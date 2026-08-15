@@ -4,7 +4,7 @@
 - Governance owner: Phoenix Nova™ AI Engineering Lead
 - Version: 1.0
 - Effective date: 2026-08-15（Asia/Shanghai）
-- Status: Active multi-project engineering governance
+- Status: Superseded by `PHOENIX_MULTI_PROJECT_ENGINEERING_GOVERNANCE_V1.1.md`
 - Current host repository: Phoenix Family OS™ Mini Program MVP
 - Parent rule: repository-local `AGENTS.md`
 
