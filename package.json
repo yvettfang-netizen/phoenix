@@ -1,0 +1,15 @@
+{
+  "name": "phoenix-family-os-mini-program-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Phoenix Family OS WeChat Mini Program MVP V0.1",
+  "scripts": {
+    "test": "node tests/run-tests.js && node tests/partner-experience.test.js && node tests/validate-project.js",
+    "typecheck": "tsc --noEmit",
+    "build": "node tests/validate-project.js",
+    "validate": "node tests/validate-project.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
