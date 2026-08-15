@@ -10,8 +10,12 @@ function emptyDatabase() {
 
 function load() {
   const stored = wx.getStorageSync(STORAGE_KEY)
-  if (!stored || stored.schemaVersion !== SCHEMA_VERSION) return emptyDatabase()
-  const database = { ...emptyDatabase(), ...stored }
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return emptyDatabase()
+
+  // Keep all recoverable records and unknown fields when opening an older snapshot.
+  // initialize() may save this normalized object, so returning an empty database here
+  // would permanently replace the family's previous local data.
+  const database = { ...emptyDatabase(), ...stored, schemaVersion: SCHEMA_VERSION }
   Object.keys(tables).forEach((table) => {
     if (!Array.isArray(database[table])) database[table] = []
   })

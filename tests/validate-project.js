@@ -4,6 +4,7 @@ const path = require('path')
 
 const root = path.resolve(__dirname, '..')
 const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
+const declaredPages = new Set(appConfig.pages)
 
 const originalPages = [
   'pages/welcome/index', 'pages/home/index', 'pages/family-edit/index', 'pages/student-edit/index',
@@ -21,6 +22,9 @@ for (const page of appConfig.pages) {
   }
 }
 
+const tabPages = new Set((appConfig.tabBar && appConfig.tabBar.list || []).map((item) => item.pagePath))
+for (const page of tabPages) assert(declaredPages.has(page), `tabBar route is not declared: ${page}`)
+
 function walk(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const target = path.join(directory, entry.name)
@@ -28,14 +32,42 @@ function walk(directory) {
   })
 }
 
-for (const file of walk(root)) {
-  if (file.includes(`${path.sep}node_modules${path.sep}`)) continue
+const projectFiles = walk(root).filter((file) => !file.includes(`${path.sep}node_modules${path.sep}`))
+
+function resolveRelativeModule(file, request) {
+  const target = path.resolve(path.dirname(file), request)
+  return [target, `${target}.js`, `${target}.json`, path.join(target, 'index.js')].some((candidate) => fs.existsSync(candidate))
+}
+
+for (const file of projectFiles) {
   const content = fs.readFileSync(file, 'utf8')
   if (file.endsWith('.json')) JSON.parse(content)
-  if (file.endsWith('.js')) new Function('require', 'module', 'exports', 'getApp', 'wx', content)
+  if (file.endsWith('.js')) {
+    new Function('require', 'module', 'exports', 'getApp', 'wx', content)
+    for (const match of content.matchAll(/require\(['"]([^'"]+)['"]\)/g)) {
+      if (match[1].startsWith('.')) assert(resolveRelativeModule(file, match[1]), `missing require target ${match[1]} in ${file}`)
+    }
+    for (const match of content.matchAll(/\/pages\/[A-Za-z0-9_/-]+\/index/g)) {
+      const route = match[0].slice(1)
+      assert(declaredPages.has(route), `undeclared page route ${match[0]} in ${file}`)
+    }
+  }
   if (file.endsWith('.wxml')) {
     assert(!content.includes('.slice('), `unsupported method call in WXML: ${file}`)
     assert(!content.includes('<script'), `script must not appear in WXML: ${file}`)
+    for (const match of content.matchAll(/\/assets\/[A-Za-z0-9_./-]+/g)) {
+      assert(fs.existsSync(path.join(root, match[0].slice(1))), `missing asset ${match[0]} in ${file}`)
+    }
+  }
+}
+
+for (const page of appConfig.pages) {
+  const pageConfig = JSON.parse(fs.readFileSync(path.join(root, `${page}.json`), 'utf8'))
+  for (const componentPath of Object.values(pageConfig.usingComponents || {})) {
+    const componentBase = path.join(root, String(componentPath).replace(/^\//, ''))
+    for (const extension of ['js', 'json', 'wxml', 'wxss']) {
+      assert(fs.existsSync(`${componentBase}.${extension}`), `missing component file ${componentPath}.${extension}`)
+    }
   }
 }
 

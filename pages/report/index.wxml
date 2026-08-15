@@ -48,3 +48,10 @@
     </view>
   </view>
 </view>
+
+<view wx:elif="{{errorMessage}}" class="page page--paper report-error">
+  <view class="empty__mark">!</view>
+  <text class="h2 report-error__title">暂时无法打开这份报告</text>
+  <text class="muted report-error__copy">{{errorMessage}}</text>
+  <button class="btn btn--primary report-error__button" bindtap="leaveError">返回安全页面</button>
+</view>

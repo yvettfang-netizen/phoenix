@@ -24,3 +24,7 @@
 .action-card__title { font-family: serif; font-size: 38rpx; font-weight: 700; margin-top: 12rpx; }
 .action-card__copy { color: rgba(255,255,255,.75); font-size: 26rpx; line-height: 1.8; margin-top: 16rpx; }
 .report-note { color: #9a958e; font-size: 20rpx; line-height: 1.6; margin-top: 28rpx; text-align: center; }
+.report-error { padding-top: 150rpx; text-align: center; }
+.report-error__title, .report-error__copy { display: block; }
+.report-error__copy { margin-top: 20rpx; }
+.report-error__button { margin-top: 48rpx; }

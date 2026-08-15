@@ -81,14 +81,20 @@ function addTimeline(familyId, eventType, description) {
 
 function familyForUser(userId) { return where('families', (family) => family.user_id === userId)[0] || null }
 function studentsForFamily(familyId) { return where('students', (student) => student.family_id === familyId) }
-function eventsForFamily(familyId) { return where('timelineEvents', (event) => event.family_id === familyId).sort((a, b) => b.date.localeCompare(a.date)) }
+function descendingBy(field) {
+  return (a, b) => String(b[field] || '').localeCompare(String(a[field] || ''))
+}
+
+function eventsForFamily(familyId) {
+  return where('timelineEvents', (event) => event.family_id === familyId).sort(descendingBy('date'))
+}
 
 function reportsForFamily(familyId) {
   const studentIds = new Set(studentsForFamily(familyId).map((student) => student.id))
   const assessments = where('assessments', (assessment) => studentIds.has(assessment.student_id))
   const assessmentIds = new Set(assessments.map((assessment) => assessment.id))
   return where('reports', (report) => assessmentIds.has(report.assessment_id))
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .sort(descendingBy('created_at'))
     .map((report) => ({ ...report, assessment: assessments.find((assessment) => assessment.id === report.assessment_id) }))
 }
 
@@ -100,8 +106,8 @@ function familyOverview(familyId) {
     students: studentsForFamily(familyId),
     reports: reportsForFamily(familyId),
     events: eventsForFamily(familyId),
-    notes: where('advisorNotes', (note) => note.family_id === familyId).sort((a, b) => b.created_at.localeCompare(a.created_at)),
-    requests: where('advisorRequests', (request) => request.family_id === familyId).sort((a, b) => b.created_at.localeCompare(a.created_at))
+    notes: where('advisorNotes', (note) => note.family_id === familyId).sort(descendingBy('created_at')),
+    requests: where('advisorRequests', (request) => request.family_id === familyId).sort(descendingBy('created_at'))
   }
 }
 
