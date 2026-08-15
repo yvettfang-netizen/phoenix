@@ -13,5 +13,5 @@
     <view class="field form-grid__wide"><text class="field__label">兴趣与喜欢做的事</text><textarea class="textarea" value="{{form.interest}}" maxlength="200" placeholder="例如：音乐、搭建、阅读、足球……" data-field="interest" bindinput="input"></textarea></view>
     <view class="field form-grid__wide"><text class="field__label">对未来的初步想法</text><textarea class="textarea" value="{{form.goal}}" maxlength="200" placeholder="可以是孩子的想法，也可以是家庭正在探索的方向。" data-field="goal" bindinput="input"></textarea></view>
   </view>
-  <view class="form-actions"><button class="btn btn--primary" bindtap="save">保存并进入 Education Compass</button></view>
+  <view class="form-actions"><button class="btn btn--primary" loading="{{saving}}" disabled="{{saving}}" bindtap="save">保存并进入 Education Compass</button></view>
 </view>

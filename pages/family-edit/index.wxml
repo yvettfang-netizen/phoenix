@@ -27,5 +27,5 @@
   </view>
 
   <view class="privacy-note"><text class="privacy-note__mark">◇</text><text>数据只服务于家庭成长关系，不作为外部销售线索。</text></view>
-  <view class="form-actions"><button class="btn btn--primary" bindtap="save">保存并继续</button></view>
+  <view class="form-actions"><button class="btn btn--primary" loading="{{saving}}" disabled="{{saving}}" bindtap="save">保存并继续</button></view>
 </view>

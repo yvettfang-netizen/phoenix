@@ -11,9 +11,14 @@ Page({
   async start() {
     if (this.data.loading) return
     this.setData({ loading: true })
-    const user = await auth.loginFamilyUser()
-    analytics.trackSession(user.id)
-    wx.reLaunch({ url: '/pages/home/index' })
+    try {
+      const user = await auth.loginFamilyUser()
+      analytics.trackSession(user.id)
+      wx.reLaunch({ url: '/pages/home/index' })
+    } catch (error) {
+      this.setData({ loading: false })
+      wx.showToast({ title: '登录未完成，请稍后重试', icon: 'none' })
+    }
   },
 
   advisorLogin() {

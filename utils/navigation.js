@@ -74,4 +74,11 @@ function getNavigationMetrics() {
   }
 }
 
-module.exports = { getNavigationMetrics }
+function navigateBackOrHome() {
+  wx.navigateBack({
+    delta: 1,
+    fail: () => wx.switchTab({ url: '/pages/home/index' })
+  })
+}
+
+module.exports = { getNavigationMetrics, navigateBackOrHome }

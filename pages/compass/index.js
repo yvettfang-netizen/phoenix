@@ -17,6 +17,9 @@ Page({
       .map((report) => ({ ...report, dateLabel: dateLabel(report.created_at) }))
     this.setData({ student: { ...student, initial: student.name.charAt(0) }, reports })
   },
-  start() { wx.navigateTo({ url: `/pages/compass-questionnaire/index?studentId=${this.data.student.id}` }) },
+  start() {
+    if (!this.data.student || !this.data.student.id) return wx.showToast({ title: '请先选择有效的孩子档案', icon: 'none' })
+    wx.navigateTo({ url: `/pages/compass-questionnaire/index?studentId=${this.data.student.id}` })
+  },
   openReport({ currentTarget }) { wx.navigateTo({ url: `/pages/report/index?id=${currentTarget.dataset.id}` }) }
 })
