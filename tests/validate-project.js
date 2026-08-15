@@ -5,6 +5,12 @@ const path = require('path')
 const root = path.resolve(__dirname, '..')
 const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
 const declaredPages = new Set(appConfig.pages)
+const expectedBrandAssets = [
+  'phoenix-nova-icon-light.png',
+  'phoenix-nova-icon-primary.png',
+  'phoenix-nova-logo-light.png',
+  'phoenix-nova-logo-primary.png'
+]
 
 const originalPages = [
   'pages/welcome/index', 'pages/home/index', 'pages/family-edit/index', 'pages/student-edit/index',
@@ -33,6 +39,23 @@ function walk(directory) {
 }
 
 const projectFiles = walk(root).filter((file) => !file.includes(`${path.sep}node_modules${path.sep}`))
+
+const actualBrandAssets = fs.readdirSync(path.join(root, 'assets', 'brand'))
+  .filter((file) => file.toLowerCase().endsWith('.png'))
+  .sort()
+assert.deepStrictEqual(actualBrandAssets, expectedBrandAssets, 'runtime brand asset set changed; human review is required')
+
+const brandTemplate = fs.readFileSync(path.join(root, 'components', 'brand-mark', 'index.wxml'), 'utf8')
+for (const asset of expectedBrandAssets) {
+  assert(brandTemplate.includes(`/assets/brand/${asset}`), `brand component does not reference ${asset}`)
+}
+
+for (const file of projectFiles.filter((target) => /[\\/](pages|components)[\\/].+\.(wxml|wxss|js)$/.test(target))) {
+  const content = fs.readFileSync(file, 'utf8')
+  for (const match of content.matchAll(/\/assets\/brand\/([A-Za-z0-9_.-]+)/g)) {
+    assert(expectedBrandAssets.includes(match[1]), `unreviewed runtime brand asset ${match[1]} in ${file}`)
+  }
+}
 
 function resolveRelativeModule(file, request) {
   const target = path.resolve(path.dirname(file), request)
