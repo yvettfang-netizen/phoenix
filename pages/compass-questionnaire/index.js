@@ -103,28 +103,39 @@ Page({
 
   submit() {
     if (this.data.submitting) return
+    const user = session.guard(['family_user'])
+    if (!user) return
+    const family = repository.familyForUser(user.id)
+    const student = repository.getById('students', this.data.student && this.data.student.id)
+    if (!family || !student || student.family_id !== family.id) {
+      return wx.reLaunch({ url: '/pages/home/index' })
+    }
     this.setData({ submitting: true })
-    const answers = {}
-    this.data.steps.forEach((step) => step.questions.forEach((item) => { answers[item.key] = item.value }))
-    const assessment = repository.insert('assessments', {
-      student_id: this.data.student.id, type: 'education', answers, status: 'completed', created_at: isoNow()
-    })
-    const generated = aiProvider.generateGrowthInsight(this.data.student, answers)
-    const report = repository.insert('reports', {
-      assessment_id: assessment.id,
-      summary: {
-        currentStage: generated.currentStage, strength: generated.strength,
-        potentialChallenge: generated.potentialChallenge, narrative: generated.narrative
-      },
-      recommendation: {
-        suggestedDirection: generated.suggestedDirection, nextAction: generated.nextAction, engine: generated.engine
-      },
-      created_at: isoNow()
-    })
-    const family = repository.getById('families', this.data.student.family_id)
-    repository.addTimeline(family.id, 'compass_completed', `${this.data.student.name} 已完成 Education Compass`)
-    repository.addTimeline(family.id, 'report_generated', `已生成 ${this.data.student.name} 的成长洞察报告`)
-    analytics.track('education_compass_completed', { userId: session.currentUser().id, familyId: family.id, properties: { student_id: this.data.student.id, report_id: report.id } })
-    wx.redirectTo({ url: `/pages/report/index?id=${report.id}&new=1` })
+    try {
+      const answers = {}
+      this.data.steps.forEach((step) => step.questions.forEach((item) => { answers[item.key] = item.value }))
+      const assessment = repository.insert('assessments', {
+        student_id: student.id, type: 'education', answers, status: 'completed', created_at: isoNow()
+      })
+      const generated = aiProvider.generateGrowthInsight(student, answers)
+      const report = repository.insert('reports', {
+        assessment_id: assessment.id,
+        summary: {
+          currentStage: generated.currentStage, strength: generated.strength,
+          potentialChallenge: generated.potentialChallenge, narrative: generated.narrative
+        },
+        recommendation: {
+          suggestedDirection: generated.suggestedDirection, nextAction: generated.nextAction, engine: generated.engine
+        },
+        created_at: isoNow()
+      })
+      repository.addTimeline(family.id, 'compass_completed', `${student.name} 已完成 Education Compass`)
+      repository.addTimeline(family.id, 'report_generated', `已生成 ${student.name} 的成长洞察报告`)
+      analytics.track('education_compass_completed', { userId: user.id, familyId: family.id, properties: { student_id: student.id, report_id: report.id } })
+      wx.redirectTo({ url: `/pages/report/index?id=${report.id}&new=1` })
+    } catch (error) {
+      this.setData({ submitting: false })
+      wx.showToast({ title: '生成失败，请稍后重试', icon: 'none' })
+    }
   }
 })

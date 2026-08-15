@@ -21,8 +21,8 @@
   </view>
 
   <view class="questionnaire__actions">
-    <button class="questionnaire__back" bindtap="previous">{{stepIndex ? '上一步' : '退出'}}</button>
-    <button class="btn btn--primary questionnaire__next" loading="{{submitting}}" bindtap="next">{{stepIndex === steps.length - 1 ? '生成成长洞察' : '继续'}}</button>
+    <button class="questionnaire__back" disabled="{{submitting}}" bindtap="previous">{{stepIndex ? '上一步' : '退出'}}</button>
+    <button class="btn btn--primary questionnaire__next" loading="{{submitting}}" disabled="{{submitting}}" bindtap="next">{{stepIndex === steps.length - 1 ? '生成成长洞察' : '继续'}}</button>
   </view>
   <view class="safe-bottom"></view>
 </view>

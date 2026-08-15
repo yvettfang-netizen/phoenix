@@ -13,7 +13,7 @@
     <view class="field"><text class="field__label">希望讨论的主题</text><picker mode="selector" range="{{topics}}" value="{{topicIndex}}" bindchange="pickTopic"><view class="picker {{!form.topic ? 'placeholder' : ''}}">{{form.topic || '请选择'}}</view></picker></view>
     <view class="field"><text class="field__label">方便联系的时间</text><picker mode="selector" range="{{times}}" value="{{timeIndex}}" bindchange="pickTime"><view class="picker {{!form.preferred_time ? 'placeholder' : ''}}">{{form.preferred_time || '请选择'}}</view></picker></view>
     <view class="field"><text class="field__label">补充说明（选填）</text><textarea class="textarea" value="{{form.note}}" maxlength="300" placeholder="还有什么希望顾问提前了解？" bindinput="input"></textarea></view>
-    <view class="form-actions"><button class="btn btn--primary" bindtap="submit">申请顾问联系</button></view>
+    <view class="form-actions"><button class="btn btn--primary" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submit">申请顾问联系</button></view>
   </block>
 
   <view wx:else class="success">
