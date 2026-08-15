@@ -74,7 +74,26 @@ const { getNavigationMetrics } = require('../utils/navigation')
 assert.deepStrictEqual(getNavigationMetrics(), {
   statusBarHeight: 47,
   navigationBarHeight: 44,
-  menuButtonSafeWidth: 103
+  menuButtonSafeWidth: 103,
+  compactHeader: false
+})
+
+wx.getWindowInfo = () => ({ safeArea: { top: 54 }, windowWidth: 320, platform: 'android' })
+wx.getMenuButtonBoundingClientRect = () => ({ top: 58, left: 225, width: 87, height: 32 })
+assert.deepStrictEqual(getNavigationMetrics(), {
+  statusBarHeight: 54,
+  navigationBarHeight: 48,
+  menuButtonSafeWidth: 103,
+  compactHeader: true
+})
+
+wx.getWindowInfo = () => ({ statusBarHeight: 24, windowWidth: 375, platform: 'android' })
+wx.getMenuButtonBoundingClientRect = () => ({ top: 28, width: 87, height: 32 })
+assert.deepStrictEqual(getNavigationMetrics(), {
+  statusBarHeight: 24,
+  navigationBarHeight: 48,
+  menuButtonSafeWidth: 16,
+  compactHeader: false
 })
 
 console.log('✓ domain flow: family → student → compass → report → timeline → advisor')

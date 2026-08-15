@@ -13,11 +13,17 @@ page {
   color: var(--ink);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
   font-size: 28rpx;
+  overflow-x: hidden;
 }
 
 view, text, button, input, textarea, picker { box-sizing: border-box; }
 
-.page { min-height: 100vh; padding: 32rpx 32rpx 64rpx; }
+.page {
+  min-height: 100vh;
+  padding: 32rpx 32rpx 64rpx;
+  padding-bottom: calc(64rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(64rpx + env(safe-area-inset-bottom));
+}
 .page--paper { background: var(--paper); }
 .eyebrow { color: var(--gold-deep); font-size: 22rpx; font-weight: 600; letter-spacing: 3rpx; text-transform: uppercase; }
 .h1 { color: var(--navy); font-family: "Songti SC", serif; font-size: 54rpx; font-weight: 700; line-height: 1.25; }
@@ -55,7 +61,7 @@ view, text, button, input, textarea, picker { box-sizing: border-box; }
 .form-actions { margin-top: 48rpx; }
 .empty { padding: 64rpx 24rpx; text-align: center; }
 .empty__mark { color: var(--gold); font-family: serif; font-size: 70rpx; margin-bottom: 12rpx; }
-.safe-bottom { height: env(safe-area-inset-bottom); }
+.safe-bottom { height: constant(safe-area-inset-bottom); height: env(safe-area-inset-bottom); }
 .chevron { color: var(--gold-deep); font-size: 32rpx; }
 .status { background: #edf2ee; border-radius: 999rpx; color: #55705b; font-size: 21rpx; padding: 9rpx 15rpx; }
 .status--warm { background: #f7ecdc; color: #976e2f; }

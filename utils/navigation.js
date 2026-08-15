@@ -28,7 +28,13 @@ function getMenuButtonRect() {
 
   try {
     const rect = wx.getMenuButtonBoundingClientRect()
-    if (rect && rect.width && rect.height && rect.top >= 0) return rect
+    const left = rect && Number(rect.left)
+    const top = rect && Number(rect.top)
+    const width = rect && Number(rect.width)
+    const height = rect && Number(rect.height)
+    if (Number.isFinite(left) && Number.isFinite(top) && width > 0 && height > 0 && top >= 0) {
+      return { ...rect, left, top, width, height }
+    }
   } catch (error) {
     // Some desktop/debug environments do not expose a valid capsule rectangle.
   }
@@ -39,7 +45,9 @@ function getMenuButtonRect() {
 function getNavigationMetrics() {
   const windowInfo = getWindowInfo()
   const deviceInfo = getDeviceInfo()
-  const statusBarHeight = Number(windowInfo.statusBarHeight) || 20
+  const safeAreaTop = Number(windowInfo.safeArea && windowInfo.safeArea.top) || 0
+  // safeArea.top is the fallback for environments that omit statusBarHeight.
+  const statusBarHeight = Number(windowInfo.statusBarHeight) || safeAreaTop || 20
   const windowWidth = Number(windowInfo.windowWidth || windowInfo.screenWidth) || 375
   const platform = String(windowInfo.platform || deviceInfo.platform || '').toLowerCase()
   const defaultNavigationBarHeight = platform === 'android' ? 48 : 44
@@ -55,10 +63,14 @@ function getNavigationMetrics() {
     menuButtonSafeWidth = Math.max(16, windowWidth - menuButton.left + 8)
   }
 
+  // A full brand lockup plus greeting can collide with the capsule on narrow phones.
+  const compactHeader = windowWidth - menuButtonSafeWidth - 16 < 240
+
   return {
     statusBarHeight,
     navigationBarHeight,
-    menuButtonSafeWidth
+    menuButtonSafeWidth,
+    compactHeader
   }
 }
 

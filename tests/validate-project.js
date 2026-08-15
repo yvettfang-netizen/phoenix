@@ -63,11 +63,25 @@ for (const file of projectFiles) {
 
 for (const page of appConfig.pages) {
   const pageConfig = JSON.parse(fs.readFileSync(path.join(root, `${page}.json`), 'utf8'))
+  if (pageConfig.navigationStyle === 'custom') {
+    const template = fs.readFileSync(path.join(root, `${page}.wxml`), 'utf8')
+    assert(template.includes('navigation.statusBarHeight'), `custom navigation misses status bar inset: ${page}`)
+    assert(template.includes('navigation.menuButtonSafeWidth'), `custom navigation misses capsule inset: ${page}`)
+  }
   for (const componentPath of Object.values(pageConfig.usingComponents || {})) {
     const componentBase = path.join(root, String(componentPath).replace(/^\//, ''))
     for (const extension of ['js', 'json', 'wxml', 'wxss']) {
       assert(fs.existsSync(`${componentBase}.${extension}`), `missing component file ${componentPath}.${extension}`)
     }
+  }
+}
+
+const appStyles = fs.readFileSync(path.join(root, 'app.wxss'), 'utf8')
+assert(appStyles.includes('safe-area-inset-bottom'), 'global styles must reserve the bottom safe area')
+for (const file of projectFiles.filter((target) => target.endsWith('.wxss'))) {
+  const content = fs.readFileSync(file, 'utf8')
+  if (content.includes('position: fixed') && content.includes('bottom: 0')) {
+    assert(content.includes('safe-area-inset-bottom'), `fixed bottom control misses safe area: ${file}`)
   }
 }
 

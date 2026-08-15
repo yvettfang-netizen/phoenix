@@ -3,7 +3,7 @@
     class="home__header"
     style="padding-top: {{navigation.statusBarHeight}}px; padding-right: {{navigation.menuButtonSafeWidth}}px; min-height: {{navigation.navigationBarHeight}}px;"
   >
-    <brand-mark />
+    <brand-mark compact="{{navigation.compactHeader}}" />
     <text class="home__hello">你好，{{user.name || '新家庭'}}</text>
   </view>
 

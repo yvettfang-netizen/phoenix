@@ -1,4 +1,4 @@
-.welcome { background: linear-gradient(165deg, #0b1b2b 0%, #152d43 58%, #0d1b2a 100%); box-sizing: border-box; color: white; min-height: 100vh; overflow: hidden; padding: 0 40rpx 30rpx; position: relative; }
+.welcome { background: linear-gradient(165deg, #0b1b2b 0%, #152d43 58%, #0d1b2a 100%); box-sizing: border-box; color: white; min-height: 100vh; overflow-x: hidden; padding: 0 40rpx 30rpx; position: relative; width: 100%; }
 .welcome__glow { border-radius: 50%; filter: blur(20rpx); opacity: .18; position: absolute; }
 .welcome__glow--one { background: #e3bd68; height: 440rpx; right: -220rpx; top: 220rpx; width: 440rpx; }
 .welcome__glow--two { background: #7ca1ae; bottom: 160rpx; height: 360rpx; left: -230rpx; width: 360rpx; }
