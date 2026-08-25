@@ -39,3 +39,10 @@ Thumbs.db
 
 # Independent repository
 /Phoenix Website/
+
+# Askwise local caches / probes
+/askwise/pnpm-temp/
+/askwise/pnpm_env/
+/askwise/pnpm_tmp/
+/askwise/tmp_write_probe/
+/askwise/probe_root_write.txt
