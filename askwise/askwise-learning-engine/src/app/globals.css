@@ -1,0 +1,265 @@
+:root {
+  --bg: #f5f3ef;
+  --panel: #ffffff;
+  --panel-soft: #f8f5ef;
+  --line: #e6ddd2;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --accent: #3f6f9b;
+  --accent-strong: #234b70;
+  --positive: #0b6e4f;
+  --negative: #8f2f2f;
+  --focus-ring: rgba(63, 111, 155, 0.24);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Noto Sans SC", "Inter", "PingFang SC", "Segoe UI", Arial, sans-serif;
+  background: linear-gradient(170deg, #f8f5ef 0%, #f1ece2 100%);
+  color: var(--text);
+  min-height: 100%;
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 22px;
+}
+
+.top-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 24px;
+  background: #2b3d50;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.top-nav a {
+  color: #eef2f7;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 14px;
+}
+
+.top-nav a:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+h1 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.askwise-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 24px rgba(31, 41, 55, 0.04);
+}
+
+.askwise-card-header {
+  margin-bottom: 10px;
+}
+
+.askwise-card-header .muted {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  color: #374151;
+  font-weight: 500;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid #d4c9be;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 12px;
+  background: #fffefa;
+  color: var(--text);
+}
+
+input:focus,
+textarea:focus,
+select:focus,
+button:focus,
+a:focus,
+.button:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+button,
+.button {
+  display: inline-block;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 14px;
+  transition: transform 0.1s ease;
+}
+
+button:hover,
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.button-primary {
+  background: linear-gradient(180deg, #476f95 0%, #345a80 100%);
+  color: white;
+  border-color: #345a80;
+}
+
+.button-secondary {
+  background: #fff;
+  color: #32526f;
+  border-color: #a3bdd6;
+}
+
+.button-ghost {
+  background: transparent;
+  color: #32526f;
+  border-color: #d7dbe3;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.status-bad {
+  color: var(--negative);
+  font-weight: 600;
+}
+
+.status-good {
+  color: var(--positive);
+  font-weight: 600;
+}
+
+.status-chip {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.status-chip.bad {
+  color: #7c1f1f;
+  background: #fde8e8;
+}
+
+.status-chip.good {
+  color: #0d5a45;
+  background: #daf2e6;
+}
+
+.status-chip.warn {
+  color: #6e4f12;
+  background: #f4edd5;
+}
+
+.task-header {
+  display: grid;
+  gap: 8px;
+}
+
+.flow-state {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  color: #5a6b7c;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-item {
+  padding: 10px;
+  border: 1px dashed #e2d8cc;
+  border-radius: 10px;
+  background: #fcfaf6;
+}
+
+.aoyu-shell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #d9d0c5;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  background: linear-gradient(90deg, #f6f2ec, #fdfbf8);
+}
+
+.aoyu-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: #f8f4ed;
+  border: 1px solid #ddcfbf;
+  object-fit: contain;
+  padding: 4px;
+}
+
+.aoyu-title {
+  margin: 0 0 2px;
+  font-weight: 600;
+}
+
+.aoyu-message {
+  margin: 0;
+  color: #555;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.grid {
+  display: grid;
+  gap: 10px;
+}
+
+.frame-title {
+  margin: 8px 0 12px;
+  font-size: 14px;
+  color: #6c7580;
+}

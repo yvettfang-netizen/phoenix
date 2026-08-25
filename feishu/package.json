@@ -1,0 +1,13 @@
+{
+  "name": "phoenixnova-feishu-connector-test",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:feishu": "node test-feishu.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1"
+  }
+}
