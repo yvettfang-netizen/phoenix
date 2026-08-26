@@ -5,8 +5,14 @@ import { useEffect, useState } from "react";
 
 import { BrandLogo } from "@/components/brand-logo";
 import { IDENTITY_ASSESSMENT_ID_KEY } from "@/lib/identity/ids";
-import { IDENTITY_DRAFT_KEY, IDENTITY_RESULT_KEY } from "@/lib/identity/storage";
-import { FAMILY_IDENTITY_TYPES, PLANNING_STAGES, type StoredIdentityResult } from "@/lib/identity/types";
+import {
+  IDENTITY_DRAFT_KEY,
+  IDENTITY_DYNAMIC_DRAFT_KEY,
+  IDENTITY_FULL_REPORT_KEY,
+  IDENTITY_RESULT_KEY,
+  isStoredIdentityResult,
+} from "@/lib/identity/storage";
+import type { StoredIdentityResult } from "@/lib/identity/types";
 
 const planningStageLabels: Record<StoredIdentityResult["snapshot"]["planning_stage"], string> = {
   initial_exploration: "了解起点",
@@ -15,19 +21,6 @@ const planningStageLabels: Record<StoredIdentityResult["snapshot"]["planning_sta
   hong_kong_transition: "香港身份衔接",
   identity_established: "已有身份基础",
 };
-
-function isStoredResult(value: unknown): value is StoredIdentityResult {
-  if (!value || typeof value !== "object") return false;
-  const result = value as Partial<StoredIdentityResult>;
-  return Boolean(
-    result.ids?.family_id?.startsWith("fam_") &&
-      result.ids.user_id?.startsWith("usr_") &&
-      result.ids.assessment_id?.startsWith("asm_") &&
-      result.snapshot &&
-      FAMILY_IDENTITY_TYPES.includes(result.snapshot.family_identity_type) &&
-      PLANNING_STAGES.includes(result.snapshot.planning_stage),
-  );
-}
 
 export function IdentityResultExperience() {
   const [result, setResult] = useState<StoredIdentityResult | null>(null);
@@ -39,7 +32,7 @@ export function IdentityResultExperience() {
         const stored = window.sessionStorage.getItem(IDENTITY_RESULT_KEY);
         if (!stored) return;
         const parsed: unknown = JSON.parse(stored);
-        if (isStoredResult(parsed)) setResult(parsed);
+        if (isStoredIdentityResult(parsed)) setResult(parsed);
       } catch {
         setResult(null);
       } finally {
@@ -50,6 +43,8 @@ export function IdentityResultExperience() {
 
   function resetAssessment() {
     window.sessionStorage.removeItem(IDENTITY_DRAFT_KEY);
+    window.sessionStorage.removeItem(IDENTITY_DYNAMIC_DRAFT_KEY);
+    window.sessionStorage.removeItem(IDENTITY_FULL_REPORT_KEY);
     window.sessionStorage.removeItem(IDENTITY_RESULT_KEY);
     window.sessionStorage.removeItem(IDENTITY_ASSESSMENT_ID_KEY);
   }
