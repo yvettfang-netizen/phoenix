@@ -59,3 +59,11 @@ The latest retained baseline audit is `docs/codex-audit/FAMILY_OS_CLEAN_BASELINE
 ## Source cleanup rule
 
 Source files remain untouched until the canonical branch is committed, pushed, and the remote ref is verified. After verification, only the 37 paths listed above may be removed from the read-only-source Family OS directory; no other `phoenix` project or ignored directory is in scope.
+
+## Source cleanup execution
+
+- Remote ref `refs/heads/codex/family-os-doc-baseline-and-ux-v0.2` was first verified at `31b3b7860cbd4d5a750ca009ed38eae698533f0f`.
+- The 37 exact untracked source paths listed in this register were then deleted from the original Family OS directory on 2026-08-27.
+- Post-delete verification found 0 remaining untracked files under the original `Phoenix Family OS/phoenix-family-os-mvp` path.
+- No directory-recursive cleanup and no deletion outside the Family OS project path was performed.
+- ACTIVE content is recoverable from the remote branch; MERGED content is recoverable in canonicalized form. ARCHIVE and DELETE CANDIDATE source bodies were intentionally not retained in Git, per the approved migration rule.
