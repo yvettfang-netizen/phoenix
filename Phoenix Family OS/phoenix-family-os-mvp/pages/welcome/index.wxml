@@ -7,11 +7,12 @@
   ><brand-mark light="{{true}}" /></view>
 
   <view class="welcome__hero">
-    <text class="welcome__eyebrow">FOR EVERY BEGINNING.</text>
+    <text class="welcome__eyebrow">FAMILY GROWTH, STEP BY STEP</text>
     <text class="welcome__title">陪伴家庭成长的
-智能系统</text>
-    <text class="welcome__subtitle">从一次教育罗盘开始，记录每一个重要选择，
+长期记录</text>
+    <text class="welcome__subtitle">从 Education Compass 开始，记录家庭的重要选择，
 让成长有方向，也有被理解的温度。</text>
+    <view class="welcome__demo-note">当前为本地 Demo，仅使用虚构测试资料；数据不会提交到生产服务。</view>
   </view>
 
   <view class="orbit" aria-label="家庭成长关系环">
@@ -28,10 +29,10 @@
   </view>
 
   <view class="welcome__actions">
-    <button class="btn btn--gold" loading="{{loading}}" disabled="{{loading}}" bindtap="start">开始家庭成长规划</button>
-    <button class="welcome__login" disabled="{{loading}}" bindtap="start">已有档案，登录</button>
+    <button class="btn btn--gold" loading="{{loading}}" disabled="{{loading}}" bindtap="start">进入家庭成长 Demo</button>
+    <button class="welcome__login" disabled="{{loading}}" bindtap="start">使用本机已有 Demo 档案</button>
   </view>
 
-  <view class="welcome__footer" bindtap="advisorLogin">Phoenix Advisor 内部入口</view>
+  <view wx:if="{{showAdvisorEntry}}" class="welcome__footer" bindtap="advisorLogin">Phoenix Advisor 内部演示入口</view>
   <view class="safe-bottom"></view>
 </view>

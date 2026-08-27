@@ -5,7 +5,12 @@ const { getNavigationMetrics } = require('../../utils/navigation')
 Page({
   data: {
     loading: false,
+    showAdvisorEntry: false,
     navigation: getNavigationMetrics()
+  },
+
+  onLoad(options = {}) {
+    this.setData({ showAdvisorEntry: options.mode === 'advisor-demo' })
   },
 
   async start() {

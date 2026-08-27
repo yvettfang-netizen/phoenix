@@ -14,7 +14,7 @@
     </view>
     <view class="field">
       <text class="field__label">联系电话 <text class="field__required">*</text></text>
-      <input class="input" type="number" maxlength="20" value="{{form.phone}}" placeholder="仅用于档案与顾问联系" data-field="phone" bindinput="input" />
+      <input class="input" type="number" maxlength="20" value="{{form.phone}}" placeholder="请填写虚构测试号码" data-field="phone" bindinput="input" />
     </view>
     <view class="field">
       <text class="field__label">常住地区</text>
@@ -26,6 +26,6 @@
     </view>
   </view>
 
-  <view class="privacy-note"><text class="privacy-note__mark">◇</text><text>数据只服务于家庭成长关系，不作为外部销售线索。</text></view>
+  <view class="privacy-note"><text class="privacy-note__mark">◇</text><text>当前为本地 Demo，请仅填写虚构测试资料；内容不会提交到生产服务。</text></view>
   <view class="form-actions"><button class="btn btn--primary" loading="{{saving}}" disabled="{{saving}}" bindtap="save">保存并继续</button></view>
 </view>

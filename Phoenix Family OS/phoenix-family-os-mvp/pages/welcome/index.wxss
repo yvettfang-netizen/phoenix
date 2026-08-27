@@ -2,12 +2,13 @@
 .welcome__glow { border-radius: 50%; filter: blur(20rpx); opacity: .18; position: absolute; }
 .welcome__glow--one { background: #e3bd68; height: 440rpx; right: -220rpx; top: 220rpx; width: 440rpx; }
 .welcome__glow--two { background: #7ca1ae; bottom: 160rpx; height: 360rpx; left: -230rpx; width: 360rpx; }
-.welcome__top, .welcome__hero, .orbit, .welcome__actions, .welcome__footer { position: relative; z-index: 1; }
+.welcome__top, .welcome__hero, .welcome__demo-note, .orbit, .welcome__actions, .welcome__footer { position: relative; z-index: 1; }
 .welcome__top { align-items: center; box-sizing: content-box; display: flex; }
 .welcome__hero { margin-top: 76rpx; }
 .welcome__eyebrow { color: #d6bd84; display: block; font-size: 20rpx; letter-spacing: 5rpx; }
 .welcome__title { display: block; font-family: "Songti SC", serif; font-size: 62rpx; font-weight: 700; line-height: 1.28; margin-top: 22rpx; white-space: pre-line; }
 .welcome__subtitle { color: rgba(255,255,255,.68); display: block; font-size: 25rpx; line-height: 1.8; margin-top: 26rpx; white-space: pre-line; }
+.welcome__demo-note { border: 1rpx solid rgba(200,162,74,.3); border-radius: 18rpx; color: rgba(255,255,255,.72); font-size: 23rpx; line-height: 1.6; margin-top: 26rpx; padding: 18rpx 22rpx; }
 .orbit { height: 360rpx; margin: 40rpx auto 24rpx; width: 540rpx; }
 .orbit__ring { border: 1rpx solid rgba(218,190,125,.34); border-radius: 50%; left: 50%; position: absolute; top: 50%; transform: translate(-50%, -50%); }
 .orbit__ring--outer { height: 340rpx; width: 520rpx; }

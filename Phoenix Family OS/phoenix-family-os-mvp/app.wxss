@@ -65,3 +65,4 @@ view, text, button, input, textarea, picker { box-sizing: border-box; }
 .chevron { color: var(--gold-deep); font-size: 32rpx; }
 .status { background: #edf2ee; border-radius: 999rpx; color: #55705b; font-size: 21rpx; padding: 9rpx 15rpx; }
 .status--warm { background: #f7ecdc; color: #976e2f; }
+.demo-note { background: #fff7e8; border: 1rpx solid rgba(200,162,74,.32); border-radius: 18rpx; color: #6d655a; font-size: 23rpx; line-height: 1.6; margin-top: 24rpx; padding: 20rpx 22rpx; }

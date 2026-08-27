@@ -1,7 +1,9 @@
 <view class="page page--paper">
   <text class="eyebrow">CHILD PROFILE</text>
   <text class="h1 profile-title">看见孩子此刻的样子</text>
-  <text class="muted profile-intro">不急着定义未来，先从真实的阶段、兴趣与想法开始。</text>
+  <text class="muted profile-intro">不急着定义未来，先从当前阶段、兴趣与想法开始。</text>
+
+  <view class="demo-note">当前为本地 Demo，请仅填写虚构测试资料；内容只保存在本机。</view>
 
   <view class="form-grid">
     <view class="field form-grid__wide"><text class="field__label">孩子姓名 <text class="field__required">*</text></text><input class="input" value="{{form.name}}" placeholder="姓名或昵称" data-field="name" bindinput="input" /></view>

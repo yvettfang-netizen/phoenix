@@ -4,8 +4,8 @@ const { dateLabel } = require('../../utils/date')
 
 const EVENT_META = {
   family_created: { label: '家庭档案', icon: '家' }, student_created: { label: '孩子档案', icon: '子' },
-  compass_completed: { label: 'Education Compass', icon: '罗' }, report_generated: { label: 'AI 成长洞察', icon: '析' },
-  advisor_contact: { label: '顾问联系', icon: '联' }, advisor_note: { label: '重要记录', icon: '记' },
+  compass_completed: { label: 'Education Compass', icon: '罗' }, report_generated: { label: '成长洞察', icon: '析' },
+  advisor_contact: { label: '顾问服务', icon: '联' }, advisor_note: { label: '重要记录', icon: '记' },
   partner_plan_saved: { label: '联合成长计划', icon: '艺' }, partner_exploration: { label: '音乐探索', icon: '音' },
   partner_application: { label: '联合体验', icon: '创' }
 }

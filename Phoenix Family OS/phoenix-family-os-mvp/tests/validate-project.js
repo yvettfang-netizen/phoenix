@@ -103,6 +103,26 @@ for (const page of appConfig.pages) {
 
 const appStyles = fs.readFileSync(path.join(root, 'app.wxss'), 'utf8')
 assert(appStyles.includes('safe-area-inset-bottom'), 'global styles must reserve the bottom safe area')
+assert.strictEqual(appConfig.tabBar.selectedColor.toUpperCase(), '#C8A24A', 'tabBar selected color must use Phoenix Gold')
+
+const welcomeScript = fs.readFileSync(path.join(root, 'pages', 'welcome', 'index.js'), 'utf8')
+const welcomeTemplate = fs.readFileSync(path.join(root, 'pages', 'welcome', 'index.wxml'), 'utf8')
+const homeScript = fs.readFileSync(path.join(root, 'pages', 'home', 'index.js'), 'utf8')
+const homeTemplate = fs.readFileSync(path.join(root, 'pages', 'home', 'index.wxml'), 'utf8')
+const reportTemplate = fs.readFileSync(path.join(root, 'pages', 'report', 'index.wxml'), 'utf8')
+const advisorTemplate = fs.readFileSync(path.join(root, 'pages', 'advisor-request', 'index.wxml'), 'utf8')
+
+assert(welcomeScript.includes('showAdvisorEntry: false'), 'internal Advisor entry must be hidden by default')
+assert(welcomeTemplate.includes('wx:if="{{showAdvisorEntry}}"'), 'internal Advisor entry must be conditionally rendered')
+assert(welcomeTemplate.includes('本地 Demo'), 'welcome page must disclose the Demo environment')
+assert(!homeScript.includes('partner-experiences'), 'family home must not load Partner Preview content')
+assert(!homeTemplate.includes('PARTNER EXPERIENCE'), 'family home must not expose Partner Preview')
+assert(!homeTemplate.includes('LATEST AI INSIGHT'), 'family home must not describe local rules as AI')
+assert(homeTemplate.includes('成长洞察 · GROWTH INSIGHT'), 'family home must use the approved Growth Insight name')
+assert(homeTemplate.indexOf('当前唯一下一步') < homeTemplate.indexOf('成长洞察 · GROWTH INSIGHT'), 'home must show the next action before Growth Insight')
+assert(!reportTemplate.includes('<text>AI</text>'), 'Growth Insight report must not display an AI seal')
+assert(reportTemplate.includes('本地规则辅助整理'), 'Growth Insight report must disclose the local-rule boundary')
+assert(advisorTemplate.includes('不会触发真实联系'), 'Advisor Service must disclose the Local Demo boundary')
 for (const file of projectFiles.filter((target) => target.endsWith('.wxss'))) {
   const content = fs.readFileSync(file, 'utf8')
   if (content.includes('position: fixed') && content.includes('bottom: 0')) {
@@ -118,3 +138,4 @@ for (const required of ['users', 'families', 'students', 'assessments', 'reports
 console.log(`✓ project structure: ${appConfig.pages.length} pages, JSON and JS syntax valid`)
 console.log('✓ original MVP routes, Partner Experience routes and required data models present')
 console.log('✓ backend source and SQLite runtime data are excluded from the WeChat package')
+console.log('✓ family navigation, Demo disclosure, Growth Insight naming and Phoenix Gold UX guards valid')
