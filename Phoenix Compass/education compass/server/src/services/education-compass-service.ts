@@ -8,6 +8,8 @@ import {
   FREE_PARENT_QUESTIONNAIRE_VERSION,
   GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   GROWTH_DISCOVERY_REPORT_VERSION,
+  LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
+  LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   QuestionnaireBank,
   StudentGrowthDiscoveryReportV1
 } from '../domain/education-compass/contracts'
@@ -151,14 +153,14 @@ export class EducationCompassService {
   ) {}
 
   questionnaireByVersion(version: string, educationSystemInput?: unknown): QuestionnaireBank {
-    if (version === FREE_PARENT_QUESTIONNAIRE_VERSION) {
+    if (version === FREE_PARENT_QUESTIONNAIRE_VERSION || version === LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION) {
       invariant(educationSystemInput === undefined, 400, 'EDUCATION_SYSTEM_NOT_APPLICABLE', '免费家长问卷不接受体系分支')
-      return getEducationCompassQuestionnaireBank('LEVEL_1', null)
+      return getEducationCompassQuestionnaireBank('LEVEL_1', null, version)
     }
-    invariant(version === GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION, 404,
+    invariant(version === GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION || version === LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION, 404,
       'QUESTIONNAIRE_VERSION_NOT_FOUND', '问卷版本不存在')
     invariant(isEducationSystem(educationSystemInput), 400, 'EDUCATION_SYSTEM_REQUIRED', '学生问卷需要教育体系 code')
-    return getEducationCompassQuestionnaireBank('LEVEL_2', educationSystemInput)
+    return getEducationCompassQuestionnaireBank('LEVEL_2', educationSystemInput, version)
   }
 
   registryIntegrity(): ReturnType<typeof getEducationCompassRegistryIntegrity> {
@@ -375,7 +377,7 @@ export class EducationCompassService {
       let answersInput = input.answers
       if (assessment.assessmentKind === 'STUDENT_GROWTH_DISCOVERY' && input.educationSystem &&
         educationSystem && input.educationSystem !== educationSystem) {
-        const switched = switchEducationSystemAnswers(input.answers, educationSystem, input.educationSystem)
+        const switched = switchEducationSystemAnswers(input.answers, educationSystem, input.educationSystem, undefined, assessment.questionnaireVersion)
         answersInput = switched.answers
         educationSystem = input.educationSystem
         await tx.insert('auditLogs', {
@@ -387,12 +389,13 @@ export class EducationCompassService {
       const validated = validateQuestionnaireAnswers({
         level,
         educationSystem: level === 'LEVEL_1' ? null : educationSystem as EducationSystem,
+        questionnaireVersion: assessment.questionnaireVersion,
         answers: answersInput,
         mode: 'DRAFT'
       })
       const bank = level === 'LEVEL_1'
-        ? getEducationCompassQuestionnaireBank('LEVEL_1', null)
-        : getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem as EducationSystem)
+        ? getEducationCompassQuestionnaireBank('LEVEL_1', null, assessment.questionnaireVersion)
+        : getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem as EducationSystem, assessment.questionnaireVersion)
       const nextRevision = (assessment.draftRevision ?? 1) + 1
       const updated = await tx.update('assessments', assessment.id, {
         answers: recordPayload(validated.answers),
@@ -450,16 +453,22 @@ export class EducationCompassService {
       const validated = validateQuestionnaireAnswers({
         level,
         educationSystem: level === 'LEVEL_1' ? null : assessment.educationSystem as EducationSystem,
+        questionnaireVersion: assessment.questionnaireVersion,
         answers: assessment.answers,
         mode: 'SUBMIT'
       })
       invariant(validated.schemaDigest === assessment.schemaDigest, 409, 'QUESTIONNAIRE_SCHEMA_CHANGED', '问卷结构版本已变化')
       const result = assessment.assessmentKind === 'FREE_PARENT_COMPASS'
-        ? buildFamilyEducationSnapshotV1({ familyId: assessment.familyId, studentId: assessment.studentId, assessmentId }, validated.answers)
+        ? buildFamilyEducationSnapshotV1(
+            { familyId: assessment.familyId, studentId: assessment.studentId, assessmentId },
+            validated.answers,
+            { questionnaireVersion: assessment.questionnaireVersion }
+          )
         : buildStudentGrowthDiscoveryReportV1(
             { familyId: assessment.familyId, studentId: assessment.studentId, assessmentId },
             assessment.educationSystem as EducationSystem,
-            validated.answers
+            validated.answers,
+            { questionnaireVersion: assessment.questionnaireVersion }
           )
       const reportId = this.ids('rpt')
       const isFree = assessment.assessmentKind === 'FREE_PARENT_COMPASS'
@@ -719,8 +728,8 @@ export class EducationCompassService {
     invariant(assessment.assessmentKind === 'FREE_PARENT_COMPASS' || assessment.assessmentKind === 'STUDENT_GROWTH_DISCOVERY',
       409, 'ASSESSMENT_VERSION_LEGACY', '该接口不处理历史问卷')
     return assessment.assessmentKind === 'FREE_PARENT_COMPASS'
-      ? getEducationCompassQuestionnaireBank('LEVEL_1', null)
-      : getEducationCompassQuestionnaireBank('LEVEL_2', assessment.educationSystem as EducationSystem)
+      ? getEducationCompassQuestionnaireBank('LEVEL_1', null, assessment.questionnaireVersion)
+      : getEducationCompassQuestionnaireBank('LEVEL_2', assessment.educationSystem as EducationSystem, assessment.questionnaireVersion)
   }
 
   private async ownedAssessment(tx: StoreTransaction, userId: string, assessmentId: string, forUpdate = false): Promise<Assessment> {

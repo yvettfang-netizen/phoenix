@@ -1,6 +1,14 @@
-export const EDUCATION_COMPASS_CONTRACT_VERSION = 'education_compass_contract_v1.0.0' as const
-export const FREE_PARENT_QUESTIONNAIRE_VERSION = 'free_parent_compass_v1.0.0-rc1' as const
-export const GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION = 'education_growth_discovery_v1.0.0-rc1' as const
+export const EDUCATION_COMPASS_CONTRACT_VERSION = 'education_compass_contract_v1.1.0' as const
+export const FREE_PARENT_QUESTIONNAIRE_VERSION = 'free_parent_compass_v1.1.0' as const
+export const GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION = 'education_growth_discovery_v1.1.0' as const
+export const LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION = 'free_parent_compass_v1.0.0-rc1' as const
+export const LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION = 'education_growth_discovery_v1.0.0-rc1' as const
+export type FreeParentQuestionnaireVersion =
+  | typeof LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION
+  | typeof FREE_PARENT_QUESTIONNAIRE_VERSION
+export type GrowthDiscoveryQuestionnaireVersion =
+  | typeof LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
+  | typeof GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
 export const FAMILY_SNAPSHOT_VERSION = 'family_education_snapshot_v1.0.0' as const
 export const GROWTH_DISCOVERY_REPORT_VERSION = 'student_growth_discovery_report_v1.0.0' as const
 export const EDUCATION_COMPASS_TAXONOMY_VERSION = 'education_compass_taxonomy_v1.0.0-rc1' as const
@@ -91,6 +99,13 @@ export interface QuestionnairePresentationMetaV1 {
   requiredQuestions: number
   progressMode: 'QUESTION_COUNT'
   scoringMode: 'NONE'
+  /** Server-owned wording only; deliberately excluded from schemaDigest. */
+  experienceTitle: string
+  experienceEyebrow: string
+  experienceSummary: string
+  respondentHint: string
+  completionOutcome: string
+  primaryActionHint: string
 }
 
 export interface QuestionnaireBank {
@@ -156,7 +171,7 @@ export interface FamilyEducationSnapshotV1 {
   preferred_next_support: string
   next_step_status: 'AVAILABLE' | 'CONSIDER' | 'NOT_RECOMMENDED' | 'DEFERRED'
   next_step_reason_codes: readonly string[]
-  questionnaire_version: typeof FREE_PARENT_QUESTIONNAIRE_VERSION
+  questionnaire_version: FreeParentQuestionnaireVersion
   disclaimer_version: typeof EDUCATION_COMPASS_DISCLAIMER_VERSION
   disclaimer: typeof EDUCATION_COMPASS_DISCLAIMER
 }

@@ -3,6 +3,10 @@
 const assert = require('node:assert/strict')
 
 const { MockWechatAuthProvider } = require('../server/dist/src/auth/wechat-auth-provider.js')
+const {
+  FREE_PARENT_QUESTIONNAIRE_VERSION: FREE_VERSION,
+  GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION: GROWTH_VERSION
+} = require('../server/dist/src/domain/education-compass/contracts.js')
 const { validateSourceCatalog } = require('../server/dist/src/domain/source-catalog.js')
 const { GROWTH_DISCOVERY_PRODUCT_CODE } = require('../server/dist/src/domain/products.js')
 const { createAppServer } = require('../server/dist/src/http/app.js')
@@ -15,7 +19,6 @@ const { ProfileService } = require('../server/dist/src/services/profile-service.
 const { ReportService } = require('../server/dist/src/services/report-service.js')
 const { InMemoryStore } = require('../server/dist/src/store/memory-store.js')
 
-const FREE_VERSION = 'free_parent_compass_v1.0.0-rc1'
 const TEST_SECRET = 'education-compass-local-smoke-secret-only'
 const FORBIDDEN_LOCKED_KEYS = [
   'student_snapshot',
@@ -134,6 +137,7 @@ async function main() {
     const freeBank = (await expectJson(base, `/v1/education-compass/questionnaires/${FREE_VERSION}`, {
       headers
     }, 200)).questionnaire
+    assert.equal(freeBank.questionnaireVersion, FREE_VERSION)
     const freeCreate = await expectJson(base, '/v1/education-compass/free-parent-assessments', {
       method: 'POST',
       headers: { ...headers, 'Idempotency-Key': 'smoke-free-create-001' },
@@ -148,6 +152,7 @@ async function main() {
         }
       })
     }, 201)
+    assert.equal(freeCreate.questionnaireVersion, FREE_VERSION)
     const freeAnswers = requiredAnswers(freeBank, {
       FP01: 'UPPER_SECONDARY',
       FP02: 'GAOKAO',
@@ -189,6 +194,7 @@ async function main() {
         }
       })
     }, 201)
+    assert.equal(growthCreate.questionnaireVersion, GROWTH_VERSION)
     const growthBank = (await expectJson(base, `/v1/assessments/${growthCreate.assessmentId}/questionnaire`, {
       headers
     }, 200)).questionnaire

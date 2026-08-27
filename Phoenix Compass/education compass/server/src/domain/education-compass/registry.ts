@@ -10,6 +10,8 @@ import {
   FrozenQuestion,
   FrozenQuestionValidation,
   GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
+  LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
+  LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   QuestionnaireBank,
   QuestionnairePresentationMetaV1,
   QuestionnaireQuestionType,
@@ -19,8 +21,12 @@ import {
 
 const QUESTION_BANK_RELATIVE_PATH = 'docs/product/freeze/education-compass-v1-rc1/QUESTION_BANKS_V1_RC1.json'
 const TAXONOMY_RELATIVE_PATH = 'docs/product/freeze/education-compass-v1-rc1/TAXONOMY_REGISTRY_V1_RC1.json'
+const QUESTION_UPDATE_RELATIVE_PATH = 'docs/product/freeze/education-compass-v1.1/QUESTION_BANK_UPDATE_V1_1.json'
 const QUESTION_BANK_SHA256 = 'EFAE34EE595FC5E4A2FE8B6C5B89B1F182625BF15518620AC475320E4FD978F9'
 const TAXONOMY_SHA256 = '53691402AA191489317E013CFC5BBE121339301EECFD43F7C6430415B11E2231'
+const QUESTION_UPDATE_SHA256 = '1E92841D2BACDD3ADC4086A68AD2749997ADBD07CC78FC810A02321765D17271'
+const BASE_CANDIDATE_VERSION = 'education_compass_question_banks_v1.0.0-rc1'
+const CURRENT_CANDIDATE_VERSION = 'education_compass_question_banks_v1.1.0'
 
 export const FORMAL_EDUCATION_SYSTEMS = Object.freeze([
   'GAOKAO', 'DSE', 'IGCSE', 'A_LEVEL', 'AP_US'
@@ -61,6 +67,26 @@ interface RawQuestionBankFile {
   external_option_registries?: unknown
 }
 
+interface RawQuestionBankUpdate {
+  schema_version?: unknown
+  update_version?: unknown
+  base_question_bank?: unknown
+  resulting_candidate_version?: unknown
+  questionnaire_versions?: unknown
+  level_1?: unknown
+  level_2?: unknown
+  presentation?: unknown
+}
+
+interface QuestionnaireExperiencePresentation {
+  experienceTitle: string
+  experienceEyebrow: string
+  experienceSummary: string
+  respondentHint: string
+  completionOutcome: string
+  primaryActionHint: string
+}
+
 interface RawTaxonomyFile {
   registry_version?: unknown
   education_system?: unknown
@@ -86,13 +112,45 @@ export interface EducationCompassRegistry {
   optionCatalogs: Readonly<Record<string, readonly FrozenOption[]>>
   externalOptionRegistries: Readonly<Record<string, readonly FrozenOption[]>>
   educationPathwayOptions: readonly FrozenOption[]
+  presentation: Readonly<{
+    level1: QuestionnaireExperiencePresentation
+    level2: QuestionnaireExperiencePresentation
+  }>
   sourceIntegrity: {
     questionBanks: RegistrySourceIntegrity
+    questionUpdate?: RegistrySourceIntegrity
     taxonomy: RegistrySourceIntegrity
   }
 }
 
-let cached: EducationCompassRegistry | undefined
+interface LoadedEducationCompassRegistries {
+  legacy: EducationCompassRegistry
+  current: EducationCompassRegistry
+}
+
+const LEGACY_PRESENTATION: Readonly<{
+  level1: QuestionnaireExperiencePresentation
+  level2: QuestionnaireExperiencePresentation
+}> = Object.freeze({
+  level1: Object.freeze({
+    experienceTitle: '免费家长教育罗盘',
+    experienceEyebrow: 'FREE · 3—5 分钟',
+    experienceSummary: '帮助家长看清孩子当前最值得关注的教育信号。',
+    respondentHint: '由家长／监护人填写；答案用于形成家庭教育成长快照。',
+    completionOutcome: '完成后可查看 Family Education Snapshot，并决定是否邀请学生本人参加下一步测评。',
+    primaryActionHint: '先完成免费成长快照'
+  }),
+  level2: Object.freeze({
+    experienceTitle: '¥39.90 学生成长发现',
+    experienceEyebrow: 'STUDENT · 15—20 分钟',
+    experienceSummary: '从学习表现、学习过程、思维方式与兴趣方向发现当前成长关键点。',
+    respondentHint: '仅限学生本人作答；家长可协助操作或解释，但不得代选答案。',
+    completionOutcome: '先完成并提交测评；付款后解锁完整成长报告。',
+    primaryActionHint: '先完成学生本人测评，再决定是否解锁完整报告'
+  })
+})
+
+let cached: LoadedEducationCompassRegistries | undefined
 const bankCache = new Map<string, QuestionnaireBank>()
 
 function object(value: unknown, code: string): Record<string, unknown> {
@@ -223,11 +281,144 @@ function parseValidation(value: unknown): FrozenQuestionValidation {
   return Object.freeze(validation)
 }
 
-function load(): EducationCompassRegistry {
-  const questionSource = loadVerifiedJson(QUESTION_BANK_RELATIVE_PATH, QUESTION_BANK_SHA256)
-  const taxonomySource = loadVerifiedJson(TAXONOMY_RELATIVE_PATH, TAXONOMY_SHA256)
-  const questionFile = object(questionSource.parsed, 'EDUCATION_COMPASS_BANK_INVALID') as unknown as RawQuestionBankFile
-  const taxonomyFile = object(taxonomySource.parsed, 'EDUCATION_COMPASS_TAXONOMY_INVALID') as RawTaxonomyFile
+function exactKeys(raw: Record<string, unknown>, allowed: readonly string[], code: string): void {
+  invariant(Object.keys(raw).every((key) => allowed.includes(key)), 500, code, '冻结题库更新包含未允许字段')
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T
+}
+
+function mutableQuestionArray(value: unknown, code: string): Record<string, unknown>[] {
+  invariant(Array.isArray(value), 500, code, '冻结题库 questions 无效')
+  return value.map((item) => object(item, code))
+}
+
+function updateOptionLabels(
+  question: Record<string, unknown>,
+  rawOverrides: unknown,
+  code: string
+): void {
+  invariant(Array.isArray(rawOverrides), 500, code, '题目选项文案更新无效')
+  invariant(Array.isArray(question.options), 500, code, '题目不支持选项文案更新')
+  const options = question.options.map((item) => object(item, code))
+  const optionByCode = new Map(options.map((option) => [string(option.code, code), option]))
+  const updatedCodes = new Set<string>()
+  for (const item of rawOverrides) {
+    const override = object(item, code)
+    exactKeys(override, ['code', 'label'], code)
+    const optionCode = string(override.code, code)
+    invariant(!updatedCodes.has(optionCode), 500, code, '题目选项文案重复更新')
+    updatedCodes.add(optionCode)
+    const target = optionByCode.get(optionCode)
+    invariant(target, 500, code, '题目选项文案更新引用了未知 code')
+    target.label = string(override.label, code)
+  }
+}
+
+function applyQuestionOverrides(
+  rawQuestions: unknown,
+  rawOverrides: unknown,
+  allowedQuestionIds: readonly string[]
+): void {
+  const code = 'EDUCATION_COMPASS_V11_UPDATE_INVALID'
+  const questions = mutableQuestionArray(rawQuestions, code)
+  invariant(Array.isArray(rawOverrides), 500, code, '冻结题库更新 questions 无效')
+  const questionById = new Map(questions.map((question) => [string(question.id, code), question]))
+  const updatedIds = new Set<string>()
+  for (const item of rawOverrides) {
+    const override = object(item, code)
+    exactKeys(override, ['id', 'label', 'option_label_overrides'], code)
+    const questionId = string(override.id, code)
+    invariant(allowedQuestionIds.includes(questionId), 500, code, 'V1.1 更新引用了未批准的题号')
+    invariant(!updatedIds.has(questionId), 500, code, 'V1.1 题号重复更新')
+    updatedIds.add(questionId)
+    const question = questionById.get(questionId)
+    invariant(question, 500, code, 'V1.1 更新题号不在基础题库中')
+    if (override.label !== undefined) question.label = string(override.label, code)
+    if (override.option_label_overrides !== undefined) updateOptionLabels(question, override.option_label_overrides, code)
+  }
+}
+
+function presentation(value: unknown, code: string): QuestionnaireExperiencePresentation {
+  const raw = object(value, code)
+  const keys = [
+    'experienceTitle', 'experienceEyebrow', 'experienceSummary', 'respondentHint', 'completionOutcome', 'primaryActionHint'
+  ] as const
+  exactKeys(raw, keys, code)
+  return Object.freeze({
+    experienceTitle: string(raw.experienceTitle, code),
+    experienceEyebrow: string(raw.experienceEyebrow, code),
+    experienceSummary: string(raw.experienceSummary, code),
+    respondentHint: string(raw.respondentHint, code),
+    completionOutcome: string(raw.completionOutcome, code),
+    primaryActionHint: string(raw.primaryActionHint, code)
+  })
+}
+
+function applyV11QuestionBankUpdate(baseValue: unknown, updateValue: unknown): {
+  questionFile: RawQuestionBankFile
+  presentation: Readonly<{ level1: QuestionnaireExperiencePresentation; level2: QuestionnaireExperiencePresentation }>
+} {
+  const code = 'EDUCATION_COMPASS_V11_UPDATE_INVALID'
+  const base = cloneJson(object(baseValue, code)) as unknown as RawQuestionBankFile & Record<string, unknown>
+  const update = object(updateValue, code) as unknown as RawQuestionBankUpdate & Record<string, unknown>
+  exactKeys(update, [
+    'package_status', 'schema_version', 'update_version', 'base_question_bank', 'resulting_candidate_version',
+    'questionnaire_versions', 'compatibility', 'guardrails', 'level_1', 'level_2', 'presentation'
+  ], code)
+  invariant(update.schema_version === 'phoenix_question_bank_update_schema_v1', 500, code, '冻结题库更新 schema 版本无效')
+  invariant(string(update.update_version, code) === 'education_compass_question_update_v1.1.0', 500, code, '冻结题库更新版本无效')
+  const baseReference = object(update.base_question_bank, code)
+  exactKeys(baseReference, ['relative_path', 'candidate_version', 'sha256'], code)
+  invariant(
+    baseReference.relative_path === QUESTION_BANK_RELATIVE_PATH &&
+      baseReference.candidate_version === BASE_CANDIDATE_VERSION &&
+      baseReference.sha256 === QUESTION_BANK_SHA256,
+    500, code, 'V1.1 更新未绑定已验证的 V1.0 基础题库'
+  )
+  invariant(base.candidate_version === BASE_CANDIDATE_VERSION, 500, code, 'V1.0 基础题库版本不匹配')
+  const versions = object(update.questionnaire_versions, code)
+  exactKeys(versions, ['level_1', 'level_2_common'], code)
+  invariant(versions.level_1 === FREE_PARENT_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 免费问卷版本不匹配')
+  invariant(versions.level_2_common === GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 学生问卷版本不匹配')
+  const level1 = object(base.level_1, code)
+  const level2 = object(base.level_2, code)
+  invariant(level1.bank_version === LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION, 500, code, 'V1.0 免费问卷版本不匹配')
+  invariant(level2.bank_version === LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION, 500, code, 'V1.0 学生问卷版本不匹配')
+  const level1Update = object(update.level_1, code)
+  exactKeys(level1Update, ['bank_version', 'question_overrides'], code)
+  invariant(level1Update.bank_version === FREE_PARENT_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 免费题库版本不匹配')
+  applyQuestionOverrides(level1.questions, level1Update.question_overrides, ['FP02', 'FP03', 'FP04', 'FP05', 'FP06', 'FP07', 'FP08'])
+  level1.bank_version = FREE_PARENT_QUESTIONNAIRE_VERSION
+  const level2Update = object(update.level_2, code)
+  exactKeys(level2Update, ['common_bank_version', 'question_overrides'], code)
+  invariant(level2Update.common_bank_version === GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 学生题库版本不匹配')
+  applyQuestionOverrides(level2.common_questions, level2Update.question_overrides, [
+    'EGD01', 'EGD02', 'EGD03', 'EGD04', 'EGD05', 'EGD06', 'EGD07', 'EGD08', 'EGD09', 'EGD10',
+    'EGD11', 'EGD12', 'EGD13', 'EGD14', 'EGD15', 'EGD16', 'EGD17', 'EGD18', 'EGD19'
+  ])
+  level2.bank_version = GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
+  base.candidate_version = string(update.resulting_candidate_version, code)
+  invariant(base.candidate_version === CURRENT_CANDIDATE_VERSION, 500, code, 'V1.1 结果题库版本不匹配')
+  const rawPresentation = object(update.presentation, code)
+  exactKeys(rawPresentation, ['level_1', 'level_2'], code)
+  return Object.freeze({
+    questionFile: base,
+    presentation: Object.freeze({
+      level1: presentation(rawPresentation.level_1, code),
+      level2: presentation(rawPresentation.level_2, code)
+    })
+  })
+}
+
+function buildRegistry(
+  questionFile: RawQuestionBankFile,
+  taxonomyFile: RawTaxonomyFile,
+  expectedVersions: { level1: string; level2: string },
+  sourceIntegrity: EducationCompassRegistry['sourceIntegrity'],
+  registryPresentation: EducationCompassRegistry['presentation']
+): EducationCompassRegistry {
   invariant(questionFile.schema_version === 'phoenix_question_bank_schema_v1', 500, 'EDUCATION_COMPASS_BANK_VERSION_INVALID', '冻结题库 schema 版本无效')
   invariant(taxonomyFile.registry_version === 'education_compass_taxonomy_v1.0.0-rc1', 500,
     'EDUCATION_COMPASS_TAXONOMY_VERSION_INVALID', '冻结 taxonomy 版本无效')
@@ -251,7 +442,7 @@ function load(): EducationCompassRegistry {
   ])) as Record<FormalEducationSystem, ParsedLevelBank>
   const level1 = parseLevelBank(questionFile.level_1, true)
   const level2Common = parseLevelBank(questionFile.level_2, true)
-  invariant(level1.bankVersion === FREE_PARENT_QUESTIONNAIRE_VERSION && level2Common.bankVersion === GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
+  invariant(level1.bankVersion === expectedVersions.level1 && level2Common.bankVersion === expectedVersions.level2,
     500, 'EDUCATION_COMPASS_BANK_VERSION_INVALID', '冻结问卷版本不匹配')
   const allIds = [
     ...level1.questionIds,
@@ -272,17 +463,60 @@ function load(): EducationCompassRegistry {
       object(taxonomy.education_pathway_target, 'EDUCATION_COMPASS_TAXONOMY_INVALID').values,
       'EDUCATION_COMPASS_TAXONOMY_INVALID'
     )),
-    sourceIntegrity: Object.freeze({ questionBanks: questionSource.integrity, taxonomy: taxonomySource.integrity })
+    presentation: registryPresentation,
+    sourceIntegrity
+  })
+}
+
+function load(): LoadedEducationCompassRegistries {
+  const questionSource = loadVerifiedJson(QUESTION_BANK_RELATIVE_PATH, QUESTION_BANK_SHA256)
+  const updateSource = loadVerifiedJson(QUESTION_UPDATE_RELATIVE_PATH, QUESTION_UPDATE_SHA256)
+  const taxonomySource = loadVerifiedJson(TAXONOMY_RELATIVE_PATH, TAXONOMY_SHA256)
+  const baseQuestionFile = object(questionSource.parsed, 'EDUCATION_COMPASS_BANK_INVALID') as unknown as RawQuestionBankFile
+  const taxonomyFile = object(taxonomySource.parsed, 'EDUCATION_COMPASS_TAXONOMY_INVALID') as RawTaxonomyFile
+  const current = applyV11QuestionBankUpdate(baseQuestionFile, updateSource.parsed)
+  return Object.freeze({
+    legacy: buildRegistry(
+      baseQuestionFile,
+      taxonomyFile,
+      { level1: LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION, level2: LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION },
+      Object.freeze({ questionBanks: questionSource.integrity, taxonomy: taxonomySource.integrity }),
+      LEGACY_PRESENTATION
+    ),
+    current: buildRegistry(
+      current.questionFile,
+      taxonomyFile,
+      { level1: FREE_PARENT_QUESTIONNAIRE_VERSION, level2: GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION },
+      Object.freeze({ questionBanks: questionSource.integrity, questionUpdate: updateSource.integrity, taxonomy: taxonomySource.integrity }),
+      current.presentation
+    )
   })
 }
 
 export function loadEducationCompassRegistry(): EducationCompassRegistry {
   cached ??= load()
-  return cached
+  return cached.current
 }
 
 export function getEducationCompassRegistryIntegrity(): EducationCompassRegistry['sourceIntegrity'] {
   return loadEducationCompassRegistry().sourceIntegrity
+}
+
+function registryForQuestionnaireVersion(
+  level: AssessmentLevel,
+  questionnaireVersion?: string
+): EducationCompassRegistry {
+  const registries = cached ??= load()
+  const currentVersion = level === 'LEVEL_1'
+    ? registries.current.level1.bankVersion
+    : registries.current.level2Common.bankVersion
+  const legacyVersion = level === 'LEVEL_1'
+    ? registries.legacy.level1.bankVersion
+    : registries.legacy.level2Common.bankVersion
+  if (questionnaireVersion === undefined || questionnaireVersion === currentVersion) return registries.current
+  if (questionnaireVersion === legacyVersion) return registries.legacy
+  invariant(false, 404, 'QUESTIONNAIRE_VERSION_NOT_FOUND', '问卷版本不存在', { level, questionnaireVersion })
+  return registries.current
 }
 
 export function isEducationSystem(value: unknown): value is EducationSystem {
@@ -354,8 +588,12 @@ function normalizeQuestion(raw: RawQuestion, systems: readonly EducationSystem[]
   return Object.freeze(question)
 }
 
-function buildBank(level: AssessmentLevel, educationSystem: EducationSystem | null): QuestionnaireBank {
-  const registry = loadEducationCompassRegistry()
+function buildBank(
+  level: AssessmentLevel,
+  educationSystem: EducationSystem | null,
+  questionnaireVersion?: string
+): QuestionnaireBank {
+  const registry = registryForQuestionnaireVersion(level, questionnaireVersion)
   if (level === 'LEVEL_1') {
     invariant(educationSystem === null, 400, 'EDUCATION_SYSTEM_NOT_APPLICABLE', '免费家长罗盘不使用体系分支题库')
     const questions = registry.level1.questions.map((question) => normalizeQuestion(question, ALL_EDUCATION_SYSTEMS, registry))
@@ -367,7 +605,8 @@ function buildBank(level: AssessmentLevel, educationSystem: EducationSystem | nu
       totalQuestions: questions.length,
       requiredQuestions: registry.level1.requiredQuestionIds.length,
       progressMode: 'QUESTION_COUNT',
-      scoringMode: 'NONE'
+      scoringMode: 'NONE',
+      ...registry.presentation.level1
     })
     return Object.freeze({
       schemaVersion: registry.schemaVersion,
@@ -410,7 +649,8 @@ function buildBank(level: AssessmentLevel, educationSystem: EducationSystem | nu
     totalQuestions: questions.length,
     requiredQuestions: requiredQuestionIds.length,
     progressMode: 'QUESTION_COUNT',
-    scoringMode: 'NONE'
+    scoringMode: 'NONE',
+    ...registry.presentation.level2
   })
   return Object.freeze({
     schemaVersion: registry.schemaVersion,
@@ -434,12 +674,15 @@ function buildBank(level: AssessmentLevel, educationSystem: EducationSystem | nu
 
 export function getEducationCompassQuestionnaireBank(
   level: AssessmentLevel,
-  educationSystem: EducationSystem | null = null
+  educationSystem: EducationSystem | null = null,
+  questionnaireVersion?: string
 ): QuestionnaireBank {
-  const key = `${level}:${educationSystem ?? 'NONE'}`
+  const registry = registryForQuestionnaireVersion(level, questionnaireVersion)
+  const resolvedVersion = level === 'LEVEL_1' ? registry.level1.bankVersion : registry.level2Common.bankVersion
+  const key = `${resolvedVersion}:${level}:${educationSystem ?? 'NONE'}`
   const existing = bankCache.get(key)
   if (existing) return existing
-  const bank = buildBank(level, educationSystem)
+  const bank = buildBank(level, educationSystem, resolvedVersion)
   bankCache.set(key, bank)
   return bank
 }
@@ -447,7 +690,8 @@ export function getEducationCompassQuestionnaireBank(
 export function getFrozenQuestion(
   level: AssessmentLevel,
   questionId: string,
-  educationSystem: EducationSystem | null = null
+  educationSystem: EducationSystem | null = null,
+  questionnaireVersion?: string
 ): FrozenQuestion | null {
-  return getEducationCompassQuestionnaireBank(level, educationSystem).questions.find((question) => question.id === questionId) ?? null
+  return getEducationCompassQuestionnaireBank(level, educationSystem, questionnaireVersion).questions.find((question) => question.id === questionId) ?? null
 }

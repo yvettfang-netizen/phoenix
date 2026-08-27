@@ -741,6 +741,8 @@ components:
       schema:
         type: string
         enum:
+          - free_parent_compass_v1.1.0
+          - education_growth_discovery_v1.1.0
           - free_parent_compass_v1.0.0-rc1
           - education_growth_discovery_v1.0.0-rc1
   responses:
@@ -1203,7 +1205,9 @@ components:
         preferred_next_support: { type: string }
         next_step_status: { type: string, enum: [AVAILABLE, CONSIDER, NOT_RECOMMENDED, DEFERRED] }
         next_step_reason_codes: { type: array, items: { type: string } }
-        questionnaire_version: { const: free_parent_compass_v1.0.0-rc1 }
+        questionnaire_version:
+          type: string
+          enum: [free_parent_compass_v1.0.0-rc1, free_parent_compass_v1.1.0]
         disclaimer_version: { type: string }
         disclaimer: { type: string }
     EvidenceSignal:

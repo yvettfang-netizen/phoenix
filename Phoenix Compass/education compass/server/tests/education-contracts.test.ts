@@ -4,7 +4,11 @@ import { AppError } from '../src/domain/errors'
 import {
   CanonicalQuestionAnswer,
   EducationSystem,
+  FREE_PARENT_QUESTIONNAIRE_VERSION,
   FrozenQuestion,
+  GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
+  LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
+  LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   ResultSignalStatus,
   StudentGrowthDiscoveryReportV1
 } from '../src/domain/education-compass/contracts'
@@ -53,6 +57,48 @@ const LEVEL_2_COMMON_IDS = Object.freeze([
 ])
 
 const SYSTEM_BANK_SNAPSHOTS: Readonly<Record<EducationSystem, {
+  systemQuestionIds: readonly string[]
+  digest: string
+  marker: 'FULL_SYSTEM_BANK' | 'SYSTEM_BANK_PENDING'
+}>> = Object.freeze({
+  GAOKAO: {
+    systemQuestionIds: Object.freeze(['GK01', 'GK02', 'GK03', 'GK04', 'GK05']),
+    digest: '5e5511458d5e5e96b2a464144b096a96437c8f3b6f057cd3c210dc3b22ee8504',
+    marker: 'FULL_SYSTEM_BANK'
+  },
+  DSE: {
+    systemQuestionIds: Object.freeze(['DSE01', 'DSE02', 'DSE03', 'DSE04']),
+    digest: 'a5a80b0a188e9ab781dbb30a4e418df6f8256049ad2e81748ae139e21fdc138b',
+    marker: 'FULL_SYSTEM_BANK'
+  },
+  IGCSE: {
+    systemQuestionIds: Object.freeze(['IG01', 'IG02', 'IG03']),
+    digest: 'f90f667d51d61f3731fc37f145b0b91607aeea0b50e5fac8102bd861875712c5',
+    marker: 'FULL_SYSTEM_BANK'
+  },
+  A_LEVEL: {
+    systemQuestionIds: Object.freeze(['AL01', 'AL02', 'AL03', 'AL04']),
+    digest: '19967a131ad3be69b303a319476c4d0fdf08b002471a5f611d5900033b0a34e1',
+    marker: 'FULL_SYSTEM_BANK'
+  },
+  AP_US: {
+    systemQuestionIds: Object.freeze(['AP01', 'AP02', 'AP03', 'AP04', 'AP05']),
+    digest: '5d7af2bbf79d50011339562420241adb7a19738eaefd96967b47f741fcbd7d70',
+    marker: 'FULL_SYSTEM_BANK'
+  },
+  IB: {
+    systemQuestionIds: Object.freeze([]),
+    digest: '5371c11018f0500138568ec3a1bcd5debf6df0c796be5092f9c0513f79ca5b69',
+    marker: 'SYSTEM_BANK_PENDING'
+  },
+  OTHER: {
+    systemQuestionIds: Object.freeze([]),
+    digest: 'a8b248bd88534e6f4f1e5b8ac99d7a322a9c26c20525f930233e31e474e5e864',
+    marker: 'SYSTEM_BANK_PENDING'
+  }
+})
+
+const LEGACY_SYSTEM_BANK_SNAPSHOTS: Readonly<Record<EducationSystem, {
   systemQuestionIds: readonly string[]
   digest: string
   marker: 'FULL_SYSTEM_BANK' | 'SYSTEM_BANK_PENDING'
@@ -128,9 +174,10 @@ function canonicalAnswer(question: FrozenQuestion): CanonicalQuestionAnswer {
 
 function validLevel2Answers(
   educationSystem: EducationSystem,
-  overrides: Readonly<Record<string, CanonicalQuestionAnswer>> = {}
+  overrides: Readonly<Record<string, CanonicalQuestionAnswer>> = {},
+  questionnaireVersion?: string
 ): Record<string, CanonicalQuestionAnswer> {
-  const bank = getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem)
+  const bank = getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem, questionnaireVersion)
   const answers: Record<string, CanonicalQuestionAnswer> = {}
   for (const questionId of bank.requiredQuestionIds) {
     const question = bank.questions.find(({ id }) => id === questionId)
@@ -165,10 +212,38 @@ function reportSignals(report: StudentGrowthDiscoveryReportV1) {
   ]
 }
 
-test('signed freeze sources match the approved SHA-256 manifest', () => {
+function questionById(
+  bank: { questions: readonly FrozenQuestion[] },
+  questionId: string
+): FrozenQuestion {
+  const question = bank.questions.find(({ id }) => id === questionId)
+  if (!question) throw new Error(`question ${questionId} must exist`)
+  return question
+}
+
+function questionDataContract(question: FrozenQuestion) {
+  return {
+    id: question.id,
+    key: question.key,
+    type: question.type,
+    required: question.required,
+    scored: question.scored,
+    optionCodes: question.options.map(({ code }) => code),
+    matrixSubjectCodes: question.matrixSubjectOptions?.map(({ code }) => code) ?? [],
+    matrixRangeCodes: question.matrixRangeOptions?.map(({ code }) => code) ?? [],
+    validation: question.validation,
+    dimensions: question.dimensions,
+    signalCodes: question.signalCodes,
+    systemApplicability: question.systemApplicability,
+    exitRule: question.exitRule ?? null,
+    privacyNote: question.privacyNote ?? null
+  }
+}
+
+test('V1.0 base, V1.1 question-copy overlay, and taxonomy match their approved SHA-256 manifests', () => {
   const registry = loadEducationCompassRegistry()
   const integrity = getEducationCompassRegistryIntegrity()
-  assert.equal(registry.candidateVersion, 'education_compass_question_banks_v1.0.0-rc1')
+  assert.equal(registry.candidateVersion, 'education_compass_question_banks_v1.1.0')
   assert.equal(registry.taxonomyVersion, 'education_compass_taxonomy_v1.0.0-rc1')
   assert.deepEqual({
     expected: integrity.questionBanks.expectedSha256,
@@ -177,6 +252,16 @@ test('signed freeze sources match the approved SHA-256 manifest', () => {
   }, {
     expected: 'EFAE34EE595FC5E4A2FE8B6C5B89B1F182625BF15518620AC475320E4FD978F9',
     actual: 'EFAE34EE595FC5E4A2FE8B6C5B89B1F182625BF15518620AC475320E4FD978F9',
+    verified: true
+  })
+  assert(integrity.questionUpdate, 'V1.1 overlay integrity must be exposed at runtime')
+  assert.deepEqual({
+    expected: integrity.questionUpdate.expectedSha256,
+    actual: integrity.questionUpdate.actualSha256,
+    verified: integrity.questionUpdate.verified
+  }, {
+    expected: '1E92841D2BACDD3ADC4086A68AD2749997ADBD07CC78FC810A02321765D17271',
+    actual: '1E92841D2BACDD3ADC4086A68AD2749997ADBD07CC78FC810A02321765D17271',
     verified: true
   })
   assert.deepEqual({
@@ -190,10 +275,11 @@ test('signed freeze sources match the approved SHA-256 manifest', () => {
   })
 })
 
-test('L1 and all seven L2 routes expose frozen IDs, digests, markers, and no scoring', () => {
+test('V1.1 L1 and all seven L2 routes expose approved copy, IDs, digests, markers, presentation, and no scoring', () => {
   const level1 = getEducationCompassQuestionnaireBank('LEVEL_1', null)
+  assert.equal(level1.questionnaireVersion, FREE_PARENT_QUESTIONNAIRE_VERSION)
   assert.deepEqual(level1.questions.map(({ id }) => id), LEVEL_1_IDS)
-  assert.equal(level1.schemaDigest, 'a39a36dffdbfc9e8e3a33640000d03aacecd0ea56a2c05e997c886105852c9bb')
+  assert.equal(level1.schemaDigest, '6c92bd8c8f47f57a0827a5a7c2d8dde745ebe571b366a3a73a0ef8b8950921b3')
   assert.equal(level1.scoringMode, 'NONE')
   assert.deepEqual(level1.presentation, {
     version: 'education_compass_presentation_v1',
@@ -202,14 +288,25 @@ test('L1 and all seven L2 routes expose frozen IDs, digests, markers, and no sco
     totalQuestions: 8,
     requiredQuestions: 8,
     progressMode: 'QUESTION_COUNT',
-    scoringMode: 'NONE'
+    scoringMode: 'NONE',
+    experienceTitle: '免费家长教育罗盘',
+    experienceEyebrow: 'FREE · 3—5 分钟',
+    experienceSummary: '帮助家长看清孩子当前最值得关注的教育信号。',
+    respondentHint: '由家长／监护人填写；答案用于形成家庭教育成长快照。',
+    completionOutcome: '完成后可查看 Family Education Snapshot，并决定是否邀请学生本人参加下一步测评。',
+    primaryActionHint: '先完成免费成长快照'
   })
+  assert.equal(questionById(level1, 'FP03').label, '作为家长，你目前最希望先看清哪些教育问题？（最多 3 项）')
+  assert.equal(questionById(level1, 'FP03').options.find(({ code }) => code === 'ACADEMIC_SUBJECTS')?.label, '成绩与学科学习')
+  assert.equal(questionById(level1, 'FP08').label, '完成免费成长快照后，你希望下一步获得哪类支持？')
+  assert.equal(questionById(level1, 'FP08').options.find(({ code }) => code === 'STUDENT_ASSESSMENT')?.label, '让学生本人完成成长发现测评')
   assert(level1.questions.every(({ scored }) => scored === false))
 
   const observedDigests = new Set<string>()
   for (const educationSystem of ALL_EDUCATION_SYSTEMS) {
     const bank = getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem)
     const snapshot = SYSTEM_BANK_SNAPSHOTS[educationSystem]
+    assert.equal(bank.questionnaireVersion, GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION)
     assert.deepEqual(bank.commonQuestionIds, LEVEL_2_COMMON_IDS)
     assert.deepEqual(bank.systemQuestionIds, snapshot.systemQuestionIds)
     assert.deepEqual(bank.questions.map(({ id }) => id), [...LEVEL_2_COMMON_IDS, ...snapshot.systemQuestionIds])
@@ -223,7 +320,13 @@ test('L1 and all seven L2 routes expose frozen IDs, digests, markers, and no sco
       totalQuestions: bank.questions.length,
       requiredQuestions: bank.requiredQuestionIds.length,
       progressMode: 'QUESTION_COUNT',
-      scoringMode: 'NONE'
+      scoringMode: 'NONE',
+      experienceTitle: '¥39.90 学生成长发现',
+      experienceEyebrow: 'STUDENT · 15—20 分钟',
+      experienceSummary: '从学习表现、学习过程、思维方式与兴趣方向发现当前成长关键点。',
+      respondentHint: '仅限学生本人作答；家长可协助操作或解释，但不得代选答案。',
+      completionOutcome: '先完成并提交测评；付款后解锁 Student Snapshot、Strength Signals、Learning Bottlenecks、Subject Focus、Growth Direction 与 30-Day Action Plan。',
+      primaryActionHint: '先完成学生本人测评，再决定是否解锁完整报告'
     })
     assert(bank.questions.every(({ scored }) => scored === false))
     observedDigests.add(bank.schemaDigest)
@@ -240,6 +343,59 @@ test('L1 and all seven L2 routes expose frozen IDs, digests, markers, and no sco
   }
   assert.deepEqual(FORMAL_EDUCATION_SYSTEMS, ['GAOKAO', 'DSE', 'IGCSE', 'A_LEVEL', 'AP_US'])
   assert.equal(observedDigests.size, ALL_EDUCATION_SYSTEMS.length)
+})
+
+test('V1.1 is copy-only: V1.0 banks remain pinned and both versions preserve IDs, codes, routing, privacy boundaries, and scoring', () => {
+  const currentLevel1 = getEducationCompassQuestionnaireBank('LEVEL_1', null)
+  const legacyLevel1 = getEducationCompassQuestionnaireBank(
+    'LEVEL_1',
+    null,
+    LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION
+  )
+  assert.equal(legacyLevel1.questionnaireVersion, LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION)
+  assert.equal(legacyLevel1.schemaDigest, 'a39a36dffdbfc9e8e3a33640000d03aacecd0ea56a2c05e997c886105852c9bb')
+  assert.equal(questionById(legacyLevel1, 'FP03').label, '你目前最关注哪些问题？')
+  assert.deepEqual(
+    currentLevel1.questions.map(questionDataContract),
+    legacyLevel1.questions.map(questionDataContract)
+  )
+
+  for (const educationSystem of ALL_EDUCATION_SYSTEMS) {
+    const current = getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem)
+    const legacy = getEducationCompassQuestionnaireBank(
+      'LEVEL_2',
+      educationSystem,
+      LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
+    )
+    const snapshot = LEGACY_SYSTEM_BANK_SNAPSHOTS[educationSystem]
+    assert.equal(legacy.questionnaireVersion, LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION)
+    assert.equal(legacy.schemaDigest, snapshot.digest)
+    assert.deepEqual(legacy.systemQuestionIds, snapshot.systemQuestionIds)
+    assert.equal(legacy.systemResultMarker, snapshot.marker)
+    assert.deepEqual(
+      current.questions.map(questionDataContract),
+      legacy.questions.map(questionDataContract)
+    )
+    const legacyValidation = validateQuestionnaireAnswers({
+      level: 'LEVEL_2',
+      educationSystem,
+      questionnaireVersion: LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
+      answers: validLevel2Answers(educationSystem, {}, LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION),
+      mode: 'SUBMIT',
+      currentYear: CURRENT_YEAR
+    })
+    assert.equal(legacyValidation.canSubmit, true)
+  }
+
+  const currentGrowth = getEducationCompassQuestionnaireBank('LEVEL_2', 'IB')
+  assert.equal(questionById(currentGrowth, 'EGD01').label, '这份成长发现测评须由学生本人完成。请确认你正由学生本人阅读并选择答案。')
+  assert.equal(questionById(currentGrowth, 'EGD07').options.find(({ code }) => code === 'MIXED')?.label,
+    '整体处于中等，或不同学科／任务差异较大')
+  assert.equal(questionById(currentGrowth, 'EGD19').required, false)
+  assert.equal(currentGrowth.optionalQuestionIds.includes('EGD19'), true)
+  assert.equal(currentGrowth.systemResultMarker, 'SYSTEM_BANK_PENDING')
+  assert.equal(questionById(currentGrowth, 'EGD17').options.some(({ code }) => /BUDGET|INCOME|ASSET/.test(code)), false)
+  assert.equal(questionById(currentGrowth, 'EGD17').label.includes('预算'), false)
 })
 
 test('validator rejects unknown IDs, wrong types, exclusive conflicts, and PII', () => {

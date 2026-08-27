@@ -14,7 +14,13 @@ function questionnaireFixture() {
       totalQuestions: 999,
       requiredQuestions: 999,
       progressMode: 'QUESTION_COUNT',
-      scoringMode: 'NONE'
+      scoringMode: 'NONE',
+      experienceEyebrow: 'STUDENT GROWTH DISCOVERY',
+      experienceTitle: '后端体验标题',
+      experienceSummary: '后端体验摘要',
+      respondentHint: '后端作答人提示',
+      completionOutcome: '后端完成结果',
+      primaryActionHint: '后端首要行动提示'
     },
     option_catalogs: {
       subject_GAOKAO: [
@@ -74,7 +80,13 @@ function testQuestionnaireModel() {
     totalQuestions: 6,
     requiredQuestions: 5,
     progressMode: 'QUESTION_COUNT',
-    scoringMode: 'NONE'
+    scoringMode: 'NONE',
+    experienceEyebrow: 'STUDENT GROWTH DISCOVERY',
+    experienceTitle: '后端体验标题',
+    experienceSummary: '后端体验摘要',
+    respondentHint: '后端作答人提示',
+    completionOutcome: '后端完成结果',
+    primaryActionHint: '后端首要行动提示'
   })
   assert.strictEqual(bank.questionByKey.strength_subjects.options[0].code, 'CHINESE')
   assert.strictEqual(bank.questionByKey.subject_achievement_bands.matrix.ranges[0].code, 'BAND_70_79')
@@ -91,7 +103,17 @@ function testQuestionnaireModel() {
   assert.strictEqual(valid.valid, true)
   assert.strictEqual(valid.coverage, 100)
   const view = model.buildViewModel(bank, answers)
+  assert.deepStrictEqual(view.presentation, bank.presentation)
   assert.strictEqual(view.questions.find((question) => question.key === 'strength_subjects').options[1].selected, true)
+
+  const freeFixture = questionnaireFixture()
+  freeFixture.assessmentKind = 'FREE_PARENT_COMPASS'
+  freeFixture.respondentRole = 'PARENT_GUARDIAN'
+  freeFixture.presentation = { version: 'education_compass_presentation_v1', estimatedMinutesMin: 3, estimatedMinutesMax: 5 }
+  const freeBank = model.normalizeQuestionBank(freeFixture, { currentYear: 2026 })
+  assert.strictEqual(freeBank.presentation.experienceEyebrow, 'FREE PARENT EDUCATION COMPASS')
+  assert.strictEqual(freeBank.presentation.estimatedMinutesMin, 3)
+  assert.strictEqual(freeBank.presentation.primaryActionHint, '完成免费问卷，查看家庭教育快照')
 
   const invalid = model.validateAnswers(bank, { ...answers, goals: ['UNSURE', 'PROCESS'], injected_label: '中文值' })
   assert(invalid.errors.some((error) => error.code === 'EXCLUSIVE_OPTION_CONFLICT'))

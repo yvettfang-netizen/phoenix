@@ -19,6 +19,8 @@ export type QuestionnaireValidationMode = 'DRAFT' | 'SUBMIT'
 export interface ValidateQuestionnaireAnswersInput {
   level: AssessmentLevel
   educationSystem: EducationSystem | null
+  /** Existing assessments validate against their pinned immutable questionnaire version. */
+  questionnaireVersion?: string
   answers: unknown
   mode?: QuestionnaireValidationMode
   currentYear?: number
@@ -173,7 +175,7 @@ export function validateQuestionnaireAnswers(input: ValidateQuestionnaireAnswers
   invariant(Number.isInteger(input.currentYear ?? new Date().getUTCFullYear()), 500,
     'EDUCATION_COMPASS_CURRENT_YEAR_INVALID', '问卷校验年份无效')
   const currentYear = input.currentYear ?? new Date().getUTCFullYear()
-  const bank = getEducationCompassQuestionnaireBank(input.level, input.educationSystem)
+  const bank = getEducationCompassQuestionnaireBank(input.level, input.educationSystem, input.questionnaireVersion)
   const source = answerObject(input.answers)
   const byId = new Map(bank.questions.map((question) => [question.id, question]))
   const unknownQuestionIds = Object.keys(source).filter((questionId) => !byId.has(questionId))
@@ -220,11 +222,12 @@ export function switchEducationSystemAnswers(
   answersInput: unknown,
   previousEducationSystem: EducationSystem,
   educationSystem: EducationSystem,
-  currentYear?: number
+  currentYear?: number,
+  questionnaireVersion?: string
 ): EducationSystemSwitchResult {
   const source = answerObject(answersInput)
-  const previousBank = getEducationCompassQuestionnaireBank('LEVEL_2', previousEducationSystem)
-  const nextBank = getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem)
+  const previousBank = getEducationCompassQuestionnaireBank('LEVEL_2', previousEducationSystem, questionnaireVersion)
+  const nextBank = getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem, questionnaireVersion)
   const common = new Set(nextBank.commonQuestionIds)
   const nextQuestions = new Map(nextBank.questions.map((question) => [question.id, question]))
   const knownQuestionIds = new Set([
@@ -258,6 +261,7 @@ export function switchEducationSystemAnswers(
   const normalized = validateQuestionnaireAnswers({
     level: 'LEVEL_2',
     educationSystem,
+    ...(questionnaireVersion !== undefined ? { questionnaireVersion } : {}),
     answers,
     mode: 'DRAFT',
     ...(currentYear !== undefined ? { currentYear } : {})

@@ -40,6 +40,13 @@
 .questionnaire__body > .eyebrow { color: #aa7a25; display: block; font-size: 19rpx; letter-spacing: 2.4rpx; text-align: center; }
 .questionnaire__title { color: #0d2036; display: block; font-family: "Songti SC", serif; font-size: 43rpx; font-weight: 700; line-height: 1.38; margin: 16rpx auto 0; max-width: 650rpx; text-align: center; }
 .questionnaire__hint { color: #7b746b; display: block; margin: 14rpx auto 0; max-width: 620rpx; text-align: center; }
+.questionnaire__experience { background: linear-gradient(145deg, rgba(255,253,249,.92), rgba(250,243,231,.92)); border: 1rpx solid rgba(185,134,45,.18); border-radius: 24rpx; box-shadow: 0 12rpx 34rpx rgba(24,37,51,.045); margin: 0 auto 30rpx; max-width: 650rpx; padding: 24rpx 26rpx; }
+.questionnaire__experience-eyebrow { color: #a57624; display: block; font-size: 18rpx; font-weight: 700; letter-spacing: 1.7rpx; line-height: 1.45; }
+.questionnaire__experience-title { color: #102238; display: block; font-family: "Songti SC", serif; font-size: 32rpx; font-weight: 700; line-height: 1.42; margin-top: 8rpx; }
+.questionnaire__experience-summary { color: #565f68; display: block; font-size: 22rpx; line-height: 1.68; margin-top: 10rpx; }
+.questionnaire__experience-respondent,
+.questionnaire__experience-route { border-top: 1rpx solid rgba(185,134,45,.14); color: #7e6a47; display: block; font-size: 20rpx; line-height: 1.64; margin-top: 14rpx; padding-top: 14rpx; }
+.questionnaire__experience-route { color: #896126; }
 .question { background: rgba(255,253,249,.94); border: 1rpx solid rgba(185,134,45,.2); border-radius: 28rpx; box-shadow: 0 18rpx 48rpx rgba(24,37,51,.055); margin-top: 30rpx; padding: 30rpx 26rpx 22rpx; }
 .question__label { color: #102238; display: block; font-family: "Songti SC", serif; font-size: 31rpx; font-weight: 700; line-height: 1.55; }
 .question__optional { background: #f4ebda; border-radius: 999rpx; color: #9a7739; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; font-size: 18rpx; font-weight: 500; margin-left: 8rpx; padding: 5rpx 10rpx; vertical-align: middle; }
@@ -63,6 +70,8 @@
 .matrix__add { align-items: center; background: #fcf7ee; border: 1rpx dashed #bd8d38; border-radius: 18rpx; color: #83652f; display: flex; font-size: 24rpx; justify-content: center; margin-top: 18rpx; min-height: 92rpx; }
 .questionnaire__privacy { align-items: center; color: #898279; display: flex; font-size: 21rpx; justify-content: center; line-height: 1.55; margin: 30rpx auto 0; min-height: 88rpx; text-align: center; }
 .questionnaire__privacy-mark { color: #ac7a27; font-size: 25rpx; margin-right: 10rpx; }
+.questionnaire__completion-note { align-items: flex-start; background: rgba(250,244,233,.86); border: 1rpx solid rgba(185,134,45,.16); border-radius: 18rpx; color: #74695c; display: flex; font-size: 20rpx; line-height: 1.65; margin: 0 auto; max-width: 620rpx; padding: 18rpx 20rpx; }
+.questionnaire__completion-label { color: #9a6c20; flex: 0 0 auto; font-weight: 700; margin-right: 12rpx; }
 .questionnaire__actions { align-items: center; background: rgba(255,253,249,.98); border-top: 1rpx solid rgba(188,145,69,.16); bottom: 0; box-shadow: 0 -14rpx 42rpx rgba(13,27,42,.08); display: flex; left: 0; padding: 20rpx 30rpx calc(20rpx + env(safe-area-inset-bottom)); position: fixed; right: 0; z-index: 20; }
 .questionnaire__back { background: transparent; border: 1rpx solid #c79a4c; border-radius: 999rpx; color: #815d20; flex: 0 0 calc(44% - 10rpx); font-size: 24rpx; line-height: 88rpx; margin: 0 20rpx 0 0; min-height: 88rpx; padding: 0; width: auto; }
 .questionnaire__back::after { border: 0; }
@@ -77,6 +86,7 @@
   .questionnaire__brand-product image { height: 48rpx; margin: 0; width: 48rpx; }
   .questionnaire__top { margin-left: 24rpx; margin-right: 24rpx; }
   .questionnaire__body { padding-left: 24rpx; padding-right: 24rpx; }
+  .questionnaire__experience { padding: 22rpx; }
   .questionnaire__title { font-size: 38rpx; }
   .question { padding-left: 22rpx; padding-right: 22rpx; }
   .matrix__row { align-items: stretch; flex-wrap: wrap; padding: 8rpx 14rpx; }

@@ -93,11 +93,11 @@ GET /v1/me/education-compass/state
 
 ## 4. Level 1｜Free Parent Compass
 
-完整正例见 [`free-parent-valid.json`](./examples/free-parent-valid.json)。先将 `{studentId}` 替换为当前学生 ID。
+当前 V1.1 正例见 [`free-parent-v1.1-valid.json`](./examples/free-parent-v1.1-valid.json)。先将 `{studentId}` 替换为当前学生 ID。原有 [`free-parent-valid.json`](./examples/free-parent-valid.json) 保留为 V1.0 历史草稿／报告兼容性示例，不能用于新建问卷的版本判断。
 
 流程：
 
-1. `GET /v1/education-compass/questionnaires/free_parent_compass_v1.0.0-rc1`
+1. `GET /v1/education-compass/questionnaires/free_parent_compass_v1.1.0`
 2. `POST /v1/education-compass/free-parent-assessments`
 3. 使用创建响应中的 `assessmentId` 和 `revision` 调用 `PUT /v1/assessments/{assessmentId}/draft`
 4. 使用保存响应中的新 `revision` 调用 `POST /v1/assessments/{assessmentId}/submit`
@@ -119,6 +119,14 @@ Level 1 的同意版本必须精确为：
 ## 5. Level 2｜Education Growth Discovery
 
 Level 2 创建前置是同一学生已提交的 Level 1；`sourceAssessmentId` 必须指向该 Level 1。
+
+新建的 Level 2 使用 `education_growth_discovery_v1.1.0`；可通过以下接口预取指定体系的 V1.1 题库：
+
+```http
+GET /v1/education-compass/questionnaires/education_growth_discovery_v1.1.0?educationSystem=GAOKAO
+```
+
+当前 V1.1 的高考完整正例见 [`level2-gaokao-v1.1-valid.json`](./examples/level2-gaokao-v1.1-valid.json)。下表中的既有 `*-valid.json` 文件保留为 V1.0 历史兼容性正例；已存在的 V1.0 草稿必须继续使用其原始版本与题库摘要，不能静默迁移到 V1.1。
 
 各体系可复核正例：
 

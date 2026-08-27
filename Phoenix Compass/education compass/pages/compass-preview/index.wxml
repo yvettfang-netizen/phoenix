@@ -60,6 +60,8 @@
       <view wx:if="{{canStartLevel2}}" class="snapshot-invite">
         <text class="snapshot-invite__title">想更深入了解孩子当前需要支持的地方？</text>
         <text class="snapshot-invite__copy">邀请学生本人完成成长发现，提交后再决定是否解锁完整报告。</text>
+        <text class="snapshot-invite__flow">学生本人确认 → 按教育体系加载题目 → 提交问卷 → 自主决定是否单次解锁</text>
+        <text class="snapshot-invite__boundary">IB／其他体系当前使用公共题 fallback；“下一阶段学历路径”为选填背景项，不改变题库路由或形成录取结论。</text>
         <text wx:if="{{growthPrice}}" class="snapshot-invite__price">完整报告解锁价 {{growthPrice}}（学生提交后自愿付款）</text>
         <text wx:if="{{growthPriceError}}" class="snapshot-invite__warning">{{growthPriceError}}</text>
       </view>
@@ -73,7 +75,7 @@
     <view class="preview-hero">
       <image class="preview-hero__compass" src="/assets/ui/compass-champagne.png" mode="aspectFit" aria-hidden="true" />
       <text class="eyebrow">STUDENT GROWTH DISCOVERY</text>
-      <text class="preview-hero__title">问卷已提交</text>
+      <text class="preview-hero__title">学生成长发现已提交</text>
       <text class="preview-hero__subtitle">完整报告仍由服务端锁定</text>
     </view>
     <view class="page preview-body preview-body--locked">

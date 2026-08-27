@@ -5,7 +5,9 @@ import test from 'node:test'
 import { MockWechatAuthProvider } from '../src/auth/wechat-auth-provider'
 import {
   FREE_PARENT_QUESTIONNAIRE_VERSION,
-  GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
+  GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
+  LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
+  LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
 } from '../src/domain/education-compass/contracts'
 import { GROWTH_DISCOVERY_PRODUCT_CODE } from '../src/domain/products'
 import { validateSourceCatalog } from '../src/domain/source-catalog'
@@ -342,6 +344,117 @@ test('V0.5 profiles support honest provisional nulls and the frozen Level 2 read
   }
 })
 
+test('V1.1 defaults new assessments while V1.0 endpoints and pinned drafts retain their historical bank', async () => {
+  const app = await listen()
+  try {
+    const owner = await createProfile(app, 'education-http-question-version-owner', '8')
+    const legacyPublic = await jsonRequest(
+      app.base,
+      `/v1/education-compass/questionnaires/${LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION}`,
+      { headers: owner.headers }
+    )
+    assert.equal(legacyPublic.response.status, 200)
+    assert.equal(legacyPublic.body.questionnaire.questionnaireVersion, LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION)
+    assert.equal(legacyPublic.body.questionnaire.questions.find((question: { id: string }) => question.id === 'FP03')?.label,
+      '你目前最关注哪些问题？')
+
+    const currentPublic = await jsonRequest(
+      app.base,
+      `/v1/education-compass/questionnaires/${FREE_PARENT_QUESTIONNAIRE_VERSION}`,
+      { headers: owner.headers }
+    )
+    assert.equal(currentPublic.response.status, 200)
+    assert.equal(currentPublic.body.questionnaire.questionnaireVersion, FREE_PARENT_QUESTIONNAIRE_VERSION)
+    assert.equal(currentPublic.body.questionnaire.questions.find((question: { id: string }) => question.id === 'FP03')?.label,
+      '作为家长，你目前最希望先看清哪些教育问题？（最多 3 项）')
+
+    const defaultCreated = await jsonRequest(app.base, '/v1/education-compass/free-parent-assessments', {
+      method: 'POST',
+      headers: { ...owner.headers, 'Idempotency-Key': 'question-version-default-v11-create' },
+      body: JSON.stringify(freeCreateBody(owner.studentId))
+    })
+    assert.equal(defaultCreated.response.status, 201)
+    assert.equal(defaultCreated.body.questionnaireVersion, FREE_PARENT_QUESTIONNAIRE_VERSION)
+    assert.equal(defaultCreated.body.schemaDigest, currentPublic.body.questionnaire.schemaDigest)
+
+    const historicalCreated = await jsonRequest(app.base, '/v1/education-compass/free-parent-assessments', {
+      method: 'POST',
+      headers: { ...owner.headers, 'Idempotency-Key': 'question-version-historical-v10-create' },
+      body: JSON.stringify(freeCreateBody(owner.studentId))
+    })
+    assert.equal(historicalCreated.response.status, 201)
+    await app.store.transaction(async (tx) => {
+      await tx.update('assessments', historicalCreated.body.assessmentId, {
+        questionnaireVersion: LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
+        commonBankVersion: LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
+        systemBankVersion: null,
+        bankVersions: { common: LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION },
+        schemaDigest: legacyPublic.body.questionnaire.schemaDigest,
+        missingFields: [...legacyPublic.body.questionnaire.requiredQuestionIds],
+        answers: {},
+        completenessScore: 0
+      })
+    })
+
+    const pinned = await jsonRequest(
+      app.base,
+      `/v1/assessments/${historicalCreated.body.assessmentId}/questionnaire`,
+      { headers: owner.headers }
+    )
+    assert.equal(pinned.response.status, 200)
+    assert.equal(pinned.body.questionnaire.questionnaireVersion, LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION)
+    assert.equal(pinned.body.questionnaire.schemaDigest, legacyPublic.body.questionnaire.schemaDigest)
+    assert.equal(pinned.body.questionnaire.questions.find((question: { id: string }) => question.id === 'FP03')?.label,
+      '你目前最关注哪些问题？')
+
+    const legacyAnswers = requiredAnswers(pinned.body.questionnaire, {
+      FP01: 'UPPER_SECONDARY', FP02: 'GAOKAO', FP06: 'WILLING', FP08: 'STUDENT_ASSESSMENT'
+    })
+    const saved = await jsonRequest(app.base, `/v1/assessments/${historicalCreated.body.assessmentId}/draft`, {
+      method: 'PUT',
+      headers: owner.headers,
+      body: JSON.stringify({
+        revision: historicalCreated.body.revision,
+        answers: legacyAnswers,
+        clientSaveToken: 'question-version-historical-v10-save'
+      })
+    })
+    assert.equal(saved.response.status, 200, JSON.stringify(saved.body))
+    assert.equal(saved.body.canSubmit, true)
+    const submitted = await jsonRequest(app.base, `/v1/assessments/${historicalCreated.body.assessmentId}/submit`, {
+      method: 'POST',
+      headers: { ...owner.headers, 'Idempotency-Key': 'question-version-historical-v10-submit' },
+      body: JSON.stringify({ revision: saved.body.revision })
+    })
+    assert.equal(submitted.response.status, 200, JSON.stringify(submitted.body))
+    assert.equal(submitted.body.result.questionnaire_version, LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION)
+
+    const legacyGrowth = await jsonRequest(
+      app.base,
+      `/v1/education-compass/questionnaires/${LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION}?educationSystem=IB`,
+      { headers: owner.headers }
+    )
+    assert.equal(legacyGrowth.response.status, 200)
+    assert.equal(legacyGrowth.body.questionnaire.questionnaireVersion, LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION)
+    assert.equal(legacyGrowth.body.questionnaire.systemResultMarker, 'SYSTEM_BANK_PENDING')
+    assert.equal(legacyGrowth.body.questionnaire.questions.find((question: { id: string }) => question.id === 'EGD01')?.label,
+      '本测评需要由学生本人作答。请确认当前由学生本人阅读并选择答案。')
+
+    const currentGrowth = await jsonRequest(
+      app.base,
+      `/v1/education-compass/questionnaires/${GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION}?educationSystem=IB`,
+      { headers: owner.headers }
+    )
+    assert.equal(currentGrowth.response.status, 200)
+    assert.equal(currentGrowth.body.questionnaire.questionnaireVersion, GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION)
+    assert.equal(currentGrowth.body.questionnaire.systemResultMarker, 'SYSTEM_BANK_PENDING')
+    assert.equal(currentGrowth.body.questionnaire.questions.find((question: { id: string }) => question.id === 'EGD01')?.label,
+      '这份成长发现测评须由学生本人完成。请确认你正由学生本人阅读并选择答案。')
+  } finally {
+    await app.close()
+  }
+})
+
 test('V0.5 real HTTP flow preserves revisions, payment authority, owner isolation and one entitlement', async () => {
   const app = await listen()
   try {
@@ -363,7 +476,13 @@ test('V0.5 real HTTP flow preserves revisions, payment authority, owner isolatio
       ['FP01', 'FP02', 'FP03', 'FP04', 'FP05', 'FP06', 'FP07', 'FP08'])
     assert.deepEqual(freeBank.body.questionnaire.presentation, {
       version: 'education_compass_presentation_v1', estimatedMinutesMin: 3, estimatedMinutesMax: 5,
-      totalQuestions: 8, requiredQuestions: 8, progressMode: 'QUESTION_COUNT', scoringMode: 'NONE'
+      totalQuestions: 8, requiredQuestions: 8, progressMode: 'QUESTION_COUNT', scoringMode: 'NONE',
+      experienceTitle: '免费家长教育罗盘',
+      experienceEyebrow: 'FREE · 3—5 分钟',
+      experienceSummary: '帮助家长看清孩子当前最值得关注的教育信号。',
+      respondentHint: '由家长／监护人填写；答案用于形成家庭教育成长快照。',
+      completionOutcome: '完成后可查看 Family Education Snapshot，并决定是否邀请学生本人参加下一步测评。',
+      primaryActionHint: '先完成免费成长快照'
     })
     const growthVersionBank = await jsonRequest(
       app.base,
@@ -472,7 +591,13 @@ test('V0.5 real HTTP flow preserves revisions, payment authority, owner isolatio
       version: 'education_compass_presentation_v1', estimatedMinutesMin: 15, estimatedMinutesMax: 20,
       totalQuestions: growthBank.body.questionnaire.questions.length,
       requiredQuestions: growthBank.body.questionnaire.requiredQuestionIds.length,
-      progressMode: 'QUESTION_COUNT', scoringMode: 'NONE'
+      progressMode: 'QUESTION_COUNT', scoringMode: 'NONE',
+      experienceTitle: '¥39.90 学生成长发现',
+      experienceEyebrow: 'STUDENT · 15—20 分钟',
+      experienceSummary: '从学习表现、学习过程、思维方式与兴趣方向发现当前成长关键点。',
+      respondentHint: '仅限学生本人作答；家长可协助操作或解释，但不得代选答案。',
+      completionOutcome: '先完成并提交测评；付款后解锁 Student Snapshot、Strength Signals、Learning Bottlenecks、Subject Focus、Growth Direction 与 30-Day Action Plan。',
+      primaryActionHint: '先完成学生本人测评，再决定是否解锁完整报告'
     })
 
     const growthAnswers = requiredAnswers(growthBank.body.questionnaire, {

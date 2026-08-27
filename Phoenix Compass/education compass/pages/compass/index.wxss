@@ -312,6 +312,26 @@
   max-width: 90%;
 }
 
+.compass-entry-note {
+  background: rgba(250, 244, 233, .82);
+  border: 1rpx solid rgba(185, 134, 45, .18);
+  border-radius: var(--radius-md);
+  color: var(--ink-secondary);
+  font-size: 22rpx;
+  line-height: 1.7;
+  margin: -6rpx 0 28rpx;
+  padding: 22rpx 24rpx;
+}
+
+.compass-entry-note__label {
+  color: var(--gold-deep);
+  display: block;
+  font-size: 19rpx;
+  font-weight: 700;
+  letter-spacing: 1.2rpx;
+  margin-bottom: 5rpx;
+}
+
 .consent-card {
   background: rgba(255, 253, 249, .9);
   border: 1rpx solid var(--line);

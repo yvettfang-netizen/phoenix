@@ -42,14 +42,20 @@
       <button class="btn btn--secondary questionnaire-state__button" bindtap="exitQuestionnaire">返回首页</button>
     </view>
     <view wx:else class="questionnaire__body">
+      <view wx:if="{{stepIndex === 0 && experienceTitle}}" class="questionnaire__experience">
+        <text class="questionnaire__experience-eyebrow">{{experienceEyebrow}}</text>
+        <text class="questionnaire__experience-title">{{experienceTitle}}</text>
+        <text class="questionnaire__experience-summary">{{experienceSummary}}</text>
+        <text class="questionnaire__experience-respondent">{{respondentHint}}</text>
+        <text wx:if="{{systemRouteHint}}" class="questionnaire__experience-route">{{systemRouteHint}}</text>
+      </view>
       <text class="eyebrow">{{level === 1 ? 'PARENT OBSERVATION' : 'STUDENT SELF DISCOVERY'}}</text>
       <text class="h1 questionnaire__title">{{current.title}}</text>
       <text class="muted questionnaire__hint">{{current.hint}}</text>
 
       <view wx:for="{{current.questions}}" wx:key="id" wx:for-item="question" wx:for-index="qIndex" class="question">
         <text class="question__label">{{question.label}} <text class="question__optional">{{question.required ? '必答' : '选填'}}</text></text>
-        <text wx:if="{{question.type === 'MULTI_CHOICE' || question.type === 'MULTI_CHOICE_DYNAMIC'}}" class="question__guidance">可多选</text>
-        <text wx:if="{{question.type === 'SUBJECT_RANGE_MATRIX'}}" class="question__guidance">成绩区间为选填；不填写不会形成负面评价</text>
+        <text wx:if="{{question.guidance}}" class="question__guidance">{{question.guidance}}</text>
 
         <view wx:if="{{question.type !== 'SUBJECT_RANGE_MATRIX'}}" class="question__options">
           <button wx:for="{{question.options}}" wx:key="code" wx:for-item="option"
@@ -76,6 +82,9 @@
         </view>
       </view>
       <view class="questionnaire__privacy"><text class="questionnaire__privacy-mark" aria-hidden="true">◇</text><text>资料按隐私说明处理｜结果仅授权家庭可见</text></view>
+      <view wx:if="{{stepIndex === steps.length - 1 && completionOutcome}}" class="questionnaire__completion-note">
+        <text class="questionnaire__completion-label">完成后</text><text>{{completionOutcome}}</text>
+      </view>
     </view>
 
     <view wx:if="{{current && !loading && !error}}" class="questionnaire__actions">

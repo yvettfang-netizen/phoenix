@@ -27,13 +27,13 @@ function initialAnswers(student, cached) {
   }
 }
 
-function chunkQuestions(questions) {
+function chunkQuestions(questions, respondentHint) {
   const steps = []
   for (let index = 0; index < questions.length; index += QUESTIONS_PER_STEP) {
     steps.push({
       key: `group_${Math.floor(index / QUESTIONS_PER_STEP) + 1}`,
       title: '请按最近真实情况作答',
-      hint: '答案没有高低之分；“尚未确定”也是有效回答。',
+      hint: respondentHint || '答案没有高低之分；“尚未确定”也是有效回答。',
       questionStart: index + 1,
       questionEnd: Math.min(index + QUESTIONS_PER_STEP, questions.length),
       questions: questions.slice(index, index + QUESTIONS_PER_STEP)
@@ -71,8 +71,31 @@ function toApiAnswers(bank, idAnswers) {
   }, {})
 }
 
+function questionGuidance(question) {
+  if (question.key === 'student_self_confirmation') {
+    return '若当前不是学生本人，可选择退出；草稿会保存，且不会生成结果或负面信号。'
+  }
+  if (question.key === 'education_system') {
+    return '选择后会更新相应体系题库；IB 与其他体系当前使用公共题 fallback。'
+  }
+  if (question.key === 'education_pathway_target_codes') {
+    return '选填背景项，不参与教育体系题库路由、评分或自动形成学历／录取结论。'
+  }
+  if (question.type === questionnaireModel.QUESTION_TYPES.SUBJECT_RANGE_MATRIX) {
+    return '成绩区间为选填；不填写不会形成负面评价。'
+  }
+  if ([questionnaireModel.QUESTION_TYPES.MULTI_CHOICE, questionnaireModel.QUESTION_TYPES.MULTI_CHOICE_DYNAMIC].includes(question.type)) {
+    const maxSelections = Number(question.validation && question.validation.maxSelections)
+    return Number.isInteger(maxSelections) && maxSelections > 0
+      ? `最多选 ${maxSelections} 项。`
+      : '可多选。'
+  }
+  return ''
+}
+
 function decorateMatrixQuestion(question) {
-  if (question.type !== questionnaireModel.QUESTION_TYPES.SUBJECT_RANGE_MATRIX) return question
+  const decorated = { ...question, guidance: questionGuidance(question) }
+  if (question.type !== questionnaireModel.QUESTION_TYPES.SUBJECT_RANGE_MATRIX) return decorated
   const rows = (question.value || []).map((row) => {
     const subjectCode = row.subjectCode || row.subject_code
     const rangeCode = row.rangeCode || row.range_code
@@ -87,11 +110,21 @@ function decorateMatrixQuestion(question) {
     }
   })
   return {
-    ...question,
+    ...decorated,
     value: rows,
     matrixPickerRange: [question.matrix.subjects.map((option) => option.label), question.matrix.ranges.map((option) => option.label)],
     matrixRangeLabels: question.matrix.ranges.map((option) => option.label)
   }
+}
+
+function systemRouteHint(bank) {
+  if (!bank || bank.assessmentKind !== educationCompass.ASSESSMENT_KINDS.STUDENT_GROWTH) return ''
+  const systemQuestion = bank.questionByKey && bank.questionByKey.education_system
+  const selectedOption = systemQuestion && systemQuestion.options.find((option) => option.code === bank.educationSystem)
+  const systemLabel = selectedOption ? selectedOption.label : bank.educationSystem
+  if (!bank.educationSystem) return '请先选择教育体系；正式体系会加载对应分支题，IB 与其他体系暂用公共题 fallback。'
+  if (bank.systemFallback) return `当前为 ${systemLabel}：首版使用公共题 fallback，不会混入其他体系的正式分支题。`
+  return `当前按 ${systemLabel} 加载公共题与体系分支题；如切换体系，公共答案会保留，分支题会更新。`
 }
 
 Page({
@@ -102,6 +135,8 @@ Page({
     progress: 0, completenessScore: 0, threshold: 70, coverage: 0, revision: 0,
     answeredCount: 0, totalQuestions: 0, requiredQuestions: 0,
     currentRangeLabel: '正在准备题目', estimatedMinutesLabel: '约 3—5 分钟',
+    experienceEyebrow: 'FREE PARENT EDUCATION COMPASS', experienceTitle: '', experienceSummary: '',
+    respondentHint: '', completionOutcome: '', primaryActionHint: '', systemRouteHint: '',
     loading: true, error: '', saving: false, submitting: false, routeReloading: false,
     savedLabel: '草稿自动保存'
   },
@@ -176,10 +211,10 @@ Page({
   applyRemoteView(preferredStep) {
     const keyAnswers = toKeyAnswers(this.remoteBank, this.remoteAnswers || {})
     const view = questionnaireModel.buildViewModel(this.remoteBank, keyAnswers)
-    const questions = view.questions.map(decorateMatrixQuestion)
-    const steps = chunkQuestions(questions)
-    const stepIndex = Math.max(0, Math.min(preferredStep === undefined ? this.data.stepIndex : preferredStep, steps.length - 1))
     const presentation = this.remoteBank.presentation || {}
+    const questions = view.questions.map(decorateMatrixQuestion)
+    const steps = chunkQuestions(questions, presentation.respondentHint)
+    const stepIndex = Math.max(0, Math.min(preferredStep === undefined ? this.data.stepIndex : preferredStep, steps.length - 1))
     const totalQuestions = questions.length
     const requiredQuestions = questions.filter((question) => question.required).length
     const answeredCount = this.remoteBank.questions.filter((question) => !questionnaireModel.isEmpty((this.remoteAnswers || {})[question.id])).length
@@ -195,7 +230,14 @@ Page({
       answeredCount, totalQuestions, requiredQuestions,
       currentRangeLabel: current ? `第 ${current.questionStart}—${current.questionEnd} 题` : '当前没有题目',
       estimatedMinutesLabel: `约 ${estimatedMinutesMin}—${estimatedMinutesMax} 分钟`,
-      progress: totalQuestions ? (answeredCount / totalQuestions) * 100 : 0
+      progress: totalQuestions ? (answeredCount / totalQuestions) * 100 : 0,
+      experienceEyebrow: presentation.experienceEyebrow || '',
+      experienceTitle: presentation.experienceTitle || '',
+      experienceSummary: presentation.experienceSummary || '',
+      respondentHint: presentation.respondentHint || '',
+      completionOutcome: presentation.completionOutcome || '',
+      primaryActionHint: presentation.primaryActionHint || '',
+      systemRouteHint: systemRouteHint(this.remoteBank)
     })
   },
 

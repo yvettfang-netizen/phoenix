@@ -62,9 +62,11 @@
 .readiness-card__reason { color: rgba(255,255,255,.65); font-size: 22rpx; line-height: 1.65; margin-top: 7rpx; }
 .boundary-note { background: rgba(245,238,226,.9); border: 1rpx solid #e7dac5; border-radius: 20rpx; color: #766f66; font-size: 21rpx; line-height: 1.75; margin-top: 26rpx; padding: 24rpx; text-align: center; }
 .snapshot-invite { align-items: flex-start; border-top: 1rpx solid #e6d8c2; display: flex; flex-direction: column; margin-top: 34rpx; padding: 30rpx 10rpx 2rpx; }
-.snapshot-invite__title, .snapshot-invite__copy, .snapshot-invite__price, .snapshot-invite__warning { display: block; }
+.snapshot-invite__title, .snapshot-invite__copy, .snapshot-invite__flow, .snapshot-invite__boundary, .snapshot-invite__price, .snapshot-invite__warning { display: block; }
 .snapshot-invite__title { color: #102238; font-family: "Songti SC", serif; font-size: 31rpx; font-weight: 700; line-height: 1.5; }
 .snapshot-invite__copy { color: #6f716f; font-size: 22rpx; line-height: 1.7; margin-top: 8rpx; }
+.snapshot-invite__flow { background: #fbf4e7; border: 1rpx solid #ead7b6; border-radius: 16rpx; color: #875f20; font-size: 20rpx; line-height: 1.65; margin-top: 16rpx; padding: 14rpx 16rpx; }
+.snapshot-invite__boundary { color: #817a70; font-size: 19rpx; line-height: 1.62; margin-top: 11rpx; }
 .snapshot-invite__price { color: #966313; font-size: 22rpx; line-height: 1.6; margin-top: 13rpx; }
 .snapshot-invite__warning { color: var(--pn-danger, #984b40); font-size: 21rpx; line-height: 1.55; margin-top: 13rpx; }
 .snapshot-cta { margin-top: 22rpx; min-height: 44px; }

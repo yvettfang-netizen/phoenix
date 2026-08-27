@@ -96,11 +96,13 @@ function mergeSignals(signals: readonly EvidenceSignal[]): EvidenceSignal[] {
 
 export function buildFamilyEducationSnapshotV1(
   identity: ResultBuildIdentity,
-  answersInput: unknown
+  answersInput: unknown,
+  options: { questionnaireVersion?: string } = {}
 ): FamilyEducationSnapshotV1 {
   const validated = validateQuestionnaireAnswers({
     level: 'LEVEL_1',
     educationSystem: null,
+    ...(options.questionnaireVersion !== undefined ? { questionnaireVersion: options.questionnaireVersion } : {}),
     answers: answersInput,
     mode: 'SUBMIT'
   })
@@ -130,7 +132,7 @@ export function buildFamilyEducationSnapshotV1(
     preferred_next_support: requiredString(answers, 'FP08'),
     next_step_status: nextStep.next_step_status,
     next_step_reason_codes: nextStep.next_step_reason_codes,
-    questionnaire_version: FREE_PARENT_QUESTIONNAIRE_VERSION,
+    questionnaire_version: (options.questionnaireVersion ?? FREE_PARENT_QUESTIONNAIRE_VERSION) as FamilyEducationSnapshotV1['questionnaire_version'],
     disclaimer_version: EDUCATION_COMPASS_DISCLAIMER_VERSION,
     disclaimer: EDUCATION_COMPASS_DISCLAIMER
   })
@@ -265,17 +267,18 @@ export function buildStudentGrowthDiscoveryReportV1(
   identity: ResultBuildIdentity,
   educationSystem: EducationSystem,
   answersInput: unknown,
-  options: { currentYear?: number } = {}
+  options: { currentYear?: number; questionnaireVersion?: string } = {}
 ): StudentGrowthDiscoveryReportV1 {
   const validated = validateQuestionnaireAnswers({
     level: 'LEVEL_2',
     educationSystem,
+    ...(options.questionnaireVersion !== undefined ? { questionnaireVersion: options.questionnaireVersion } : {}),
     answers: answersInput,
     mode: 'SUBMIT',
     ...(options.currentYear !== undefined ? { currentYear: options.currentYear } : {})
   })
   const answers = validated.answers
-  const bank = getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem)
+  const bank = getEducationCompassQuestionnaireBank('LEVEL_2', educationSystem, options.questionnaireVersion)
   const achievementEvidence = achievementEvidenceBySubject(answers, bank.systemQuestionIds)
   const strengthSignals = buildStrengthSignals(answers, achievementEvidence)
   const bottlenecks = buildBottlenecks(answers)

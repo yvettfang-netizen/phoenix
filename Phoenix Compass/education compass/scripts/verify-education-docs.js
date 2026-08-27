@@ -10,7 +10,9 @@ const root = path.resolve(__dirname, '..')
 const examplesDirectory = path.join(root, 'docs', 'examples')
 const expectedValid = new Map([
   ['free-parent-valid.json', { level: 'LEVEL_1', educationSystem: null }],
+  ['free-parent-v1.1-valid.json', { level: 'LEVEL_1', educationSystem: null }],
   ['level2-gaokao-valid.json', { level: 'LEVEL_2', educationSystem: 'GAOKAO' }],
+  ['level2-gaokao-v1.1-valid.json', { level: 'LEVEL_2', educationSystem: 'GAOKAO' }],
   ['level2-dse-valid.json', { level: 'LEVEL_2', educationSystem: 'DSE' }],
   ['level2-igcse-valid.json', { level: 'LEVEL_2', educationSystem: 'IGCSE' }],
   ['level2-a-level-valid.json', { level: 'LEVEL_2', educationSystem: 'A_LEVEL' }],
@@ -55,6 +57,14 @@ async function main() {
   assert.ok(openapi.includes('const: EDUCATION_GROWTH_DISCOVERY_SINGLE_V1'))
   assert.ok(openapi.includes('amountFen: { const: 3990 }'))
   assert.ok(openapi.includes('paymentTiming: { const: AFTER_SUBMIT_BEFORE_REPORT }'))
+  for (const questionnaireVersion of [
+    'free_parent_compass_v1.0.0-rc1',
+    'education_growth_discovery_v1.0.0-rc1',
+    'free_parent_compass_v1.1.0',
+    'education_growth_discovery_v1.1.0'
+  ]) assert.ok(openapi.includes(questionnaireVersion), `OpenAPI omitted supported questionnaire version ${questionnaireVersion}`)
+  assert.ok(openapi.includes('enum: [free_parent_compass_v1.0.0-rc1, free_parent_compass_v1.1.0]'),
+    'OpenAPI must preserve historical and current family snapshot questionnaire versions')
   assert.ok(openapi.includes('required: [consentVersion, scope, guardianConfirmed, studentConfirmed, locale]'),
     'OpenAPI must require the complete V0.5 AI_ANALYSIS consent payload')
   assert.ok(openapi.includes('consentVersion: { const: agent_analysis_opt_in_v1.0.0-rc1 }'))
@@ -69,6 +79,8 @@ async function main() {
 
   const apiExamples = await readFile(path.join(root, 'docs', 'API_EXAMPLES_EDUCATION_COMPASS_V0.5.0.md'), 'utf8')
   for (const requiredExample of [
+    'free_parent_compass_v1.1.0',
+    'education_growth_discovery_v1.1.0',
     '"expiresAt": "2026-08-25T14:00:00.000Z"',
     '"consentVersion": "agent_analysis_opt_in_v1.0.0-rc1"',
     '"scope": "AI_ANALYSIS"',

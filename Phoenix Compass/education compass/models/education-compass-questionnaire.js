@@ -11,6 +11,24 @@ const ALLOWED_TYPES = new Set(Object.values(QUESTION_TYPES))
 const MULTI_TYPES = new Set([QUESTION_TYPES.MULTI_CHOICE, QUESTION_TYPES.MULTI_CHOICE_DYNAMIC])
 const SINGLE_TYPES = new Set([QUESTION_TYPES.SINGLE_CHOICE, QUESTION_TYPES.YEAR_SELECT, QUESTION_TYPES.PROVINCE_REGION_SELECT])
 const FALLBACK_SYSTEMS = new Set(['IB', 'OTHER'])
+const EXPERIENCE_COPY_FALLBACKS = Object.freeze({
+  FREE_PARENT: Object.freeze({
+    experienceEyebrow: 'FREE PARENT EDUCATION COMPASS',
+    experienceTitle: '3—5 分钟，形成一份家庭教育快照',
+    experienceSummary: '由家长／监护人根据近期观察填写，帮助整理家庭教育关注点、孩子当前阶段与下一步支持方向。',
+    respondentHint: '请由家长／监护人根据最近的真实观察作答；这不是对孩子能力的评分。',
+    completionOutcome: '提交后可查看完整 Family Education Snapshot，并判断是否适合邀请学生本人继续。',
+    primaryActionHint: '完成免费问卷，查看家庭教育快照'
+  }),
+  STUDENT_GROWTH: Object.freeze({
+    experienceEyebrow: '¥39.90 STUDENT GROWTH DISCOVERY',
+    experienceTitle: '15—20 分钟，完成学生成长发现',
+    experienceSummary: '仅由学生本人作答；先完成并提交问卷，再由学生自主决定是否付款解锁完整六项报告。',
+    respondentHint: '本问卷仅限学生本人填写；家长可协助操作或解释题意，但不能代选答案。',
+    completionOutcome: '提交后可查看付款解锁入口；未付款前不会展示结论、信号、证据或完整报告。',
+    primaryActionHint: '由学生本人完成成长发现'
+  })
+})
 
 class QuestionnaireContractError extends Error {
   constructor(message, details) {
@@ -176,12 +194,17 @@ function presentationMeta(raw, questions, assessmentKind) {
   const source = raw.presentationMeta || raw.presentation_meta || raw.presentation || {}
   const respondentRole = raw.respondentRole || raw.respondent_role || ''
   const isFreeParent = assessmentKind === 'FREE_PARENT_COMPASS' || respondentRole === 'PARENT_GUARDIAN'
+  const copyFallbacks = isFreeParent ? EXPERIENCE_COPY_FALLBACKS.FREE_PARENT : EXPERIENCE_COPY_FALLBACKS.STUDENT_GROWTH
   const defaultMin = isFreeParent ? 3 : 15
   const defaultMax = isFreeParent ? 5 : 20
   const providedMin = Number(source.estimatedMinutesMin === undefined ? source.estimated_minutes_min : source.estimatedMinutesMin)
   const providedMax = Number(source.estimatedMinutesMax === undefined ? source.estimated_minutes_max : source.estimatedMinutesMax)
   const estimatedMinutesMin = Number.isFinite(providedMin) && providedMin > 0 ? providedMin : defaultMin
   const estimatedMinutesMax = Number.isFinite(providedMax) && providedMax >= estimatedMinutesMin ? providedMax : defaultMax
+  const copyValue = (camelKey, snakeKey) => {
+    const candidate = source[camelKey] === undefined ? source[snakeKey] : source[camelKey]
+    return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : copyFallbacks[camelKey]
+  }
   return {
     version: source.version || 'education_compass_presentation_v1',
     estimatedMinutesMin,
@@ -189,7 +212,13 @@ function presentationMeta(raw, questions, assessmentKind) {
     totalQuestions: questions.length,
     requiredQuestions: questions.filter((question) => question.required).length,
     progressMode: 'QUESTION_COUNT',
-    scoringMode: 'NONE'
+    scoringMode: 'NONE',
+    experienceEyebrow: copyValue('experienceEyebrow', 'experience_eyebrow'),
+    experienceTitle: copyValue('experienceTitle', 'experience_title'),
+    experienceSummary: copyValue('experienceSummary', 'experience_summary'),
+    respondentHint: copyValue('respondentHint', 'respondent_hint'),
+    completionOutcome: copyValue('completionOutcome', 'completion_outcome'),
+    primaryActionHint: copyValue('primaryActionHint', 'primary_action_hint')
   }
 }
 
@@ -346,6 +375,7 @@ function buildViewModel(bank, answers = {}) {
     version: bank.version,
     schemaDigest: bank.schemaDigest,
     educationSystem: bank.educationSystem,
+    presentation: bank.presentation,
     coverage: validation.coverage,
     questions: bank.questions.map((question) => {
       const answerKey = question.answerKey || question.id
