@@ -9,7 +9,7 @@
 | Project / source | Local path | Git / remote | Branch / HEAD at audit | Working state | Classification |
 |---|---|---|---|---|---|
 | Phoenix Nova canonical monorepo | `D:\CODEX\01_PHOENIX_NOVA\phoenix` | Git; `yvettfang-netizen/phoenix` | `codex/phoenix-main-post-merge-audit-2026-08-28`; `955a5cf` | Base equals `origin/main`; independent untracked `docs/` exists in this worktree | `NEEDS_REVIEW` |
-| Weekend closeout worktree | `D:\CODEX\pwc` | Linked worktree of `phoenix` | `codex/weekend-engineering-closeout-2026-08-29`; base `955a5cf` | Education hardening and reports pending commit at audit time | `UNPUSHED` until final delivery |
+| Weekend closeout worktree | `D:\CODEX\pwc` | Linked worktree of `phoenix` | `codex/weekend-engineering-closeout-2026-08-29`; evidence commit `3a3c4aa` | Clean and pushed; Phoenix PR #2 open | `NEEDS_REVIEW` |
 | Education Compass | `D:\CODEX\pwc\Phoenix Compass\education compass` | Component of `phoenix`, not a separate repo | Same closeout branch | P0 passes locally; see E2E report | `NEEDS_REVIEW` pending PR |
 | Identity Compass | `D:\CODEX\01_PHOENIX_NOVA\phoenix\Phoenix Compass\Identity Compass` | Component of `phoenix` | `origin/main` source | Runtime is canonical here; five Identity `.docx` files also live on website `main` | `DUPLICATE` documentation / `NEEDS_REVIEW` |
 | Phoenix Family OS | `D:\CODEX\01_PHOENIX_NOVA\phoenix\Phoenix Family OS\phoenix-family-os-mvp` | Component of `phoenix` | `origin/main`; remote candidate branches listed below | Two unmerged remote branches have no PR | `NEEDS_REVIEW` |
@@ -37,7 +37,7 @@ GitHub contains exactly three source repositories owned by `yvettfang-netizen`:
 
 | Repository | Visibility | Default branch / HEAD | Open PR | Merged PR | Closed-only PR |
 |---|---|---|---|---|---|
-| `yvettfang-netizen/phoenix` | Public | `main` / `955a5cf169125dc4d864969edc022e5a50ea3bc2` | Closeout PR recorded after push | #1 `jimson的拉取请求` | None |
+| `yvettfang-netizen/phoenix` | Public | `main` / `955a5cf169125dc4d864969edc022e5a50ea3bc2` | #2 `Phoenix weekend closeout: inventory and Education Compass P0` | #1 `jimson的拉取请求` | None |
 | `yvettfang-netizen/phoenix-academic-studio` | Private | `main` / `c32534fc9eee795b6ea57c3d9ff9b2d891cd4db0` | #2 `Record Academic Studio acceptance blockers` | #1 bootstrap | None |
 | `yvettfang-netizen/phoenix-nova-website` | Private | `main` / `7426c9d4e58d8d1a6351546172c2069229961b54` | #1 `Normalize recovered Phoenix Nova Website V4 candidate` | None | None |
 
@@ -83,7 +83,7 @@ The forensic bundle proves V4 head `f4e8f9a` is an ancestor of V7 head `e841e6b`
 | `D:\SHARED\PHOENIX_TEAM\PhoenixNova` | 11 modified + 39 untracked + 219 deleted; no ahead commit | `BLOCKED_NEEDS_PROVENANCE_REVIEW`; preserve |
 | `D:\CODEX\01_PHOENIX_NOVA\phoenix` | untracked `docs/` from a separate audit task | Preserve; do not absorb into this branch |
 | Website staging `aa09d59` | one local commit beyond bundle refs | Content preserved on website PR #1; retain forensic repo |
-| Closeout `pwc` | Education hardening + two reports before final commit | Commit/push/PR as this delivery |
+| Closeout `pwc` | Evidence commit `3a3c4aa`; branch synchronized to GitHub | PR #2 open; do not merge automatically |
 | Empty Documents `phoenix east` | no commit, no files, no remote | `DELETE CANDIDATE`; do not delete unattended |
 | Temp V4 extraction | 10 non-Git files | `DELETE CANDIDATE`; do not delete unattended |
 
@@ -95,4 +95,3 @@ The forensic bundle proves V4 head `f4e8f9a` is an ancestor of V7 head `e841e6b`
 4. Open or explicitly retire the four unmerged Phoenix migration/candidate branches; no remote branch was deleted here.
 5. After website PR disposition, decide whether staging/forensic/temporary copies can be archived or deleted.
 6. Decide the official repository/zone for Fengqi Research Institute before moving it into `02_NOVA_DIGITAL`.
-
