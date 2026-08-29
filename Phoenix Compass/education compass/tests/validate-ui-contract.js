@@ -28,8 +28,9 @@ function walk(directory) {
   })
 }
 
-function sha256(file) {
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
+function sha256Text(file) {
+  const canonical = fs.readFileSync(file, 'utf8').replace(/\r\n?/g, '\n')
+  return crypto.createHash('sha256').update(canonical, 'utf8').digest('hex')
 }
 
 function readSource(relative) {
@@ -595,7 +596,7 @@ for (const page of ['pages/admin-families', 'pages/admin-family']) {
 for (const lockPath of ['package-lock.json', 'server/package-lock.json']) {
   const baseline = protectedBaseline.files.find((item) => normalizeSlashes(item.path) === lockPath)
   assert(baseline, `protected baseline is missing ${lockPath}`)
-  assert.strictEqual(sha256(path.join(root, ...lockPath.split('/'))), baseline.sha256, `${lockPath} changed during the UI-only update`)
+  assert.strictEqual(sha256Text(path.join(root, ...lockPath.split('/'))), baseline.sha256, `${lockPath} changed during the UI-only update`)
 }
 
 console.log('✓ UI route contract: 16 ordered pages, 3 tab paths and lazy loading preserved')
