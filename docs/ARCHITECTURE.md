@@ -18,13 +18,22 @@ flowchart TD
   C --> D[本地存储 V0.1]
   B --> E[AI Provider]
   E --> F[可解释规则引擎]
-  C -. 后续替换 .-> G[云数据库]
+  B --> O[问卷同步 Outbox]
+  O --> P[固定 Loopback 后端代理]
+  P --> Q[Local Demo SQLite]
+  C -. 生产阶段替换 .-> G[受控远程 API / 数据库]
   E -. 后续替换 .-> H[受保护的 AI 云函数]
 ```
 
 页面不直接操作存储。未来把 `Repository` 替换为云数据库实现时，家庭端与顾问端页面不需要重写。
 
 Partner Experience Layer 使用 `data/partner-experiences.js` 保存可复用内容配置，页面只负责呈现。首个配置是 `yuanchao`（音乐主题、预览状态），复用 Family Profile、Growth Archive 与 Family Timeline，不创建新的 Compass 或独立用户体系。
+
+### 2.1 受控问卷后端扩展
+
+Education Compass 的 assessment 会在首次本地写入时记录 `sync_requested_at`，随后把最小问卷 payload 写入持久化 outbox，再异步提交到固定 `127.0.0.1:8787` 的本地后端。若 outbox 写入或中间步骤中断，后续只对带该标记的新 assessment 重建同步任务，不自动上传旧 Local Demo 数据。客户端只有在收到结构完整的 `synced` receipt 后才移除 outbox。后端执行字段白名单、Local Demo session、家庭/孩子归属、幂等和 SQLite 事务写入；`backend/` 整体由微信打包配置排除。
+
+该扩展只用于微信开发者工具与虚构数据验证。它不是微信真实登录、生产权限或正式数据库架构；真机、真实家庭数据和生产发布仍要求 HTTPS 合法域名、服务端 `wx.login` 换取身份、受控密钥、managed database、RBAC、Consent 与 Audit。详细边界见 `docs/architecture/ADR-001-CONTROLLED-QUESTIONNAIRE-BACKEND-PROXY.md`。
 
 ## 3. 家庭关系闭环
 

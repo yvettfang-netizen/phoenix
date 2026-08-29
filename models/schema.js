@@ -4,7 +4,7 @@ const tables = {
   users: ['id', 'wechat_id', 'name', 'phone', 'role', 'created_at'],
   families: ['id', 'user_id', 'family_name', 'parent_name', 'phone', 'location', 'goal', 'created_at'],
   students: ['id', 'family_id', 'name', 'age', 'gender', 'school', 'education_system', 'grade', 'interest', 'goal'],
-  assessments: ['id', 'student_id', 'type', 'answers', 'status', 'created_at'],
+  assessments: ['id', 'student_id', 'type', 'answers', 'status', 'sync_requested_at', 'created_at'],
   reports: ['id', 'assessment_id', 'summary', 'recommendation', 'created_at'],
   timelineEvents: ['id', 'family_id', 'event_type', 'description', 'date'],
   advisorNotes: ['id', 'family_id', 'advisor_id', 'note', 'follow_up_status', 'created_at'],

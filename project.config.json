@@ -1,6 +1,6 @@
 {
   "description": "Phoenix Family OS Mini Program MVP V0.1",
-  "packOptions": { "ignore": ["tests", "docs", "node_modules"] },
+  "packOptions": { "ignore": ["tests", "docs", "node_modules", "backend"] },
   "setting": {
     "bundle": false,
     "userConfirmedBundleSwitch": false,

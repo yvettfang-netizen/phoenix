@@ -3,6 +3,7 @@ const session = require('../../services/session')
 const aiProvider = require('../../services/ai-provider')
 const { isoNow } = require('../../utils/date')
 const analytics = require('../../services/analytics')
+const questionnaireSync = require('../../services/questionnaire-sync')
 
 function question(key, label, type, options, placeholder) {
   return { key, label, type, options: (options || []).map((text) => ({ text, selected: false })), placeholder: placeholder || '', value: type === 'multi' ? [] : '' }
@@ -114,8 +115,14 @@ Page({
     try {
       const answers = {}
       this.data.steps.forEach((step) => step.questions.forEach((item) => { answers[item.key] = item.value }))
+      const submittedAt = isoNow()
       const assessment = repository.insert('assessments', {
-        student_id: student.id, type: 'education', answers, status: 'completed', created_at: isoNow()
+        student_id: student.id,
+        type: 'education',
+        answers,
+        status: 'completed',
+        sync_requested_at: submittedAt,
+        created_at: submittedAt
       })
       const generated = aiProvider.generateGrowthInsight(student, answers)
       const report = repository.insert('reports', {
@@ -132,8 +139,25 @@ Page({
       repository.addTimeline(family.id, 'compass_completed', `${student.name} 已完成 Education Compass`)
       repository.addTimeline(family.id, 'report_generated', `已生成 ${student.name} 的成长洞察报告`)
       analytics.track('education_compass_completed', { userId: user.id, familyId: family.id, properties: { student_id: student.id, report_id: report.id } })
+      try {
+        questionnaireSync.enqueue({
+          clientSubmissionId: assessment.id,
+          familyId: family.id,
+          studentId: student.id,
+          questionnaireType: 'education',
+          answers,
+          submittedAt: assessment.created_at
+        })
+        questionnaireSync.flush().catch(() => {})
+      } catch (_syncError) {
+        // The local Demo report remains available; no remote-sync success is shown.
+      }
       wx.redirectTo({ url: `/pages/report/index?id=${report.id}&new=1` })
     } catch (error) {
+      try {
+        questionnaireSync.reconcile(repository)
+        questionnaireSync.flush().catch(() => {})
+      } catch (_syncError) {}
       this.setData({ submitting: false })
       wx.showToast({ title: '生成失败，请稍后重试', icon: 'none' })
     }

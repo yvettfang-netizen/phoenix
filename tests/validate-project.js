@@ -4,6 +4,7 @@ const path = require('path')
 
 const root = path.resolve(__dirname, '..')
 const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
+const projectConfig = JSON.parse(fs.readFileSync(path.join(root, 'project.config.json'), 'utf8'))
 const declaredPages = new Set(appConfig.pages)
 const expectedBrandAssets = [
   'phoenix-nova-icon-light.png',
@@ -18,6 +19,7 @@ const originalPages = [
   'pages/advisor-request/index', 'pages/mine/index', 'pages/admin-families/index', 'pages/admin-family/index'
 ]
 const partnerPages = ['pages/partner/yuanchao/index', 'pages/partner/music-exploration/index', 'pages/partner/apply/index']
+assert((projectConfig.packOptions && projectConfig.packOptions.ignore || []).includes('backend'), 'backend must be excluded from the WeChat package')
 assert.strictEqual(appConfig.pages.length, originalPages.length + partnerPages.length, 'unexpected page count')
 for (const page of originalPages) assert(appConfig.pages.includes(page), `original MVP route removed: ${page}`)
 for (const page of partnerPages) assert(appConfig.pages.includes(page), `missing Partner Experience route: ${page}`)
@@ -115,3 +117,4 @@ for (const required of ['users', 'families', 'students', 'assessments', 'reports
 
 console.log(`✓ project structure: ${appConfig.pages.length} pages, JSON and JS syntax valid`)
 console.log('✓ original MVP routes, Partner Experience routes and required data models present')
+console.log('✓ backend source and SQLite runtime data are excluded from the WeChat package')

@@ -1,4 +1,5 @@
 const repository = require('./repository')
+const backendApi = require('./backend-api')
 const { isoNow } = require('../utils/date')
 
 function loginFamilyUser(profile = {}) {
@@ -41,6 +42,7 @@ function loginAdvisorDemo() {
 function logout() {
   const app = getApp()
   app.setCurrentUser('')
+  backendApi.clearSession()
 }
 
 module.exports = { loginFamilyUser, loginAdvisorDemo, logout }

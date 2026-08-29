@@ -1,5 +1,6 @@
 const repository = require('./services/repository')
 const analytics = require('./services/analytics')
+const questionnaireSync = require('./services/questionnaire-sync')
 
 App({
   globalData: {
@@ -14,6 +15,12 @@ App({
 
   onShow() {
     analytics.trackSession(this.globalData.currentUserId)
+    const currentUser = repository.getById('users', this.globalData.currentUserId)
+    if (!currentUser || currentUser.role !== 'family_user') return
+    try {
+      questionnaireSync.reconcile(repository)
+    } catch (_syncError) {}
+    questionnaireSync.flush().catch(() => {})
   },
 
   setCurrentUser(userId) {

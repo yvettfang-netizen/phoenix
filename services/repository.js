@@ -112,6 +112,8 @@ function familyOverview(familyId) {
 }
 
 function resetDemoData() {
+  require('./questionnaire-sync').clear()
+  require('./backend-api').clearSession()
   store.reset()
   initialize()
   wx.removeStorageSync('PFS_CURRENT_USER_ID')
