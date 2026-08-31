@@ -4,14 +4,20 @@ import {
   EDUCATION_COMPASS_DISCLAIMER,
   EDUCATION_COMPASS_DISCLAIMER_VERSION,
   EducationSystem,
+  EducationPathwaySignalV12,
+  FamilyEducationSnapshotV1,
   FAMILY_SNAPSHOT_VERSION,
+  FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION,
   FREE_PARENT_QUESTIONNAIRE_VERSION,
   GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   GROWTH_DISCOVERY_REPORT_VERSION,
   LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
   LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   QuestionnaireBank,
-  StudentGrowthDiscoveryReportV1
+  StudentGrowthDiscoveryReportV1,
+  StudentGrowthDiscoveryReportV12,
+  PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION,
+  PATHWAY_FIT_RULESET_VERSION
 } from '../domain/education-compass/contracts'
 import {
   CORE_ASSESSMENT_CONSENT_COPY as CORE_COPY,
@@ -25,6 +31,12 @@ import {
   buildFamilyEducationSnapshotV1,
   buildStudentGrowthDiscoveryReportV1
 } from '../domain/education-compass/result-builder'
+import {
+  buildEducationPathwaySignalV12,
+  buildStudentGrowthDiscoveryReportV12,
+  educationSystemFromPathwayFit,
+  isEducationPathwaySignalV12
+} from '../domain/education-compass/pathway-fit'
 import {
   getEducationCompassQuestionnaireBank,
   getEducationCompassRegistryIntegrity,
@@ -131,11 +143,18 @@ function lockedPreview(reportId: string, assessmentId: string, at: string): Repo
   }
 }
 
-function growthModules(result: StudentGrowthDiscoveryReportV1): ReportModule[] {
+function growthModules(result: StudentGrowthDiscoveryReportV1 | StudentGrowthDiscoveryReportV12): ReportModule[] {
   const signalItems = (value: readonly { code: string; status: string }[]): string[] =>
     value.map((item) => `${item.code} · ${item.status}`)
+  const pathwayFit = 'pathway_fit' in result ? result.pathway_fit : null
   return [
-    { key: 'student_snapshot', title: 'Student Snapshot', summary: `${result.student_snapshot.education_system} · ${result.student_snapshot.grade_stage}`, items: [...result.student_snapshot.target_regions] },
+    pathwayFit
+      ? { key: 'pathway_fit', title: 'Pathway Fit', summary: '香港与海外路径是否值得继续探索。', items: [
+          `Hong Kong · ${pathwayFit.hong_kong_fit_signal.status}`,
+          `Overseas · ${pathwayFit.overseas_fit_signal.status}`,
+          ...pathwayFit.key_variables
+        ] }
+      : { key: 'student_snapshot', title: 'Student Snapshot', summary: `${result.student_snapshot.education_system} · ${result.student_snapshot.grade_stage}`, items: [...result.student_snapshot.target_regions] },
     { key: 'strength_signals', title: 'Strength Signals', summary: '基于不同题号的交叉证据形成。', items: signalItems(result.strength_signals) },
     { key: 'learning_bottlenecks', title: 'Learning Bottlenecks', summary: '用于发现近期可验证的学习卡点。', items: signalItems(result.learning_bottlenecks) },
     { key: 'subject_focus', title: 'Subject Focus', summary: '最多呈现三个当前学科重点。', items: signalItems(result.subject_focus) },
@@ -153,7 +172,7 @@ export class EducationCompassService {
   ) {}
 
   questionnaireByVersion(version: string, educationSystemInput?: unknown): QuestionnaireBank {
-    if (version === FREE_PARENT_QUESTIONNAIRE_VERSION || version === LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION) {
+    if (version === FREE_PARENT_QUESTIONNAIRE_VERSION || version === FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION || version === LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION) {
       invariant(educationSystemInput === undefined, 400, 'EDUCATION_SYSTEM_NOT_APPLICABLE', '免费家长问卷不接受体系分支')
       return getEducationCompassQuestionnaireBank('LEVEL_1', null, version)
     }
@@ -402,10 +421,14 @@ export class EducationCompassService {
         completenessScore: validated.completenessCoverage,
         missingFields: [...validated.missingRequiredQuestionIds],
         educationSystem: level === 'LEVEL_1'
-          ? (typeof validated.answers.FP02 === 'string' ? validated.answers.FP02 as EducationSystem : null)
+          ? (assessment.questionnaireVersion === PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION
+              ? educationSystemFromPathwayFit(validated.answers.PF02)
+              : (typeof validated.answers.FP02 === 'string' ? validated.answers.FP02 as EducationSystem : null))
           : educationSystem,
         gradeStage: level === 'LEVEL_1'
-          ? (typeof validated.answers.FP01 === 'string' ? validated.answers.FP01 : null)
+          ? (assessment.questionnaireVersion === PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION
+              ? (typeof validated.answers.PF01 === 'string' ? validated.answers.PF01 : null)
+              : (typeof validated.answers.FP01 === 'string' ? validated.answers.FP01 : null))
           : (typeof validated.answers.EGD02 === 'string' ? validated.answers.EGD02 : (assessment.gradeStage ?? null)),
         commonBankVersion: bank.commonBankVersion,
         systemBankVersion: bank.systemBankVersion,
@@ -458,20 +481,33 @@ export class EducationCompassService {
         mode: 'SUBMIT'
       })
       invariant(validated.schemaDigest === assessment.schemaDigest, 409, 'QUESTIONNAIRE_SCHEMA_CHANGED', '问卷结构版本已变化')
-      const result = assessment.assessmentKind === 'FREE_PARENT_COMPASS'
-        ? buildFamilyEducationSnapshotV1(
-            { familyId: assessment.familyId, studentId: assessment.studentId, assessmentId },
-            validated.answers,
-            { questionnaireVersion: assessment.questionnaireVersion }
-          )
-        : buildStudentGrowthDiscoveryReportV1(
-            { familyId: assessment.familyId, studentId: assessment.studentId, assessmentId },
-            assessment.educationSystem as EducationSystem,
-            validated.answers,
-            { questionnaireVersion: assessment.questionnaireVersion }
-          )
-      const reportId = this.ids('rpt')
       const isFree = assessment.assessmentKind === 'FREE_PARENT_COMPASS'
+      let result: FamilyEducationSnapshotV1 | EducationPathwaySignalV12 | StudentGrowthDiscoveryReportV1 | StudentGrowthDiscoveryReportV12
+      if (isFree) {
+        result = assessment.questionnaireVersion === PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION
+          ? buildEducationPathwaySignalV12({ familyId: assessment.familyId, studentId: assessment.studentId, assessmentId }, validated.answers)
+          : buildFamilyEducationSnapshotV1(
+              { familyId: assessment.familyId, studentId: assessment.studentId, assessmentId },
+              validated.answers,
+              { questionnaireVersion: assessment.questionnaireVersion }
+            )
+      } else {
+        const base = buildStudentGrowthDiscoveryReportV1(
+          { familyId: assessment.familyId, studentId: assessment.studentId, assessmentId },
+          assessment.educationSystem as EducationSystem,
+          validated.answers,
+          { questionnaireVersion: assessment.questionnaireVersion }
+        )
+        const source = assessment.sourceAssessmentId ? await tx.findById('assessments', assessment.sourceAssessmentId) : null
+        const sourceReport = source?.reportId ? await tx.findById('reports', source.reportId) : null
+        result = source?.questionnaireVersion === PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION && isEducationPathwaySignalV12(sourceReport?.resultPayload)
+          ? buildStudentGrowthDiscoveryReportV12(base, sourceReport.resultPayload, source.id)
+          : base
+      }
+      const reportId = this.ids('rpt')
+      const isPathwayFit = isFree && assessment.questionnaireVersion === PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION
+      const isV12Growth = !isFree && result.result_version === 'student_growth_discovery_report_v1.2.0'
+      const ruleVersion = (isPathwayFit || isV12Growth) ? PATHWAY_FIT_RULESET_VERSION : 'education_compass_deterministic_rules_v1.0.0-rc1'
       const payload = recordPayload(result)
       const report: Report = {
         id: reportId, userId, familyId: assessment.familyId, studentId: assessment.studentId,
@@ -480,16 +516,16 @@ export class EducationCompassService {
         sources: [], dataAsOf: now.slice(0, 10), disclaimer: EDUCATION_COMPASS_DISCLAIMER,
         confidence: 'high', versions: {
           studentVersion: assessment.studentVersion,
-          ruleVersion: 'education_compass_deterministic_rules_v1.0.0-rc1',
+          ruleVersion,
           dataVersion: bank.schemaDigest,
           promptVersion: 'none',
-          templateVersion: isFree ? FAMILY_SNAPSHOT_VERSION : GROWTH_DISCOVERY_REPORT_VERSION
+          templateVersion: isFree ? (isPathwayFit ? result.result_version : FAMILY_SNAPSHOT_VERSION) : result.result_version
         },
         qaPassed: true, sourceCatalogVerified: false, sourceCatalogVersion: 'not-applicable',
         createdAt: now, updatedAt: now,
         reportKind: isFree ? 'FAMILY_EDUCATION_SNAPSHOT' : 'STUDENT_GROWTH_DISCOVERY',
         resultVersion: result.result_version, resultPayload: payload,
-        ruleVersion: 'education_compass_deterministic_rules_v1.0.0-rc1',
+        ruleVersion,
         disclaimerVersion: EDUCATION_COMPASS_DISCLAIMER_VERSION,
         disclaimerTextHash: sha256(EDUCATION_COMPASS_DISCLAIMER)
       }
@@ -499,7 +535,7 @@ export class EducationCompassService {
         lastError: null, createdAt: now, updatedAt: now
       })
       const submittedEducationSystem = isFree
-        ? (result as { education_system: EducationSystem }).education_system
+        ? (isPathwayFit ? educationSystemFromPathwayFit((result as EducationPathwaySignalV12).education_system) : (result as { education_system: EducationSystem }).education_system)
         : (result as StudentGrowthDiscoveryReportV1).student_snapshot.education_system
       const submittedGradeStage = isFree
         ? (result as { grade_stage: string }).grade_stage

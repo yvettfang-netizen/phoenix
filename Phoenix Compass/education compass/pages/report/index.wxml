@@ -85,21 +85,20 @@
         <text class="next-support__eyebrow">NEXT GROWTH SUPPORT</text>
         <text class="next-support__title">下一步成长支持</text>
         <text class="next-support__headline">让建议真正用起来</text>
-        <view class="askwise-card">
+        <view wx:if="{{nextSupport.askwiseVisible}}" class="askwise-card">
           <text class="askwise-card__name">ASKWISE</text>
           <text class="askwise-card__title">学习伙伴</text>
           <view class="askwise-card__points">
-            <text>• 错题分析与薄弱点定位</text>
-            <text>• 个性化学习路径跟踪</text>
-            <text>• 学习计划与执行提醒</text>
+            <text>{{nextSupport.askwiseCopy}}</text>
           </view>
           <button class="btn askwise-card__button" disabled="{{!nextSupport.askwiseEnabled}}">{{nextSupport.askwiseLabel}}</button>
         </view>
         <view class="next-support__divider"></view>
         <view class="advisor-support">
-          <text class="advisor-support__title">需要专业顾问协助？</text>
+          <text class="advisor-support__title">¥980 Education Growth Review</text>
           <text class="advisor-support__copy">{{nextSupport.deepStateCopy}}</text>
-          <button wx:if="{{nextSupport.deepAdvisorVisible}}" class="btn btn--outline advisor-support__button" bindtap="contactDeep">了解深度评估 / 预约顾问</button>
+          <button wx:if="{{nextSupport.deepAdvisorVisible}}" class="btn btn--outline advisor-support__button" bindtap="contactDeep">了解 ¥980 深度教育规划 / 顾问服务</button>
+          <text wx:elif="{{nextSupport.continueObservingVisible}}" class="advisor-support__status">Continue Observing：当前无需升级，请先执行报告中的 30-Day Action Plan。</text>
           <text wx:else class="advisor-support__status">当前不主动推荐付费服务，也不会自动创建预约。</text>
           <button class="btn btn--text advisor-support__button" bindtap="contact">联系教育顾问</button>
         </view>

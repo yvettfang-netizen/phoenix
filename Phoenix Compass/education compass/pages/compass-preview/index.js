@@ -18,6 +18,9 @@ const RESULT_LABELS = {
   STUDENT_NEEDS_EXPLANATION: '学生可能需要先了解测评用途与退出权利',
   STUDENT_DECLINED: '学生当前不愿参与，应尊重其选择',
   STUDENT_READINESS_UNKNOWN: '学生参与意愿尚未确认'
+  ,PRIORITY_EXPLORE: '值得优先探索', CONTINUE_EVALUATING: '可以继续评估', CONDITIONS_INSUFFICIENT: '目前条件不足', NOT_PRIORITY_NOW: '暂时不建议优先',
+  ACADEMIC_STABILITY: '成绩稳定性', LEARNING_EXECUTION: '学习执行力', INDEPENDENCE: '独立性', ADAPTATION: '适应能力',
+  EDUCATION_SYSTEM: '教育体系', FAMILY_PATH_CLARITY: '家庭路径清晰度', HK_IDENTITY_CONTEXT: '香港身份背景'
 }
 
 function codeLabelMap(bank) {
@@ -74,6 +77,21 @@ function familyPresentation(sections) {
   }
 }
 
+function pathwayPresentation(sections) {
+  const hongKong = sections.find((section) => section.key === 'hong_kong_fit_signal')
+  const overseas = sections.find((section) => section.key === 'overseas_fit_signal')
+  const variables = sections.find((section) => section.key === 'key_variables')
+  const insight = sections.find((section) => section.key === 'next_insight')
+  return {
+    primarySignal: hongKong && hongKong.lines[0] ? hongKong.lines[0] : '可以继续评估',
+    primarySignalSource: 'Hong Kong Fit Signal / 香港路径信号',
+    overviewCards: [overseas, variables].filter(Boolean).map((section) => ({ key: section.key, title: section.title, value: section.lines[0] || '本次未形成更多线索' })),
+    insight: insight && insight.lines[0] ? insight.lines[0] : '',
+    readinessTitle: 'NEXT INSIGHT', readinessLabel: '下一步需要理解',
+    nextStepTitle: 'VALUE GAP', nextStepLabel: '路径判断之外还需要什么'
+  }
+}
+
 function paymentParams(result) {
   const value = (result && (result.paymentParams || result.payment_params)) || result || {}
   return {
@@ -101,7 +119,8 @@ function invokePayment(params) {
 Page({
   data: {
     assessmentId: '', isV05: !runtime.isDemo(), viewKind: '', rendered: null,
-    familySections: [], studentReadiness: '', nextStepStatus: '', nextStepReasons: [],
+    familySections: [], studentReadiness: '', nextStepStatus: '', nextStepReasons: [], freeIsPathway: false,
+    readinessTitle: 'STUDENT READINESS', readinessLabel: '学生参与准备度', nextStepTitle: 'NEXT STEP STATUS', nextStepLabel: '下一步状态',
     canStartLevel2: false, primarySignal: '', primarySignalSource: '', overviewCards: [], growthPrice: '', growthPriceError: '',
     preview: null, loading: true, paying: false, error: '',
     product: runtime.isDemo() ? PRODUCT : null, canPurchase: runtime.isDemo(), isDemo: runtime.isDemo(), reportId: ''
@@ -128,14 +147,15 @@ Page({
     try {
       const rawResult = await educationCompass.getResult(this.data.assessmentId)
       const rendered = reportModel.renderResult(rawResult)
-      if (rendered.rendererKey === reportModel.RENDERER_KEYS.FAMILY_SNAPSHOT) {
+      if ([reportModel.RENDERER_KEYS.FAMILY_SNAPSHOT, reportModel.RENDERER_KEYS.PATHWAY_FIT].includes(rendered.rendererKey)) {
         let labels = {}
         try {
           const rawBank = await educationCompass.getAssessmentQuestionnaire(this.data.assessmentId)
           labels = codeLabelMap(questionnaireModel.normalizeQuestionBank(rawBank, { educationSystem: rendered.educationSystem }))
         } catch (error) {}
         const familySections = rendered.sections.map((section) => sectionView(section, labels))
-        const presentation = familyPresentation(familySections)
+        const isPathway = rendered.rendererKey === reportModel.RENDERER_KEYS.PATHWAY_FIT
+        const presentation = isPathway ? pathwayPresentation(familySections) : familyPresentation(familySections)
         const canStartLevel2 = rendered.nextStepStatus === 'AVAILABLE'
         let growthPrice = ''
         let growthPriceError = ''
@@ -155,8 +175,11 @@ Page({
           viewKind: 'family', rendered,
           familySections,
           ...presentation,
-          studentReadiness: displayLine(rendered.studentReadiness, labels) || '尚未形成明确判断',
-          nextStepStatus: displayLine(rendered.nextStepStatus, labels) || '可根据家庭意愿决定下一步',
+          freeIsPathway: isPathway,
+          studentReadiness: isPathway ? presentation.insight : (displayLine(rendered.studentReadiness, labels) || '尚未形成明确判断'),
+          nextStepStatus: isPathway ? '我们已看到方向与关键变量；学习过程、学科重点和 30 天行动仍需由学生本人补充。' : (displayLine(rendered.nextStepStatus, labels) || '可根据家庭意愿决定下一步'),
+          readinessTitle: presentation.readinessTitle || 'STUDENT READINESS', readinessLabel: presentation.readinessLabel || '学生参与准备度',
+          nextStepTitle: presentation.nextStepTitle || 'NEXT STEP STATUS', nextStepLabel: presentation.nextStepLabel || '下一步状态',
           nextStepReasons: (rendered.nextStepReasonCodes || []).map((value) => displayLine(value, labels)).filter(Boolean),
           canStartLevel2,
           growthPrice,

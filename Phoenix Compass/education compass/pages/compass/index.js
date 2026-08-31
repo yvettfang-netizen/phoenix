@@ -31,7 +31,7 @@ Page({
     consentValues: [], consentComplete: false,
     guardianAccepted: false, studentAssentAccepted: false,
     guardianCopy: GUARDIAN_COPY, studentAssentCopy: STUDENT_ASSENT_COPY,
-    heroTitle: '3—5 分钟，\n看见孩子当前\n最值得关注的信号。',
+    heroTitle: '30—45 秒，\n快速看见孩子当前\n值得探索的路径。',
     heroCopy: ''
   },
 
@@ -84,10 +84,10 @@ Page({
         uiScreen: level === 2 ? UI_SCREENS.GROWTH : UI_SCREENS.FREE,
         level2EntryAuthorized: level === 2,
         ...(product ? { product: { ...product, displayPrice: product.displayPrice || `¥${(product.amountFen / 100).toFixed(2)}`, purchaseType: '单次解锁' } } : {}),
-        heroTitle: level === 1 ? '3—5 分钟，\n看见孩子当前\n最值得关注的信号。' : '15—20 分钟，\n进一步看清孩子\n当前需要支持的地方。',
+        heroTitle: level === 1 ? '30—45 秒，\n快速看见孩子当前\n值得探索的路径。' : '15—20 分钟，\n进一步看清哪些学习与成长因素\n正在影响路径。',
         heroCopy: level === 1
-          ? '免费家长教育罗盘约 3—5 分钟，完成后可查看完整 Family Education Snapshot。'
-          : '学生成长发现约 15—20 分钟。先完成并提交，付款后解锁完整六项报告；不做录取预测。',
+          ? '免费快速判断香港与海外路径是否值得继续探索；不输出录取概率或结果保证。'
+          : 'Education Growth Discovery 约 15—20 分钟。先完成并提交，付款后解锁完整六层报告；不做录取预测。',
         loading: false
       })
     } catch (error) {

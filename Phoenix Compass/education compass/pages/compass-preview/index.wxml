@@ -12,19 +12,19 @@
     <view class="preview-hero preview-hero--family" data-ui-screen="free-result">
       <image class="preview-hero__compass" src="/assets/ui/compass-champagne.png" mode="aspectFit" aria-hidden="true" />
       <button class="preview-share" open-type="share" aria-label="分享通用小程序入口">分享</button>
-      <text class="eyebrow">FAMILY EDUCATION SNAPSHOT</text>
-      <text class="preview-hero__title">你的第一份成长信号来了</text>
-      <text class="preview-hero__subtitle">这是基于家长近期观察形成的家庭教育快照</text>
+      <text class="eyebrow">{{freeIsPathway ? 'EDUCATION PATHWAY SIGNAL' : 'FAMILY EDUCATION SNAPSHOT'}}</text>
+      <text class="preview-hero__title">{{freeIsPathway ? '孩子当前升学路径信号' : '你的第一份成长信号来了'}}</text>
+      <text class="preview-hero__subtitle">{{freeIsPathway ? '这是基于家长近期观察形成的快速路径判断，不是录取预测。' : '这是基于家长近期观察形成的家庭教育快照'}}</text>
     </view>
     <view class="page preview-body">
       <view class="signal-card">
         <image class="signal-card__feather" src="/assets/ui/feather-champagne.png" mode="aspectFit" aria-hidden="true" />
-        <text class="signal-card__label">孩子当前值得关注的信号</text>
+        <text class="signal-card__label">{{freeIsPathway ? 'HONG KONG FIT SIGNAL' : '孩子当前值得关注的信号'}}</text>
         <text class="signal-card__title">{{primarySignal}}</text>
         <text class="signal-card__source">来自：{{primarySignalSource}}。这是一条观察线索，建议结合学生本人感受继续验证。</text>
       </view>
 
-      <text class="snapshot-overview__title">其他观察线索</text>
+        <text class="snapshot-overview__title">{{freeIsPathway ? '海外路径与关键变量' : '其他观察线索'}}</text>
       <view class="snapshot-overview">
         <view wx:for="{{overviewCards}}" wx:key="key" class="snapshot-overview__card">
           <view class="snapshot-overview__mark"></view>
@@ -34,17 +34,18 @@
       </view>
 
       <view class="readiness-card">
-        <text class="readiness-card__label">STUDENT READINESS</text>
-        <text class="readiness-card__title">学生参与准备度</text>
+        <text class="readiness-card__label">{{readinessTitle}}</text>
+        <text class="readiness-card__title">{{readinessLabel}}</text>
         <text class="readiness-card__copy">{{studentReadiness}}</text>
         <view class="readiness-card__divider"></view>
-        <text class="readiness-card__label">NEXT STEP STATUS</text>
+        <text class="readiness-card__label">{{nextStepTitle}}</text>
+        <text class="readiness-card__title">{{nextStepLabel}}</text>
         <text class="readiness-card__copy">{{nextStepStatus}}</text>
         <text wx:for="{{nextStepReasons}}" wx:key="*this" class="readiness-card__reason">• {{item}}</text>
       </view>
 
       <view class="snapshot-details">
-        <text class="snapshot-details__title">家庭教育快照详情</text>
+        <text class="snapshot-details__title">{{freeIsPathway ? '路径信号详情' : '家庭教育快照详情'}}</text>
         <view wx:for="{{familySections}}" wx:key="key" class="snapshot-section">
           <view class="row row--between snapshot-section__head"><text class="snapshot-section__title">{{item.title}}</text><text wx:if="{{item.source}}" class="snapshot-section__source">{{item.source}}</text></view>
           <view wx:if="{{item.lines.length}}" class="snapshot-section__lines">
@@ -58,14 +59,14 @@
         <text>{{rendered.disclaimer || '本快照用于发现家庭教育关注点，并帮助决定是否邀请学生本人继续测评；不替代专业诊断或完整升学规划。'}}</text>
       </view>
       <view wx:if="{{canStartLevel2}}" class="snapshot-invite">
-        <text class="snapshot-invite__title">想更深入了解孩子当前需要支持的地方？</text>
-        <text class="snapshot-invite__copy">邀请学生本人完成成长发现，提交后再决定是否解锁完整报告。</text>
-        <text class="snapshot-invite__flow">学生本人确认 → 按教育体系加载题目 → 提交问卷 → 自主决定是否单次解锁</text>
-        <text class="snapshot-invite__boundary">IB／其他体系当前使用公共题 fallback；“下一阶段学历路径”为选填背景项，不改变题库路由或形成录取结论。</text>
-        <text wx:if="{{growthPrice}}" class="snapshot-invite__price">完整报告解锁价 {{growthPrice}}（学生提交后自愿付款）</text>
+        <text class="snapshot-invite__title">{{freeIsPathway ? '下一步，把路径信号看得更清楚' : '想更深入了解孩子当前需要支持的地方？'}}</text>
+        <text class="snapshot-invite__copy">{{freeIsPathway ? '已知：当前路径是否值得继续探索，以及最明显的关键变量。' : '邀请学生本人完成成长发现，提交后再决定是否解锁完整报告。'}}</text>
+        <text wx:if="{{freeIsPathway}}" class="snapshot-invite__flow">未知：为什么卡住、哪些学习能力与学科重点正在影响路径，以及未来 30 天怎么行动。</text>
+        <text class="snapshot-invite__boundary">学生本人确认 → 按教育体系加载题目 → 提交问卷 → 自主决定是否单次解锁。不会形成录取预测或保证。</text>
+        <text wx:if="{{growthPrice}}" class="snapshot-invite__price">进入 Education Growth Discovery {{growthPrice}}</text>
         <text wx:if="{{growthPriceError}}" class="snapshot-invite__warning">{{growthPriceError}}</text>
       </view>
-      <button wx:if="{{canStartLevel2}}" class="btn btn--primary snapshot-cta" bindtap="startStudentAssessment">邀请学生开始成长发现</button>
+      <button wx:if="{{canStartLevel2}}" class="btn btn--primary snapshot-cta" bindtap="startStudentAssessment">{{freeIsPathway ? '进入 Education Growth Discovery' : '邀请学生开始成长发现'}}</button>
       <button class="btn {{canStartLevel2 ? 'btn--text' : 'btn--outline'}} snapshot-cta" bindtap="home">{{canStartLevel2 ? '稍后再说' : '尊重学生当前意愿，返回家庭中心'}}</button>
       <view class="safe-bottom"></view>
     </view>

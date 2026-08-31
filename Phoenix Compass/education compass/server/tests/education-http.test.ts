@@ -5,6 +5,7 @@ import test from 'node:test'
 import { MockWechatAuthProvider } from '../src/auth/wechat-auth-provider'
 import {
   FREE_PARENT_QUESTIONNAIRE_VERSION,
+  FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION,
   GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
   LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
@@ -227,10 +228,12 @@ async function completeLevelOne(
   })
   assert.equal(created.response.status, 201)
   const answers = requiredAnswers(bankResponse.body.questionnaire, {
-    FP01: 'UPPER_SECONDARY',
-    FP02: educationSystem,
-    FP06: 'WILLING',
-    FP08: 'STUDENT_ASSESSMENT',
+    PF01: 'GRADE_11',
+    PF02: educationSystem === 'DSE' ? 'HKDSE' : educationSystem,
+    PF03: 'UNDERSTANDS_BUT_UNSTABLE',
+    PF04: 'WILLING_WITH_SUPPORT',
+    PF05: 'UNSURE_ABROAD',
+    PF06: 'LEARNING_GAP',
     ...answerOverrides
   })
   const saved = await jsonRequest(app.base, `/v1/assessments/${created.body.assessmentId}/draft`, {
@@ -344,7 +347,7 @@ test('V0.5 profiles support honest provisional nulls and the frozen Level 2 read
   }
 })
 
-test('V1.1 defaults new assessments while V1.0 endpoints and pinned drafts retain their historical bank', async () => {
+test('V1.2 defaults new assessments while V1.0 and V1.1 endpoints and pinned drafts retain their historical banks', async () => {
   const app = await listen()
   try {
     const owner = await createProfile(app, 'education-http-question-version-owner', '8')
@@ -360,11 +363,11 @@ test('V1.1 defaults new assessments while V1.0 endpoints and pinned drafts retai
 
     const currentPublic = await jsonRequest(
       app.base,
-      `/v1/education-compass/questionnaires/${FREE_PARENT_QUESTIONNAIRE_VERSION}`,
+      `/v1/education-compass/questionnaires/${FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION}`,
       { headers: owner.headers }
     )
     assert.equal(currentPublic.response.status, 200)
-    assert.equal(currentPublic.body.questionnaire.questionnaireVersion, FREE_PARENT_QUESTIONNAIRE_VERSION)
+    assert.equal(currentPublic.body.questionnaire.questionnaireVersion, FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION)
     assert.equal(currentPublic.body.questionnaire.questions.find((question: { id: string }) => question.id === 'FP03')?.label,
       '作为家长，你目前最希望先看清哪些教育问题？（最多 3 项）')
 
@@ -375,7 +378,7 @@ test('V1.1 defaults new assessments while V1.0 endpoints and pinned drafts retai
     })
     assert.equal(defaultCreated.response.status, 201)
     assert.equal(defaultCreated.body.questionnaireVersion, FREE_PARENT_QUESTIONNAIRE_VERSION)
-    assert.equal(defaultCreated.body.schemaDigest, currentPublic.body.questionnaire.schemaDigest)
+    assert.notEqual(defaultCreated.body.schemaDigest, currentPublic.body.questionnaire.schemaDigest)
 
     const historicalCreated = await jsonRequest(app.base, '/v1/education-compass/free-parent-assessments', {
       method: 'POST',
@@ -472,18 +475,10 @@ test('V0.5 real HTTP flow preserves revisions, payment authority, owner isolatio
       { headers: owner.headers }
     )
     assert.equal(freeBank.response.status, 200)
-    assert.deepEqual(freeBank.body.questionnaire.requiredQuestionIds,
-      ['FP01', 'FP02', 'FP03', 'FP04', 'FP05', 'FP06', 'FP07', 'FP08'])
-    assert.deepEqual(freeBank.body.questionnaire.presentation, {
-      version: 'education_compass_presentation_v1', estimatedMinutesMin: 3, estimatedMinutesMax: 5,
-      totalQuestions: 8, requiredQuestions: 8, progressMode: 'QUESTION_COUNT', scoringMode: 'NONE',
-      experienceTitle: '免费家长教育罗盘',
-      experienceEyebrow: 'FREE · 3—5 分钟',
-      experienceSummary: '帮助家长看清孩子当前最值得关注的教育信号。',
-      respondentHint: '由家长／监护人填写；答案用于形成家庭教育成长快照。',
-      completionOutcome: '完成后可查看 Family Education Snapshot，并决定是否邀请学生本人参加下一步测评。',
-      primaryActionHint: '先完成免费成长快照'
-    })
+    assert.deepEqual(freeBank.body.questionnaire.questions.map((question: { id: string }) => question.id),
+      ['PF01', 'PF02', 'PF03', 'PF04', 'PF05', 'PF05A', 'PF06'])
+    assert.equal(freeBank.body.questionnaire.presentation.experienceEyebrow, 'FREE · 30—45 秒')
+    assert.equal(freeBank.body.questionnaire.scoringMode, 'NONE')
     const growthVersionBank = await jsonRequest(
       app.base,
       `/v1/education-compass/questionnaires/${GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION}?educationSystem=DSE`,
@@ -530,10 +525,8 @@ test('V0.5 real HTTP flow preserves revisions, payment authority, owner isolatio
     assert.equal(differentInput.body.error.code, 'IDEMPOTENCY_KEY_REUSED')
 
     const freeAnswers = requiredAnswers(freeBank.body.questionnaire, {
-      FP01: 'UPPER_SECONDARY',
-      FP02: 'GAOKAO',
-      FP06: 'WILLING',
-      FP08: 'STUDENT_ASSESSMENT'
+      PF01: 'GRADE_11', PF02: 'GAOKAO', PF03: 'STRONG_AND_STABLE', PF04: 'HIGHLY_READY',
+      PF05: 'HONG_KONG', PF05A: 'HK_PR', PF06: 'FIT_HONG_KONG'
     })
     const freeSave = await jsonRequest(app.base, `/v1/assessments/${freeCreate.body.assessmentId}/draft`, {
       method: 'PUT',
@@ -566,7 +559,7 @@ test('V0.5 real HTTP flow preserves revisions, payment authority, owner isolatio
     })
     assert.equal(freeSubmit.response.status, 200)
     assert.equal(freeSubmit.body.resultState, 'READY')
-    assert.equal(freeSubmit.body.result.result_kind, 'FAMILY_EDUCATION_SNAPSHOT')
+    assert.equal(freeSubmit.body.result.result_kind, 'EDUCATION_PATHWAY_SIGNAL')
     assert.equal(freeSubmit.body.result.next_step_status, 'AVAILABLE')
 
     const stateAfterFree = await jsonRequest(app.base, '/v1/me/education-compass/state', { headers: owner.headers })
@@ -757,10 +750,14 @@ test('V0.5 real HTTP flow preserves revisions, payment authority, owner isolatio
     assert.equal(report.body.access, 'full')
     assert.equal(report.body.reportKind, 'STUDENT_GROWTH_DISCOVERY')
     assert.equal(report.body.full.modules.length, 6)
+    assert.deepEqual(report.body.full.modules.map((module: { key: string }) => module.key), [
+      'pathway_fit', 'strength_signals', 'learning_bottlenecks', 'subject_focus', 'growth_direction', 'action_plan_30d'
+    ])
     assert.equal(report.body.full.result.result_kind, 'STUDENT_GROWTH_DISCOVERY')
-    assert.deepEqual(report.body.capabilities.nextSupport.askwise, {
-      status: 'RESERVED', enabled: false, reasonCode: 'ASKWISE_CAPABILITY_UNAVAILABLE', requiresExplicitConsent: true
-    })
+    assert.equal(report.body.full.result.result_version, 'student_growth_discovery_report_v1.2.0')
+    assert.equal(report.body.capabilities.nextSupport.askwise.status, 'RESERVED')
+    assert.equal(report.body.capabilities.nextSupport.askwise.enabled, false)
+    assert.equal(report.body.capabilities.nextSupport.askwise.eligible, true)
     assert.equal(report.body.capabilities.nextSupport.deepAssessment.state, 'DEFERRED')
     assert.equal(report.body.capabilities.nextSupport.deepAssessment.displayPrice, null)
     assert.equal(report.body.capabilities.nextSupport.advisor.available, false)
@@ -775,7 +772,7 @@ test('next-support capabilities and advisor intent remain server-authoritative',
     const owner = await createProfile(app, 'education-http-next-support-owner', '6')
     const other = await createProfile(app, 'education-http-next-support-other', '7')
     const free = await completeLevelOne(app, owner, 'GAOKAO', 'next-support-free', {
-      FP08: 'DEEP_ASSESSMENT_INFO'
+      PF05: 'MULTI_REGION', PF05A: 'NONE', PF06: 'HK_VS_ABROAD'
     })
     const growth = await completeLevelTwo(
       app, owner, free.assessmentId, 'GAOKAO', 'next-support-growth'
@@ -835,13 +832,13 @@ test('next-support capabilities and advisor intent remain server-authoritative',
     assert.equal(report.body.access, 'full')
     assert.equal(report.body.capabilities.nextSupport.askwise.status, 'RESERVED')
     assert.equal(report.body.capabilities.nextSupport.askwise.enabled, false)
-    assert.equal(report.body.capabilities.nextSupport.deepAssessment.state, 'AVAILABLE')
+    assert.equal(report.body.capabilities.nextSupport.deepAssessment.state, 'CONSIDER')
     assert.deepEqual(report.body.capabilities.nextSupport.deepAssessment.reasonCodes,
-      ['USER_REQUESTED_DEEP_ASSESSMENT'])
+      ['PATHWAY_COMPARISON_REQUESTED'])
     assert.equal(report.body.capabilities.nextSupport.deepAssessment.ctaMode,
       'ADVISOR_INFORMATION_OR_APPOINTMENT_ONLY')
     assert.equal(report.body.capabilities.nextSupport.deepAssessment.advisorIntent, 'DEEP_ASSESSMENT')
-    assert.equal(report.body.capabilities.nextSupport.deepAssessment.displayPrice, null)
+    assert.equal(report.body.capabilities.nextSupport.deepAssessment.displayPrice, '¥980')
     assert.equal(report.body.capabilities.nextSupport.advisor.available, true)
 
     const secondStudent = await jsonRequest(app.base, '/v1/me/students', {

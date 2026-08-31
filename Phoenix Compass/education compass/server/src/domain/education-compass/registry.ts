@@ -10,6 +10,7 @@ import {
   FrozenQuestion,
   FrozenQuestionValidation,
   GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
+  FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION,
   LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
   LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   QuestionnaireBank,
@@ -18,6 +19,7 @@ import {
   RegistrySourceIntegrity,
   FREE_PARENT_QUESTIONNAIRE_VERSION
 } from './contracts'
+import { PATHWAY_FIT_FREE_BANK_V12 } from './pathway-fit'
 
 const QUESTION_BANK_RELATIVE_PATH = 'docs/product/freeze/education-compass-v1-rc1/QUESTION_BANKS_V1_RC1.json'
 const TAXONOMY_RELATIVE_PATH = 'docs/product/freeze/education-compass-v1-rc1/TAXONOMY_REGISTRY_V1_RC1.json'
@@ -56,6 +58,7 @@ interface RawQuestion {
   scored?: unknown
   exit_rule?: unknown
   privacy_note?: unknown
+  visibility?: unknown
 }
 
 interface RawQuestionBankFile {
@@ -126,6 +129,7 @@ export interface EducationCompassRegistry {
 interface LoadedEducationCompassRegistries {
   legacy: EducationCompassRegistry
   current: EducationCompassRegistry
+  v12: EducationCompassRegistry
 }
 
 const LEGACY_PRESENTATION: Readonly<{
@@ -186,7 +190,10 @@ function loadVerifiedJson(relativePath: string, expectedSha256: string): {
 } {
   const resolvedPath = resolveFrozenPath(relativePath)
   const raw = readFileSync(resolvedPath)
-  const actualSha256 = createHash('sha256').update(raw).digest('hex').toUpperCase()
+  // Frozen manifests were authored with LF. Normalize only line endings before hashing
+  // so a Windows checkout cannot make an unchanged historical bank fail closed.
+  const canonicalRaw = raw.toString('utf8').replace(/\r\n/g, '\n')
+  const actualSha256 = createHash('sha256').update(canonicalRaw).digest('hex').toUpperCase()
   invariant(actualSha256 === expectedSha256, 500, 'EDUCATION_COMPASS_FREEZE_HASH_MISMATCH', '服务端冻结题库校验失败', {
     relativePath,
     expectedSha256,
@@ -194,7 +201,7 @@ function loadVerifiedJson(relativePath: string, expectedSha256: string): {
   })
   let parsed: unknown
   try {
-    parsed = JSON.parse(raw.toString('utf8')) as unknown
+    parsed = JSON.parse(canonicalRaw) as unknown
   } catch {
     invariant(false, 500, 'EDUCATION_COMPASS_FREEZE_JSON_INVALID', '服务端冻结题库 JSON 无效', { relativePath })
   }
@@ -380,7 +387,7 @@ function applyV11QuestionBankUpdate(baseValue: unknown, updateValue: unknown): {
   invariant(base.candidate_version === BASE_CANDIDATE_VERSION, 500, code, 'V1.0 基础题库版本不匹配')
   const versions = object(update.questionnaire_versions, code)
   exactKeys(versions, ['level_1', 'level_2_common'], code)
-  invariant(versions.level_1 === FREE_PARENT_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 免费问卷版本不匹配')
+  invariant(versions.level_1 === FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 免费问卷版本不匹配')
   invariant(versions.level_2_common === GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 学生问卷版本不匹配')
   const level1 = object(base.level_1, code)
   const level2 = object(base.level_2, code)
@@ -388,9 +395,9 @@ function applyV11QuestionBankUpdate(baseValue: unknown, updateValue: unknown): {
   invariant(level2.bank_version === LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION, 500, code, 'V1.0 学生问卷版本不匹配')
   const level1Update = object(update.level_1, code)
   exactKeys(level1Update, ['bank_version', 'question_overrides'], code)
-  invariant(level1Update.bank_version === FREE_PARENT_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 免费题库版本不匹配')
+  invariant(level1Update.bank_version === FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 免费题库版本不匹配')
   applyQuestionOverrides(level1.questions, level1Update.question_overrides, ['FP02', 'FP03', 'FP04', 'FP05', 'FP06', 'FP07', 'FP08'])
-  level1.bank_version = FREE_PARENT_QUESTIONNAIRE_VERSION
+  level1.bank_version = FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION
   const level2Update = object(update.level_2, code)
   exactKeys(level2Update, ['common_bank_version', 'question_overrides'], code)
   invariant(level2Update.common_bank_version === GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION, 500, code, 'V1.1 学生题库版本不匹配')
@@ -475,6 +482,21 @@ function load(): LoadedEducationCompassRegistries {
   const baseQuestionFile = object(questionSource.parsed, 'EDUCATION_COMPASS_BANK_INVALID') as unknown as RawQuestionBankFile
   const taxonomyFile = object(taxonomySource.parsed, 'EDUCATION_COMPASS_TAXONOMY_INVALID') as RawTaxonomyFile
   const current = applyV11QuestionBankUpdate(baseQuestionFile, updateSource.parsed)
+  const currentRegistry = buildRegistry(
+    current.questionFile,
+    taxonomyFile,
+    { level1: FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION, level2: GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION },
+    Object.freeze({ questionBanks: questionSource.integrity, questionUpdate: updateSource.integrity, taxonomy: taxonomySource.integrity }),
+    current.presentation
+  )
+  const v12Level1 = parseLevelBank(PATHWAY_FIT_FREE_BANK_V12.level_1, true)
+  const v12Presentation = presentation(PATHWAY_FIT_FREE_BANK_V12.presentation, 'EDUCATION_COMPASS_V12_BANK_INVALID')
+  const v12 = Object.freeze({
+    ...currentRegistry,
+    candidateVersion: PATHWAY_FIT_FREE_BANK_V12.candidate_version,
+    level1: v12Level1,
+    presentation: Object.freeze({ ...currentRegistry.presentation, level1: v12Presentation })
+  })
   return Object.freeze({
     legacy: buildRegistry(
       baseQuestionFile,
@@ -483,19 +505,14 @@ function load(): LoadedEducationCompassRegistries {
       Object.freeze({ questionBanks: questionSource.integrity, taxonomy: taxonomySource.integrity }),
       LEGACY_PRESENTATION
     ),
-    current: buildRegistry(
-      current.questionFile,
-      taxonomyFile,
-      { level1: FREE_PARENT_QUESTIONNAIRE_VERSION, level2: GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION },
-      Object.freeze({ questionBanks: questionSource.integrity, questionUpdate: updateSource.integrity, taxonomy: taxonomySource.integrity }),
-      current.presentation
-    )
+    current: currentRegistry,
+    v12
   })
 }
 
 export function loadEducationCompassRegistry(): EducationCompassRegistry {
   cached ??= load()
-  return cached.current
+  return cached.v12
 }
 
 export function getEducationCompassRegistryIntegrity(): EducationCompassRegistry['sourceIntegrity'] {
@@ -507,13 +524,13 @@ function registryForQuestionnaireVersion(
   questionnaireVersion?: string
 ): EducationCompassRegistry {
   const registries = cached ??= load()
-  const currentVersion = level === 'LEVEL_1'
-    ? registries.current.level1.bankVersion
-    : registries.current.level2Common.bankVersion
+  const defaultVersion = level === 'LEVEL_1' ? registries.v12.level1.bankVersion : registries.current.level2Common.bankVersion
+  const currentVersion = level === 'LEVEL_1' ? registries.current.level1.bankVersion : registries.current.level2Common.bankVersion
   const legacyVersion = level === 'LEVEL_1'
     ? registries.legacy.level1.bankVersion
     : registries.legacy.level2Common.bankVersion
-  if (questionnaireVersion === undefined || questionnaireVersion === currentVersion) return registries.current
+  if (questionnaireVersion === undefined || questionnaireVersion === defaultVersion) return level === 'LEVEL_1' ? registries.v12 : registries.current
+  if (questionnaireVersion === currentVersion) return registries.current
   if (questionnaireVersion === legacyVersion) return registries.legacy
   invariant(false, 404, 'QUESTIONNAIRE_VERSION_NOT_FOUND', '问卷版本不存在', { level, questionnaireVersion })
   return registries.current
@@ -584,8 +601,19 @@ function normalizeQuestion(raw: RawQuestion, systems: readonly EducationSystem[]
     ...(matrixRangeOptions ? { matrixRangeOptions: Object.freeze([...matrixRangeOptions]) } : {}),
     ...(typeof raw.exit_rule === 'string' ? { exitRule: raw.exit_rule } : {}),
     ...(typeof raw.privacy_note === 'string' ? { privacyNote: raw.privacy_note } : {})
+    ,...(raw.visibility === undefined ? {} : { visibility: normalizeVisibility(raw.visibility) })
   }
   return Object.freeze(question)
+}
+
+function normalizeVisibility(value: unknown): NonNullable<FrozenQuestion['visibility']> {
+  const raw = object(value, 'EDUCATION_COMPASS_QUESTION_VISIBILITY_INVALID')
+  exactKeys(raw, ['question_id', 'question_key', 'allowed_values'], 'EDUCATION_COMPASS_QUESTION_VISIBILITY_INVALID')
+  return Object.freeze({
+    questionId: string(raw.question_id, 'EDUCATION_COMPASS_QUESTION_VISIBILITY_INVALID'),
+    questionKey: string(raw.question_key, 'EDUCATION_COMPASS_QUESTION_VISIBILITY_INVALID'),
+    allowedValues: Object.freeze(stringArray(raw.allowed_values, 'EDUCATION_COMPASS_QUESTION_VISIBILITY_INVALID'))
+  })
 }
 
 function buildBank(
@@ -600,8 +628,8 @@ function buildBank(
     const digestInput = { level, questionnaireVersion: registry.level1.bankVersion, questions }
     const presentation: QuestionnairePresentationMetaV1 = Object.freeze({
       version: 'education_compass_presentation_v1',
-      estimatedMinutesMin: 3,
-      estimatedMinutesMax: 5,
+      estimatedMinutesMin: registry.level1.bankVersion === FREE_PARENT_QUESTIONNAIRE_VERSION ? 1 : 3,
+      estimatedMinutesMax: registry.level1.bankVersion === FREE_PARENT_QUESTIONNAIRE_VERSION ? 1 : 5,
       totalQuestions: questions.length,
       requiredQuestions: registry.level1.requiredQuestionIds.length,
       progressMode: 'QUESTION_COUNT',

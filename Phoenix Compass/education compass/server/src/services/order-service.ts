@@ -92,7 +92,7 @@ export class OrderService {
       invariant(await this.hasActiveGrowthConsents(tx, order), 403,
         'GROWTH_DISCOVERY_CONSENT_REQUIRED', '核心测评或学生本人同意无效、版本不匹配或已撤回')
       invariant(report.status === 'LOCKED' && report.deliveryStatus === 'LOCKED' && report.qaPassed &&
-        report.resultVersion === 'student_growth_discovery_report_v1.0.0' && report.resultPayload,
+        (report.resultVersion === 'student_growth_discovery_report_v1.0.0' || report.resultVersion === 'student_growth_discovery_report_v1.2.0') && report.resultPayload,
         409, 'REPORT_QA_REQUIRED', '成长发现报告尚未通过收费前QA')
       return
     }
@@ -495,7 +495,7 @@ export class OrderService {
             report.modules?.length === 6 && report.sourceCatalogVerified
           const growthReady = order.productCode === GROWTH_DISCOVERY_PRODUCT_CODE && report.qaPassed &&
             report.reportKind === 'STUDENT_GROWTH_DISCOVERY' && report.resultPayload &&
-            report.resultVersion === 'student_growth_discovery_report_v1.0.0'
+            (report.resultVersion === 'student_growth_discovery_report_v1.0.0' || report.resultVersion === 'student_growth_discovery_report_v1.2.0')
           invariant(Boolean(legacyReady || growthReady), 500, 'REPORT_DELIVERY_PRECONDITION_FAILED', '报告未通过收费前QA或来源审核')
           invariant(job?.status === 'SUCCEEDED', 500, 'REPORT_DELIVERY_PRECONDITION_FAILED', '收费前报告任务未成功')
           const paidAt = result.successTime ?? now

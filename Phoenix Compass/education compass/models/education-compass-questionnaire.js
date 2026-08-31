@@ -176,6 +176,7 @@ function normalizeQuestion(question, scope, root, raw, context) {
     dimensions: question.dimensions || (question.dimension ? [question.dimension] : []),
     signalCodes: question.signalCodes || question.signal_codes || [],
     systemApplicability: question.systemApplicability || question.system_applicability || [],
+    visibility: question.visibility || null,
     scored: false,
     scope: String(question.scope || scope || 'COMMON').toUpperCase(),
     options,
@@ -342,11 +343,11 @@ function validateAnswers(bank, answers, options = {}) {
   Object.keys(value).forEach((key) => {
     if (!knownKeys.has(key)) errors.push({ questionId: '', key, code: 'UNKNOWN_ANSWER_FIELD', message: '答案包含当前题库之外的字段' })
   })
-  bank.questions.forEach((question) => {
+  bank.questions.filter((question) => isQuestionVisible(question, value)).forEach((question) => {
     const answerKey = question.answerKey || question.id
     errors.push(...validateQuestion(question, value[answerKey] === undefined ? value[question.key] : value[answerKey], options))
   })
-  const required = bank.questions.filter((question) => question.required)
+  const required = bank.questions.filter((question) => question.required && isQuestionVisible(question, value))
   const answeredRequired = required.filter((question) => {
     const answerKey = question.answerKey || question.id
     return !isEmpty(value[answerKey] === undefined ? value[question.key] : value[answerKey])
@@ -357,6 +358,15 @@ function validateAnswers(bank, answers, options = {}) {
     missingQuestionIds: errors.filter((error) => error.code === 'REQUIRED').map((error) => error.questionId),
     coverage: required.length ? Math.round((answeredRequired.length / required.length) * 100) : 100
   }
+}
+
+function isQuestionVisible(question, answers) {
+  const visibility = question && question.visibility
+  if (!visibility) return true
+  const value = answers && (answers[visibility.questionId] === undefined
+    ? answers[visibility.questionKey]
+    : answers[visibility.questionId])
+  return typeof value === 'string' && Array.isArray(visibility.allowedValues) && visibility.allowedValues.includes(value)
 }
 
 function viewQuestion(question, answer) {
@@ -377,7 +387,7 @@ function buildViewModel(bank, answers = {}) {
     educationSystem: bank.educationSystem,
     presentation: bank.presentation,
     coverage: validation.coverage,
-    questions: bank.questions.map((question) => {
+    questions: bank.questions.filter((question) => isQuestionVisible(question, answers)).map((question) => {
       const answerKey = question.answerKey || question.id
       return viewQuestion(question, answers[answerKey] === undefined ? answers[question.key] : answers[answerKey])
     })
@@ -416,6 +426,7 @@ module.exports = {
   QUESTION_TYPES,
   QuestionnaireContractError,
   buildViewModel,
+  isQuestionVisible,
   isEmpty,
   normalizeQuestionBank,
   switchEducationSystem,

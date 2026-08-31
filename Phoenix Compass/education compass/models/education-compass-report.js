@@ -1,12 +1,14 @@
 const RESULT_KINDS = Object.freeze({
   LEGACY_SIX_MODULES: 'LEGACY_COMPASS_SIX_MODULES',
   FAMILY_SNAPSHOT: 'FAMILY_EDUCATION_SNAPSHOT',
+  PATHWAY_FIT: 'EDUCATION_PATHWAY_SIGNAL',
   STUDENT_GROWTH: 'STUDENT_GROWTH_DISCOVERY'
 })
 
 const RENDERER_KEYS = Object.freeze({
   LEGACY_SIX_MODULES: 'compass-six-modules-v1',
   FAMILY_SNAPSHOT: 'family_education_snapshot_v1',
+  PATHWAY_FIT: 'education_pathway_signal_v1.2.0',
   STUDENT_GROWTH: 'student_growth_discovery_report_v1'
 })
 
@@ -107,10 +109,35 @@ function normalizeFamilySnapshot(value) {
   }
 }
 
+function normalizePathwayFit(value) {
+  const required = ['hong_kong_fit_signal', 'overseas_fit_signal', 'key_variables', 'next_insight', 'next_step_status']
+  const missing = required.filter((key) => value[key] === undefined && value[key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())] === undefined)
+  if (missing.length) throw new ResultContractError('Education Pathway Signal 字段不完整', { missing })
+  return {
+    rendererKey: RENDERER_KEYS.PATHWAY_FIT,
+    resultKind: RESULT_KINDS.PATHWAY_FIT,
+    resultState: 'FULL',
+    resultVersion: field(value, 'resultVersion', 'result_version') || '',
+    familyId: field(value, 'familyId', 'family_id') || '', studentId: field(value, 'studentId', 'student_id') || '',
+    assessmentId: field(value, 'assessmentId', 'assessment_id') || '',
+    educationSystem: field(value, 'educationSystem', 'education_system') || '', gradeStage: field(value, 'gradeStage', 'grade_stage') || '',
+    sections: [
+      { key: 'hong_kong_fit_signal', title: 'Hong Kong Fit Signal', value: field(value, 'hongKongFitSignal', 'hong_kong_fit_signal'), source: 'PARENT_OBSERVATION' },
+      { key: 'overseas_fit_signal', title: 'Overseas Fit Signal', value: field(value, 'overseasFitSignal', 'overseas_fit_signal'), source: 'PARENT_OBSERVATION' },
+      { key: 'key_variables', title: 'Key Variables', value: field(value, 'keyVariables', 'key_variables') || [], source: 'PARENT_OBSERVATION' },
+      { key: 'next_insight', title: 'Next Insight', value: field(value, 'nextInsight', 'next_insight') || '', source: 'PARENT_OBSERVATION' }
+    ],
+    nextStepStatus: field(value, 'nextStepStatus', 'next_step_status') || '',
+    nextStepReasonCodes: field(value, 'nextStepReasonCodes', 'next_step_reason_codes') || [],
+    disclaimer: value.disclaimer || '', disclaimerVersion: field(value, 'disclaimerVersion', 'disclaimer_version') || ''
+  }
+}
+
 function normalizeStudentGrowth(value) {
   if (resultState(value) === 'LOCKED') return normalizeLocked(value)
+  const v12 = /^student_growth_discovery_report_v1\.2(?:\.|$)/.test(String(field(value, 'resultVersion', 'result_version') || ''))
   const sectionDefinitions = [
-    ['student_snapshot', 'studentSnapshot', 'Student Snapshot'],
+    ...(v12 ? [['pathway_fit', 'pathwayFit', 'Pathway Fit']] : [['student_snapshot', 'studentSnapshot', 'Student Snapshot']]),
     ['strength_signals', 'strengthSignals', 'Strength Signals'],
     ['learning_bottlenecks', 'learningBottlenecks', 'Learning Bottlenecks'],
     ['subject_focus', 'subjectFocus', 'Subject Focus'],
@@ -147,6 +174,7 @@ function normalizeStudentGrowth(value) {
 const RESULT_RENDERERS = Object.freeze({
   [RENDERER_KEYS.LEGACY_SIX_MODULES]: normalizeLegacy,
   [RENDERER_KEYS.FAMILY_SNAPSHOT]: normalizeFamilySnapshot,
+  [RENDERER_KEYS.PATHWAY_FIT]: normalizePathwayFit,
   [RENDERER_KEYS.STUDENT_GROWTH]: normalizeStudentGrowth
 })
 
@@ -154,6 +182,7 @@ const KIND_ALIASES = Object.freeze({
   LEGACY_EDUCATION_COMPASS: RENDERER_KEYS.LEGACY_SIX_MODULES,
   LEGACY_COMPASS_SIX_MODULES: RENDERER_KEYS.LEGACY_SIX_MODULES,
   FAMILY_EDUCATION_SNAPSHOT: RENDERER_KEYS.FAMILY_SNAPSHOT,
+  EDUCATION_PATHWAY_SIGNAL: RENDERER_KEYS.PATHWAY_FIT,
   STUDENT_GROWTH_DISCOVERY: RENDERER_KEYS.STUDENT_GROWTH,
   STUDENT_GROWTH_DISCOVERY_REPORT: RENDERER_KEYS.STUDENT_GROWTH
 })
@@ -164,6 +193,7 @@ function rendererKeyFor(input) {
     field(value, 'templateVersion', 'template_version') || ''
   if (RESULT_RENDERERS[version]) return version
   if (/^family_education_snapshot_v1(?:\.|$)/.test(version)) return RENDERER_KEYS.FAMILY_SNAPSHOT
+  if (/^education_pathway_signal_v1\.2(?:\.|$)/.test(version)) return RENDERER_KEYS.PATHWAY_FIT
   if (/^student_growth_discovery_report_v1(?:\.|$)/.test(version)) return RENDERER_KEYS.STUDENT_GROWTH
   if (/^compass-six-modules-v1(?:\.|$)/.test(version)) return RENDERER_KEYS.LEGACY_SIX_MODULES
   const kind = String(field(value, 'resultKind', 'result_kind') || field(value, 'reportKind', 'report_kind') || '').toUpperCase()
@@ -185,6 +215,7 @@ module.exports = {
   RESULT_RENDERERS,
   ResultContractError,
   normalizeFamilySnapshot,
+  normalizePathwayFit,
   normalizeLegacy,
   normalizeLocked,
   normalizeStudentGrowth,

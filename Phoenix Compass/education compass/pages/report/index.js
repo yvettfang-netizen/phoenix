@@ -37,6 +37,7 @@ const CODE_LABELS = {
 
 const SECTION_TITLES = {
   student_snapshot: 'Student Snapshot / 学生成长快照',
+  pathway_fit: 'Pathway Fit / 升学路径适配',
   strength_signals: 'Strength Signals / 优势信号',
   learning_bottlenecks: 'Learning Bottlenecks / 学习卡点',
   subject_focus: 'Subject Focus / 学科重点',
@@ -154,12 +155,17 @@ function nextSupportPresentation(response) {
     deepAssessment.advisorIntent === 'DEEP_ASSESSMENT'
   return {
     askwiseStatus: ['RESERVED', 'BLOCKED', 'DISABLED'].includes(askwise.status) ? askwise.status : 'DISABLED',
+    askwiseVisible: askwise.eligible === true,
     askwiseEnabled: false,
-    askwiseLabel: askwise.status === 'RESERVED' ? 'Askwise 即将开放' : 'Askwise 暂未开放',
+    askwiseLabel: askwise.status === 'RESERVED' ? '授权后接驳将开放' : 'ASKWISE 暂未开放',
+    askwiseCopy: askwise.eligible === true
+      ? '当前报告出现明确的学科重点或学习瓶颈信号。ASKWISE 仅在监护人单独同意后，按受控 contract 接驳。'
+      : '',
     deepState: state,
     deepStateCopy: SUPPORT_STATE_COPY[state],
     deepAdvisorVisible,
-    advisorIntent: deepAdvisorVisible ? 'DEEP_ASSESSMENT' : ''
+    advisorIntent: deepAdvisorVisible ? 'DEEP_ASSESSMENT' : '',
+    continueObservingVisible: !deepAdvisorVisible && askwise.eligible !== true
   }
 }
 

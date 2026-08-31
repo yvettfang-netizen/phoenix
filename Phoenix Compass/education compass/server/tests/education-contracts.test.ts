@@ -5,6 +5,7 @@ import {
   CanonicalQuestionAnswer,
   EducationSystem,
   FREE_PARENT_QUESTIONNAIRE_VERSION,
+  FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION,
   FrozenQuestion,
   GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION,
   LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION,
@@ -27,6 +28,7 @@ import {
   buildFamilyEducationSnapshotV1,
   buildStudentGrowthDiscoveryReportV1
 } from '../src/domain/education-compass/result-builder'
+import { buildEducationPathwaySignalV12 } from '../src/domain/education-compass/pathway-fit'
 import { buildLevel3ReservationV1 } from '../src/domain/education-compass/level3-reservation'
 import {
   buildLevel3ReservationFromFrozenEvidence,
@@ -243,7 +245,7 @@ function questionDataContract(question: FrozenQuestion) {
 test('V1.0 base, V1.1 question-copy overlay, and taxonomy match their approved SHA-256 manifests', () => {
   const registry = loadEducationCompassRegistry()
   const integrity = getEducationCompassRegistryIntegrity()
-  assert.equal(registry.candidateVersion, 'education_compass_question_banks_v1.1.0')
+  assert.equal(registry.candidateVersion, 'education_pathway_fit_free_v1.2.0')
   assert.equal(registry.taxonomyVersion, 'education_compass_taxonomy_v1.0.0-rc1')
   assert.deepEqual({
     expected: integrity.questionBanks.expectedSha256,
@@ -276,8 +278,8 @@ test('V1.0 base, V1.1 question-copy overlay, and taxonomy match their approved S
 })
 
 test('V1.1 L1 and all seven L2 routes expose approved copy, IDs, digests, markers, presentation, and no scoring', () => {
-  const level1 = getEducationCompassQuestionnaireBank('LEVEL_1', null)
-  assert.equal(level1.questionnaireVersion, FREE_PARENT_QUESTIONNAIRE_VERSION)
+  const level1 = getEducationCompassQuestionnaireBank('LEVEL_1', null, FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION)
+  assert.equal(level1.questionnaireVersion, FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION)
   assert.deepEqual(level1.questions.map(({ id }) => id), LEVEL_1_IDS)
   assert.equal(level1.schemaDigest, '6c92bd8c8f47f57a0827a5a7c2d8dde745ebe571b366a3a73a0ef8b8950921b3')
   assert.equal(level1.scoringMode, 'NONE')
@@ -346,7 +348,7 @@ test('V1.1 L1 and all seven L2 routes expose approved copy, IDs, digests, marker
 })
 
 test('V1.1 is copy-only: V1.0 banks remain pinned and both versions preserve IDs, codes, routing, privacy boundaries, and scoring', () => {
-  const currentLevel1 = getEducationCompassQuestionnaireBank('LEVEL_1', null)
+  const currentLevel1 = getEducationCompassQuestionnaireBank('LEVEL_1', null, FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION)
   const legacyLevel1 = getEducationCompassQuestionnaireBank(
     'LEVEL_1',
     null,
@@ -400,19 +402,19 @@ test('V1.1 is copy-only: V1.0 banks remain pinned and both versions preserve IDs
 
 test('validator rejects unknown IDs, wrong types, exclusive conflicts, and PII', () => {
   expectCode(() => validateQuestionnaireAnswers({
-    level: 'LEVEL_1', educationSystem: null, answers: { ZZ99: 'UNKNOWN' }
+    level: 'LEVEL_1', educationSystem: null, questionnaireVersion: FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION, answers: { ZZ99: 'UNKNOWN' }
   }), 'EDUCATION_COMPASS_UNKNOWN_QUESTION_ID')
 
   expectCode(() => validateQuestionnaireAnswers({
-    level: 'LEVEL_1', educationSystem: null, answers: { FP01: ['PRIMARY'] }
+    level: 'LEVEL_1', educationSystem: null, questionnaireVersion: FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION, answers: { FP01: ['PRIMARY'] }
   }), 'EDUCATION_COMPASS_ANSWER_TYPE_INVALID')
 
   expectCode(() => validateQuestionnaireAnswers({
-    level: 'LEVEL_1', educationSystem: null, answers: { FP04: ['NOT_CLEAR', 'MEMORY'] }
+    level: 'LEVEL_1', educationSystem: null, questionnaireVersion: FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION, answers: { FP04: ['NOT_CLEAR', 'MEMORY'] }
   }), 'EDUCATION_COMPASS_EXCLUSIVE_OPTION_CONFLICT')
 
   expectCode(() => validateQuestionnaireAnswers({
-    level: 'LEVEL_1', educationSystem: null, answers: { FP01: '13800000000' }
+    level: 'LEVEL_1', educationSystem: null, questionnaireVersion: FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION, answers: { FP01: '13800000000' }
   }), 'EDUCATION_COMPASS_PII_FORBIDDEN')
 })
 
@@ -628,7 +630,8 @@ test('next-support projection uses only the two frozen positive mappings and kee
     reportAccess: 'full'
   })
   assert.deepEqual(unavailable.askwise, {
-    status: 'RESERVED', enabled: false, reasonCode: 'ASKWISE_CAPABILITY_UNAVAILABLE', requiresExplicitConsent: true
+    status: 'RESERVED', enabled: false, reasonCode: 'ASKWISE_CAPABILITY_UNAVAILABLE', eligible: false,
+    triggerCodes: [], ctaMode: 'NONE', requiresExplicitConsent: true
   })
   assert.equal(unavailable.deepAssessment.state, 'DEFERRED')
   assert.deepEqual(unavailable.deepAssessment.reasonCodes, ['NO_LEVEL_3_TRIGGER'])

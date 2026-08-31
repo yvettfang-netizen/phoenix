@@ -27,16 +27,16 @@ function initialAnswers(student, cached) {
   }
 }
 
-function chunkQuestions(questions, respondentHint) {
+function chunkQuestions(questions, respondentHint, perStep = QUESTIONS_PER_STEP) {
   const steps = []
-  for (let index = 0; index < questions.length; index += QUESTIONS_PER_STEP) {
+  for (let index = 0; index < questions.length; index += perStep) {
     steps.push({
-      key: `group_${Math.floor(index / QUESTIONS_PER_STEP) + 1}`,
+      key: `group_${Math.floor(index / perStep) + 1}`,
       title: '请按最近真实情况作答',
       hint: respondentHint || '答案没有高低之分；“尚未确定”也是有效回答。',
       questionStart: index + 1,
-      questionEnd: Math.min(index + QUESTIONS_PER_STEP, questions.length),
-      questions: questions.slice(index, index + QUESTIONS_PER_STEP)
+      questionEnd: Math.min(index + perStep, questions.length),
+      questions: questions.slice(index, index + perStep)
     })
   }
   return steps
@@ -213,11 +213,12 @@ Page({
     const view = questionnaireModel.buildViewModel(this.remoteBank, keyAnswers)
     const presentation = this.remoteBank.presentation || {}
     const questions = view.questions.map(decorateMatrixQuestion)
-    const steps = chunkQuestions(questions, presentation.respondentHint)
+    const pathwayFitFree = this.remoteBank.version === 'education_pathway_fit_free_v1.2.0'
+    const steps = chunkQuestions(questions, presentation.respondentHint, pathwayFitFree ? 1 : QUESTIONS_PER_STEP)
     const stepIndex = Math.max(0, Math.min(preferredStep === undefined ? this.data.stepIndex : preferredStep, steps.length - 1))
     const totalQuestions = questions.length
     const requiredQuestions = questions.filter((question) => question.required).length
-    const answeredCount = this.remoteBank.questions.filter((question) => !questionnaireModel.isEmpty((this.remoteAnswers || {})[question.id])).length
+    const answeredCount = questions.filter((question) => !questionnaireModel.isEmpty((this.remoteAnswers || {})[question.id])).length
     const defaultMin = this.data.level === 2 ? 15 : 3
     const defaultMax = this.data.level === 2 ? 20 : 5
     const min = Number(presentation.estimatedMinutesMin)
@@ -229,7 +230,7 @@ Page({
       steps, stepIndex, current, coverage: view.coverage,
       answeredCount, totalQuestions, requiredQuestions,
       currentRangeLabel: current ? `第 ${current.questionStart}—${current.questionEnd} 题` : '当前没有题目',
-      estimatedMinutesLabel: `约 ${estimatedMinutesMin}—${estimatedMinutesMax} 分钟`,
+      estimatedMinutesLabel: pathwayFitFree ? '约 30—45 秒' : `约 ${estimatedMinutesMin}—${estimatedMinutesMax} 分钟`,
       progress: totalQuestions ? (answeredCount / totalQuestions) * 100 : 0,
       experienceEyebrow: presentation.experienceEyebrow || '',
       experienceTitle: presentation.experienceTitle || '',

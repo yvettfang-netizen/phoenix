@@ -169,6 +169,13 @@ function normalizeAnswer(
   }
 }
 
+function isQuestionVisible(question: FrozenQuestion, answers: Readonly<Record<string, CanonicalQuestionAnswer>>): boolean {
+  const visibility = question.visibility
+  if (!visibility) return true
+  const value = answers[visibility.questionId]
+  return typeof value === 'string' && visibility.allowedValues.includes(value)
+}
+
 export function validateQuestionnaireAnswers(input: ValidateQuestionnaireAnswersInput): QuestionnaireValidationResult {
   const mode = input.mode ?? 'DRAFT'
   invariant(mode === 'DRAFT' || mode === 'SUBMIT', 500, 'EDUCATION_COMPASS_VALIDATION_MODE_INVALID', '问卷校验模式无效')
@@ -183,18 +190,26 @@ export function validateQuestionnaireAnswers(input: ValidateQuestionnaireAnswers
     questionIds: unknownQuestionIds
   })
   const normalized: Record<string, CanonicalQuestionAnswer> = {}
-  for (const [questionId, raw] of Object.entries(source)) {
-    invariant(raw !== undefined && raw !== null, 400, 'EDUCATION_COMPASS_EMPTY_ANSWER_INVALID', '空答案应从 answers 中省略', { questionId })
-    const question = byId.get(questionId)
-    invariant(question, 400, 'EDUCATION_COMPASS_UNKNOWN_QUESTION_ID', '未知题号', { questionId })
-    normalized[questionId] = normalizeAnswer(question, raw, mode, currentYear)
+  for (const question of bank.questions) {
+    const raw = source[question.id]
+    if (raw === undefined) continue
+    invariant(raw !== null, 400, 'EDUCATION_COMPASS_EMPTY_ANSWER_INVALID', '空答案应从 answers 中省略', { questionId: question.id })
+    if (!isQuestionVisible(question, normalized)) {
+      assertNoPii(raw, question.id)
+      continue
+    }
+    normalized[question.id] = normalizeAnswer(question, raw, mode, currentYear)
   }
   if (input.level === 'LEVEL_2' && normalized.EGD03 !== undefined) {
     invariant(typeof normalized.EGD03 === 'string' && isEducationSystem(normalized.EGD03), 400,
       'EDUCATION_SYSTEM_INVALID', '教育体系必须使用冻结 code')
     invariant(normalized.EGD03 === input.educationSystem, 409, 'EDUCATION_SYSTEM_ROUTE_MISMATCH', '答案中的教育体系与当前题库分支不一致')
   }
-  const missingRequiredQuestionIds = bank.requiredQuestionIds.filter((questionId) => normalized[questionId] === undefined)
+  const applicableRequiredQuestionIds = bank.requiredQuestionIds.filter((questionId) => {
+    const question = byId.get(questionId)
+    return Boolean(question && isQuestionVisible(question, normalized))
+  })
+  const missingRequiredQuestionIds = applicableRequiredQuestionIds.filter((questionId) => normalized[questionId] === undefined)
   const respondentExitRequested = normalized.EGD01 === 'EXIT_NOT_STUDENT'
   if (mode === 'SUBMIT') {
     invariant(!respondentExitRequested, 422, 'STUDENT_SELF_CONFIRMATION_REQUIRED', '学生未确认本人作答，不生成结果且不允许购买')
@@ -202,15 +217,15 @@ export function validateQuestionnaireAnswers(input: ValidateQuestionnaireAnswers
       questionIds: missingRequiredQuestionIds
     })
   }
-  const answeredRequiredCount = bank.requiredQuestionIds.length - missingRequiredQuestionIds.length
-  const completenessCoverage = bank.requiredQuestionIds.length === 0
+  const answeredRequiredCount = applicableRequiredQuestionIds.length - missingRequiredQuestionIds.length
+  const completenessCoverage = applicableRequiredQuestionIds.length === 0
     ? 100
-    : Math.round(answeredRequiredCount / bank.requiredQuestionIds.length * 100)
+    : Math.round(answeredRequiredCount / applicableRequiredQuestionIds.length * 100)
   return Object.freeze({
     answers: Object.freeze(normalized),
     missingRequiredQuestionIds: Object.freeze(missingRequiredQuestionIds),
     answeredRequiredCount,
-    requiredCount: bank.requiredQuestionIds.length,
+    requiredCount: applicableRequiredQuestionIds.length,
     completenessCoverage,
     canSubmit: missingRequiredQuestionIds.length === 0 && !respondentExitRequested,
     respondentExitRequested,

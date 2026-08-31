@@ -18,9 +18,9 @@
     <text class="compass-hero__title">{{heroTitle}}</text>
     <text class="compass-hero__copy">{{heroCopy}}</text>
     <view wx:if="{{isV05 && level === 1}}" class="compass-benefits">
-      <view class="compass-benefit"><text class="compass-benefit__value">免费</text><text class="compass-benefit__label">完整家庭快照</text></view>
-      <view class="compass-benefit"><text class="compass-benefit__value">8</text><text class="compass-benefit__label">道家长必答题</text></view>
-      <view class="compass-benefit"><text class="compass-benefit__value">3—5</text><text class="compass-benefit__label">分钟手机完成</text></view>
+      <view class="compass-benefit"><text class="compass-benefit__value">免费</text><text class="compass-benefit__label">路径信号判断</text></view>
+      <view class="compass-benefit"><text class="compass-benefit__value">6</text><text class="compass-benefit__label">道核心点击题</text></view>
+      <view class="compass-benefit"><text class="compass-benefit__value">30—45</text><text class="compass-benefit__label">秒快速完成</text></view>
     </view>
     <view wx:elif="{{isV05 && level === 2}}" class="compass-benefits">
       <view class="compass-benefit"><text class="compass-benefit__value">学生</text><text class="compass-benefit__label">仅本人作答</text></view>
@@ -43,7 +43,7 @@
         <view><text class="product-card__label">完整报告解锁价</text><text class="product-card__price">{{product.displayPrice}}</text></view>
         <text class="product-card__type">{{product.purchaseType}}</text>
       </view>
-      <text class="product-card__note">此入口只在免费 Family Education Snapshot 完成且允许邀请学生时出现。学生先完成并提交问卷，再自主决定是否付款；付款前不返回六项正文、signals 或 evidence。</text>
+      <text class="product-card__note">此入口只在免费路径信号完成后出现。学生先完成并提交问卷，再自主决定是否付款；付款前不返回六层正文、signals 或 evidence。</text>
     </view>
 
     <view wx:if="{{!isV05}}" class="compass-path">
@@ -54,14 +54,14 @@
 
     <view wx:else class="compass-path">
       <block wx:if="{{level === 1}}">
-        <view class="compass-path__item"><text>01</text><view><text>家长本人填写</text><text>8 道必答题，记录最近观察而非能力判断</text></view></view>
-        <view class="compass-path__item"><text>02</text><view><text>免费完整结果</text><text>家庭关注、观察信号与学生准备状态</text></view></view>
-        <view class="compass-path__item"><text>03</text><view><text>尊重学生意愿</text><text>只有冻结规则允许时才邀请学生继续</text></view></view>
+        <view class="compass-path__item"><text>01</text><view><text>家长快速点击</text><text>6 道核心题，记录路径、学习状态与适应情况</text></view></view>
+        <view class="compass-path__item"><text>02</text><view><text>免费路径信号</text><text>香港与海外是否值得继续探索，以及当前关键变量</text></view></view>
+        <view class="compass-path__item"><text>03</text><view><text>学生本人继续</text><text>由学生确认后，进一步解释学习与成长因素如何影响路径</text></view></view>
       </block>
       <block wx:else>
         <view class="compass-path__item"><text>01</text><view><text>学生本人确认</text><text>家长可协助操作或解释，不得代选答案</text></view></view>
         <view class="compass-path__item"><text>02</text><view><text>按教育体系动态出题</text><text>GAOKAO、DSE、IGCSE、A-Level、AP／美国课程加载分支题；IB／其他体系使用公共题 fallback</text></view></view>
-        <view class="compass-path__item"><text>03</text><view><text>提交后单次解锁</text><text>学历路径为选填背景项；付款确认后查看六项成长发现结果</text></view></view>
+        <view class="compass-path__item"><text>03</text><view><text>提交后单次解锁</text><text>付款确认后查看六层成长发现结果；不输出录取预测</text></view></view>
       </block>
     </view>
 
@@ -97,8 +97,8 @@
       </view>
     </block>
 
-    <button class="btn btn--primary compass-primary" loading="{{creating}}" disabled="{{isV05 && level === 2 && !level2EntryAuthorized}}" bindtap="start">{{isV05 ? (level === 1 ? '开始免费家长教育罗盘' : '由学生本人开始成长发现') : '免费填写问卷'}}</button>
-    <text class="compass-time">{{isV05 ? (level === 1 ? '约 3—5 分钟 · 8 道家长必答题 · 免费查看完整家庭快照' : '约 15—20 分钟 · 学生本人作答 · 无能力总分') : '约 8—12 分钟 · 资料完整度达到 70 分后可生成预览'}}</text>
+    <button class="btn btn--primary compass-primary" loading="{{creating}}" disabled="{{isV05 && level === 2 && !level2EntryAuthorized}}" bindtap="start">{{isV05 ? (level === 1 ? '开始路径适配快速判断' : '由学生本人开始成长发现') : '免费填写问卷'}}</button>
+    <text class="compass-time">{{isV05 ? (level === 1 ? '约 30—45 秒 · 6 道核心点击题 · 免费查看路径信号' : '约 15—20 分钟 · 学生本人作答 · 无能力总分') : '约 8—12 分钟 · 资料完整度达到 70 分后可生成预览'}}</text>
     <view class="compass-privacy"><text class="compass-privacy__mark" aria-hidden="true">◇</text><text>资料按隐私说明处理｜结果仅授权家庭可见</text></view>
 
     <view wx:if="{{reports.length}}" class="history section">

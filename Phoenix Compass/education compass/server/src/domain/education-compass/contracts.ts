@@ -1,16 +1,23 @@
-export const EDUCATION_COMPASS_CONTRACT_VERSION = 'education_compass_contract_v1.1.0' as const
-export const FREE_PARENT_QUESTIONNAIRE_VERSION = 'free_parent_compass_v1.1.0' as const
+export const EDUCATION_COMPASS_CONTRACT_VERSION = 'education_compass_contract_v1.2.0' as const
+export const PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION = 'education_pathway_fit_free_v1.2.0' as const
+export const FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION = 'free_parent_compass_v1.1.0' as const
+/** The default version for newly created Free assessments. */
+export const FREE_PARENT_QUESTIONNAIRE_VERSION = PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION
 export const GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION = 'education_growth_discovery_v1.1.0' as const
 export const LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION = 'free_parent_compass_v1.0.0-rc1' as const
 export const LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION = 'education_growth_discovery_v1.0.0-rc1' as const
 export type FreeParentQuestionnaireVersion =
   | typeof LEGACY_FREE_PARENT_QUESTIONNAIRE_VERSION
+  | typeof FREE_PARENT_COMPASS_V11_QUESTIONNAIRE_VERSION
   | typeof FREE_PARENT_QUESTIONNAIRE_VERSION
 export type GrowthDiscoveryQuestionnaireVersion =
   | typeof LEGACY_GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
   | typeof GROWTH_DISCOVERY_QUESTIONNAIRE_VERSION
 export const FAMILY_SNAPSHOT_VERSION = 'family_education_snapshot_v1.0.0' as const
 export const GROWTH_DISCOVERY_REPORT_VERSION = 'student_growth_discovery_report_v1.0.0' as const
+export const PATHWAY_FIT_SIGNAL_VERSION = 'education_pathway_signal_v1.2.0' as const
+export const PATHWAY_FIT_RULESET_VERSION = 'education_pathway_fit_rules_v1.2.0' as const
+export const GROWTH_DISCOVERY_REPORT_V12_VERSION = 'student_growth_discovery_report_v1.2.0' as const
 export const EDUCATION_COMPASS_TAXONOMY_VERSION = 'education_compass_taxonomy_v1.0.0-rc1' as const
 export const EDUCATION_COMPASS_DISCLAIMER_VERSION = 'education_compass_disclaimer_v1.0.0-rc1' as const
 
@@ -65,6 +72,12 @@ export interface FrozenQuestionValidation {
   allowEmpty?: boolean
 }
 
+export interface FrozenQuestionVisibility {
+  questionId: string
+  questionKey: string
+  allowedValues: readonly string[]
+}
+
 export interface FrozenQuestion {
   id: string
   key: string
@@ -81,6 +94,7 @@ export interface FrozenQuestion {
   matrixRangeOptions?: readonly FrozenOption[]
   exitRule?: string
   privacyNote?: string
+  visibility?: Readonly<FrozenQuestionVisibility>
 }
 
 export interface RegistrySourceIntegrity {
@@ -176,6 +190,38 @@ export interface FamilyEducationSnapshotV1 {
   disclaimer: typeof EDUCATION_COMPASS_DISCLAIMER
 }
 
+export type PathwayFitStatus =
+  | 'PRIORITY_EXPLORE'
+  | 'CONTINUE_EVALUATING'
+  | 'CONDITIONS_INSUFFICIENT'
+  | 'NOT_PRIORITY_NOW'
+
+export interface PathwayFitSignalV12 {
+  status: PathwayFitStatus
+  evidence_refs: readonly string[]
+}
+
+export interface EducationPathwaySignalV12 {
+  result_kind: 'EDUCATION_PATHWAY_SIGNAL'
+  result_version: typeof PATHWAY_FIT_SIGNAL_VERSION
+  family_id: string
+  student_id: string
+  assessment_id: string
+  education_system: string
+  grade_stage: string
+  hong_kong_fit_signal: PathwayFitSignalV12
+  overseas_fit_signal: PathwayFitSignalV12
+  key_variables: readonly string[]
+  next_insight: string
+  next_step_status: 'AVAILABLE'
+  next_step_reason_codes: readonly ['PATHWAY_SIGNAL_READY_FOR_GROWTH_DISCOVERY']
+  questionnaire_version: typeof PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION
+  ruleset_version: typeof PATHWAY_FIT_RULESET_VERSION
+  disclaimer_version: typeof EDUCATION_COMPASS_DISCLAIMER_VERSION
+  disclaimer: typeof EDUCATION_COMPASS_DISCLAIMER
+  scoring_mode: 'NONE'
+}
+
 export interface EvidenceSignal {
   code: string
   dimension: Extract<GrowthDimension,
@@ -234,6 +280,21 @@ export interface StudentGrowthDiscoveryReportV1 {
   disclaimer_version: typeof EDUCATION_COMPASS_DISCLAIMER_VERSION
   disclaimer: typeof EDUCATION_COMPASS_DISCLAIMER
   scoring_mode: 'NONE'
+}
+
+export interface StudentGrowthDiscoveryReportV12 extends Omit<StudentGrowthDiscoveryReportV1, 'result_version' | 'questionnaire_versions'> {
+  result_version: typeof GROWTH_DISCOVERY_REPORT_V12_VERSION
+  pathway_fit: {
+    hong_kong_fit_signal: PathwayFitSignalV12
+    overseas_fit_signal: PathwayFitSignalV12
+    key_variables: readonly string[]
+    next_insight: string
+    evidence_refs: readonly string[]
+    source_assessment_id: string
+    source_questionnaire_version: typeof PATHWAY_FIT_FREE_QUESTIONNAIRE_VERSION
+    ruleset_version: typeof PATHWAY_FIT_RULESET_VERSION
+  }
+  questionnaire_versions: readonly string[]
 }
 
 export interface ResultBuildIdentity {

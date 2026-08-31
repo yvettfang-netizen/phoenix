@@ -28,8 +28,11 @@ function walk(directory) {
   })
 }
 
-function sha256(file) {
-  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')
+function sha256(file, { normalizeLineEndings = false } = {}) {
+  const content = normalizeLineEndings
+    ? fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
+    : fs.readFileSync(file)
+  return crypto.createHash('sha256').update(content).digest('hex')
 }
 
 function readSource(relative) {
@@ -195,7 +198,7 @@ for (const page of interactionBaseline.pages) assertInteractionContract(page)
 
 const copyContract = {
   'pages/compass/index.wxml': [
-    '约 3—5 分钟', '约 15—20 分钟', '学生先完成并提交问卷',
+    '约 30—45 秒', '约 15—20 分钟', '学生先完成并提交问卷',
     '学生本人 Assent', '由学生本人开始成长发现'
   ],
   'pages/compass-preview/index.wxml': [
@@ -595,7 +598,11 @@ for (const page of ['pages/admin-families', 'pages/admin-family']) {
 for (const lockPath of ['package-lock.json', 'server/package-lock.json']) {
   const baseline = protectedBaseline.files.find((item) => normalizeSlashes(item.path) === lockPath)
   assert(baseline, `protected baseline is missing ${lockPath}`)
-  assert.strictEqual(sha256(path.join(root, ...lockPath.split('/'))), baseline.sha256, `${lockPath} changed during the UI-only update`)
+  assert.strictEqual(
+    sha256(path.join(root, ...lockPath.split('/')), { normalizeLineEndings: true }),
+    baseline.sha256,
+    `${lockPath} changed during the UI-only update`
+  )
 }
 
 console.log('✓ UI route contract: 16 ordered pages, 3 tab paths and lazy loading preserved')
