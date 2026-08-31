@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+:root { --navy: #0d1b2a; --gold: #c8a24a; --ivory: #fbf8f0; --ink: #243343; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ivory); color: var(--navy); font-family: Arial, "PingFang SC", sans-serif; }
+a { color: inherit; text-decoration: none; }
+.shell { min-height: 100vh; }
+.nav { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem max(1.25rem, calc((100vw - 68rem) / 2)); border-bottom: 1px solid #dfd8c8; }
+.brand { letter-spacing: .08em; font-weight: 700; }
+.brand span { color: var(--gold); }
+.main { width: min(100% - 2.5rem, 68rem); margin: 0 auto; padding: 4.5rem 0; }
+.eyebrow { color: #8a6b27; font-size: .78rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+h1 { max-width: 13em; margin: .8rem 0 1.25rem; font-family: Georgia, "Songti SC", serif; font-size: clamp(2.3rem, 8vw, 5rem); line-height: 1.05; font-weight: 500; }
+h2 { font-family: Georgia, "Songti SC", serif; font-size: clamp(1.7rem, 5vw, 2.6rem); font-weight: 500; }
+.lead { max-width: 42rem; color: #53606c; font-size: 1.08rem; line-height: 1.8; }
+.actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2rem; }
+.button { display: inline-flex; min-height: 3rem; align-items: center; justify-content: center; border: 1px solid var(--navy); border-radius: 999px; padding: .7rem 1.25rem; font-weight: 700; }
+.button.primary { background: var(--navy); color: white; }
+.grid { display: grid; gap: 1rem; margin-top: 3rem; }
+.card { border: 1px solid #dfd8c8; border-radius: 1.2rem; background: rgba(255,255,255,.58); padding: 1.4rem; }
+.card p { color: #58636d; line-height: 1.7; }
+.notice { border-left: 3px solid var(--gold); background: #f4edda; padding: 1rem 1.2rem; color: #625127; }
+.steps { display: grid; gap: .8rem; margin: 2rem 0; padding: 0; list-style: none; }
+.steps li { display: flex; gap: .8rem; align-items: center; color: #58636d; }
+.step { display: grid; width: 2rem; height: 2rem; place-items: center; border: 1px solid var(--gold); border-radius: 50%; color: #80631f; }
+@media (min-width: 700px) { .grid { grid-template-columns: repeat(3, 1fr); } }
