@@ -1,6 +1,12 @@
 name: Identity Gate 2 Validation
 
 on:
+  push:
+    branches:
+      - "feat/identity-compass-gate2-sprint"
+    paths:
+      - "Phoenix Compass/Identity Compass/**"
+      - ".github/workflows/identity-gate2-validation.yml"
   pull_request:
     paths:
       - "Phoenix Compass/Identity Compass/**"
