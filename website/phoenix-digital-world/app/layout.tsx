@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PublicSiteBridge } from "@/components/public-site-bridge";
 import "./globals.css";
+import "./scrollbar-utilities.css";
 
 export const metadata: Metadata = {
   title: "Phoenix Nova Digital World",
