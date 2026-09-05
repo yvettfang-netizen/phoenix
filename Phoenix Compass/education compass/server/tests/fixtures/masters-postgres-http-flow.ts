@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { createHash, randomUUID } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { lstat, mkdtemp, readdir, rm } from 'node:fs/promises'
 import { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -22,6 +22,12 @@ import { ProfileService } from '../../src/services/profile-service'
 import { ReportService } from '../../src/services/report-service'
 import { MockPaymentProvider } from '../../src/payments/mock-payment-provider'
 import { PostgresStore } from '../../src/store/postgres-store'
+import {
+  runMastersIsolatedBackupRestore,
+  type MastersBackupRestoreConfig,
+  type MastersBackupRestoreVerificationContext,
+  type MastersIsolatedBackupRestoreResult
+} from './masters-isolated-backup'
 
 /**
  * This helper is deliberately Postgres-only.  It never accepts a Store
@@ -30,7 +36,9 @@ import { PostgresStore } from '../../src/store/postgres-store'
  * tests.  All people and files are synthetic fixtures.
  */
 
-const sessionSecret = 'masters-postgres-http-flow-synthetic-secret-with-enough-entropy'
+// One per process: source/restart/restore HTTP stacks must share the same
+// synthetic signing key, while no test token or key is stable across runs.
+const sessionSecret = randomBytes(32).toString('hex')
 const consent = { accepted: true as const, copyVersion: 'masters_service_consent_v1.1', locale: 'zh-CN' }
 const pdfFontPath = process.env.MASTERS_TEST_PDF_FONT_PATH || process.env.MASTERS_PDF_FONT_PATH || 'C:\\Windows\\Fonts\\simhei.ttf'
 const sourceCatalog = validateSourceCatalog({
@@ -90,6 +98,7 @@ interface PostgresHttpApp {
 export interface MastersPostgresHttpFlowOptions {
   /** PoolConfig must point at the caller's UUID-named isolated schema. */
   poolConfig: PoolConfig
+  backupRestore?: MastersBackupRestoreConfig
   pdfFontPath?: string
 }
 
@@ -105,6 +114,11 @@ export interface MastersPostgresHttpFlowResult {
   staleAndWithdrawnAccess: 'PASS'
   xlsxExport: 'PASS'
   pdfExport: 'PASS' | 'BLOCKED_EXTERNAL'
+  isolatedBackupRestore: 'PASS' | 'BLOCKED_EXTERNAL'
+  isolatedBackupRestoreProof?: {
+    released?: MastersIsolatedBackupRestoreResult
+    withdrawn?: MastersIsolatedBackupRestoreResult
+  }
   pdfReason?: string
 }
 
@@ -306,6 +320,153 @@ function resumeBytes(): Buffer {
   ].join('\n'))
 }
 
+interface RestoreExpectedState {
+  consultationId: string
+  path: string
+  internalPath: string
+  profile: Record<string, unknown>
+  profileVersion: number
+  report: { id: string; version: number; profileVersion: number; payload: Record<string, unknown> }
+  documentIds: Record<string, string>
+  bytesByType: Record<string, Buffer>
+  candidateToken: string
+  otherStudentToken: string
+  currentAdvisorToken: string
+  formerAdvisorToken: string
+}
+
+async function assertRestoredPrivateRoot(root: string, expectedCount: number): Promise<number> {
+  const entries = await readdir(root, { withFileTypes: true })
+  for (const entry of entries) {
+    const entryPath = `${root}/${entry.name}`
+    const info = await lstat(entryPath)
+    assert.equal(info.isSymbolicLink(), false, 'restored private root must not contain symlinks')
+    assert.ok(info.isFile(), 'restored private root must contain files only')
+  }
+  assert.equal(entries.length, expectedCount)
+  return entries.length
+}
+
+async function verifyRestoredCheckpoint(
+  app: PostgresHttpApp,
+  context: MastersBackupRestoreVerificationContext,
+  expected: RestoreExpectedState,
+  effectivePdfFontPath: string
+): Promise<Record<string, unknown>> {
+  if (context.checkpoint === 'RELEASED') {
+    const detail = await app.call(expected.path, expected.candidateToken)
+    assert.equal(detail.status, 200, JSON.stringify(detail.body))
+    const consultation = detail.body.consultation
+    assert.equal(consultation.id, expected.consultationId)
+    assert.equal(consultation.profileVersion, expected.profileVersion)
+    assert.deepEqual(consultation.profile, expected.profile)
+    assert.equal(consultation.documents.filter((item: any) => item.uploadStatus === 'UPLOADED').length, 7)
+
+    const reportResult = await app.call(`${expected.path}/report`, expected.candidateToken)
+    assert.equal(reportResult.status, 200, JSON.stringify(reportResult.body))
+    const restoredReport = reportResult.body.report
+    assert.equal(restoredReport.id, expected.report.id)
+    assert.equal(restoredReport.version, expected.report.version)
+    assert.equal(restoredReport.sourceProfileVersion, expected.report.profileVersion)
+    assert.deepEqual(restoredReport.payload, expected.report.payload)
+
+    // Every active category is checked through both owner and current-advisor
+    // routes. The replacement row is included; the removed old row is not.
+    for (const type of Object.keys(expected.documentIds).sort()) {
+      const documentId = expected.documentIds[type]
+      const expectedBytes = expected.bytesByType[type]
+      assert.ok(documentId && expectedBytes)
+      const ownerDownload = await app.binary(`${expected.path}/documents/${documentId}`, expected.candidateToken)
+      assert.equal(ownerDownload.status, 200, JSON.stringify(ownerDownload.body))
+      assert.equal(digest(ownerDownload.bytes), digest(expectedBytes))
+      const advisorDownload = await app.binary(`${expected.internalPath}/documents/${documentId}`, expected.currentAdvisorToken)
+      assert.equal(advisorDownload.status, 200, JSON.stringify(advisorDownload.body))
+      assert.equal(digest(advisorDownload.bytes), digest(expectedBytes))
+      const formerAdvisorDownload = await app.binary(`${expected.internalPath}/documents/${documentId}`, expected.formerAdvisorToken)
+      assert.equal(formerAdvisorDownload.status, 403, JSON.stringify(formerAdvisorDownload.body))
+      assertCode(formerAdvisorDownload, 'MASTERS_ASSIGNMENT_REQUIRED')
+    }
+    const otherStudent = await app.call(expected.path, expected.otherStudentToken)
+    assert.ok([403, 404].includes(otherStudent.status), JSON.stringify(otherStudent.body))
+    const otherStudentDownload = await app.binary(`${expected.path}/documents/${expected.documentIds.RESUME}`, expected.otherStudentToken)
+    assert.ok([403, 404].includes(otherStudentDownload.status), JSON.stringify(otherStudentDownload.body))
+
+    const expectedExportDigest = contentDigest({
+      id: expected.report.id,
+      version: expected.report.version,
+      profileVersion: expected.report.profileVersion,
+      content: expected.report.payload
+    })
+    const xlsx = await app.binary(`${expected.path}/report/export?format=xlsx`, expected.candidateToken)
+    assert.equal(xlsx.status, 200, JSON.stringify(xlsx.body))
+    const worksheetText = unpackWorksheetText(xlsx.bytes)
+    assert.match(worksheetText, new RegExp(expected.report.id))
+    assert.match(worksheetText, new RegExp(`report_version`))
+    assert.match(worksheetText, new RegExp(String(expected.report.version)))
+    assert.match(worksheetText, new RegExp(`profile_version`))
+    assert.match(worksheetText, new RegExp(String(expected.report.profileVersion)))
+    assert.match(worksheetText, new RegExp(expectedExportDigest))
+
+    let pdfExport: 'PASS' | 'BLOCKED_EXTERNAL' = 'PASS'
+    if (existsSync(effectivePdfFontPath)) {
+      const pdf = await app.binary(`${expected.path}/report/export?format=pdf`, expected.candidateToken)
+      assert.equal(pdf.status, 200, JSON.stringify(pdf.body))
+      assert.equal(pdf.contentType, 'application/pdf')
+      const pdfText = await extractPdfText(pdf.bytes)
+      for (const value of [expected.report.id, String(expected.report.version), String(expected.report.profileVersion), expectedExportDigest]) {
+        assert.ok(pdfText.includes(value), `restored PDF must contain released report value: ${value}`)
+      }
+    } else {
+      const pdf = await app.binary(`${expected.path}/report/export?format=pdf`, expected.candidateToken)
+      assert.equal(pdf.status, 503, JSON.stringify(pdf.body))
+      assertCode(pdf, 'PDF_FONT_REQUIRED')
+      throw new Error('Restored PDF export is blocked because no Chinese test font is available')
+    }
+    const fileCount = await assertRestoredPrivateRoot(context.filesRoot, 7)
+    return {
+      consultationId: expected.consultationId,
+      reportId: expected.report.id,
+      reportVersion: expected.report.version,
+      profileVersion: expected.profileVersion,
+      activeDocumentCount: 7,
+      restoredPrivateFileCount: fileCount,
+      exportDigest: expectedExportDigest,
+      pdfExport,
+      tlsVerifyFull: context.tlsVerified
+    }
+  }
+
+  const ownerDetail = await app.call(expected.path, expected.candidateToken)
+  assert.ok([403, 410].includes(ownerDetail.status), JSON.stringify(ownerDetail.body))
+  const ownerReport = await app.call(`${expected.path}/report`, expected.candidateToken)
+  assert.ok(ownerReport.status >= 400, JSON.stringify(ownerReport.body))
+  const ownerDownload = await app.binary(`${expected.path}/documents/${expected.documentIds.RESUME}`, expected.candidateToken)
+  assert.ok(ownerDownload.status >= 400, JSON.stringify(ownerDownload.body))
+  const advisorDetail = await app.call(expected.internalPath, expected.currentAdvisorToken)
+  assert.equal(advisorDetail.status, 410, JSON.stringify(advisorDetail.body))
+  const otherStudent = await app.call(expected.path, expected.otherStudentToken)
+  assert.ok([403, 404, 410].includes(otherStudent.status), JSON.stringify(otherStudent.body))
+  const consultationRow = await app.store.pool.query<{ status: string; profile: Record<string, unknown> }>(
+    'SELECT status, profile FROM masters_consultations WHERE id = $1', [expected.consultationId]
+  )
+  assert.equal(consultationRow.rows[0]?.status, 'WITHDRAWN')
+  assert.deepEqual(consultationRow.rows[0]?.profile, {})
+  const documents = await app.store.pool.query<{ upload_status: string; original_name: string; extraction: unknown; description: string | null }>(
+    'SELECT upload_status, original_name, extraction, description FROM masters_consultation_documents WHERE consultation_id = $1', [expected.consultationId]
+  )
+  assert.ok(documents.rowCount && documents.rowCount >= 7)
+  assert.ok(documents.rows.every((row) => row.upload_status === 'REMOVED' && row.original_name === 'withdrawn-material' && row.extraction === null && row.description === null))
+  const fileCount = await assertRestoredPrivateRoot(context.filesRoot, 0)
+  return {
+    consultationId: expected.consultationId,
+    withdrawnStatus: 'WITHDRAWN',
+    redactedDocumentRows: documents.rowCount,
+    restoredPrivateFileCount: fileCount,
+    removedOriginalBytesResurrected: false,
+    tlsVerifyFull: context.tlsVerified
+  }
+}
+
 async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: string): Promise<MastersPostgresHttpFlowResult> {
   let app = await startPostgresApp(options.poolConfig, filesRoot, undefined, options.pdfFontPath)
   try {
@@ -343,6 +504,7 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
       { type: 'SUPPLEMENTAL', bytes: commonPdf, name: 'pg-http-supplement.pdf', mime: 'application/pdf' }
     ]
     const documentIds: Record<string, string> = {}
+    const bytesByType: Record<string, Buffer> = {}
     for (const material of materials) {
       const result = await app.upload(
         consultationId, candidate.accessToken, version, material.type,
@@ -351,6 +513,7 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
       )
       assert.equal(result.status, 201, JSON.stringify(result.body))
       documentIds[material.type] = result.body.document.id as string
+      bytesByType[material.type] = material.bytes
       version = result.body.consultation.profileVersion as number
     }
     assert.equal(Object.keys(documentIds).length, 7)
@@ -406,6 +569,7 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
     )
     assert.equal(replacement.status, 201, JSON.stringify(replacement.body))
     documentIds.RESUME = replacement.body.document.id as string
+    bytesByType.RESUME = replacementBytes
     version = replacement.body.consultation.profileVersion as number
     const oldResumeUrl = await app.binary(`${path}/documents/${oldResumeId}`, candidate.accessToken)
     assert.equal(oldResumeUrl.status, 404, JSON.stringify(oldResumeUrl.body))
@@ -622,6 +786,45 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
       pdfReason = 'Chinese PDF font is unavailable at the configured test path; HTTP 503 was recorded and is not counted as export success'
     }
 
+    const releasedDetail = await app.call(path, candidate.accessToken)
+    assert.equal(releasedDetail.status, 200, JSON.stringify(releasedDetail.body))
+    const releasedExpected: RestoreExpectedState = {
+      consultationId,
+      path,
+      internalPath,
+      profile: releasedDetail.body.consultation.profile,
+      profileVersion: releasedDetail.body.consultation.profileVersion,
+      report: {
+        id: releasedReport.id,
+        version: releasedReport.version,
+        profileVersion: releasedReport.sourceProfileVersion,
+        payload: releasedReport.payload
+      },
+      documentIds: { ...documentIds },
+      bytesByType: { ...bytesByType },
+      candidateToken: candidate.accessToken,
+      otherStudentToken: otherStudent.accessToken,
+      currentAdvisorToken: advisorB.accessToken,
+      formerAdvisorToken: advisorA.accessToken
+    }
+    let isolatedBackupRestoreProof: {
+      released?: MastersIsolatedBackupRestoreResult
+      withdrawn?: MastersIsolatedBackupRestoreResult
+    } | undefined
+    if (options.backupRestore) {
+      const runBackupCheckpoint = async (checkpoint: 'RELEASED' | 'WITHDRAWN'): Promise<MastersIsolatedBackupRestoreResult> => runMastersIsolatedBackupRestore({
+        backupRestore: options.backupRestore!,
+        poolConfig: options.poolConfig,
+        checkpoint,
+        privateRoot: filesRoot,
+        stopSource: async () => { await app.close() },
+        restartSource: async () => { app = await startPostgresApp(options.poolConfig, filesRoot, undefined, options.pdfFontPath) },
+        startRestoredApp: async (poolConfig, restoredFilesRoot) => startPostgresApp(poolConfig, restoredFilesRoot, undefined, options.pdfFontPath),
+        verifyRestored: async (restoredApp, context) => verifyRestoredCheckpoint(restoredApp as PostgresHttpApp, context, releasedExpected, effectivePdfFontPath)
+      })
+      isolatedBackupRestoreProof = { released: await runBackupCheckpoint('RELEASED') }
+    }
+
     const changed = await app.call(path, candidate.accessToken, 'PATCH', {
       version, profile: { targetPreference: '资料变化后的合成偏好' }
     })
@@ -670,6 +873,20 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
     assert.ok(purgedRows.rowCount && purgedRows.rowCount >= 7)
     assert.ok(purgedRows.rows.every((row) => row.original_name === 'withdrawn-material' && row.extraction === null && row.description === null))
 
+    if (options.backupRestore) {
+      const withdrawnProof = await runMastersIsolatedBackupRestore({
+        backupRestore: options.backupRestore,
+        poolConfig: options.poolConfig,
+        checkpoint: 'WITHDRAWN',
+        privateRoot: filesRoot,
+        stopSource: async () => { await app.close() },
+        restartSource: async () => { app = await startPostgresApp(options.poolConfig, filesRoot, undefined, options.pdfFontPath) },
+        startRestoredApp: async (poolConfig, restoredFilesRoot) => startPostgresApp(poolConfig, restoredFilesRoot, undefined, options.pdfFontPath),
+        verifyRestored: async (restoredApp, context) => verifyRestoredCheckpoint(restoredApp as PostgresHttpApp, context, releasedExpected, effectivePdfFontPath)
+      })
+      isolatedBackupRestoreProof = { ...(isolatedBackupRestoreProof ?? {}), withdrawn: withdrawnProof }
+    }
+
     return {
       status: pdfExport === 'PASS' ? 'PASS' : 'PASS_WITH_EXTERNAL_BLOCK',
       store: 'PostgresStore',
@@ -682,6 +899,8 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
       staleAndWithdrawnAccess: 'PASS',
       xlsxExport: 'PASS',
       pdfExport,
+      isolatedBackupRestore: options.backupRestore ? 'PASS' : 'BLOCKED_EXTERNAL',
+      ...(isolatedBackupRestoreProof ? { isolatedBackupRestoreProof } : {}),
       ...(pdfReason ? { pdfReason } : {})
     }
   } finally {

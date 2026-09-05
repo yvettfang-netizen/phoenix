@@ -129,7 +129,7 @@ function collectChecks(env = process.env, options = {}) {
   checks.push(check(
     'NODE_ENV=test',
     nodeEnv === 'test',
-    nodeEnv === 'test' ? '隔离测试运行模式已显式设置；值不输出' : '需要由 Jimson 在隔离测试环境显式设置 NODE_ENV=test'
+    nodeEnv === 'test' ? '隔离测试运行模式已显式设置；值不输出' : '目标主机联调需显式设置 NODE_ENV=test；自动化测试由隔离 runner 自行配置'
   ))
   checks.push(check(
     'MASTERS_INTAKE_ENABLED=true',
@@ -154,17 +154,24 @@ function collectChecks(env = process.env, options = {}) {
     validTestDatabase(value(env, 'MASTERS_TEST_DATABASE_URL')),
     validTestDatabase(value(env, 'MASTERS_TEST_DATABASE_URL'))
       ? '专用数据库连接串格式、测试库命名标记和 sslmode=verify-full 已检查；连接串不输出'
-      : '需要 Jimson 安全注入专用、可销毁 PostgreSQL 测试库连接串；要求测试库命名标记和 sslmode=verify-full'
+      : '自动化临时库由 Codex 生成并注入；目标主机库由 Jimson 配置；均需测试库标记和 sslmode=verify-full'
   ))
   checks.push(check(
     'MASTERS_TEST_DATABASE_ALLOW_MUTATION=YES',
     value(env, 'MASTERS_TEST_DATABASE_ALLOW_MUTATION') === 'YES',
-    '只有确认隔离测试库后，才由 Jimson 安全注入变更哨兵；值不输出'
+    '只有确认隔离测试库后才注入变更哨兵；自动化临时库由 Codex 自行配置，值不输出'
+  ))
+  const migration = safeUrl(value(env, 'MASTERS_TEST_DATABASE_URL'))
+  const application = safeUrl(value(env, 'MASTERS_TEST_APP_DATABASE_URL'))
+  checks.push(check(
+    'MASTERS_TEST_APP_DATABASE_URL (DML role)',
+    Boolean(migration && application && validTestDatabase(application.href) && migration.host === application.host && migration.pathname === application.pathname && migration.username !== application.username),
+    '自动 HTTP 专项使用同一测试库的独立 DML 账号；这里只核对形状，真实权限由 PostgreSQL 专项断言，连接串不输出'
   ))
   checks.push(check(
     'DATABASE_URL (HTTP runtime)',
     Boolean(runtimeDatabase && runtimeDatabase.tlsVerified && TEST_DATABASE_SENTINEL.test(runtimeDatabase.database)),
-    '人工联调 HTTP 服务必须指向已核对的专用测试 PostgreSQL；自动 HTTP 回归使用 MASTERS_TEST_DATABASE_URL 的隔离 schema；连接串不输出'
+    '人工联调 HTTP 服务必须指向专用测试 PostgreSQL；自动 HTTP 使用 MASTERS_TEST_APP_DATABASE_URL 的隔离 schema；连接串不输出'
   ))
   checks.push(check(
     'HTTP/test database isolation',
@@ -179,13 +186,13 @@ function collectChecks(env = process.env, options = {}) {
   checks.push(check(
     'EDUCATION_TEST_DATABASE_ALLOW_MUTATION=YES',
     value(env, 'EDUCATION_TEST_DATABASE_ALLOW_MUTATION') === 'YES',
-    '既有迁移回归只接受 Jimson 安全提供的专用库变更哨兵；值不输出'
+    '既有迁移回归只接受专用库变更哨兵；Actions 临时库由 Codex 自行生成，值不输出'
   ))
   const sessionSecret = value(env, 'SESSION_SECRET')
   checks.push(check(
     'SESSION_SECRET',
     Buffer.byteLength(sessionSecret, 'utf8') >= 32 && sessionSecret !== DEFAULT_SESSION_SECRET,
-    '服务端会话密钥需由 Jimson 通过秘密管理器注入；这里只检查长度，不输出密钥'
+    '目标主机会话密钥由秘密管理器注入；自动化临时密钥由测试进程生成；这里只检查长度，不输出密钥'
   ))
 
   checks.push(check(
@@ -249,8 +256,8 @@ function collectChecks(env = process.env, options = {}) {
 
   // These checks intentionally remain blocked until a person supplies
   // external evidence.  No local presence check can prove any of them.
-  checks.push(check('dedicated database least-privilege evidence', false, '需要 Jimson 回报隔离库、schema、角色权限和 TLS 握手证据；脚本不连接数据库'))
-  checks.push(check('database plus private-file backup/restore evidence', false, '需要在干净隔离目标中恢复合成资料并核对 DB/附件对应关系；目录或备份文件存在不算通过'))
+  checks.push(check('dedicated database least-privilege evidence', false, '本项指目标主机库、schema、权限与 TLS；自动临时库证据单列在 CI，预检不连接数据库'))
+  checks.push(check('database plus private-file backup/restore evidence', false, '本项指目标主机联合恢复；自动隔离恢复由 Codex 执行并在 CI 单列，目录存在不算通过'))
   checks.push(check('private storage ACL and retention evidence', false, '需要目标主机实际 ACL、静态加密、清理任务和脱敏审计证据；脚本不读取私有目录内容'))
   checks.push(check('PDF font licence and target-host evidence', false, '需要目标主机字体可用性和合法使用依据；配置存在不等于导出验收通过'))
   checks.push(check('WeChat test account, privacy approval and legal-domain evidence', false, '需要 Jimson 提供受控测试 AppID、开发/体验成员、隐私配置和 request/uploadFile/downloadFile 合法域名证据'))

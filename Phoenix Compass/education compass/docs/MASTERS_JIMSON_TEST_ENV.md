@@ -1,5 +1,7 @@
 # Application Compass｜Jimson 隔离联调环境交接清单
 
+> Round 3 补充：Codex 已获授权自行在本任务隔离开发环境/Actions 建立可销毁 PostgreSQL、随机临时密码/证书/会话密钥并清理，无需 Founder 或 Jimson 逐项生成。自动数据库、CI、合成资料加密备份恢复由 Codex 执行，详见 [Round 3 执行说明](MASTERS_PR9_ROUND3.md)。以下由 Jimson 安全提供的配置指目标主机和真实微信联调，不能把自动工程项全部交回 Jimson。专项的 `MASTERS_TEST_DATABASE_URL` 现在只供迁移/清理；新增同库的 `MASTERS_TEST_APP_DATABASE_URL` 供独立最小 DML 账号运行 HTTP。临时库通过不替代目标主机或微信证据。
+
 状态：交接模板与只读就绪检查说明，不是已完成的外部验收记录。本文对应 PR #9 的下一轮候选；每一份实际证据都必须填写执行时的候选 `HEAD_SHA`，不能把 `29df2358718232294dcda4af9f2410fd0b32aab6` 或更早的测试输出直接沿用为新版本通过。
 
 仓库：`yvettfang-netizen/phoenix`

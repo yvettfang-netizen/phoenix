@@ -24,6 +24,12 @@ import { runMastersPostgresHttpFlow, MastersPostgresHttpFlowResult } from './fix
  * test, while these checks keep direct `node --test` invocation honest.
  */
 const databaseUrl = process.env.MASTERS_TEST_DATABASE_URL || ''
+const applicationUrl = process.env.MASTERS_TEST_APP_DATABASE_URL || ''
+const { testDatabaseUrl, applicationDatabaseUrl, verifyConnection } = require(resolve(__dirname, '../../../scripts/ci/postgres-guard.js')) as {
+  testDatabaseUrl(value: string, label?: string): URL
+  applicationDatabaseUrl(migration: URL, value: string): URL
+  verifyConnection(pool: Pool, options?: { application?: boolean }): Promise<Record<string, unknown>>
+}
 const mutationApproved = process.env.MASTERS_TEST_DATABASE_ALLOW_MUTATION === 'YES'
 const migrationDirectory = resolve(__dirname, '../../migrations')
 const masterTables = [
@@ -56,23 +62,13 @@ const NOW = '2026-09-05T00:00:00.000Z'
 function databaseSentinelError(): string | null {
   if (!databaseUrl) return 'MASTERS_TEST_DATABASE_URL is not configured; no database connection was attempted'
   if (!mutationApproved) return 'MASTERS_TEST_DATABASE_ALLOW_MUTATION=YES is required; no database connection was attempted'
+  if (!applicationUrl) return 'MASTERS_TEST_APP_DATABASE_URL is required for the separate DML-only HTTP application role'
   let parsed: URL
   try {
-    parsed = new URL(databaseUrl)
-  } catch {
-    return 'MASTERS_TEST_DATABASE_URL is not a valid URL'
-  }
-  if (!['postgres:', 'postgresql:'].includes(parsed.protocol) || !parsed.hostname) {
-    return 'MASTERS_TEST_DATABASE_URL must use postgres:// or postgresql:// with a hostname'
-  }
-  let databaseName: string
-  try {
-    databaseName = decodeURIComponent(parsed.pathname.replace(/^\/+/, ''))
-  } catch {
-    return 'MASTERS_TEST_DATABASE_URL contains an invalid database path'
-  }
-  if (!/(^|[-_])(test|testing|ci|sandbox)([-_]|$)/i.test(databaseName)) {
-    return 'Refusing mutation: database name must contain a delimited test, testing, ci, or sandbox sentinel'
+    parsed = testDatabaseUrl(databaseUrl, 'Masters migration database')
+    applicationDatabaseUrl(parsed, applicationUrl)
+  } catch (error) {
+    return (error as Error).message
   }
   return null
 }
@@ -80,12 +76,12 @@ function databaseSentinelError(): string | null {
 const guardError = databaseSentinelError()
 if (guardError) {
   process.stdout.write(`${JSON.stringify({
-    status: databaseUrl && mutationApproved ? 'FAIL' : 'BLOCKED_EXTERNAL',
+    status: databaseUrl && mutationApproved && applicationUrl ? 'FAIL' : 'BLOCKED_EXTERNAL',
     suite: 'masters-postgres',
     databaseConnectionAttempted: false,
     reason: guardError
   })}\n`)
-  if (databaseUrl && mutationApproved) process.exitCode = 2
+  if (databaseUrl && mutationApproved && applicationUrl) process.exitCode = 2
 }
 
 function quoteIdentifier(value: string): string {
@@ -99,9 +95,9 @@ function migrationBody(raw: string): string {
     .replace(/\s*COMMIT\s*;\s*$/i, '')
 }
 
-function poolConfig(schema: string): PoolConfig {
+function poolConfig(schema: string, connectionString = databaseUrl): PoolConfig {
   return {
-    connectionString: databaseUrl,
+    connectionString,
     max: 4,
     connectionTimeoutMillis: 10_000,
     statement_timeout: 15_000,
@@ -161,6 +157,7 @@ async function createIsolatedDatabase(): Promise<IsolatedDatabase> {
   }
 
   try {
+    await verifyConnection(bootstrap)
     await createSchema()
     pool = new Pool(poolConfig(schema))
     const isolated: IsolatedDatabase = {
@@ -470,7 +467,33 @@ if (guardError) {
         }
       })
 
-      store = new PostgresStore(database.config)
+      const appConfig = poolConfig(database.schema, applicationUrl)
+      await t.test('verified TLS and separate HTTP application role enforce DML-only access', async () => {
+        const role = decodeURIComponent(new URL(applicationUrl).username)
+        assert.match(role, /^[a-z][a-z0-9_]{0,62}$/i)
+        await database.getPool().query(`GRANT USAGE ON SCHEMA ${quoteIdentifier(database.schema)} TO "${role}"`)
+        for (const table of ['users', 'wechat_identities', 'sessions', ...masterTables]) {
+          await database.getPool().query(`GRANT SELECT, INSERT, UPDATE ON "${table}" TO "${role}"`)
+        }
+        await database.getPool().query(`GRANT SELECT ON schema_migrations TO "${role}"`)
+        const application = new Pool(appConfig)
+        try {
+          await verifyConnection(application, { application: true })
+          const permissionDenied = (error: unknown) => (error as { code?: string }).code === '42501'
+          await assert.rejects(() => application.query('CREATE TABLE application_must_not_create (id text)'), permissionDenied)
+          await assert.rejects(() => application.query(`DROP SCHEMA ${quoteIdentifier(database.schema)}`), permissionDenied)
+          await assert.rejects(() => application.query('CREATE SCHEMA application_must_not_create'), permissionDenied)
+          await assert.rejects(() => application.query('DELETE FROM schema_migrations'), permissionDenied)
+          await assert.rejects(() => application.query('DELETE FROM masters_consultations'), permissionDenied)
+          await assert.rejects(() => application.query('SELECT id FROM orders LIMIT 1'), permissionDenied)
+          const owners = await application.query('SELECT COUNT(*)::int AS count FROM pg_class WHERE relnamespace = $1::regnamespace AND relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)', [database.schema])
+          assert.equal(owners.rows[0]?.count, 0, 'HTTP role must not own application tables')
+          const memberships = await application.query('SELECT COUNT(*)::int AS count FROM pg_auth_members WHERE member = (SELECT oid FROM pg_roles WHERE rolname = current_user)')
+          assert.equal(memberships.rows[0]?.count, 0, 'HTTP role cannot inherit a more privileged role')
+        } finally { await application.end() }
+      })
+
+      store = new PostgresStore(appConfig)
       const ownerA = 'usr_masters_pg_owner_a'
       const ownerB = 'usr_masters_pg_owner_b'
       const consultation = consultationFor('mc_pg_primary', ownerA, '2028')
@@ -494,7 +517,7 @@ if (guardError) {
       })
 
       await store.close()
-      store = new PostgresStore(database.config)
+      store = new PostgresStore(appConfig)
       await t.test('ordinary Store rows survive a real PostgreSQL reconnect with JSON and score scales intact', async () => {
         const restored = await store!.read(async (tx) => ({
           consultation: await tx.findById('mastersConsultations', consultation.id),
@@ -594,10 +617,40 @@ if (guardError) {
       })
 
       let httpFlow: MastersPostgresHttpFlowResult | undefined
+      // Store-only fixtures above intentionally have no filesystem originals.
+      // Remove just those generated owners before the joint DB/original backup
+      // proof, so every remaining active document comes from real HTTP upload.
+      await store.close()
+      store = undefined
+      const fixtureCleanup = await database.getPool().connect()
+      try {
+        await fixtureCleanup.query('BEGIN')
+        await fixtureCleanup.query('DELETE FROM masters_report_jobs WHERE consultation_id = $1', [consultation.id])
+        await fixtureCleanup.query('DELETE FROM masters_reports WHERE consultation_id = $1', [consultation.id])
+        await fixtureCleanup.query('DELETE FROM masters_consultation_snapshots WHERE consultation_id = $1', [consultation.id])
+        await fixtureCleanup.query('DELETE FROM masters_consultation_documents WHERE user_id = ANY($1::text[])', [[ownerA, ownerB]])
+        await fixtureCleanup.query('DELETE FROM masters_consultations WHERE user_id = ANY($1::text[])', [[ownerA, ownerB]])
+        await fixtureCleanup.query('DELETE FROM users WHERE id = ANY($1::text[])', [[ownerA, ownerB]])
+        const remaining = await fixtureCleanup.query('SELECT COUNT(*)::int AS count FROM masters_consultation_documents')
+        assert.equal(remaining.rows[0]?.count, 0, 'no metadata-only original may enter the joint backup proof')
+        await fixtureCleanup.query('COMMIT')
+      } catch (error) {
+        await fixtureCleanup.query('ROLLBACK')
+        throw error
+      } finally { fixtureCleanup.release() }
       await t.test('real PostgresStore HTTP upload, restart, authorization, worker, review, approval, release, export, and withdrawal flow', async () => {
         const configuredPdfFontPath = process.env.MASTERS_TEST_PDF_FONT_PATH || process.env.MASTERS_PDF_FONT_PATH
         httpFlow = await runMastersPostgresHttpFlow({
-          poolConfig: database.config,
+          poolConfig: appConfig,
+          ...(process.env.MASTERS_TEST_RELEASED_RESTORE_DATABASE_URL && process.env.MASTERS_TEST_WITHDRAWN_RESTORE_DATABASE_URL && process.env.MASTERS_TEST_POSTGRES_CONTAINER ? {
+            backupRestore: {
+              migrationUrl: databaseUrl,
+              applicationUrl,
+              releasedRestoreUrl: process.env.MASTERS_TEST_RELEASED_RESTORE_DATABASE_URL,
+              withdrawnRestoreUrl: process.env.MASTERS_TEST_WITHDRAWN_RESTORE_DATABASE_URL,
+              postgresContainer: process.env.MASTERS_TEST_POSTGRES_CONTAINER
+            }
+          } : {}),
           ...(configuredPdfFontPath ? { pdfFontPath: configuredPdfFontPath } : {})
         })
         assert.equal(httpFlow.store, 'PostgresStore')
@@ -623,6 +676,9 @@ if (guardError) {
         foreignKeysAndOwnerIsolation: 'PASS',
         concurrentDuplicateCreation: 'PASS',
         staleLeaseFence: 'PASS',
+        tlsVerifyFull: 'PASS',
+        applicationRoleIsolation: 'PASS',
+        isolatedBackupRestore: httpFlow.isolatedBackupRestore,
         httpFlow: httpFlow.status === 'PASS' ? 'PASS' : 'BLOCKED_EXTERNAL',
         httpPostgresFlow: httpFlow
       })}\n`)

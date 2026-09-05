@@ -3,10 +3,12 @@
 const { spawnSync } = require('node:child_process')
 const { existsSync } = require('node:fs')
 const path = require('node:path')
+const { testDatabaseUrl, applicationDatabaseUrl } = require('./ci/postgres-guard')
 
 const projectRoot = path.resolve(__dirname, '..')
 const databaseUrl = process.env.MASTERS_TEST_DATABASE_URL || ''
 const mutationApproved = process.env.MASTERS_TEST_DATABASE_ALLOW_MUTATION === 'YES'
+const applicationUrl = process.env.MASTERS_TEST_APP_DATABASE_URL || ''
 const migrationPath = path.join(projectRoot, 'server', 'migrations', '006_masters_intake.sql')
 
 function blocked(reason) {
@@ -52,6 +54,18 @@ if (!databaseUrl) {
 if (!mutationApproved) {
   blocked('MASTERS_TEST_DATABASE_ALLOW_MUTATION=YES is required because the isolated schema is created and dropped')
   process.exit(0)
+}
+
+if (!applicationUrl) {
+  blocked('MASTERS_TEST_APP_DATABASE_URL is required for the separate DML-only HTTP application role')
+  process.exit(0)
+}
+
+try {
+  applicationDatabaseUrl(testDatabaseUrl(databaseUrl, 'Masters migration database'), applicationUrl)
+} catch (error) {
+  fail(error.message)
+  process.exit(2)
 }
 
 let parsed
