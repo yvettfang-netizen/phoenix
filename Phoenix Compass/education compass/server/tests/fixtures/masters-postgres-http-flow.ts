@@ -14,6 +14,7 @@ import { contentDigest, type ExportReport } from '../../src/masters/exports'
 import { MastersHttp } from '../../src/masters/http'
 import { PrivateFiles } from '../../src/masters/private-files'
 import { makeSyntheticDocx, makeSyntheticJpeg, makeSyntheticPdf, makeSyntheticPng } from './masters-fixtures'
+import { assistedReportPatch, sourcedProgram } from './masters-sourced-program'
 import { AssessmentService } from '../../src/services/assessment-service'
 import { AuthService } from '../../src/services/auth-service'
 import { MastersService } from '../../src/services/masters-service'
@@ -369,6 +370,9 @@ async function verifyRestoredCheckpoint(
     assert.equal(restoredReport.version, expected.report.version)
     assert.equal(restoredReport.sourceProfileVersion, expected.report.profileVersion)
     assert.deepEqual(restoredReport.payload, expected.report.payload)
+    assert.equal(restoredReport.assistance.level, 'ADVISOR_VERIFIED_PLAN')
+    assert.equal(restoredReport.assistance.autoSchoolMatching, 'NOT_IMPLEMENTED')
+    assert.deepEqual(restoredReport.payload.candidatePrograms, [sourcedProgram])
 
     // Every active category is checked through both owner and current-advisor
     // routes. The replacement row is included; the removed old row is not.
@@ -406,6 +410,7 @@ async function verifyRestoredCheckpoint(
     assert.match(worksheetText, new RegExp(`profile_version`))
     assert.match(worksheetText, new RegExp(String(expected.report.profileVersion)))
     assert.match(worksheetText, new RegExp(expectedExportDigest))
+    assert.ok(worksheetText.includes(sourcedProgram.officialUrl) && worksheetText.includes(sourcedProgram.program))
 
     let pdfExport: 'PASS' | 'BLOCKED_EXTERNAL' = 'PASS'
     if (existsSync(effectivePdfFontPath)) {
@@ -413,7 +418,7 @@ async function verifyRestoredCheckpoint(
       assert.equal(pdf.status, 200, JSON.stringify(pdf.body))
       assert.equal(pdf.contentType, 'application/pdf')
       const pdfText = await extractPdfText(pdf.bytes)
-      for (const value of [expected.report.id, String(expected.report.version), String(expected.report.profileVersion), expectedExportDigest]) {
+      for (const value of [expected.report.id, String(expected.report.version), String(expected.report.profileVersion), expectedExportDigest, sourcedProgram.officialUrl, sourcedProgram.institution]) {
         assert.ok(pdfText.includes(value), `restored PDF must contain released report value: ${value}`)
       }
     } else {
@@ -431,6 +436,8 @@ async function verifyRestoredCheckpoint(
       activeDocumentCount: 7,
       restoredPrivateFileCount: fileCount,
       exportDigest: expectedExportDigest,
+      reportAssistance: 'ADVISOR_VERIFIED_PLAN',
+      sourcedCandidateCount: 1,
       pdfExport,
       tlsVerifyFull: context.tlsVerified
     }
@@ -654,6 +661,11 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
     assert.ok(assignmentRows.rows.some((row) => row.advisor_user_id === advisorA.user.id && row.status === 'ENDED'))
     assert.ok(assignmentRows.rows.some((row) => row.advisor_user_id === advisorB.user.id && row.status === 'ACTIVE'))
 
+    // The draft/restart path above preserves UNDECIDED. The synthetic student
+    // now explicitly chooses the intake year covered by the fixed source.
+    const chosenIntake = await app.call(path, candidate.accessToken, 'PATCH', { version, profile: { targetYear: sourcedProgram.intakeYear } })
+    assert.equal(chosenIntake.status, 200, JSON.stringify(chosenIntake.body))
+    version = chosenIntake.body.consultation.profileVersion
     const confirmed = await app.call(`${path}/confirm`, candidate.accessToken, 'POST', {
       version, accuracyConfirmed: true, consent
     }, 'pg-http-confirm-key')
@@ -690,11 +702,12 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
     assert.equal(internalBeforeEdit.status, 200, JSON.stringify(internalBeforeEdit.body))
     const initialReport = internalBeforeEdit.body.consultation.currentReport
     assert.equal(initialReport.status, 'NEEDS_REVIEW')
+    assert.equal(initialReport.assistance.level, 'RULE_DRAFT')
     assert.deepEqual(initialReport.payload.candidatePrograms, [])
     const edited = await app.call(`${internalPath}/report/edit`, advisorB.accessToken, 'POST', {
       version: initialReport.version,
       reportId: initialReport.id,
-      payload: { backgroundSummary: 'PG_HTTP_APPROVED_SUMMARY；顾问核验前的合成规则草稿' },
+      payload: { ...assistedReportPatch, backgroundSummary: 'PG_HTTP_APPROVED_SUMMARY；完全虚构的申请人，由顾问核验官网来源后的辅助方案' },
       note: '仅用于 PostgreSQL HTTP 审核流程'
     }, 'pg-http-edit-key')
     assert.equal(edited.status, 200, JSON.stringify(edited.body))
@@ -706,12 +719,13 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
     }, 'pg-http-review-key')
     assert.equal(reviewed.status, 200, JSON.stringify(reviewed.body))
     assert.equal(reviewed.body.consultation.currentReport.reviewedBy, advisorB.user.id)
+    assert.equal(reviewed.body.consultation.currentReport.assistance.level, 'ADVISOR_VERIFIED_PLAN')
     const approved = await app.call(`${internalPath}/report/approve`, founder.accessToken, 'POST', {
-      version: editedReport.version, reportId: editedReport.id, note: 'Founder 批准合成初评稿'
+      version: editedReport.version, reportId: editedReport.id, note: 'Founder 批准有来源项目的合成辅助方案'
     }, 'pg-http-approve-key')
     assert.equal(approved.status, 200, JSON.stringify(approved.body))
     const released = await app.call(`${internalPath}/report/release`, founder.accessToken, 'POST', {
-      version: editedReport.version, reportId: editedReport.id, note: 'Founder 开放合成初评稿'
+      version: editedReport.version, reportId: editedReport.id, note: 'Founder 开放有来源项目的合成辅助方案'
     }, 'pg-http-release-key')
     assert.equal(released.status, 200, JSON.stringify(released.body))
     assert.equal(released.body.consultation.currentReport.status, 'RELEASED')
@@ -719,7 +733,9 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
     const studentReport = await app.call(`${path}/report`, candidate.accessToken)
     assert.equal(studentReport.status, 200, JSON.stringify(studentReport.body))
     assert.equal(studentReport.body.report.status, 'RELEASED')
-    assert.deepEqual(studentReport.body.report.payload.candidatePrograms, [])
+    assert.equal(studentReport.body.report.assistance.level, 'ADVISOR_VERIFIED_PLAN')
+    assert.equal(studentReport.body.report.assistance.autoSchoolMatching, 'NOT_IMPLEMENTED')
+    assert.deepEqual(studentReport.body.report.payload.candidatePrograms, [sourcedProgram])
     const releasedReport = studentReport.body.report as {
       id: string
       version: number
@@ -747,6 +763,7 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
     const worksheetText = unpackWorksheetText(xlsx.bytes)
     const worksheetCells = [...worksheetText.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map((match) => match[1] ?? '')
     assert.match(worksheetText, /Application Compass/)
+    assert.ok(worksheetText.includes(sourcedProgram.officialUrl) && worksheetText.includes(sourcedProgram.program))
     assert.ok(worksheetCells.includes('report_id'))
     assert.ok(worksheetCells.includes(releasedReport.id))
     assert.ok(worksheetCells.includes('report_version'))
@@ -777,7 +794,7 @@ async function runFlow(options: MastersPostgresHttpFlowOptions, filesRoot: strin
       for (const expected of [
         'Application Compass', releasedReport.id, String(releasedReport.version),
         String(releasedReport.sourceProfileVersion), expectedExportDigest,
-        'PG_HTTP_APPROVED_SUMMARY'
+        'PG_HTTP_APPROVED_SUMMARY', sourcedProgram.officialUrl, sourcedProgram.institution
       ]) assert.ok(pdfText.includes(expected), `PDF must contain released report value: ${expected}`)
     } else {
       assert.equal(pdf.status, 503, JSON.stringify(pdf.body))
