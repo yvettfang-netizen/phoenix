@@ -20,5 +20,7 @@ project.private.config.json
 server/.data/
 server/tmp/
 *.log
+/outputs/masters-round2/
+/outputs/masters-ci/
 .DS_Store
 Thumbs.db
