@@ -8,6 +8,7 @@ import { FileInspection, inspectDocument, readMultipart } from './documents'
 import { MAX_DOCUMENT_BYTES, MAX_DOCUMENTS, PrivateFiles } from './private-files'
 import { contentDigest, ExportReport, renderMastersPdf, renderMastersXlsx } from './exports'
 import { recordExtractionRetry } from './document-operations'
+import { reportAssistance } from './report-assistance'
 
 export interface MastersHttpResult { status: number; body?: Record<string, unknown>; binary?: Buffer; contentType?: string; filename?: string }
 
@@ -41,13 +42,13 @@ function documentDto(doc: MastersDocument) {
   return publicDocument
 }
 function reportDto(report: MastersReport) {
-  return { id: report.id, consultationId: report.consultationId, version: report.version, sourceProfileVersion: report.sourceProfileVersion, status: report.status, payload: report.payload, releasedAt: report.releasedAt }
+  return { id: report.id, consultationId: report.consultationId, version: report.version, sourceProfileVersion: report.sourceProfileVersion, status: report.status, payload: report.payload, releasedAt: report.releasedAt, assistance: reportAssistance(report) }
 }
 function detailDto(detail: MastersConsultationDetail, internal: boolean) {
   const { userId: _owner, serviceConsentId: _consentId, consent: _consent, assignments, currentReport, ...publicDetail } = detail
   return {
     ...publicDetail, documents: detail.documents.map(documentDto),
-    ...(internal ? { assignments, currentReport } : { reportStatus: currentReport?.status ?? 'NOT_STARTED', currentReport: currentReport?.status === 'RELEASED' ? reportDto(currentReport) : null })
+    ...(internal ? { assignments, currentReport: currentReport ? { ...currentReport, assistance: reportAssistance(currentReport, detail.applicationSeason) } : null } : { reportStatus: currentReport?.status ?? 'NOT_STARTED', currentReport: currentReport?.status === 'RELEASED' ? reportDto(currentReport) : null })
   }
 }
 
@@ -77,7 +78,7 @@ export class MastersHttp {
   private async export(userId: string, id: string, internal: boolean, format: string | null): Promise<MastersHttpResult> {
     invariant(format === 'pdf' || format === 'xlsx', 400, 'EXPORT_FORMAT_INVALID', '仅支持 PDF 或 XLSX')
     const report = await this.service.getReleasedReport(userId, id, internal)
-    const payload: ExportReport = { id: report.id, version: report.version, profileVersion: report.sourceProfileVersion, content: report.payload as unknown as Record<string, unknown> }
+    const payload: ExportReport = { id: report.id, version: report.version, profileVersion: report.sourceProfileVersion, content: report.payload as unknown as Record<string, unknown>, assistance: reportAssistance(report) }
     const bytes = format === 'pdf' ? await renderMastersPdf(payload, this.pdfFontPath) : renderMastersXlsx(payload)
     const current = await this.service.getReleasedReport(userId, id, internal)
     invariant(current.id === report.id && current.version === report.version && contentDigest({ ...payload, content: current.payload as unknown as Record<string, unknown> }) === contentDigest(payload), 409, 'REPORT_STALE', '报告版本已变化，请刷新')
@@ -109,7 +110,7 @@ export class MastersHttp {
     const id = match[1], tail = match[2] ?? ''
     if (!tail && method === 'GET') return json({ consultation: await this.detail(userId, id, internal) })
     if (!tail && method === 'PATCH' && !internal) {
-      const body = exact(await readJson(), ['version', 'profile'])
+      const body = exact(await readJson(), ['version', 'profile', 'path'])
       await this.service.patch(userId, id, body)
       return json({ consultation: await this.detail(userId, id, false) })
     }

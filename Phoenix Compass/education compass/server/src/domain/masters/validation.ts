@@ -298,10 +298,11 @@ export function parseServiceConsent(value: unknown): MastersServiceConsentInput 
   }
 }
 
-export function validatePatchInput(value: unknown): { version: number; profile: MastersProfile } {
-  const record = exact(value, ['version', 'profile'])
+export function validatePatchInput(value: unknown): { version: number; profile: MastersProfile; path?: 'RESUME' | 'GUIDED' } {
+  const record = exact(value, ['version', 'profile', 'path'])
   invariant(Number.isInteger(record.version) && Number(record.version) >= 1, 400, 'MASTERS_VERSION_INVALID', '资料版本无效')
-  return { version: Number(record.version), profile: validateProfileDraft(record.profile) }
+  invariant(record.path === undefined || record.path === 'RESUME' || record.path === 'GUIDED', 400, 'MASTERS_PATH_INVALID', '请选择上传简历或分步填写')
+  return { version: Number(record.version), profile: validateProfileDraft(record.profile), ...(record.path === undefined ? {} : { path: record.path as 'RESUME' | 'GUIDED' }) }
 }
 
 export function validateConfirmInput(value: unknown): { version: number; accuracyConfirmed: true; consent?: MastersServiceConsentInput } {
@@ -456,7 +457,7 @@ export function reportTemplate(profile: MastersProfile, readiness: MastersReadin
   const name = hasText(profile.name) ? String(profile.name) : '申请人资料待补'
   const institution = hasText(profile.institution) ? String(profile.institution) : '院校待核验'
   const major = hasText(profile.major) ? String(profile.major) : '专业待补'
-  const targetYear = profile.targetYear === 'UNDECIDED' || !profile.targetYear ? 'UNDECIDED' : String(profile.targetYear)
+  const targetYear = profile.targetYear === 'UNDECIDED' || !profile.targetYear ? '尚未确定，希望顾问建议' : String(profile.targetYear)
   const summaryParts = [
     `姓名/称呼：${name}`,
     `本科院校：${institution}`,

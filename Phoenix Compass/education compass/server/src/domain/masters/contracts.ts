@@ -143,6 +143,7 @@ export interface MastersCreateInput {
 export interface MastersPatchInput {
   version: number
   profile: MastersProfile
+  path?: 'RESUME' | 'GUIDED'
 }
 
 export interface MastersConfirmInput {

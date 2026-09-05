@@ -2,7 +2,7 @@
 
 ## V1.1 接口、材料与验证边界
 
-> 本文件记录 V1.1 实现、运行方式和验收边界。最终实测结果见 [MASTERS_P0_VERIFICATION.md](MASTERS_P0_VERIFICATION.md)。HTTP、私有文件、本地持久化和浏览器工作台与 PostgreSQL、微信真机分别验收。
+> 本文件记录 V1.1 实现、运行方式和验收边界。本轮变更与候选验收方法见 [MASTERS_PR9_ROUND2.md](MASTERS_PR9_ROUND2.md)；[MASTERS_P0_VERIFICATION.md](MASTERS_P0_VERIFICATION.md) 仅为上一轮归档。HTTP、私有文件、本地持久化和浏览器工作台与 PostgreSQL、微信真机分别验收。
 
 ## 0. 范围、基线和交付边界
 
@@ -68,6 +68,8 @@
 | 分配 | `ACTIVE`、`ENDED` | 独立于报告；改派结束旧分配并建立新版本 |
 
 `profileVersion` 是资料的乐观并发版本。PATCH、材料增补/替换/撤除和提取冲突处理会使受影响草稿或报告失效；确认创建包含资料版本和当前有效材料 ID 的快照。旧任务不能覆盖新版本，已开放报告若资料版本变化则不再作为当前有效报告。
+
+草稿 PATCH 可在 `version`、`profile` 之外携带可选 `path: RESUME | GUIDED`，用于持久保存学生切换的填写路径；不接受其他路径值。它使用同一本人、有效同意、版本检查和旧报告失效规则，不改变权限或审核状态。
 
 ### 2.2 幂等契约
 
@@ -243,6 +245,8 @@ JSON 详情中的附件至少含 `id`、`consultationId`、canonical `type`、`o
 规则模板包含：背景摘要、优势与资料缺口、建议方向、候选学校/专业表、准备计划、下一步及限制说明。资料不足时先输出缺件和有限初评。`candidatePrograms` 默认必须为空并标记人工核验；任何候选项目在对外前都要有官方项目名、入学年份、要求、匹配理由、风险、HTTPS 官网 URL、核验日期、`sourceStatus`（`NEEDS_REVIEW`/`VERIFIED`）和学生接受状态。没有可核验来源时保持 `NEEDS_REVIEW`，不得补造官网要求、录取概率、保录或保证性结论。
 
 报告绑定 `snapshotId`、`sourceProfileVersion`、`templateVersion` 和内容 digest。材料或字段更新会使旧报告 `STALE`，旧 worker 不能写回新版本。只有 Founder 批准后才可开放；学生端和导出端均拒绝草稿/待复核/仅批准版本。
+
+批准和开放都校验非空项目的官网 HTTPS 来源、顾问 `VERIFIED` 标记、非未来核验日期以及与咨询一致的入学年份。服务端派生 `assistance`，编辑器不能用改标签将草稿提升为完整方案：未复核为规则草稿；已复核但没有项目或方向/计划/下一步不完整为初评／待补报告；来源合格且内容完整、经活动顾问复核后才称顾问核验后的申请方案。自动选校始终 `NOT_IMPLEMENTED`。来源门禁检查人工核验记录与格式，不自动抓取或鉴定官网。
 
 PDF 由 `renderMastersPdf` 生成，必须传入 `MASTERS_PDF_FONT_PATH` 指向已安装许可的中文 Unicode 字体；没有字体时是 `PDF_FONT_REQUIRED` 阻塞。XLSX 由真实 OOXML 生成，所有单元格按字符串写入以避免公式/外链，且必须绑定获批报告的完整 `version`、`sourceProfileVersion`、`templateVersion`、content digest 和完整 `approved_candidates_json`；不能只导出候选名称或脱离获批版本的表格。
 

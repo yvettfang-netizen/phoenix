@@ -2,6 +2,7 @@ const api = require('./api')
 const runtime = require('../config/runtime')
 const config = require('../config/masters')
 const model = require('../models/masters-intake')
+const profilePayload = require('../models/masters-profile-payload')
 
 const SERVICE_CONSENT_VERSION = config.SERVICE_CONSENT_VERSION
 const DRAFT_ID_KEY = 'PFS_MASTERS_DRAFT_ID_V1'
@@ -168,12 +169,12 @@ async function getConsultation(consultationId) {
   return consultationPayload(await requestWithToken(consultPath(consultationId)))
 }
 
-async function saveProfile(consultationId, version, profile) {
+async function saveProfile(consultationId, version, profile, path) {
   assertFeatureEnabled()
   const currentVersion = assertVersion(version)
-  const normalized = model.normalizeProfile(profile)
+  const normalized = profilePayload(profile)
   const result = await requestWithToken(consultPath(consultationId), {
-    method: 'PATCH', data: { version: currentVersion, profile: normalized }
+    method: 'PATCH', data: { version: currentVersion, profile: normalized, ...(path === undefined ? {} : { path }) }
   })
   return consultationPayload(result)
 }
@@ -406,7 +407,7 @@ async function getReport(consultationId) {
   assertFeatureEnabled()
   const report = normalizeReport(await requestWithToken(`${consultPath(consultationId)}/report`))
   if (report.status !== 'RELEASED') {
-    throw new api.ApiError('正式方案尚未获批或开放', { code: 'MASTERS_REPORT_NOT_RELEASED', statusCode: 403 })
+    throw new api.ApiError('咨询报告尚未获批或开放', { code: 'MASTERS_REPORT_NOT_RELEASED', statusCode: 403 })
   }
   return report
 }

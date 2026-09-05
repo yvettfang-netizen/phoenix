@@ -33,6 +33,8 @@ const profile = {
   targetYear: 'UNDECIDED', targetMajors: ['尚未确定'], targetInstitutions: ['希望顾问建议'],
   targetPreference: '希望顾问建议', experiences: []
 }
+// Import the actual client serializer; do not hand-write a cleaner server-only payload.
+const clientProfilePayload = require('../../../models/masters-profile-payload') as (value: unknown) => Record<string, unknown>
 const catalog = validateSourceCatalog({ version: 'MASTERS-SYNTHETIC-TEST', dataAsOf: '2026-09-05', reviewedAt: '2026-09-05T00:00:00.000Z', reviewedBy: 'Synthetic fixture', entries: [{ sourceId: 'SYNTHETIC-TEST', title: 'Synthetic source', applicableYear: '2026', verifiedAt: '2026-09-05T00:00:00.000Z' }] })
 
 async function start(directory: string) {
@@ -65,6 +67,54 @@ test('P0 flags fail closed; no production, model or transient-store activation',
   assert.throws(() => loadMastersConfig({ NODE_ENV: 'production', MASTERS_INTAKE_ENABLED: 'true' }))
   assert.throws(() => loadMastersConfig({ MASTERS_AI_ENABLED: 'true' }))
   assert.throws(() => loadMastersConfig({ MASTERS_INTAKE_ENABLED: 'true' }))
+})
+
+test('guided path switch persists with the profile across HTTP restart and keeps consent, owner and version gates', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'masters-guided-recovery-'))
+  let app = await start(dir)
+  try {
+    const owner = await app.login('synthetic-guided-owner'), other = await app.login('synthetic-guided-other')
+    const created = await app.call('/v1/masters/consultations', owner.accessToken, 'POST', { path: 'RESUME', targetYear: 'UNDECIDED' })
+    assert.equal(created.status, 201)
+    const path = `/v1/masters/consultations/${created.body.consultation.id}`
+    const patch = { version: 1, profile: clientProfilePayload({ institution: 'Synthetic draft university' }), path: 'GUIDED' }
+    const denied = await app.call(path, owner.accessToken, 'PATCH', patch)
+    assert.equal(denied.status, 403, JSON.stringify(denied.body))
+    assert.equal(denied.body.error.code, 'MASTERS_CONSENT_REQUIRED')
+    // Seed consent for this legacy empty draft; normal clients supply it at creation.
+    await app.service.grantConsent(owner.user.id, created.body.consultation.id, consent)
+    assert.ok((await app.call(path, other.accessToken, 'PATCH', patch)).status >= 400)
+    assert.equal((await app.call(path, owner.accessToken, 'PATCH', { ...patch, path: 'admin' })).status, 400)
+    const saved = await app.call(path, owner.accessToken, 'PATCH', patch)
+    assert.equal(saved.status, 200, JSON.stringify(saved.body))
+    assert.equal(saved.body.consultation.profileVersion, 2)
+    assert.equal(saved.body.consultation.path, 'GUIDED')
+    assert.equal((await app.call(path, owner.accessToken, 'PATCH', { ...patch, path: 'RESUME' })).status, 409)
+    await app.close()
+    app = await start(dir)
+    const restored = await app.call(path, owner.accessToken)
+    assert.equal(restored.body.consultation.path, 'GUIDED')
+    assert.equal(restored.body.consultation.profile.institution, patch.profile.institution)
+    assert.equal(restored.body.consultation.profileVersion, 2)
+    assert.equal(restored.body.consultation.profile.contact, null)
+    assert.equal(restored.body.consultation.profile.graduationDate, null)
+    assert.equal(restored.body.consultation.profile.languageScores, null)
+    const scored = await app.call(path, owner.accessToken, 'PATCH', {
+      version: 2, path: 'GUIDED', profile: clientProfilePayload({
+        ...profile, graduationYear: '', languageStatus: 'AVAILABLE', languageType: 'IELTS',
+        languageScores: { total: '7.0', subscores: { listening: '7.5' }, examDate: '' },
+        experiences: [{ type: 'RESEARCH', title: 'Synthetic project', startDate: '', endDate: '' }]
+      })
+    })
+    assert.equal(scored.status, 200, JSON.stringify(scored.body))
+    assert.equal(scored.body.consultation.profile.languageScores.total, '7.0')
+    assert.equal(scored.body.consultation.profile.languageScores.subscores.listening, '7.5')
+    assert.equal(scored.body.consultation.profile.languageScores.examDate, null)
+    assert.equal(scored.body.consultation.profile.experiences[0].startDate, null)
+    for (const invalid of [{ graduationDate: 'not-a-date' }, { contact: { type: 'email', value: 'not-an-email' } }]) {
+      assert.equal((await app.call(path, owner.accessToken, 'PATCH', { version: 3, profile: clientProfilePayload(invalid), path: 'GUIDED' })).status, 400)
+    }
+  } finally { await app.close(); await rm(dir, { recursive: true, force: true }) }
 })
 
 test('real HTTP DOCX/PDF uploads survive restart, group by type, enforce ownership and permit incomplete submission', async () => {
@@ -237,5 +287,39 @@ test('retention worker removes expired originals and old crash orphans while pro
     assert.equal(retained?.extraction, null)
     await assert.rejects(app.files.get(retained!.storageKey))
     assert.equal((await app.call(`${path}/documents/${retained!.id}`, owner.accessToken)).status, 410)
+  } finally { await app.close(); await rm(dir, { recursive: true, force: true }) }
+})
+
+test('ordinary DOCX, text PDF and scanned PDF stay saved for manual review without reformatting or blocking incomplete consultation', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'masters-ordinary-documents-'))
+  const app = await start(dir)
+  try {
+    const owner = await app.login('ordinary-synthetic-student')
+    const created = await app.call('/v1/masters/consultations', owner.accessToken, 'POST', { targetYear: 'UNDECIDED', path: 'RESUME', serviceConsent: consent })
+    const id = created.body.consultation.id, path = `/v1/masters/consultations/${id}`
+    let version = created.body.consultation.profileVersion
+    const ordinary = 'FICTIONAL RESUME\nSynthetic Applicant\nEducation\n2023-2027 | Synthetic University | Computer Science\nCourse project\nBuilt an entirely fictional classroom demonstration. No real person is represented.'
+    const fixtures = [
+      { type: 'RESUME', name: 'ordinary-resume.docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', bytes: makeSyntheticDocx(ordinary) },
+      { type: 'TRANSCRIPT', name: 'ordinary-text.pdf', mime: 'application/pdf', bytes: await makeSyntheticPdf({ text: 'FICTIONAL academic record\nExample Course A 88\nExample Course B 90' }) },
+      { type: 'SUPPLEMENTAL', name: 'scanned-proof.pdf', mime: 'application/pdf', bytes: await makeSyntheticPdf({ image: makeSyntheticPng() }) }
+    ]
+    for (const fixture of fixtures) {
+      const saved = await app.upload(id, owner.accessToken, version, fixture.type, fixture.bytes, fixture.name, fixture.mime)
+      assert.equal(saved.status, 201, JSON.stringify(saved.body))
+      assert.equal(saved.body.document.uploadStatus, 'UPLOADED')
+      assert.equal(saved.body.document.extractionStatus, 'MANUAL_REVIEW')
+      const response = await fetch(`${app.base}${path}/documents/${saved.body.document.id}`, { headers: { Authorization: `Bearer ${owner.accessToken}` } })
+      assert.equal(response.status, 200)
+      assert.deepEqual(Buffer.from(await response.arrayBuffer()), fixture.bytes)
+      version = saved.body.consultation.profileVersion
+    }
+    const patched = await app.call(path, owner.accessToken, 'PATCH', { version, profile })
+    version = patched.body.consultation.profileVersion
+    assert.equal((await app.call(`${path}/confirm`, owner.accessToken, 'POST', { version, accuracyConfirmed: true, consent })).status, 200)
+    const submitted = await app.call(`${path}/submit`, owner.accessToken, 'POST', { version })
+    assert.equal(submitted.status, 200)
+    assert.equal(submitted.body.consultation.verificationStatus, 'NEEDS_REVIEW')
+    assert.equal(submitted.body.consultation.documents.length, 3)
   } finally { await app.close(); await rm(dir, { recursive: true, force: true }) }
 })

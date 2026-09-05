@@ -2,6 +2,7 @@ const auth = require('../../services/auth')
 const config = require('../../config/masters')
 const masters = require('../../services/masters')
 const model = require('../../models/masters-intake')
+const labels = require('../../models/masters-labels')
 const session = require('../../services/session')
 const api = require('../../services/api')
 
@@ -13,11 +14,26 @@ const LANGUAGE_OPTIONS = [
   { value: 'TOEFL', label: '托福 TOEFL' }, { value: 'OTHER', label: '其他语言考试' }
 ]
 const EXPERIENCE_OPTIONS = model.EXPERIENCE_TYPES
-
+const EXPERIENCE_LABELS = Object.freeze(EXPERIENCE_OPTIONS.reduce((result, item) => ({ ...result, [item.value]: item.label }), {}))
+const GUIDED_STEPS = [
+  { value: 'education', label: '教育背景' },
+  { value: 'academics', label: '成绩与语言' },
+  { value: 'target', label: '申请意向' },
+  { value: 'experience', label: '相关经历' }
+]
 function errorMessage(error, fallback = '操作未完成，请稍后重试') { return (error && error.message) || fallback }
 function isCancel(error) { return /cancel|取消/i.test(String(error && (error.errMsg || error.message || error.code) || '')) }
 function fileKey(file, index) { return String(file.id || file.documentId || file.localId || `${Date.now()}_${index}`) }
 function safeNumber(value, fallback = 0) { const number = Number(value); return Number.isFinite(number) ? number : fallback }
+function targetYearOptionsFor(value) {
+  const candidate = String(value || '')
+  if (!candidate || candidate === model.TARGET_YEAR_UNDECIDED || model.TARGET_YEAR_OPTIONS.some((item) => item.value === candidate)) return model.TARGET_YEAR_OPTIONS
+  return [{ value: candidate, label: candidate }].concat(model.TARGET_YEAR_OPTIONS)
+}
+function targetYearIndex(value, options = model.TARGET_YEAR_OPTIONS) {
+  const index = options.findIndex((item) => item.value === String(value || ''))
+  return index >= 0 ? index : options.length - 1
+}
 function sessionUserId() {
   const user = session.currentUser()
   return String(user && (user.id || user.userId) || '')
@@ -30,6 +46,11 @@ const EXTRACTABLE_PROFILE_FIELDS = new Set([
   'languageScores.subscores.listening', 'languageScores.subscores.reading',
   'languageScores.subscores.writing', 'languageScores.subscores.speaking',
   'targetYear', 'targetMajors', 'targetInstitutions', 'targetPreference', 'contact.value'
+])
+const RESUME_FACT_EDITABLE_FIELDS = new Set([
+  'name', 'institution', 'degree', 'major', 'graduationYear', 'graduationDate',
+  'averageScore', 'gpa', 'gpaScale', 'classRank', 'targetYear', 'targetMajors',
+  'targetInstitutions', 'targetPreference', 'contact.value'
 ])
 
 function extractionFieldName(field) {
@@ -46,6 +67,11 @@ function getProfileFact(profile, field) {
 function hasProfileFact(value) {
   if (Array.isArray(value)) return value.length > 0
   return value !== undefined && value !== null && String(value).trim() !== ''
+}
+
+function profileFactDisplayValue(profile, field) {
+  const value = getProfileFact(profile, field)
+  return Array.isArray(value) ? value.join('、') : String(value === undefined || value === null ? '' : value)
 }
 
 function profileFactsEqual(existing, value, field) {
@@ -102,15 +128,23 @@ function preserveProfile(existing, fallback) {
 function extractionView(item, profile) {
   const field = String(item && item.field || '')
   const existing = getProfileFact(profile, field)
+  const rawValue = item && item.value
+  const valueLabel = rawValue === undefined || rawValue === null || (typeof rawValue === 'string' && !rawValue.trim())
+    ? '待补'
+    : field === 'targetYear'
+      ? labels.targetYearLabel(rawValue)
+      : field === 'languageType' && String(rawValue).toUpperCase() === 'OTHER' ? '其他语言考试'
+        : Array.isArray(rawValue) ? rawValue.map((value) => labels.studentValue(value)).join('、') : labels.studentValue(rawValue)
   return {
     ...item,
     field,
-    valueLabel: item && item.value === undefined ? '待补' : String(item.value === null ? '待补' : item.value),
+    label: labels.fieldLabel(field),
+    valueLabel,
     sourceLabel: item && (item.sourceName || item.source) || '上传材料',
     locationLabel: item && (item.location || item.snippet) || '位置待核验',
     decisionLabel: item && item.accepted === true ? '已接受' : item && item.accepted === false ? '已拒绝' : '待你确认',
     existing: hasProfileFact(existing),
-    existingLabel: hasProfileFact(existing) ? String(existing) : ''
+    existingLabel: hasProfileFact(existing) ? (Array.isArray(existing) ? existing.join('、') : labels.studentValue(existing)) : ''
   }
 }
 
@@ -121,18 +155,25 @@ Page({
     profile: model.emptyProfile(), documents: [], cards: [], hiddenDocuments: [],
     supplementalExpanded: false, supplementalDescription: '', serviceConsent: false, contactOptions: CONTACT_OPTIONS,
     contactTypeIndex: 0, languageOptions: LANGUAGE_OPTIONS, languageTypeIndex: 0,
-    experienceOptions: EXPERIENCE_OPTIONS, error: '', fieldErrors: {}, extraction: null,
+    experienceOptions: EXPERIENCE_OPTIONS, experienceLabels: EXPERIENCE_LABELS, error: '', fieldErrors: {}, extraction: null,
     extractionFields: [], extractionError: '', applyingExtractionField: '', retentionDays: config.retentionDays(),
     uploadConfigReady: false, uploadConfigError: '', serviceConsentText: '',
-    pendingUploads: 0, retryingDocumentId: '', lastSavedAt: ''
+    pendingUploads: 0, retryingDocumentId: '', lastSavedAt: '',
+    guidedSteps: GUIDED_STEPS, guidedStep: 0, guidedStepLabel: GUIDED_STEPS[0].label,
+    showFullProfile: false, showMissingProfile: false, missingEditFields: [], missingEditName: false, missingEditAdult: false, missingEditContact: false, missingEditInstitution: false, missingEditMajor: false, resumeEditingField: '', resumeEditingLabel: '', resumeEditingValue: '',
+    targetYearOptions: model.TARGET_YEAR_OPTIONS, targetYearIndex: targetYearIndex(model.TARGET_YEAR_UNDECIDED),
+    resumeReview: model.buildResumeReview(model.emptyProfile(), [], [])
   },
 
   onLoad(options = {}) {
     this.options = options
     this.routeConsultationId = String(options.id || '')
+    const path = config.path(options.path)
     this.setData({
-      path: config.path(options.path), channel: config.channel(options.channel),
-      consultationId: this.routeConsultationId, enabled: config.isEnabled()
+      path, channel: config.channel(options.channel), consultationId: this.routeConsultationId,
+      enabled: config.isEnabled(), guidedStep: 0, guidedStepLabel: GUIDED_STEPS[0].label,
+      showFullProfile: false, showMissingProfile: false, missingEditFields: [], missingEditName: false, missingEditAdult: false, missingEditContact: false, missingEditInstitution: false, missingEditMajor: false, resumeEditingField: '', resumeEditingLabel: '', resumeEditingValue: '',
+      targetYearOptions: model.TARGET_YEAR_OPTIONS, targetYearIndex: targetYearIndex(model.TARGET_YEAR_UNDECIDED)
     })
   },
 
@@ -162,7 +203,9 @@ Page({
     this.guidedOverride = false
     this.setData({ consultationId: '', version: 1, profile: model.emptyProfile(), documents: [], cards: [], hiddenDocuments: [],
       extraction: null, extractionFields: [], extractionError: '', serviceConsent: false, fieldErrors: {}, error: '',
-      pendingUploads: 0, retryingDocumentId: '', applyingExtractionField: '', supplementalDescription: '', uploadConfigReady: false, uploadConfigError: '' })
+      pendingUploads: 0, retryingDocumentId: '', applyingExtractionField: '', supplementalDescription: '', uploadConfigReady: false, uploadConfigError: '',
+      showFullProfile: false, showMissingProfile: false, missingEditFields: [], missingEditName: false, missingEditAdult: false, missingEditContact: false, missingEditInstitution: false, missingEditMajor: false, resumeEditingField: '', resumeEditingLabel: '', resumeEditingValue: '', guidedStep: 0, guidedStepLabel: GUIDED_STEPS[0].label,
+      targetYearOptions: model.TARGET_YEAR_OPTIONS, targetYearIndex: targetYearIndex(model.TARGET_YEAR_UNDECIDED), resumeReview: model.buildResumeReview(model.emptyProfile(), [], []) })
   },
 
   async login() {
@@ -242,8 +285,10 @@ Page({
       targetMajorsText: profile.targetMajors.join('、'), targetInstitutionsText: profile.targetInstitutions.join('、'),
       contactTypeIndex: Math.max(0, CONTACT_OPTIONS.findIndex((item) => item.value === profile.contact.type)),
       languageTypeIndex: Math.max(0, LANGUAGE_OPTIONS.findIndex((item) => item.value === profile.languageType)),
+      targetYearOptions: targetYearOptionsFor(profile.targetYear), targetYearIndex: targetYearIndex(profile.targetYear, targetYearOptionsFor(profile.targetYear)),
       loading: false, error: '',
-      ...this.presentation(documents, profile.educationStatus)
+      ...this.presentation(documents, profile.educationStatus),
+      resumeReview: model.buildResumeReview(profile, documents, this.data.extractionFields)
     })
     if (consultation.id || consultation.consultationId) masters.rememberDraftId(consultation.id || consultation.consultationId)
   },
@@ -254,10 +299,11 @@ Page({
     try {
       const extraction = await masters.getExtraction(this.data.consultationId)
       if (!requestUserId || requestUserId !== sessionUserId()) return
-      this.setData({ extraction, extractionError: '', extractionFields: (extraction.fields || []).map((item) => extractionView(item, this.data.profile)) })
+      const extractionFields = (extraction.fields || []).map((item) => extractionView(item, this.data.profile))
+      this.setData({ extraction, extractionError: '', extractionFields, resumeReview: model.buildResumeReview(this.data.profile, this.data.documents, extractionFields) })
     } catch (error) {
       if (!requestUserId || requestUserId !== sessionUserId()) return
-      this.setData({ extraction: null, extractionFields: [], extractionError: errorMessage(error, '识别结果暂时无法读取') })
+      this.setData({ extraction: null, extractionFields: [], extractionError: errorMessage(error, '识别结果暂时无法读取'), resumeReview: model.buildResumeReview(this.data.profile, this.data.documents, []) })
     }
   },
 
@@ -322,6 +368,10 @@ Page({
     return { cards: result.cards, hiddenDocuments: result.hiddenDocuments, totalDocumentCount: result.totalCount, totalDocumentSizeLabel: result.totalSizeLabel }
   },
 
+  refreshResumeReview(profile = this.data.profile, documents = this.data.documents, extractionFields = this.data.extractionFields) {
+    this.setData({ resumeReview: model.buildResumeReview(profile, documents, extractionFields) })
+  },
+
   ensureLoggedIn() {
     if (session.currentUser()) return true
     this.setData({ loggedIn: false })
@@ -345,6 +395,7 @@ Page({
     // Creation commonly returns an empty profile. Keep unsaved edits in
     // memory until the explicit save PATCH; never put those fields in storage.
     this.setData({ profile: localProfile, targetMajorsText: localProfile.targetMajors.join('、'), targetInstitutionsText: localProfile.targetInstitutions.join('、') })
+    this.refreshResumeReview(localProfile, this.data.documents, this.data.extractionFields)
     return consultation.id
   },
 
@@ -366,28 +417,41 @@ Page({
     else if (field === 'targetInstitutions') this.setData({ targetInstitutionsText: String(value), 'profile.targetInstitutions': model.normalizeProfile({ targetInstitutions: value }).targetInstitutions })
     else if (field.indexOf('languageScores.subscores.') === 0) this.setData({ [`profile.${field}`]: String(value) })
     else this.setData({ [`profile.${field}`]: String(value) })
+    this.refreshResumeReview()
   },
 
   adultChange({ detail }) {
     const values = Array.isArray(detail && detail.value) ? detail.value : []
     this.setData({ 'profile.adultConfirmed': values.includes('true') || values.includes('adult') || detail.value === true })
+    this.refreshResumeReview()
   },
 
   selectContactType({ detail }) {
     const index = safeNumber(detail && detail.value)
     const option = CONTACT_OPTIONS[index] || CONTACT_OPTIONS[0]
     this.setData({ contactTypeIndex: index, 'profile.contact.type': option.value })
+    this.refreshResumeReview()
   },
 
   educationStatusChange({ detail }) {
     const status = model.EDUCATION_STATUSES.includes(detail && detail.value) ? detail.value : 'ENROLLED'
     this.setData({ 'profile.educationStatus': status, ...this.presentation(this.data.documents, status) })
+    this.refreshResumeReview()
+  },
+
+  targetYearChange({ detail }) {
+    const options = Array.isArray(this.data.targetYearOptions) && this.data.targetYearOptions.length ? this.data.targetYearOptions : model.TARGET_YEAR_OPTIONS
+    const index = Math.max(0, Math.min(options.length - 1, safeNumber(detail && detail.value)))
+    const option = options[index] || options[options.length - 1]
+    this.setData({ targetYearIndex: index, 'profile.targetYear': option.value })
+    this.refreshResumeReview()
   },
 
   languageTypeChange({ detail }) {
     const index = safeNumber(detail && detail.value)
     const option = LANGUAGE_OPTIONS[index] || LANGUAGE_OPTIONS[0]
     this.setData({ languageTypeIndex: index, 'profile.languageType': option.value, 'profile.languageStatus': option.value === 'NONE' ? 'NONE' : 'AVAILABLE' })
+    this.refreshResumeReview()
   },
 
   addExperience() {
@@ -425,9 +489,85 @@ Page({
     this.setData({ supplementalDescription: String(detail && detail.value || '').slice(0, 500) })
   },
 
-  switchToGuided() {
-    this.guidedOverride = true
-    this.setData({ path: 'GUIDED' })
+  async switchToGuided() {
+    const previousPath = this.data.path
+    if (previousPath !== 'GUIDED' && this.data.consultationId) {
+      this.guidedOverride = true
+      const saved = await this.saveProfile('GUIDED')
+      if (!saved) {
+        this.guidedOverride = false
+        this.setData({ path: previousPath })
+        return false
+      }
+    } else this.guidedOverride = true
+    this.setData({ path: 'GUIDED', guidedStep: 0, guidedStepLabel: GUIDED_STEPS[0].label, showFullProfile: false, showMissingProfile: false, missingEditFields: [], missingEditName: false, missingEditAdult: false, missingEditContact: false, missingEditInstitution: false, missingEditMajor: false, resumeEditingField: '', resumeEditingLabel: '', resumeEditingValue: '' })
+    return true
+  },
+
+  toggleMissingProfile() {
+    if (!this.data.resumeReview.missingFacts.length) return
+    const opening = !this.data.showMissingProfile
+    const fields = opening ? this.data.resumeReview.missingFacts.map((item) => item.field) : []
+    this.setData({ showMissingProfile: opening, missingEditFields: fields, missingEditName: fields.includes('name'), missingEditAdult: fields.includes('adultConfirmed'), missingEditContact: fields.includes('contact'), missingEditInstitution: fields.includes('institution'), missingEditMajor: fields.includes('major'), showFullProfile: false, resumeEditingField: '', resumeEditingLabel: '', resumeEditingValue: '' })
+  },
+
+  closeMissingProfile() {
+    this.setData({ showMissingProfile: false, missingEditFields: [], missingEditName: false, missingEditAdult: false, missingEditContact: false, missingEditInstitution: false, missingEditMajor: false })
+  },
+
+  editResumeFact({ currentTarget }) {
+    const field = extractionFieldName(currentTarget && currentTarget.dataset && currentTarget.dataset.field)
+    if (!field || !RESUME_FACT_EDITABLE_FIELDS.has(field)) {
+      this.setData({ showFullProfile: true, showMissingProfile: false, missingEditFields: [], missingEditName: false, missingEditAdult: false, missingEditContact: false, missingEditInstitution: false, missingEditMajor: false, resumeEditingField: '', resumeEditingLabel: '', resumeEditingValue: '' })
+      return
+    }
+    this.setData({ resumeEditingField: field, resumeEditingLabel: labels.fieldLabel(field), resumeEditingValue: profileFactDisplayValue(this.data.profile, field), showMissingProfile: false, missingEditFields: [], missingEditName: false, missingEditAdult: false, missingEditContact: false, missingEditInstitution: false, missingEditMajor: false, showFullProfile: false })
+  },
+
+  onResumeFactInput({ detail }) {
+    const field = this.data.resumeEditingField
+    if (!field || !RESUME_FACT_EDITABLE_FIELDS.has(field) || field === 'targetYear') return
+    const value = String(detail && detail.value !== undefined ? detail.value : '')
+    if (field === 'contact.value') this.setData({ 'profile.contact.value': value, resumeEditingValue: value })
+    else if (field === 'targetMajors') this.setData({ targetMajorsText: value, 'profile.targetMajors': model.normalizeProfile({ targetMajors: value }).targetMajors, resumeEditingValue: value })
+    else if (field === 'targetInstitutions') this.setData({ targetInstitutionsText: value, 'profile.targetInstitutions': model.normalizeProfile({ targetInstitutions: value }).targetInstitutions, resumeEditingValue: value })
+    else this.setData({ [`profile.${field}`]: value, resumeEditingValue: value })
+    this.refreshResumeReview()
+  },
+
+  closeResumeFactEditor() {
+    this.setData({ resumeEditingField: '', resumeEditingLabel: '', resumeEditingValue: '' })
+  },
+
+  toggleFullProfile() {
+    this.setData({ showFullProfile: !this.data.showFullProfile, showMissingProfile: false, missingEditFields: [], missingEditName: false, missingEditAdult: false, missingEditContact: false, missingEditInstitution: false, missingEditMajor: false, resumeEditingField: '', resumeEditingLabel: '', resumeEditingValue: '' })
+  },
+
+  setGuidedStepIndex(value) {
+    const step = Math.max(0, Math.min(GUIDED_STEPS.length - 1, safeNumber(value)))
+    this.setData({ guidedStep: step, guidedStepLabel: GUIDED_STEPS[step].label })
+  },
+
+  async setGuidedStep(value) {
+    const dataset = value && value.currentTarget && value.currentTarget.dataset
+    const raw = dataset && dataset.index !== undefined ? dataset.index : value
+    const step = Math.max(0, Math.min(GUIDED_STEPS.length - 1, safeNumber(raw)))
+    if (step === this.data.guidedStep) return true
+    if (!(await this.saveProfile())) return false
+    this.setGuidedStepIndex(step)
+    return true
+  },
+
+  async previousGuidedStep() {
+    if (this.data.guidedStep > 0) return this.setGuidedStep(this.data.guidedStep - 1)
+    return false
+  },
+
+  async nextGuidedStep() {
+    if (this.data.guidedStep < GUIDED_STEPS.length - 1) return this.setGuidedStep(this.data.guidedStep + 1)
+    const saved = await this.saveProfile()
+    if (saved) wx.showToast({ title: '四步资料已保存，可继续核对或提交', icon: 'success' })
+    return saved
   },
 
   async selectUpload({ currentTarget }) {
@@ -442,8 +582,8 @@ Page({
       }
       await this.ensureConsultation()
       if (!this.data.consultationId) return
-      const existingCount = this.data.documents.filter((item) => item.id).length
       const replaceId = String(currentTarget && currentTarget.dataset && currentTarget.dataset.replaceId || '')
+      const existingCount = this.data.documents.filter((item) => item.id && item.id !== replaceId && item.uploadStatus !== 'REMOVED').length
       if (existingCount >= model.MAX_DOCUMENTS && !replaceId) {
         wx.showToast({ title: '每份咨询最多保存 20 份材料', icon: 'none' }); return
       }
@@ -468,6 +608,7 @@ Page({
   async uploadFiles(type, files, replaceId = '', retryLocalId = '', description = '') {
     const selectedFiles = Array.isArray(files) ? files : []
     const requestUserId = sessionUserId()
+    const draftProfile = model.normalizeProfile(this.data.profile)
     let documents = this.data.documents.slice()
     for (let index = 0; index < selectedFiles.length; index += 1) {
       const selected = selectedFiles[index] || {}
@@ -483,7 +624,7 @@ Page({
       this.setData({ documents, pendingUploads: this.data.pendingUploads + 1, ...this.presentation(documents, this.data.profile.educationStatus) })
       try {
         const result = await masters.uploadDocument(this.data.consultationId, { filePath: path, name, size: selected.size, mimeType: selected.type }, {
-          version: this.data.version, type, existingDocuments: documents.filter((item) => item.id), idempotencyKey: masters.createIdempotencyKey('document'),
+          version: this.data.version, type, existingDocuments: documents.filter((item) => item.id && item.id !== replaceId && item.uploadStatus !== 'REMOVED'), idempotencyKey: masters.createIdempotencyKey('document'),
           replaceDocumentId: replaceId || undefined, description: description || selected.description || undefined
         })
         if (!requestUserId || requestUserId !== sessionUserId()) return
@@ -495,15 +636,20 @@ Page({
           const consultation = model.normalizeConsultation(result.consultation)
           if (!consultation.documents.some((item) => item.id === uploaded.id)) consultation.documents.push(uploaded)
           this.applyConsultation(consultation)
+          // Upload responses may include a refreshed consultation snapshot.
+          // Keep edits made before file selection until the user explicitly
+          // saves the profile, so an upload cannot discard an in-memory draft.
+          this.setData({ profile: draftProfile, targetMajorsText: draftProfile.targetMajors.join('、'), targetInstitutionsText: draftProfile.targetInstitutions.join('、') })
+          this.refreshResumeReview(draftProfile, this.data.documents, this.data.extractionFields)
         }
-        else this.setData({ documents, ...this.presentation(documents, this.data.profile.educationStatus) })
+        else this.setData({ documents, ...this.presentation(documents, this.data.profile.educationStatus), resumeReview: model.buildResumeReview(this.data.profile, documents, this.data.extractionFields) })
         this.loadExtraction()
       } catch (error) {
         if (!requestUserId || requestUserId !== sessionUserId()) return
         documents = documents.map((item) => item.localId === localId ? { ...item, uploadStatus: 'FAILED', uploadError: errorMessage(error, '上传失败') } : item)
-        this.setData({ documents, error: errorMessage(error, '上传失败'), ...this.presentation(documents, this.data.profile.educationStatus) })
+        this.setData({ documents, error: errorMessage(error, '上传失败'), ...this.presentation(documents, this.data.profile.educationStatus), resumeReview: model.buildResumeReview(this.data.profile, documents, this.data.extractionFields) })
       } finally {
-        this.setData({ pendingUploads: Math.max(0, this.data.pendingUploads - 1) })
+        if (requestUserId && requestUserId === sessionUserId()) this.setData({ pendingUploads: Math.max(0, this.data.pendingUploads - 1) })
       }
     }
   },
@@ -602,7 +748,7 @@ Page({
       .catch((error) => wx.showToast({ title: errorMessage(error, '材料查看失败'), icon: 'none' }))
   },
 
-  async saveProfile() {
+  async saveProfile(pathOverride = '') {
     if (!this.ensureLoggedIn()) return false
     if (!this.data.serviceConsent) { wx.showToast({ title: '保存前请先同意资料处理说明', icon: 'none' }); return false }
     this.setData({ saving: true, error: '' })
@@ -610,7 +756,7 @@ Page({
     try {
       await this.ensureConsultation()
       if (!this.data.consultationId) return false
-      const consultation = await masters.saveProfile(this.data.consultationId, this.data.version, this.data.profile)
+      const consultation = await masters.saveProfile(this.data.consultationId, this.data.version, this.data.profile, pathOverride || this.data.path)
       if (!requestUserId || requestUserId !== sessionUserId()) return false
       this.applyConsultation(consultation)
       this.setData({ lastSavedAt: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) })

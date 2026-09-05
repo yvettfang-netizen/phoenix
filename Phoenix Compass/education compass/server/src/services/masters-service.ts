@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { canonicalJson } from '../ai/crypto'
 import { AppError, invariant } from '../domain/errors'
+import { assertReportSources } from '../masters/report-assistance'
 import {
   MASTERS_CONTRACT_VERSION,
   MASTERS_REPORT_TEMPLATE_VERSION,
@@ -250,10 +251,10 @@ export class MastersService {
       const now = iso(this.clock)
       const updated = await tx.update('mastersConsultations', consultation.id, {
         profile: nextProfile, applicationSeason: season, profileVersion: nextVersion, accuracyConfirmed: false, confirmedSnapshotId: null,
-        status: nextStatus, updatedAt: now
+        path: input.path ?? consultation.path, status: nextStatus, updatedAt: now
       })
       await this.markReportsStale(tx, consultation.id, now, 'PROFILE_CHANGED')
-      await this.audit(tx, userId, consultation.id, 'PROFILE_UPDATED', { fromVersion: consultation.profileVersion, toVersion: nextVersion }, now)
+      await this.audit(tx, userId, consultation.id, 'PROFILE_UPDATED', { fromVersion: consultation.profileVersion, toVersion: nextVersion, fromPath: consultation.path, toPath: updated.path }, now)
       return updated
     })
   }
@@ -645,9 +646,9 @@ export class MastersService {
       }
       const reports = await tx.findMany('mastersReports', { consultationId })
       const released = reports.filter((report) => report.status === 'RELEASED').sort((left, right) => right.version - left.version)[0]
-      invariant(released || !reports.some(report => report.releasedAt && report.status === 'STALE'), 409, 'MASTERS_REPORT_STALE', '资料已变化，请等待复核后的正式方案')
-      invariant(released, 404, 'MASTERS_REPORT_NOT_RELEASED', '正式方案尚未开放')
-      invariant(released.sourceProfileVersion === consultation.profileVersion, 409, 'MASTERS_REPORT_STALE', '资料已变化，请等待新的正式方案')
+      invariant(released || !reports.some(report => report.releasedAt && report.status === 'STALE'), 409, 'MASTERS_REPORT_STALE', '资料已变化，请等待复核后的咨询报告')
+      invariant(released, 404, 'MASTERS_REPORT_NOT_RELEASED', '咨询报告尚未开放')
+      invariant(released.sourceProfileVersion === consultation.profileVersion, 409, 'MASTERS_REPORT_STALE', '资料已变化，请等待新的咨询报告')
       return released
     })
   }
@@ -1069,13 +1070,14 @@ export class MastersService {
         invariant(reviewerStaff, 409, 'MASTERS_REPORT_REVIEW_REQUIRED', '报告复核人不是有效顾问')
         const reviewerAssignment = await tx.findOne('mastersAssignments', { consultationId: consultation.id, advisorUserId: report.reviewedBy, status: 'ACTIVE' })
         invariant(reviewerAssignment, 409, 'MASTERS_REPORT_REVIEW_REQUIRED', '报告复核人未被分配到该咨询')
+        assertReportSources(report.payload, consultation.applicationSeason, now)
         const updated = await tx.update('mastersReports', report.id, { status: 'APPROVED', approvedBy: staff.userId, approvedAt: now, updatedAt: now })
         await this.audit(tx, actorUserId, consultation.id, 'REPORT_APPROVED', { reportId: report.id, version: report.version, note: input.note ?? '' }, now)
         return updated
       }
       if (decision === 'RELEASED') {
         invariant(report.status === 'APPROVED', 409, 'MASTERS_REPORT_RELEASE_INVALID_STATE', '只有已批准报告可以开放')
-        invariant(report.payload.candidatePrograms.every(candidate => candidate.sourceStatus === 'VERIFIED' && candidate.verifiedAt <= now.slice(0, 10)), 409, 'MASTERS_SOURCES_UNVERIFIED', '候选项目必须先完成来源核验')
+        assertReportSources(report.payload, consultation.applicationSeason, now)
         invariant(report.sourceProfileVersion === consultation.profileVersion, 409, 'MASTERS_REPORT_STALE', '报告所依据的资料已变化')
         const updated = await tx.update('mastersReports', report.id, { status: 'RELEASED', releasedBy: staff.userId, releasedAt: now, updatedAt: now })
         await this.audit(tx, actorUserId, consultation.id, 'REPORT_RELEASED', { reportId: report.id, version: report.version }, now)

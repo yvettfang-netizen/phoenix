@@ -1,3 +1,4 @@
+const labels = require('../../models/masters-labels')
 const auth = require('../../services/auth')
 const config = require('../../config/masters')
 const masters = require('../../services/masters')
@@ -12,7 +13,7 @@ function sessionUserId() {
 }
 function normalize(item) {
   const status = String(item.status || 'DRAFT').toUpperCase()
-  return { ...item, id: item.id || item.consultationId, status, statusLabel: STATUS_COPY[status] || '处理中', targetYear: item.targetYear || item.profile && item.profile.targetYear || '尚未确定', updatedAt: item.updatedAt || item.updated_at || '' }
+  return { ...item, id: item.id || item.consultationId, status, statusLabel: STATUS_COPY[status] || '处理中', targetYear: labels.targetYearLabel(item.targetYear || item.profile && item.profile.targetYear), updatedAt: item.updatedAt || item.updated_at || '' }
 }
 
 Page({

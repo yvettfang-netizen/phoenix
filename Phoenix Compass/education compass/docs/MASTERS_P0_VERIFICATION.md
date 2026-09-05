@@ -1,8 +1,10 @@
-# 香港硕士免费咨询 P0 / V1.1 验收记录
+# 香港硕士免费咨询 P0 / V1.1 历史验收记录
+
+> 本文归档至上一轮提交 `29df2358718232294dcda4af9f2410fd0b32aab6`，包括 110/110 在内的下列记录不适用于后续 HEAD。本轮说明见 [PR #9 下一轮修正](MASTERS_PR9_ROUND2.md)，当前候选实际结果以绑定新 SHA 的验收输出及 PR 正文为准。
 
 日期：2026-09-05。总状态：**BLOCKED**（代码与本地真实联调可审阅；PostgreSQL 和微信平台/真机验收缺外部条件）。所有身份、联系方式和材料均程序生成，不引用真实学生样板。
 
-仓库 `yvettfang-netizen/phoenix`；原任务分支 `codex/masters-intake-p0`；基线 `846f77c120cd00a49d89635dd4297b020af7d03a`。沿用本任务工作树，不覆盖原工作目录成果，不合并 Founder 分支或 PR #2。最终提交 SHA 以 Draft PR 的 head 为准，避免把文档所在提交的 SHA 写入自身。
+仓库 `yvettfang-netizen/phoenix`；原任务分支 `codex/masters-intake-p0`；基线 `846f77c120cd00a49d89635dd4297b020af7d03a`。沿用本任务工作树，不覆盖原工作目录成果，不合并 Founder 分支或 PR #2。该轮历史交付提交为 `29df2358718232294dcda4af9f2410fd0b32aab6`；不能跟随 Draft PR 当前 head 自动更新证据归属。
 
 接口、测试配置、页面路径、角色与回滚操作见 [运行及接口说明](MASTERS_INTAKE_P0.md)。机器可读状态见 [MASTERS_P0_VERIFICATION.json](MASTERS_P0_VERIFICATION.json)。
 

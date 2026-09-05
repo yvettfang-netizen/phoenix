@@ -45,7 +45,7 @@ function escapeXml(value: string): string {
 }
 
 /** Generate a PDF with explicit labelled values that the parser can extract. */
-export function makeSyntheticPdf(options: { pages?: number; text?: string } = {}): Promise<Buffer> {
+export function makeSyntheticPdf(options: { pages?: number; text?: string; image?: Buffer } = {}): Promise<Buffer> {
   const pages = Math.max(1, Math.floor(options.pages ?? 1))
   const text = options.text ?? syntheticPdfText
   return new Promise((resolve, reject) => {
@@ -56,7 +56,8 @@ export function makeSyntheticPdf(options: { pages?: number; text?: string } = {}
     document.once('end', () => resolve(Buffer.concat(chunks)))
     for (let page = 1; page <= pages; page += 1) {
       if (page > 1) document.addPage()
-      document.fontSize(12).text(text)
+      if (options.image) document.image(options.image, { fit: [400, 500] })
+      else document.fontSize(12).text(text)
       document.fontSize(9).text(`Synthetic page ${page} of ${pages}`)
     }
     document.end()

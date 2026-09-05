@@ -7,10 +7,10 @@ export const workbenchHtml = `<!doctype html><html lang="zh-CN"><meta charset="u
 <section id="case" hidden><h2 id="case-title"></h2><p id="progress"></p><h3>申请资料</h3><pre id="profile"></pre><h3>分类材料</h3><div id="documents"></div>
 <div id="assign-panel"><label>顾问 <select id="advisor"></select></label><button id="assign">分配／改派</button></div>
 <label>补件或审核说明 <textarea id="note" maxlength="1000"></textarea></label><button id="request-documents">请求补件</button><button id="generate">生成／重试方案草稿</button>
-<h3>申请方案</h3><p id="report-state"></p><label>草稿内容（结构化字段）<textarea id="report-editor" rows="24" spellcheck="false"></textarea></label>
+<h3>报告与核验能力</h3><p id="report-state"></p><p id="report-capability"></p><label>草稿内容（结构化字段）<textarea id="report-editor" rows="24" spellcheck="false"></textarea></label>
 <button id="save-report">保存草稿</button><button id="review">顾问复核完成，提交 Founder</button>
 <div id="founder-panel"><button id="approve">批准此版本</button><button id="return">退回修改</button><button id="release">开放已批准版本</button></div>
-<button id="pdf">导出正式 PDF</button><button id="xlsx">导出正式院校表 XLSX</button><p>上传与识别分别显示；下载只开放经授权的材料。导出必须是已批准、已开放且资料版本一致的方案。</p></section></main><script src="/internal/masters/app.js" defer></script></html>`
+<button id="pdf">导出已开放报告 PDF</button><button id="xlsx">导出已开放院校表 XLSX</button><p>上传与识别分别显示；下载只开放经授权的材料。导出必须是已批准、已开放且资料版本一致的方案。</p></section></main><script src="/internal/masters/app.js" defer></script></html>`
 
 export const workbenchCss = `body{font:16px/1.65 system-ui,sans-serif;background:#f5f3ec;color:#1c3834;margin:0}main{max-width:1050px;margin:auto;padding:28px}section{background:white;padding:24px;margin:16px 0;border-radius:12px}h1{margin-bottom:0}label{display:block;margin:12px 0}input,textarea,select{box-sizing:border-box;width:100%;font:inherit;padding:10px;border:1px solid #afbdb7;border-radius:5px}button{background:#1e5148;color:white;padding:10px 16px;margin:5px 8px 5px 0;border:0;border-radius:6px;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.card{border:1px solid #d8ded9;border-radius:6px;margin:10px 0;padding:16px}pre{white-space:pre-wrap;overflow-wrap:anywhere}#message{padding:8px;white-space:pre-wrap}small{color:#62756d}`
 
@@ -54,6 +54,7 @@ async function load(id) {
  for(const file of files){const p=document.createElement('p');p.textContent=file.originalName+' · '+file.sizeBytes+' bytes · '+file.uploadStatus+' / '+file.extractionStatus+(file.description?' · '+file.description:'');card.append(p);const b=document.createElement('button');b.textContent='授权查看／下载';b.onclick=()=>download(api+'/consultations/'+id+'/documents/'+file.id,file.originalName).catch(e=>message(e.message));card.append(b);}
  el('documents').append(card); }
  const report=selected.currentReport;el('report-state').textContent=report ? report.status+' · 报告版本 '+report.version : '尚未生成草稿';
+ el('report-capability').textContent=report ? (report.assistance?.label || '待顾问核验草稿')+'。'+(report.assistance?.explanation || '自动选校尚未实现。')+' '+(report.assistance?.limitations || []).join('；') : '规则草稿可辅助整理资料，自动选校尚未实现。';
  el('report-editor').value=report?JSON.stringify(report.payload,null,2):'';
  el('founder-panel').hidden=staff?.role!=='founder';el('assign-panel').hidden=!['founder','assignment_manager'].includes(staff?.role);
 }

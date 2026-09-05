@@ -1,3 +1,4 @@
+const labels = require('../../models/masters-labels')
 const auth = require('../../services/auth')
 const config = require('../../config/masters')
 const masters = require('../../services/masters')
@@ -5,9 +6,9 @@ const model = require('../../models/masters-intake')
 const session = require('../../services/session')
 
 function display(value) {
-  if (Array.isArray(value)) return value.join('、') || '未填写'
-  if (value && typeof value === 'object') return Object.keys(value).map((key) => `${key}: ${value[key]}`).join('；') || '未填写'
-  return value === undefined || value === null || value === '' ? '未填写' : String(value)
+  if (Array.isArray(value)) return value.map(display).join('、') || '未填写'
+  if (value && typeof value === 'object') return Object.keys(value).map((key) => `${labels.fieldLabel(key)}：${display(value[key])}`).join('；') || '未填写'
+  return value === undefined || value === null || value === '' ? '未填写' : labels.studentValue(value)
 }
 function errorText(error) {
   if (error && Number(error.statusCode) === 409) return '服务端资料已有新版本，请返回资料页重新核对后再提交。'
@@ -35,7 +36,7 @@ Page({
     enabled: config.isEnabled(), loggedIn: false, loginBusy: false, loading: true, confirming: false,
     consultationId: '', version: 1, consultation: null, profile: model.emptyProfile(), documents: [], documentGroups: [],
     targetMajorsLabel: '方向待定', targetInstitutionsLabel: '尚未确定', resumeDraft: null, extractionFields: [], conflicts: [],
-    extractionError: '', serviceConsent: false, accuracyConfirmed: false, error: ''
+    contactTypeLabel: '联系方式', targetYearLabel: '尚未确定，希望顾问建议', extractionError: '', serviceConsent: false, accuracyConfirmed: false, error: ''
   },
 
   onLoad(options = {}) { this.routeConsultationId = String(options.id || ''); this.setData({ consultationId: this.routeConsultationId, enabled: config.isEnabled() }) },
@@ -64,6 +65,7 @@ Page({
   clearSensitiveState(clearRoute = false) {
     if (clearRoute) this.routeConsultationId = ''
     this.setData({ consultationId: '', version: 1, consultation: null, profile: model.emptyProfile(), documents: [], documentGroups: [],
+      targetMajorsLabel: '方向待定', targetInstitutionsLabel: '尚未确定', contactTypeLabel: '联系方式', targetYearLabel: '尚未确定，希望顾问建议',
       resumeDraft: null, extractionFields: [], conflicts: [], extractionError: '', serviceConsent: false, accuracyConfirmed: false, error: '' })
   },
 
@@ -94,11 +96,11 @@ Page({
       const documents = (consultation.documents || []).map(model.normalizeDocument).map((item) => ({ ...item, uploadStatusLabel: uploadStatusLabel(item.uploadStatus), parseStatusLabel: parseStatusLabel(item.parseStatus) }))
       const grouped = model.DOCUMENT_TYPES.map((type) => ({ type, title: model.DOCUMENT_META[type].title, files: documents.filter((item) => item.type === type) })).filter((group) => group.files.length)
       const extractionFields = (extraction.fields || []).map((item) => ({
-        ...item, field: String(item.field || ''), valueLabel: display(item.value), sourceLabel: item.sourceName || item.source || '上传材料',
+        ...item, field: String(item.field || ''), fieldLabel: labels.fieldLabel(item.field), valueLabel: display(item.value), sourceLabel: item.sourceName || item.source || '上传材料',
         locationLabel: item.location || item.snippet || '位置待核验', confidenceLabel: confidenceLabel(item.confidence), decisionLabel: item.accepted === true ? '已接受' : item.accepted === false ? '已拒绝' : '待你确认'
       }))
-      const conflicts = (extraction.conflicts || []).map((item) => ({ ...item, values: Array.isArray(item.values) ? item.values.map((value) => display(value)) : [], field: String(item.field || ''), decisionLabel: decisionLabel(item.resolution) }))
-      this.setData({ consultation, version: Number(consultation.version || consultation.profileVersion || 1), profile, documents, documentGroups: grouped, targetMajorsLabel: profile.targetMajors.length ? profile.targetMajors.join('、') : '方向待定', targetInstitutionsLabel: profile.targetInstitutions.length ? profile.targetInstitutions.join('、') : '尚未确定', resumeDraft: consultation.path === 'GUIDED' || !documents.some((item) => item.type === 'RESUME') ? model.resumeDraft(profile) : null, extractionFields, conflicts, extractionError, serviceConsent: Boolean(consultation.consent && (consultation.consent.accepted || consultation.consent.service || !consultation.consent.withdrawnAt)), accuracyConfirmed: Boolean(profile.accuracyConfirmed), loading: false })
+      const conflicts = (extraction.conflicts || []).map((item) => ({ ...item, values: Array.isArray(item.values) ? item.values.map((value) => display(value)) : [], field: String(item.field || ''), fieldLabel: labels.fieldLabel(item.field), decisionLabel: decisionLabel(item.resolution) }))
+      this.setData({ contactTypeLabel: labels.contactTypeLabel(profile.contact.type), targetYearLabel: labels.targetYearLabel(profile.targetYear), consultation, version: Number(consultation.version || consultation.profileVersion || 1), profile, documents, documentGroups: grouped, targetMajorsLabel: profile.targetMajors.length ? profile.targetMajors.join('、') : '方向待定', targetInstitutionsLabel: profile.targetInstitutions.length ? profile.targetInstitutions.join('、') : '尚未确定', resumeDraft: consultation.path === 'GUIDED' || !documents.some((item) => item.type === 'RESUME') ? model.resumeDraft(profile) : null, extractionFields, conflicts, extractionError, serviceConsent: Boolean(consultation.consent && (consultation.consent.accepted || consultation.consent.service || !consultation.consent.withdrawnAt)), accuracyConfirmed: Boolean(profile.accuracyConfirmed), loading: false })
     } catch (error) { this.setData({ loading: false, error: errorText(error) }) }
   },
 

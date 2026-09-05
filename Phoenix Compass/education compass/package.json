@@ -5,7 +5,7 @@
   "description": "Phoenix Family OS WeChat Mini Program MVP V0.5.0 with Education Compass Level 1 and Level 2 flows, dual AI analysis, WeChat Pay and opt-in Feishu customer profile mirror",
   "scripts": {
     "test": "npm run test:client",
-    "test:client": "node tests/run-tests.js && node tests/validate-project.js && node tests/validate-ui-contract.js && node tests/validate-release-build.js && node tests/masters-client.test.js",
+    "test:client": "node tests/run-tests.js && node tests/validate-project.js && node tests/validate-ui-contract.js && node tests/validate-release-build.js && node tests/masters-client.test.js && node tests/masters-report-client.test.js && node tests/masters-environment.test.js && node tests/masters-candidate-evidence.test.js",
     "test:ui-contract": "node tests/validate-ui-contract.js",
     "test:server": "npm --prefix server test",
     "test:education-contracts": "npm --prefix server run test:education-contracts",
@@ -24,6 +24,8 @@
     "test:release": "node tests/validate-release-build.js",
     "validate": "node tests/validate-project.js",
     "test:masters": "node tests/masters-client.test.js && npm --prefix server run test:masters",
-    "test:masters-postgres": "node scripts/test-masters-postgres.js"
+    "test:masters-postgres": "node scripts/test-masters-postgres.js",
+    "check:masters-environment": "node scripts/check-masters-test-environment.js",
+    "verify:masters-candidate": "node scripts/verify-masters-candidate.js"
   }
 }

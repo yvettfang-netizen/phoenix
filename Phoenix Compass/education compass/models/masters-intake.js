@@ -1,3 +1,5 @@
+const labels = require('./masters-labels')
+
 const DOCUMENT_TYPES = Object.freeze([
   'RESUME',
   'TRANSCRIPT',
@@ -14,6 +16,20 @@ const LANGUAGE_STATUSES = Object.freeze(['NONE', 'AVAILABLE'])
 const LANGUAGE_TYPES = Object.freeze(['IELTS', 'TOEFL', 'OTHER', 'NONE'])
 const CONTACT_TYPES = Object.freeze(['email', 'phone', 'wechat'])
 const TARGET_YEAR_UNDECIDED = 'UNDECIDED'
+const TARGET_YEAR_UNDECIDED_LABEL = '尚未确定，希望顾问建议'
+const TARGET_YEAR_OPTIONS = Object.freeze([
+  { value: '2026', label: '2026' },
+  { value: '2027', label: '2027' },
+  { value: '2028', label: '2028' },
+  { value: '2029', label: '2029' },
+  { value: '2030', label: '2030' },
+  { value: '2031', label: '2031' },
+  { value: TARGET_YEAR_UNDECIDED, label: TARGET_YEAR_UNDECIDED_LABEL }
+])
+const EDUCATION_STATUS_OPTIONS = Object.freeze([
+  { value: 'ENROLLED', label: '本科在读' },
+  { value: 'GRADUATED', label: '已毕业' }
+])
 const MAX_DOCUMENT_SIZE = 10 * 1024 * 1024
 const MAX_DOCUMENTS = 20
 
@@ -45,8 +61,19 @@ const EXPERIENCE_TYPES = Object.freeze([
   { value: 'INTERNSHIP', label: '实习' },
   { value: 'RESEARCH', label: '科研' },
   { value: 'COMPETITION', label: '竞赛' },
-  { value: 'STUDENT_WORK', label: '学生工作' }
+  { value: 'STUDENT_WORK', label: '学生工作' },
+  { value: 'OTHER', label: '其他经历' }
 ])
+
+const DOCUMENT_TYPE_LABELS = Object.freeze({
+  RESUME: '个人简历', TRANSCRIPT: '本科成绩单', LANGUAGE: '语言成绩',
+  ENROLLMENT: '在读证明', GRADUATION: '毕业证书', DEGREE: '学位证书', SUPPLEMENTAL: '补充证明'
+})
+const UPLOAD_STATUS_LABELS = Object.freeze({ UPLOADED: '已上传', FAILED: '上传失败', REMOVED: '已撤除', UPLOADING: '上传中' })
+const PARSE_STATUS_LABELS = Object.freeze({
+  PENDING: '待识别', PROCESSING: '识别中', RUNNING: '识别中', SUCCEEDED: '已识别',
+  NEEDS_CONFIRMATION: '待你确认', NEEDS_REVIEW: '待人工核验', MANUAL_REVIEW: '待人工核验', FAILED: '识别失败，待人工核验'
+})
 
 function stringValue(value, fallback = '') {
   if (value === undefined || value === null) return fallback
@@ -54,6 +81,30 @@ function stringValue(value, fallback = '') {
 }
 
 function boolValue(value) { return value === true }
+
+function targetYearLabel(value) {
+  const candidate = String(value || '')
+  const option = TARGET_YEAR_OPTIONS.find((item) => item.value === candidate)
+  return option ? option.label : candidate || TARGET_YEAR_UNDECIDED_LABEL
+}
+
+function educationStatusLabel(value) {
+  const option = EDUCATION_STATUS_OPTIONS.find((item) => item.value === value)
+  return option ? option.label : '本科在读'
+}
+
+function experienceTypeLabel(value) {
+  const option = EXPERIENCE_TYPES.find((item) => item.value === value)
+  return option ? option.label : '其他经历'
+}
+
+function languageTypeLabel(value) {
+  return { IELTS: '雅思 IELTS', TOEFL: '托福 TOEFL', OTHER: '其他语言考试', NONE: '暂无语言成绩' }[String(value || '').toUpperCase()] || '语言考试待补'
+}
+
+function documentTypeLabel(value) { return DOCUMENT_TYPE_LABELS[String(value || '').toUpperCase()] || '其他材料' }
+function uploadStatusLabel(value) { return UPLOAD_STATUS_LABELS[String(value || '').toUpperCase()] || '状态待确认' }
+function parseStatusLabel(value) { return PARSE_STATUS_LABELS[String(value || '').toUpperCase()] || '识别状态待确认' }
 
 function listValue(value) {
   if (Array.isArray(value)) return value.map((item) => stringValue(item).trim()).filter(Boolean)
@@ -120,6 +171,10 @@ function normalizeProfile(value) {
     ? source.languageStatus
     : (languageType === 'NONE' ? 'NONE' : 'AVAILABLE')
   const contactType = CONTACT_TYPES.includes(contact.type) ? contact.type : 'phone'
+  const rawTargetYear = source.targetYear !== undefined ? source.targetYear : source.target_year
+  const targetYearText = stringValue(rawTargetYear).trim()
+  const normalizedTargetYear = !targetYearText || targetYearText === TARGET_YEAR_UNDECIDED_LABEL
+    ? TARGET_YEAR_UNDECIDED : targetYearText
   return {
     ...emptyProfile(),
     name: stringValue(source.name || source.displayName),
@@ -138,7 +193,7 @@ function normalizeProfile(value) {
     languageStatus,
     languageType,
     languageScores: normalizeLanguageScores(source.languageScores || source.language_scores),
-    targetYear: stringValue(source.targetYear || source.target_year, TARGET_YEAR_UNDECIDED),
+    targetYear: normalizedTargetYear,
     targetMajors: listValue(source.targetMajors !== undefined ? source.targetMajors : source.target_majors),
     targetInstitutions: listValue(source.targetInstitutions !== undefined ? source.targetInstitutions : source.target_institutions),
     targetPreference: stringValue(source.targetPreference || source.target_preference),
@@ -157,6 +212,8 @@ function formatSize(bytes) {
 function normalizeDocument(value) {
   const source = value && typeof value === 'object' ? value : {}
   const type = String(source.type || source.documentType || source.document_type || '').toUpperCase()
+  const uploadStatus = String(source.uploadStatus || source.upload_status || source.status || 'UPLOADED').toUpperCase()
+  const parseStatus = String(source.parseStatus || source.parse_status || source.extractionStatus || source.extraction_status || 'PENDING').toUpperCase()
   return {
     ...source,
     id: stringValue(source.id || source.documentId || source.document_id),
@@ -169,8 +226,11 @@ function normalizeDocument(value) {
     size: Number(source.size || source.sizeBytes || source.size_bytes || source.fileSize || source.file_size || 0),
     sizeLabel: formatSize(source.size || source.sizeBytes || source.size_bytes || source.fileSize || source.file_size),
     version: source.version === undefined || source.version === null ? '' : stringValue(source.version),
-    uploadStatus: String(source.uploadStatus || source.upload_status || source.status || 'UPLOADED').toUpperCase(),
-    parseStatus: String(source.parseStatus || source.parse_status || source.extractionStatus || source.extraction_status || 'PENDING').toUpperCase(),
+    uploadStatus,
+    uploadStatusLabel: uploadStatusLabel(uploadStatus),
+    parseStatus,
+    parseStatusLabel: parseStatusLabel(parseStatus),
+    typeLabel: documentTypeLabel(type),
     contentHash: stringValue(source.contentHash || source.content_hash || source.sha256 || source.digest || source.md5),
     uploadedAt: stringValue(source.uploadedAt || source.uploaded_at || source.createdAt || source.created_at),
     source: stringValue(source.source || source.sourceDocumentId || source.source_document_id)
@@ -261,6 +321,54 @@ function requiredProfileFields(profile) {
   return missing
 }
 
+function buildResumeReview(profile, documents = [], extractionFields = []) {
+  const value = normalizeProfile(profile)
+  const allDocuments = documents.map(normalizeDocument)
+  const resume = allDocuments.find((item) => item.type === 'RESUME' && item.id && item.uploadStatus !== 'REMOVED')
+  const transcript = allDocuments.find((item) => item.type === 'TRANSCRIPT' && item.id && item.uploadStatus !== 'REMOVED')
+  const facts = [
+    ['name', '姓名／称呼', value.name],
+    ['adultConfirmed', '成年确认', value.adultConfirmed ? '已确认' : ''],
+    ['educationStatus', '学籍状态', educationStatusLabel(value.educationStatus)],
+    ['institution', '本科院校', value.institution],
+    ['major', '本科专业', value.major],
+    ['degree', '学位名称', value.degree],
+    ['graduationDate', '毕业时间', value.graduationDate || value.graduationYear],
+    ['averageScore', '百分制均分', value.averageScore],
+    ['gpa', 'GPA', value.gpa],
+    ['gpaScale', 'GPA 满分制', value.gpaScale],
+    ['classRank', '专业排名', value.classRank],
+    ['contact', '联系方式', value.contact.value ? `${contactLabel(value.contact.type)} ${value.contact.value}` : ''],
+    ['language', '语言成绩', `${languageTypeLabel(value.languageType)}${value.languageScores.total ? ` ${value.languageScores.total}` : ''}`],
+    ['targetYear', '申请入学年份', targetYearLabel(value.targetYear)],
+    ['targetMajors', '意向专业', value.targetMajors.join('、')],
+    ['targetInstitutions', '意向院校', value.targetInstitutions.join('、')],
+    ['targetPreference', '目标偏好／补充说明', value.targetPreference]
+  ]
+  const knownFacts = facts.filter(([, , factValue]) => String(factValue || '').trim())
+    .map(([field, label, factValue]) => ({ field, label, value: String(factValue) }))
+  const missingFacts = [
+    ['name', '姓名／称呼', value.name],
+    ['adultConfirmed', '成年确认', value.adultConfirmed ? '已确认' : ''],
+    ['contact', '联系方式', value.contact.value],
+    ['institution', '本科院校', value.institution],
+    ['major', '本科专业', value.major]
+  ].filter(([, , factValue]) => !String(factValue || '').trim())
+    .map(([field, label]) => ({ field, label }))
+  const conflicts = extractionFields.filter((item) => item && item.existing && item.value !== undefined && item.value !== null && String(item.existingLabel || '').trim() !== String(item.value).trim())
+    .map((item) => ({ field: item.field, label: item.label || labels.fieldLabel(item.field), value: item.field === 'targetYear' ? targetYearLabel(item.value) : item.field === 'languageType' ? languageTypeLabel(item.value) : labels.studentValue(item.value), existingLabel: Array.isArray(item.existingLabel) ? item.existingLabel.join('、') : labels.studentValue(item.existingLabel) }))
+  const manualReviewDocuments = allDocuments.filter((item) => ['FAILED', 'MANUAL_REVIEW', 'NEEDS_REVIEW'].includes(item.parseStatus) && item.uploadStatus !== 'REMOVED')
+  return {
+    hasResume: Boolean(resume),
+    resume: resume ? { name: resume.name, statusLabel: `${resume.uploadStatusLabel} · ${resume.parseStatusLabel}` } : null,
+    hasTranscript: Boolean(transcript),
+    knownFacts,
+    missingFacts,
+    conflicts,
+    manualReviewDocuments: manualReviewDocuments.map((item) => ({ name: item.name, typeLabel: item.typeLabel, statusLabel: item.parseStatusLabel }))
+  }
+}
+
 function contactLabel(type) {
   return { phone: '手机', wechat: '微信', email: '邮箱' }[type] || '联系方式'
 }
@@ -341,9 +449,11 @@ function resumeDraft(profile) {
 function isSupportedDocumentType(type) { return DOCUMENT_TYPES.includes(String(type || '').toUpperCase()) }
 
 module.exports = {
-  CONTACT_TYPES, DOCUMENT_META, DOCUMENT_TYPES, EDUCATION_STATUSES, EXPERIENCE_TYPES,
+  CONTACT_TYPES, DOCUMENT_META, DOCUMENT_TYPES, EDUCATION_STATUSES, EDUCATION_STATUS_OPTIONS, EXPERIENCE_TYPES,
   LANGUAGE_STATUSES, LANGUAGE_TYPES, MAX_DOCUMENTS, MAX_DOCUMENT_SIZE, PATHS,
-  TARGET_YEAR_UNDECIDED, buildMaterialCards, documentsForType, emptyLanguageScores,
+  TARGET_YEAR_OPTIONS, TARGET_YEAR_UNDECIDED, TARGET_YEAR_UNDECIDED_LABEL,
+  buildMaterialCards, buildResumeReview, documentTypeLabel, documentsForType, educationStatusLabel, emptyLanguageScores,
+  experienceTypeLabel, parseStatusLabel, targetYearLabel, uploadStatusLabel,
   emptyProfile, formatSize, isSupportedDocumentType, normalizeConsultation,
   normalizeDocument, normalizeExperience, normalizeList, normalizeProfile,
   requiredProfileFields, resumeDraft, stringValue

@@ -20,6 +20,9 @@ import { ReportService } from '../src/services/report-service'
 import { MockPaymentProvider } from '../src/payments/mock-payment-provider'
 import { FileStore } from '../src/store/file-store'
 import { makeSyntheticDocx } from './fixtures/masters-fixtures'
+import { assistedReportPatch, sourcedProgram } from './fixtures/masters-sourced-program'
+import { unzipSync } from 'fflate'
+import { contentDigest } from '../src/masters/exports'
 
 const secret = 'masters-workflow-http-synthetic-secret-with-enough-entropy'
 const consent = { accepted: true as const, copyVersion: 'masters_service_consent_v1.1', locale: 'zh-CN' }
@@ -143,7 +146,7 @@ async function seedStaff(app: WorkflowApp, founder: any, manager: any, advisorA:
   await app.service.grantStaff(founder.user.id, unassigned.user.id, 'advisor')
 }
 
-async function prepareSubmittedReport(app: WorkflowApp, candidate: any): Promise<{
+async function prepareSubmittedReport(app: WorkflowApp, candidate: any, targetYear = 'UNDECIDED'): Promise<{
   id: string
   path: string
   version: number
@@ -151,17 +154,17 @@ async function prepareSubmittedReport(app: WorkflowApp, candidate: any): Promise
   jobId: string
 }> {
   const created = await app.call('/v1/masters/consultations', candidate.accessToken, 'POST', {
-    targetYear: 'UNDECIDED', channel: 'organic', path: 'GUIDED', serviceConsent: consent
+    targetYear, channel: 'organic', path: 'GUIDED', serviceConsent: consent
   })
   assert.equal(created.status, 201, JSON.stringify(created.body))
   const id = created.body.consultation.id as string
   const path = `/v1/masters/consultations/${id}`
   const profile = {
     name: '合成申请人乙', adultConfirmed: true, contact: { type: 'email', value: 'workflow@example.invalid' },
-    educationStatus: 'ENROLLED', institution: 'Synthetic University', degree: 'Bachelor', major: 'Synthetic Studies',
+    educationStatus: 'ENROLLED', institution: 'Synthetic University', degree: 'Bachelor', major: targetYear === '2027' ? 'Computer Science' : 'Synthetic Studies',
     graduationDate: '2027-06', averageScore: '88.5', gpa: '3.70', gpaScale: '4.00', classRank: '12/120',
     languageStatus: 'NONE', languageType: 'NONE', languageScores: null,
-    targetYear: 'UNDECIDED', targetMajors: ['Synthetic Studies'], targetInstitutions: ['Synthetic University'],
+    targetYear, targetMajors: ['Synthetic Studies'], targetInstitutions: ['Synthetic University'],
     targetPreference: '请顾问建议', experiences: []
   }
   const patched = await app.call(path, candidate.accessToken, 'PATCH', {
@@ -170,7 +173,7 @@ async function prepareSubmittedReport(app: WorkflowApp, candidate: any): Promise
   assert.equal(patched.status, 200, JSON.stringify(patched.body))
   const uploaded = await app.upload(
     id, candidate.accessToken, patched.body.consultation.profileVersion, 'RESUME',
-    makeSyntheticDocx('姓名：合成申请人乙\n本科院校：Synthetic University\n本科专业：Synthetic Studies'),
+    makeSyntheticDocx(`姓名：合成申请人乙\n本科院校：Synthetic University\n本科专业：${profile.major}`),
     'workflow-resume.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   )
   assert.equal(uploaded.status, 201, JSON.stringify(uploaded.body))
@@ -311,6 +314,9 @@ test('HTTP review workflow enforces assignment, self-review, role gates, return/
     const studentReport = await app.call(`${path}/report`, candidate.accessToken)
     assert.equal(studentReport.status, 200, JSON.stringify(studentReport.body))
     assert.equal(studentReport.body.report.status, 'RELEASED')
+    assert.equal(studentReport.body.report.assistance.level, 'INITIAL_ASSESSMENT')
+    assert.equal(studentReport.body.report.assistance.complete, false)
+    assert.equal(studentReport.body.report.assistance.autoSchoolMatching, 'NOT_IMPLEMENTED')
     assert.equal(studentReport.body.report.payload.templateVersion, 'masters_application_report_v1.1')
 
     const xlsx = await app.binary(`${path}/report/export?format=xlsx`, candidate.accessToken)
@@ -387,4 +393,73 @@ test('submit enqueues the report job exactly once over HTTP and does not duplica
     await app.close()
     await rm(directory, { recursive: true, force: true })
   }
+})
+
+test('sourced assisted plan binds advisor editing, source/season gates, Founder release and real exports to one version', {
+  skip: !existsSync(pdfFontPath) ? 'BLOCKED_EXTERNAL: licensed Chinese PDF test font unavailable' : false
+}, async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'masters-sourced-plan-http-'))
+  const app = await start(directory)
+  try {
+    const student = await app.login('sourced-synthetic-student')
+    const founder = await app.login('sourced-synthetic-founder')
+    const manager = await app.login('sourced-synthetic-manager')
+    const advisor = await app.login('sourced-synthetic-advisor')
+    await seedStaff(app, founder, manager, advisor, await app.login('sourced-synthetic-other'), await app.login('sourced-synthetic-unassigned'))
+    const { id, path, version } = await prepareSubmittedReport(app, student, '2027')
+    const internal = `/v1/internal/masters/consultations/${id}`
+    assert.equal((await app.call(`${internal}/assignment`, manager.accessToken, 'POST', { advisorUserId: advisor.user.id, version })).status, 200)
+    let report = (await app.call(internal, advisor.accessToken)).body.consultation.currentReport
+    assert.equal(report.assistance.level, 'RULE_DRAFT')
+    assert.equal((await app.call(`${path}/report`, student.accessToken)).status, 404)
+    for (const [override, errorCode] of [
+      [{ sourceStatus: 'NEEDS_REVIEW' }, 'MASTERS_SOURCES_UNVERIFIED'],
+      [{ officialUrl: 'https://example.invalid/program' }, 'MASTERS_SOURCES_UNVERIFIED'],
+      [{ verifiedAt: '2099-01-01' }, 'MASTERS_SOURCES_UNVERIFIED'],
+      [{ intakeYear: '2028' }, 'MASTERS_SOURCE_SEASON_MISMATCH']
+    ] as const) {
+      const edited = await app.call(`${internal}/report/edit`, advisor.accessToken, 'POST', { version: report.version, payload: { ...assistedReportPatch, candidatePrograms: [{ ...sourcedProgram, ...override }] } })
+      assert.equal(edited.status, 200, JSON.stringify(edited.body))
+      report = edited.body.consultation.currentReport
+      assert.equal(report.reviewedAt, null, 'each edit must clear the previous review')
+      assert.equal((await app.call(`${internal}/report/review`, advisor.accessToken, 'POST', { version: report.version })).status, 200)
+      const rejected = await app.call(`${internal}/report/approve`, founder.accessToken, 'POST', { version: report.version })
+      assert.equal(rejected.status, 409)
+      assertCode(rejected, errorCode)
+      assert.ok((await app.binary(`${path}/report/export?format=xlsx`, student.accessToken)).status >= 400)
+    }
+    const edited = await app.call(`${internal}/report/edit`, advisor.accessToken, 'POST', { version: report.version, payload: assistedReportPatch })
+    assert.equal(edited.status, 200, JSON.stringify(edited.body))
+    report = edited.body.consultation.currentReport
+    assert.equal(report.assistance.level, 'RULE_DRAFT')
+    const reviewed = await app.call(`${internal}/report/review`, advisor.accessToken, 'POST', { version: report.version, note: '虚构顾问测试角色核对固定官网来源，不代表真实客户审核' })
+    assert.equal(reviewed.status, 200, JSON.stringify(reviewed.body))
+    assert.equal(reviewed.body.consultation.currentReport.assistance.level, 'ADVISOR_VERIFIED_PLAN')
+    assert.equal((await app.call(`${internal}/report/approve`, founder.accessToken, 'POST', { version: report.version })).status, 200)
+    assert.equal((await app.call(`${internal}/report/release`, founder.accessToken, 'POST', { version: report.version })).status, 200)
+    const visible = (await app.call(`${path}/report`, student.accessToken)).body.report
+    assert.equal(visible.version, report.version)
+    assert.equal(visible.sourceProfileVersion, version)
+    assert.equal(visible.assistance.level, 'ADVISOR_VERIFIED_PLAN')
+    assert.equal(visible.assistance.autoSchoolMatching, 'NOT_IMPLEMENTED')
+    assert.deepEqual(visible.payload.candidatePrograms, [sourcedProgram])
+    const digest = contentDigest({ id: visible.id, version: visible.version, profileVersion: version, content: visible.payload })
+    const xlsx = await app.binary(`${path}/report/export?format=xlsx`, student.accessToken)
+    assert.equal(xlsx.status, 200)
+    const worksheet = Buffer.from(unzipSync(xlsx.bytes)['xl/worksheets/sheet1.xml']!).toString('utf8')
+    const cells = [...worksheet.matchAll(/<t xml:space="preserve">([\s\S]*?)<\/t>/g)].map(match => match[1]!.replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&'))
+    assert.ok(cells.includes(JSON.stringify([sourcedProgram])), 'XLSX must preserve every approved candidate field exactly')
+    assert.ok(cells.includes(digest))
+    assert.ok(cells.includes('顾问核验后的申请方案'))
+    const pdf = await app.binary(`${path}/report/export?format=pdf`, student.accessToken)
+    assert.equal(pdf.status, 200)
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    const loading = pdfjs.getDocument({ data: new Uint8Array(pdf.bytes), useSystemFonts: false, disableFontFace: true, useWorkerFetch: false, verbosity: 0 })
+    try {
+      const document = await loading.promise
+      let text = ''
+      for (let n = 1; n <= document.numPages; n++) text += (await (await document.getPage(n)).getTextContent()).items.map(item => 'str' in item ? item.str : '').join('')
+      for (const expected of [sourcedProgram.program, sourcedProgram.officialUrl, sourcedProgram.verifiedAt, digest, '顾问核验后的申请方案', '自动选校尚未实现']) assert.ok(text.includes(expected), `PDF missing ${expected}`)
+    } finally { await loading.destroy() }
+  } finally { await app.close(); await rm(directory, { recursive: true, force: true }) }
 })

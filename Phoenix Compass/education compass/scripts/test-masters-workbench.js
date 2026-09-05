@@ -28,6 +28,8 @@ const { MastersWorker } = require('../server/dist/src/masters/worker')
 const { PrivateFiles } = require('../server/dist/src/masters/private-files')
 const { createAppServer } = require('../server/dist/src/http/app')
 const { makeSyntheticPng, makeSyntheticJpeg } = require('../server/dist/tests/fixtures/masters-fixtures')
+const { assistedReportPatch, sourcedProgram } = require('../server/dist/tests/fixtures/masters-sourced-program')
+const { unzipSync } = require('../server/node_modules/fflate')
 
 async function main() {
   const directory = await mkdtemp(join(tmpdir(), 'masters-browser-synthetic-'))
@@ -58,9 +60,9 @@ async function main() {
       return result.consultation
     }
     const consent = { accepted: true, copyVersion: 'masters_service_consent_v1.1' }
-    let consultation = await call('/v1/masters/consultations', { targetYear: '2028', path: 'GUIDED', channel: 'organic', serviceConsent: consent })
+    let consultation = await call('/v1/masters/consultations', { targetYear: '2027', path: 'GUIDED', channel: 'organic', serviceConsent: consent })
     const path = `/v1/masters/consultations/${consultation.id}`
-    consultation = await call(path, { version: consultation.profileVersion, profile: { name: '合成浏览器申请人', adultConfirmed: true, contact: { type: 'email', value: 'browser-synthetic@example.invalid' }, educationStatus: 'GRADUATED', institution: 'Synthetic University', major: 'Synthetic Studies', languageStatus: 'NONE', languageType: 'NONE', targetYear: '2028' } }, 'PATCH')
+    consultation = await call(path, { version: consultation.profileVersion, profile: { name: '合成浏览器申请人', adultConfirmed: true, contact: { type: 'email', value: 'browser-synthetic@example.invalid' }, educationStatus: 'GRADUATED', institution: 'Synthetic University', major: 'Computer Science', languageStatus: 'NONE', languageType: 'NONE', targetYear: '2027' } }, 'PATCH')
     const png = makeSyntheticPng(), jpeg = makeSyntheticJpeg()
     for (const [type, name, bytes, mime] of [['GRADUATION', 'synthetic-graduation.png', png, 'image/png'], ['DEGREE', 'synthetic-degree.jpg', jpeg, 'image/jpeg']]) {
       const form = new FormData()
@@ -116,7 +118,11 @@ async function main() {
     const downloaded = page.waitForEvent('download')
     await graduationCard.getByRole('button', { name: '授权查看／下载' }).click()
     assert.deepEqual(await readFile(await (await downloaded).path()), png)
+    const draft = JSON.parse(await page.locator('#report-editor').inputValue())
+    await page.locator('#report-editor').fill(JSON.stringify({ ...draft, ...assistedReportPatch }))
+    await clickAndWait('#save-report')
     await clickAndWait('#review')
+    await page.locator('#report-capability').filter({ hasText: '顾问核验后的申请方案' }).waitFor()
     await connect('founder')
     await openCase()
     await clickAndWait('#approve')
@@ -127,11 +133,13 @@ async function main() {
     await page.locator('#xlsx').click()
     const workbook = await readFile(await (await exported).path())
     assert.equal(workbook.subarray(0, 2).toString(), 'PK')
+    const sheet = Buffer.from(unzipSync(workbook)['xl/worksheets/sheet1.xml']).toString('utf8')
+    assert.ok(sheet.includes(sourcedProgram.officialUrl) && sheet.includes(sourcedProgram.program))
     await page.reload()
     assert.equal(await page.locator('#list button').count(), 0)
     assert.equal(await page.evaluate(() => localStorage.length + sessionStorage.length), 0)
     assert.deepEqual(errors, [])
-    process.stdout.write(JSON.stringify({ status: 'PASS', suite: 'masters-workbench-browser', browser: 'headless Chromium', realHttp: true, fileStore: true, syntheticOnly: true, cases: ['student-denied', 'unassigned-advisor-empty', 'seven-categories', 'distinct-graduation-degree', 'assignment', 'authorized-download-byte-equality', 'advisor-review', 'founder-approval-release', 'xlsx-download', 'no-token-in-browser-storage'], wechatDevice: 'NOT_TESTED' }) + '\n')
+    process.stdout.write(JSON.stringify({ status: 'PASS', suite: 'masters-workbench-browser', browser: 'headless Chromium', realHttp: true, fileStore: true, syntheticOnly: true, cases: ['student-denied', 'unassigned-advisor-empty', 'seven-categories', 'distinct-graduation-degree', 'assignment', 'authorized-download-byte-equality', 'sourced-program-edit', 'advisor-review', 'assisted-plan-classification', 'founder-approval-release', 'xlsx-download', 'no-token-in-browser-storage'], wechatDevice: 'NOT_TESTED' }) + '\n')
   } finally {
     if (browser) await browser.close()
     if (server) await new Promise(resolve => server.close(resolve))

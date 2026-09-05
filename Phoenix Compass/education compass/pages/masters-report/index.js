@@ -2,10 +2,11 @@ const auth = require('../../services/auth')
 const config = require('../../config/masters')
 const masters = require('../../services/masters')
 const session = require('../../services/session')
+const labels = require('../../models/masters-labels')
 
 function errorText(error) {
-  if (error && (error.code === 'MASTERS_REPORT_NOT_RELEASED' || Number(error.statusCode) === 403)) return '正式方案尚未获批并开放，当前不能查看草稿。'
-  return error && error.message || '正式方案暂时无法读取'
+  if (error && (error.code === 'MASTERS_REPORT_NOT_RELEASED' || Number(error.statusCode) === 403)) return '咨询报告尚未获批并开放，当前不能查看草稿。'
+  return error && error.message || '咨询报告暂时无法读取'
 }
 function sessionUserId() {
   const user = session.currentUser()
@@ -52,8 +53,10 @@ Page({
       const report = await masters.getReport(this.data.consultationId)
       if (!requestUserId || requestUserId !== sessionUserId()) return
       const payload = report.payload || {}
-      const candidatePrograms = (payload.candidatePrograms || []).map((item) => ({ ...item, risksLabel: Array.isArray(item.risks) ? item.risks.join('、') : String(item.risks || '') }))
-      this.setData({ report, payload: { ...payload, candidatePrograms }, loading: false })
+      const candidatePrograms = (payload.candidatePrograms || []).map((item) => ({ ...item, sourceStatusLabel: item.sourceStatus === 'VERIFIED' ? '顾问已核验' : '待核验', intakeYearLabel: item.intakeYear === 'UNDECIDED' ? '尚未确定' : item.intakeYear, studentAcceptedLabel: { PENDING: '待你确认', ACCEPTED: '已接受', DECLINED: '未接受' }[item.studentAccepted] || '待你确认', risksLabel: Array.isArray(item.risks) ? item.risks.join('、') : String(item.risks || '') }))
+      const assistance = report.assistance || { label: '初评／待补报告', complete: false, explanation: '规则草稿与人工核验辅助；自动选校尚未实现。', limitations: [] }
+      const gaps = (payload.strengthsAndGaps && payload.strengthsAndGaps.gaps || []).map(labels.studentValue)
+      this.setData({ report: { ...report, assistance }, payload: { ...payload, strengthsAndGaps: { ...payload.strengthsAndGaps, gaps }, candidatePrograms }, loading: false })
     }
     catch (error) { this.setData({ loading: false, error: errorText(error) }) }
   },

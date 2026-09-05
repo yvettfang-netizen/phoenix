@@ -111,17 +111,15 @@ test('XLSX export is a real unpackable workbook with inline strings and formula-
     'xl/workbook.xml',
     'xl/worksheets/sheet1.xml'
   ])
-  assert.equal(unpacked.rows[0]?.[0], 'Application Compass · 香港硕士申请方案')
+  assert.equal(unpacked.rows[0]?.[0], 'Application Compass · 初评／待补报告')
   assert.deepEqual(unpacked.rows[1]?.slice(0, 5), [
     'report_id', formulaReport.id, 'report_version', '7', 'profile_version'
   ])
   assert.equal(unpacked.rows[2]?.[0], 'content_sha256')
   assert.equal(unpacked.rows[2]?.[1], contentDigest(formulaReport))
-  assert.equal(unpacked.rows[4]?.[0], '=HYPERLINK("https://evil.invalid","open")')
-  assert.equal(unpacked.rows[4]?.[1], '+SUM(1,2)')
-  assert.equal(unpacked.rows[4]?.[2], '-1+2')
-  assert.equal(unpacked.rows[4]?.[3], '@malicious-command')
-  assert.equal(unpacked.rows[4]?.[4], '<script>alert(1)</script>')
+  const candidate = unpacked.rows.find(row => row[0] === '=HYPERLINK("https://evil.invalid","open")')
+  assert.ok(candidate)
+  assert.deepEqual(candidate.slice(0, 5), ['=HYPERLINK("https://evil.invalid","open")', '+SUM(1,2)', '-1+2', '@malicious-command', '<script>alert(1)</script>'])
   assert.match(unpacked.xml, /t="inlineStr"/)
   assert.doesNotMatch(unpacked.xml, /<f(?:\s|>)/i)
   assert.doesNotMatch(unpacked.xml, /<v(?:\s|>)/i)
@@ -139,7 +137,8 @@ test('PDF export embeds all six governed structures with report/profile versions
   const text = await extractPdfText(pdf)
   for (const expected of [
     'Application Compass',
-    '香港硕士申请方案',
+    '初评／待补报告',
+    '自动选校尚未实现',
     '背景摘要',
     '合成背景摘要：仅用于导出验证。',
     '优势与资料缺口',

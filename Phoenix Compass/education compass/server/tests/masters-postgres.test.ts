@@ -15,6 +15,7 @@ import type {
 } from '../src/domain/masters/contracts'
 import { PostgresStore } from '../src/store/postgres-store'
 import { MastersService } from '../src/services/masters-service'
+import { runMastersPostgresHttpFlow, MastersPostgresHttpFlowResult } from './fixtures/masters-postgres-http-flow'
 
 /**
  * This suite is intentionally separate from the in-memory/domain suites. It
@@ -581,17 +582,49 @@ if (guardError) {
         assert.equal(final?.lastError, null)
         const runningReport = await store!.read((tx) => tx.findById('mastersReports', report.id))
         assert.equal(runningReport?.status, 'RUNNING')
+
+        // Finish the recovered worker-B lease before the next subtest.  A
+        // RUNNING row with the controlled 00:02:01 expiry would otherwise be
+        // eligible to the HTTP flow's real-time worker and contaminate its
+        // queue assertions.
+        const completedByB = await service.completeJob(job.id, leaseTokenB as string)
+        assert.equal(completedByB.status, 'NEEDS_REVIEW')
+        const cleanedJob = await store!.read((tx) => tx.findById('mastersReportJobs', job.id))
+        assert.equal(cleanedJob?.status, 'NEEDS_REVIEW')
       })
 
+      let httpFlow: MastersPostgresHttpFlowResult | undefined
+      await t.test('real PostgresStore HTTP upload, restart, authorization, worker, review, approval, release, export, and withdrawal flow', async () => {
+        const configuredPdfFontPath = process.env.MASTERS_TEST_PDF_FONT_PATH || process.env.MASTERS_PDF_FONT_PATH
+        httpFlow = await runMastersPostgresHttpFlow({
+          poolConfig: database.config,
+          ...(configuredPdfFontPath ? { pdfFontPath: configuredPdfFontPath } : {})
+        })
+        assert.equal(httpFlow.store, 'PostgresStore')
+        assert.equal(httpFlow.databaseRows, 'PASS')
+        assert.equal(httpFlow.multipartAndPrivateStorage, 'PASS')
+        assert.equal(httpFlow.restartRecovery, 'PASS')
+        assert.equal(httpFlow.authorizationAndReassignment, 'PASS')
+        assert.equal(httpFlow.idempotentSubmitAndWorker, 'PASS')
+        assert.equal(httpFlow.reviewApprovalRelease, 'PASS')
+        assert.equal(httpFlow.staleAndWithdrawnAccess, 'PASS')
+        assert.equal(httpFlow.xlsxExport, 'PASS')
+        assert.ok(httpFlow.pdfExport === 'PASS' || httpFlow.pdfExport === 'BLOCKED_EXTERNAL')
+        if (httpFlow.pdfExport === 'BLOCKED_EXTERNAL') t.diagnostic(httpFlow.pdfReason ?? 'Chinese PDF font unavailable; PDF export was not counted as passed')
+      })
+      assert.ok(httpFlow)
+
       process.stdout.write(`${JSON.stringify({
-        status: 'PASS',
+        status: httpFlow.pdfExport === 'PASS' ? 'PASS' : 'PASS_WITH_EXTERNAL_BLOCK',
         suite: 'masters-postgres',
         databaseConnectionAttempted: true,
         migrationRoundtrip: 'PASS',
         persistenceReconnect: 'PASS',
         foreignKeysAndOwnerIsolation: 'PASS',
         concurrentDuplicateCreation: 'PASS',
-        staleLeaseFence: 'PASS'
+        staleLeaseFence: 'PASS',
+        httpFlow: httpFlow.status === 'PASS' ? 'PASS' : 'BLOCKED_EXTERNAL',
+        httpPostgresFlow: httpFlow
       })}\n`)
     } finally {
       if (store) await store.close().catch(() => undefined)
