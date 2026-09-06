@@ -1,6 +1,6 @@
 # Phoenix Nova website V5
 
-Independent, private-review V5 site for Phoenix Nova™. V4.0 / V4.1 remain untouched as the stable reference. The active product and content decisions are recorded in [`docs/WEBSITE_V5_CANDIDATE_BASELINE.md`](docs/WEBSITE_V5_CANDIDATE_BASELINE.md).
+Existing unified, private-review V5 site for Phoenix Nova™. V4.0 / V4.1 remain untouched as the stable reference. The active product and content decisions are recorded in [`docs/WEBSITE_V5_CANDIDATE_BASELINE.md`](docs/WEBSITE_V5_CANDIDATE_BASELINE.md).
 
 The site uses a Vinext runtime with optional Cloudflare D1 and Drizzle support.
 
@@ -26,11 +26,21 @@ Scripts that need writable project-scoped home, npm, XDG, and temporary paths us
 - `.openai/hosting.json` declares optional Sites D1 and R2 bindings
 - `vite.config.ts` simulates declared bindings for local development
 - `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` starts intentionally empty
+- `db/schema.ts` defines the minimal customer credential, session, rate-limit and audit tables
 - `examples/d1/` contains an optional D1 example surface
 - `drizzle.config.ts` supports local migration generation when needed
 
-## Workspace Auth Headers
+## Phoenix customer accounts
+
+The existing V5 now contains a default-off username/password authentication candidate at `/{locale}/account`. When enabled, the Family Center requires a server-validated session and displays only the account state until Core business authorization is integrated. It does not attach customers to the fictional family preview.
+
+See [`docs/V5_USERNAME_AUTH_V1.md`](docs/V5_USERNAME_AUTH_V1.md) for configuration, recovery codes, migrations, tests and the exact remaining limits. [`docs/V5_CORE_ACCOUNT_AND_DATA_PLAN_V1.md`](docs/V5_CORE_ACCOUNT_AND_DATA_PLAN_V1.md) defines the shared SQL handoff. Customer authentication does not use the optional ChatGPT helpers below. SMS/email, MFA and private family records are not connected; this candidate has not been deployed.
+
+## Optional platform authentication reference
+
+The following starter helpers describe platform identity only. They are not used for Phoenix customer credentials or customer permissions.
+
+### Workspace Auth Headers
 
 OpenAI workspace sites can read the current user's email from `oai-authenticated-user-email`.
 
@@ -74,7 +84,7 @@ Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the 
 
 SIWC establishes identity only; it does not prove workspace membership. Use the Sites hosting platform's access policy controls for workspace-wide restrictions, or enforce explicit server-side membership or allowlist checks.
 
-Use SIWC for account pages, user-specific dashboards, saved records, and write actions tied to the current ChatGPT user. Leave public content anonymous.
+Use SIWC only for separately scoped features explicitly tied to a ChatGPT identity. Phoenix customer account pages use the customer authentication implementation above.
 
 ## Diagnostic Commands
 

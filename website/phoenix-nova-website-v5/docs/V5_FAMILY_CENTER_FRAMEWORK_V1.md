@@ -1,6 +1,6 @@
 # V5 × Family OS 统一框架 V1.0
 
-状态：Founder 已批准框架并授权页面修改；本轮为同一 V5 内的交互候选。
+状态：Founder 已批准框架并授权页面修改；下文保留初始交互候选记录。最新增量为同一 V5 的用户名认证候选，见 [V5_USERNAME_AUTH_V1.md](./V5_USERNAME_AUTH_V1.md)；旧验证结果只属于当时前端版本。
 日期：2026-09-06
 底稿：Sites V5 `62d2e47c3f74c5c334178b5521d8fabcd25b021d`；GitHub PR #6 为已核对的对应底稿。硕士业务参考 PR #9 `ebeaa1538eaf8c1476b1c63b6d7e77f6b42c4c44`，引用不代表后端已接通。
 

@@ -186,7 +186,7 @@ function SectionIntro({
   );
 }
 
-function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId; inverse?: boolean }) {
+export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId; inverse?: boolean }) {
   const otherLocale: Locale = locale === "zh" ? "en" : "zh";
   return (
     <header className={`site-header ${inverse ? "site-header--inverse" : ""}`}>

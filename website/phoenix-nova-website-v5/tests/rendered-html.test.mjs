@@ -1,26 +1,14 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-
-const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-const { default: worker } = await import(workerUrl.href);
-
-const env = {
-  ASSETS: {
-    fetch: async () => new Response("Not found", { status: 404 }),
-  },
-};
-
-const ctx = {
-  waitUntil() {},
-  passThroughOnException() {},
-};
+import test, { after } from "node:test";
+import { createV5Worker } from "./worker-fixture.mjs";
+const worker = createV5Worker();
+after(() => worker.dispose());
 
 async function get(path) {
-  return worker.fetch(new Request(`http://localhost${path}`, {
+  return worker.dispatchFetch(`http://localhost${path}`, {
     headers: { accept: "text/html" },
     redirect: "manual",
-  }), env, ctx);
+  });
 }
 
 test("redirects the root to the Chinese master route", async () => {

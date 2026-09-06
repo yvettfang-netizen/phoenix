@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./customer-center.css";
+import "./account.css";
 import { FamilyDemoProvider } from "@/components/family-demo-provider";
 
 export const metadata: Metadata = {
