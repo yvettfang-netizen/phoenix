@@ -2,3 +2,4 @@
 export function healthPreviewEnabled(): boolean {
   return process.env.HEALTH_COMPASS_PREVIEW === "1";
 }
+

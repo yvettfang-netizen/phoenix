@@ -14,3 +14,4 @@ export function HealthCompassEntry({ locale }: { locale: HealthLocale }) {
     </div>
   </aside>;
 }
+

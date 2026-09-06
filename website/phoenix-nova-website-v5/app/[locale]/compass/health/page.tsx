@@ -37,3 +37,4 @@ export default async function HealthPage({ params }: Props) {
     </footer>
   </div>;
 }
+

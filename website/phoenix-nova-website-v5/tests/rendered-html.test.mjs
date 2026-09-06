@@ -1,26 +1,14 @@
 import assert from "node:assert/strict";
-import test from "node:test";
-
-const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-const { default: worker } = await import(workerUrl.href);
-
-const env = {
-  ASSETS: {
-    fetch: async () => new Response("Not found", { status: 404 }),
-  },
-};
-
-const ctx = {
-  waitUntil() {},
-  passThroughOnException() {},
-};
+import test, { after } from "node:test";
+import { createV5Worker } from "./worker-fixture.mjs";
+const worker = createV5Worker();
+after(() => worker.dispose());
 
 async function get(path) {
-  return worker.fetch(new Request(`http://localhost${path}`, {
+  return worker.dispatchFetch(`http://localhost${path}`, {
     headers: { accept: "text/html" },
     redirect: "manual",
-  }), env, ctx);
+  });
 }
 
 test("redirects the root to the Chinese master route", async () => {
@@ -56,7 +44,7 @@ test("connects Digital Phoenix to the approved immortal-guardian world", async (
 });
 
 test("renders every bilingual candidate destination", async () => {
-  const pages = ["compass", "lighthouse", "services", "insights", "oriental", "about", "family-center"];
+  const pages = ["compass", "lighthouse", "services", "insights", "oriental", "about", "family-center", "admissions", "application"];
   for (const locale of ["zh", "en"]) {
     for (const page of pages) {
       const response = await get(`/${locale}/${page}`);
@@ -64,6 +52,35 @@ test("renders every bilingual candidate destination", async () => {
       assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
     }
   }
+});
+
+test("keeps the three admissions goals together and exposes no real intake endpoint", async () => {
+  const info = await (await get("/zh/admissions")).text();
+  const intake = await (await get("/zh/application")).text();
+  for (const label of ["本科申请", "硕士申请", "博士申请"]) assert.ok(info.includes(label));
+  assert.match(info, /\/zh\/application/);
+  assert.match(intake, /准备申请什么学位/);
+  assert.match(intake, /目前就读/);
+  assert.match(intake, /虚构资料/);
+  assert.doesNotMatch(intake, /<input[^>]+type="file"/i);
+  assert.match(intake, /name="robots" content="noindex, nofollow, nocache"/i);
+});
+
+test("Family Center foregrounds document milestones and keeps the prototype honest", async () => {
+  const html = await (await get("/zh/family-center")).text();
+  for (const label of ["证件与节点", "学业与报告", "我的服务", "我的资料", "获准逗留期限", "回乡证"]) assert.ok(html.includes(label), label);
+  assert.match(html, /未接通真实账户/);
+  assert.match(html, /换领节点待核验/);
+  assert.match(html, /\/zh\/application/);
+  assert.match(html, /name="robots" content="noindex, nofollow, nocache"/i);
+});
+
+test("Compass presents the four approved directions without claiming live handoff", async () => {
+  const html = await (await get("/zh/compass")).text();
+  for (const id of ["education", "identity", "wealth", "health"]) assert.ok(html.includes(`id="${id}"`));
+  assert.doesNotMatch(html, /Child Compass|Family Compass/);
+  assert.match(html, /正式测评入口待接通/);
+  assert.match(html, /测评结果尚未同步/);
 });
 
 test("keeps the serial novel inside Insights", async () => {

@@ -1,7 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
-import { FamilyDashboardPreview } from "./family-dashboard-preview";
+import { AdmissionsContent, AdmissionsShortcut, ApplicationIntake, FamilyHub } from "./customer-center";
+import { compassItems } from "@/lib/family-demo";
+import { HealthCompassEntry } from "./health-compass-entry";
+import { healthPreviewEnabled } from "@/lib/health-compass-gate";
 import { PatternMedallion } from "./pattern-medallion";
 
 export const pageIds = [
@@ -12,6 +15,8 @@ export const pageIds = [
   "oriental",
   "about",
   "family-center",
+  "admissions",
+  "application",
 ] as const;
 
 export type PageId = "home" | (typeof pageIds)[number];
@@ -26,6 +31,8 @@ const routeLabels = {
   oriental: ["凤启东方", "Phoenix Oriental"],
   about: ["关于凤启", "About"],
   "family-center": ["家庭中心", "Family Center"],
+  admissions: ["升学申请", "Admissions"],
+  application: ["申请登记", "Application intake"],
 } as const;
 
 export const routeMetadata = {
@@ -36,6 +43,8 @@ export const routeMetadata = {
   oriental: { zh: "凤启东方", en: "Phoenix Oriental" },
   about: { zh: "关于凤启", en: "About Phoenix Nova" },
   "family-center": { zh: "家庭中心", en: "Family Center" },
+  admissions: { zh: "本科、硕士与博士升学申请", en: "Undergraduate, Master’s & Doctoral Admissions" },
+  application: { zh: "升学申请登记预览", en: "Admissions Intake Preview" },
 } as const;
 
 const digitalWorldUrl = "https://fengqi-research-institute.yvettfang.chatgpt.site";
@@ -177,7 +186,7 @@ function SectionIntro({
   );
 }
 
-function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId; inverse?: boolean }) {
+export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId; inverse?: boolean }) {
   const otherLocale: Locale = locale === "zh" ? "en" : "zh";
   return (
     <header className={`site-header ${inverse ? "site-header--inverse" : ""}`}>
@@ -283,8 +292,8 @@ function HomePage({ locale }: { locale: Locale }) {
               "Phoenix Nova™ brings the family compass, action blueprint, professional support, Family Center and brand worlds into one clear portal for every beginning."
             )}</p>
             <div className="gateway-hero__actions">
-              <a className="button button--gold" href="#portal-directory">{pick(locale, "浏览凤启门户", "Explore the portal")} <Arrow /></a>
-              <Link className="text-action" href={hrefFor(locale, "about")}>{pick(locale, "认识 Phoenix Nova", "Meet Phoenix Nova")} <Arrow /></Link>
+              <Link className="button button--gold" href={hrefFor(locale, "admissions")}>{pick(locale, "了解升学申请", "Explore admissions")} <Arrow /></Link>
+              <Link className="text-action" href={hrefFor(locale, "family-center")}>{pick(locale, "进入家庭中心预览", "Preview Family Center")} <Arrow /></Link>
             </div>
           </div>
           <div className="gateway-hero__visual" aria-label={pick(locale, "Phoenix Nova 官方凤凰罗盘", "Phoenix Nova official phoenix compass")}>
@@ -307,6 +316,8 @@ function HomePage({ locale }: { locale: Locale }) {
         </div>
       </section>
 
+      <HealthCompassEntry locale={locale} />
+      <AdmissionsShortcut locale={locale} />
       <section className="portal-directory" id="portal-directory">
         <div className="shell portal-directory__heading">
           <SectionIntro
@@ -328,7 +339,7 @@ function HomePage({ locale }: { locale: Locale }) {
             <div className="portal-tile__content">
               <small>Phoenix Compass™</small>
               <h2>{pick(locale, "凤启罗盘", "Phoenix Compass")}</h2>
-              <p>{pick(locale, "看见孩子、教育与家庭的当下位置，找到下一步方向。", "See the family's present clearly and find the next direction that matters.")}</p>
+              <p>{pick(locale, "从教育、身份、财富与健康四个方向，梳理当前问题。", "Explore your questions through Education, Identity, Wealth and Health.")}</p>
               <strong>{pick(locale, "进入罗盘", "Enter Compass")} <Arrow /></strong>
             </div>
           </Link>
@@ -348,7 +359,7 @@ function HomePage({ locale }: { locale: Locale }) {
             <div className="portal-tile__content">
               <small>Phoenix Family OS™</small>
               <h2>{pick(locale, "家庭中心", "Family Center")}</h2>
-              <p>{pick(locale, "让档案、评估与关键节点留在同一份长期成长记录里。", "Keep profiles, assessments and milestones in one living record of growth.")}</p>
+              <p>{pick(locale, "管理证件节点、申请进度、学业报告与后续服务。", "Keep document milestones, applications, learning reports and services together.")}</p>
               <strong>{pick(locale, "预览家庭中心", "Preview Family Center")} <Arrow /></strong>
             </div>
           </Link>
@@ -468,26 +479,24 @@ function PageHero({ locale, page, eyebrow, title, lead, image }: { locale: Local
 }
 
 function CompassPage({ locale }: { locale: Locale }) {
-  const compasses = [
-    ["01", "Child Compass™", "孩子成长罗盘", "从孩子的兴趣、状态与成长信号开始。", "Begin with the child's interests, current state and growth signals."],
-    ["02", "Education Compass™", "教育成长罗盘", "把课程体系、学习表现与升学目标放在同一条路径上。", "Bring curricula, learning performance and admissions goals onto one pathway."],
-    ["03", "Family Compass™", "家庭成长罗盘", "看见家庭整体目标、关键节点与需要协同的选择。", "See the family's shared goals, milestones and choices that need coordination."],
-  ] as const;
+  const healthEnabled = healthPreviewEnabled();
   return (
     <>
       <PageHero locale={locale} page="compass" eyebrow="Phoenix Compass™" image="compass" title={pick(locale, "先理解家庭，\n再判断方向。", "Understand the family.\nThen find direction.")} lead={pick(locale, "不是一次性答案，而是把问题放进真实家庭情境中重新看清。", "Not a one-off answer, but a clearer view of the question inside the family's real context.")} />
       <section className="editorial-section">
-        <div className="shell editorial-heading"><SectionIntro index="01" eyebrow="Three entry points" title={pick(locale, "从最接近此刻的问题开始。", "Start with the question closest to this moment.")} /></div>
+        <div className="shell editorial-heading"><SectionIntro index="01" eyebrow="Four compasses · One center" title={pick(locale, "四个方向，一个持续跟进的中心。", "Four perspectives. One place to follow through.")} body={pick(locale,"每类罗盘保留独立的专业判断，后续资料与服务规划在同一个家庭中心管理。","Each compass keeps its professional scope; subsequent records and services are planned within the same Family Center.")} /></div>
         <div className="shell compass-list">
-          {compasses.map((item, index) => (
-            <article id={`compass-${index + 1}`} key={item[0]}>
-              <div className="compass-list__visual"><PatternMedallion variant={index === 1 ? "education" : "master"} size="card" /></div>
-              <span>{item[0]}</span><div><small>{item[1]}</small><h2>{pick(locale, item[2], item[1])}</h2><p>{pick(locale, item[3], item[4])}</p></div>
-              <em>{pick(locale, "候选体验 · 正式入口待产品 Gate", "Candidate experience · Live entry follows product gate")}</em>
+          {compassItems.map((item, index) => (
+            <article id={item.id} key={item.id}>
+              <div className="compass-list__visual"><PatternMedallion variant={item.id} size="card" /></div>
+              <span>0{index+1}</span><div><small>{item.en}</small><h2>{pick(locale, item.zh, item.en)}</h2><p>{pick(locale, item.description[0], item.description[1])}</p><div className="compass-entry-actions"><span className="center-pill">{item.id==="health"?pick(locale,healthEnabled?"健康安排 · 候选体验":"健康安排体验 · 尚未开放",healthEnabled?"Health arrangements · candidate":"Health arrangements preview · not open"):pick(locale,"正式测评入口待接通","Live assessment entry not connected")}</span>{item.id==="health"&&healthEnabled?<Link className="center-text-link" prefetch={false} data-testid="health-entry" href={`/${locale}/compass/health`}>{pick(locale,"进入健康罗盘候选体验","Try Health Compass")} <Arrow /></Link>:<Link className="center-text-link" href={hrefFor(locale,item.id==="education"?"admissions":"family-center")}>{pick(locale,item.id==="education"?"已有升学目标？查看申请登记":"查看家庭中心预览",item.id==="education"?"Have an admissions goal? View intake":"Preview Family Center")} <Arrow /></Link>}</div></div>
+              <em>{pick(locale,"后续关联：","Planned destination: ")}{pick(locale,item.next[0],item.next[1])}<br/>{pick(locale,"测评结果尚未同步","Assessment results are not synced")}</em>
             </article>
           ))}
         </div>
       </section>
+      <div className="shell compass-integration-note">{pick(locale,"四罗盘介绍与导航已统一，健康安排问卷已纳入受控候选体验。真实测评接驳、结果回传与账户关联尚未完成验收。身份筛选不代表获批，财富与健康内容不替代相应专业判断。","The four compass descriptions and navigation are unified, with the health-arrangements questionnaire included as a controlled candidate. Live assessment integration, result handoff and account linking are not accepted yet. Identity screening is not approval; wealth and health information does not replace professional judgement.")}</div>
+      <AdmissionsShortcut locale={locale} />
       <section className="quiet-cta"><div className="shell"><p>Knowledge First.</p><h2>{pick(locale, "先得到一张清晰的成长快照。", "Begin with a clear growth snapshot.")}</h2><Link className="button button--navy" href={hrefFor(locale, "lighthouse")}>{pick(locale, "继续了解成长蓝图", "Continue to the Growth Blueprint")} <Arrow /></Link></div></section>
     </>
   );
@@ -516,6 +525,7 @@ function ServicesPage({ locale }: { locale: Locale }) {
   return (
     <>
       <PageHero locale={locale} page="services" eyebrow="Professional Services" title={pick(locale, "从家庭旅程出发，\n让专业能力协同工作。", "Start with the family journey.\nLet expertise work together.")} lead={pick(locale, "V5 将“旅程”与“能力”分开表达：前台看见家庭正在经历什么，后台由教育、身份、财富、健康与全球生活能力共同支持。", "V5 separates journeys from capabilities: families see what they are living through, while Education, Identity, Wealth, Health and Global Living work together behind the experience.")} />
+      <AdmissionsShortcut locale={locale} />
       <section className="services-section"><div className="shell services-list">
         {journeyData.map((item) => <article key={item.no}><span>{item.no}</span><div><small>{item.en}</small><h2>{pick(locale, item.zh, item.en)}</h2><p>{pick(locale, item.zhDescription, item.enDescription)}</p></div><em>{pick(locale, item.zhDetail, item.enDetail)}</em></article>)}
       </div></section>
@@ -557,10 +567,7 @@ function AboutPage({ locale }: { locale: Locale }) {
 
 function FamilyCenterPage({ locale }: { locale: Locale }) {
   return (
-    <>
-      <PageHero locale={locale} page="family-center" eyebrow="Phoenix Family OS™" title={pick(locale, "一次建立家庭档案，\n长期陪伴家庭成长。", "Build the family profile once.\nKeep growing with continuity.")} lead={pick(locale, "V5 Candidate 展示家庭中心的产品关系与视觉方向；正式账户、数据与入口将在产品 Gate 后接驳。", "The V5 Candidate shows the Family Center's product relationship and visual direction. Live accounts, data and entry points follow the product gate.")} />
-      <section className="family-center-section"><div className="shell family-center-layout"><FamilyDashboardPreview full locale={locale} compassHref={hrefFor(locale,"compass")} /><div className="family-center-copy"><SectionIntro index="01" eyebrow="MVP focus" title={pick(locale,"一个家庭，\n一份持续更新的成长记录。","One family.\nOne living record of growth.")} /><ul><li>{pick(locale,"家庭档案","Family profile")}</li><li>{pick(locale,"孩子档案","Child profiles")}</li><li>{pick(locale,"Compass 评估结果","Compass assessment results")}</li><li>{pick(locale,"家庭时间线","Family timeline")}</li></ul></div></div></section>
-    </>
+    <div className="center-page"><SiteHeader locale={locale} page="family-center"/><FamilyHub locale={locale}/></div>
   );
 }
 
@@ -572,6 +579,8 @@ export function V5Site({ locale, page }: { locale: Locale; page: PageId }) {
     : page === "insights" ? <InsightsPage locale={locale} />
     : page === "oriental" ? <OrientalPage locale={locale} />
     : page === "about" ? <AboutPage locale={locale} />
+    : page === "admissions" ? <div className="center-page"><SiteHeader locale={locale} page={page}/><AdmissionsContent locale={locale}/></div>
+    : page === "application" ? <div className="center-page"><SiteHeader locale={locale} page={page}/><ApplicationIntake locale={locale}/></div>
     : <FamilyCenterPage locale={locale} />;
 
   return <main lang={locale === "zh" ? "zh-Hans" : "en"}>{content}<SiteFooter locale={locale} /></main>;

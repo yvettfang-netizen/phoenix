@@ -151,3 +151,4 @@ finally:
         server.kill()
     log.close()
     (out / "browser-results.json").write_text(json.dumps({"code_sha": os.environ.get("HEALTH_TEST_SHA", "unknown"), "scope": "headless Chromium, synthetic inputs, built worker on loopback; not real mobile or WeChat", "checks": checks}, ensure_ascii=False, indent=2))
+

@@ -138,3 +138,4 @@ export function HealthCompass({ locale }: { locale: HealthLocale }) {
     </section>
   );
 }
+
