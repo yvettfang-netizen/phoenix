@@ -37,3 +37,4 @@ test("switch can be disabled again without changing existing destinations", asyn
   assert.equal((await get("/zh/compass/health")).status, 404);
   for (const path of ["/zh/services", "/en/compass", "/zh/family-center"]) assert.equal((await get(path)).status, 200);
 });
+

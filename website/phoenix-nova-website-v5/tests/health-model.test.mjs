@@ -55,3 +55,4 @@ test("model and UI contain no persistence, API, analytics or external form calls
   assert.doesNotMatch(source + ui, /localStorage|sessionStorage|indexedDB|document\.cookie|fetch\s*\(|sendBeacon|XMLHttpRequest|WebSocket|console\./);
   assert.doesNotMatch(ui, /type=["']file|<form[^>]*action/);
 });
+

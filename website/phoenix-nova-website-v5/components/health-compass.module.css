@@ -5,3 +5,4 @@
 @media(prefers-reduced-motion:reduce){.compass *{scroll-behavior:auto!important;transition:none!important}}
 
 .compass :global(.button--gold){background:#e4cd95;border-color:#c5ab74;color:#193e36}
+

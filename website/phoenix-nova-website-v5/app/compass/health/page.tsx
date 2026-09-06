@@ -5,3 +5,4 @@ export default function HealthAlias() {
   if (!healthPreviewEnabled()) notFound();
   redirect("/zh/compass/health");
 }
+

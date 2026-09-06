@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./customer-center.css";
+import { FamilyDemoProvider } from "@/components/family-demo-provider";
 
 export const metadata: Metadata = {
   title: {
@@ -28,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-Hans">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased"><FamilyDemoProvider>{children}</FamilyDemoProvider></body>
     </html>
   );
 }

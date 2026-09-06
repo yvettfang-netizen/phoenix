@@ -48,3 +48,4 @@ The baseline root layout was inspected and contains no analytics provider. Full 
 Before merge, leave the default switch off or close the Draft PR. No main or production change is included. For a future approved deployment, disable `HEALTH_COMPASS_PREVIEW` on the candidate/release environment and verify both entry absence and direct-route 404; restart/rebuild as required by the target runtime. Revert the isolated integration commit through review if removal is required. No database rollback exists because no data schema or persistence was introduced.
 
 Jimson must bind the final V5 release SHA and approved test host, check the combined site's actual domain/HTTPS/ICP and access control, run iOS/Android/WeChat full-flow and download fallback, review scripts/logs, and provide rollback evidence. Founder review of final visual/wording and release is separate. Do not merge, deploy, invent an ICP number or mark real-device tests passed from Chromium evidence.
+

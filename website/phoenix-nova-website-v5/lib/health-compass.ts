@@ -70,3 +70,4 @@ export function actionText(selected: readonly string[], locale: HealthLocale): s
     return `${index + 1}. ${text(dimension.title, locale)}\n${text(dimension.action, locale)}`;
   }), `${QUESTION_VERSION} / ${RULE_VERSION}`].join("\n\n");
 }
+
