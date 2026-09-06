@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {initialDocuments, daysUntil, renewDemoDocument, upsertDemoApplication, subjectRecords, allowedGoal} from "../lib/family-demo.ts";
+import { readFileSync } from "node:fs";
+import ts from "typescript";
+
+// Match the existing Health model test loader on the supported CI Node version.
+const source = readFileSync(new URL("../lib/family-demo.ts", import.meta.url), "utf8");
+const code = ts.transpileModule(source, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
+}).outputText;
+const {initialDocuments, daysUntil, renewDemoDocument, upsertDemoApplication, subjectRecords, allowedGoal} =
+  await import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
 
 test("undated identity records never acquire an invented expiry or countdown", () => {
   const id = initialDocuments().find(x => x.id === "identity-xiao");
