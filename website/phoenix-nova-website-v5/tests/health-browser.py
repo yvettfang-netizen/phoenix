@@ -17,6 +17,12 @@ def passed(name):
 
 def fit(page, label):
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), label
+    header = page.locator("header.site-header").bounding_box()
+    content = page.locator("[data-health-compass]").bounding_box()
+    assert content["y"] >= header["y"] + header["height"] - 1, "Header overlaps Health content"
+    brand = page.locator("header .brand-mark").bounding_box()
+    nav = page.locator("header nav").bounding_box()
+    assert (brand["x"] + brand["width"] <= nav["x"] + 1 or brand["y"] + brand["height"] <= nav["y"] + 1), "Logo overlaps navigation"
     passed(label)
 
 def start(page):
@@ -79,7 +85,7 @@ try:
         assert "1. 持续跟进" in content and "2. 家庭照护协作" in content
         assert "HC03" not in content and "全家一起" not in content
         passed("Downloaded action list preserves choice order and excludes raw answers")
-        page.evaluate("URL.createObjectURL = () => { throw new Error('Synthetic unsupported download'); }")
+        page.evaluate("() => { URL.createObjectURL = () => { throw new Error('Synthetic unsupported download'); }; }")
         page.get_by_test_id("health-export").click()
         expect(page.get_by_test_id("health-plan")).to_be_visible()
         expect(page.get_by_role("status")).to_contain_text("当前浏览器无法导出")
@@ -131,6 +137,10 @@ try:
         passed("No uncaught browser JavaScript errors")
         browser.close()
 except Exception as error:
+    try:
+        page.screenshot(path=str(out / "failure.jpg"), type="jpeg", quality=72, full_page=True)
+    except Exception:
+        pass
     checks.append({"name": "Browser integration", "status": "FAIL", "error": str(error)})
     raise
 finally:

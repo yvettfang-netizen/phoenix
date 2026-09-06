@@ -15,5 +15,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function LocalizedPage({ params }: Props) {
   const { locale, page } = await params;
   if ((locale !== "zh" && locale !== "en") || !pageIds.includes(page as (typeof pageIds)[number])) notFound();
-  return <>{page === "compass" ? <HealthCompassEntry locale={locale} /> : null}<V5Site locale={locale as Locale} page={page as PageId} /></>;
+  return <>{page === "compass" ? <HealthCompassEntry locale={locale} /> : null}<div style={{ position: "relative" }}><V5Site locale={locale as Locale} page={page as PageId} /></div></>;
 }
