@@ -40,9 +40,15 @@
       <text class="action-card__copy">{{report.recommendation.nextAction}}</text>
     </view>
 
+    <view wx:if="{{blueprint}}" class="blueprint-entry" bindtap="viewBlueprint">
+      <view><text class="blueprint-entry__label">GROWTH BLUEPRINT</text><text class="blueprint-entry__title">把这份洞察整理成家庭的下一步</text></view>
+      <text class="chevron">›</text>
+    </view>
+
     <view class="report-note">这份洞察用于支持家庭讨论，不替代学校、心理或医疗专业意见。</view>
     <view wx:if="{{userRole === 'family_user'}}" class="form-actions">
       <button class="btn btn--primary" bindtap="save">已保存至 Family OS</button>
+      <button wx:if="{{blueprint}}" class="btn btn--outline" bindtap="viewBlueprint">查看 Growth Blueprint</button>
       <button class="btn btn--outline" bindtap="contact">联系顾问解读报告</button>
       <button class="btn btn--text" bindtap="home">返回家庭中心</button>
     </view>

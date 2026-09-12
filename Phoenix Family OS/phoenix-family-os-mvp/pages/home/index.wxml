@@ -64,9 +64,12 @@
         <view class="home-link" bindtap="goCompass">
           <text class="home-link__number">01</text><text class="home-link__title">Education Compass</text><text class="chevron">›</text>
         </view>
-        <view class="home-link" bindtap="goAdvisor">
-          <text class="home-link__number">02</text><text class="home-link__title">联系 Phoenix 顾问</text><text class="chevron">›</text>
-        </view>
+      <view class="home-link" bindtap="goAdvisor">
+        <text class="home-link__number">02</text><text class="home-link__title">联系 Phoenix 顾问</text><text class="chevron">›</text>
+      </view>
+      <view wx:if="{{latestBlueprint}}" class="home-link" bindtap="goBlueprint">
+        <text class="home-link__number">03</text><text class="home-link__title">查看 Growth Blueprint</text><text class="chevron">›</text>
+      </view>
       </view>
 
       <view class="partner-section">

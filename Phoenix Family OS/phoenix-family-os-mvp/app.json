@@ -7,6 +7,7 @@
     "pages/compass/index",
     "pages/compass-questionnaire/index",
     "pages/report/index",
+    "pages/blueprint/index",
     "pages/timeline/index",
     "pages/advisor-request/index",
     "pages/mine/index",

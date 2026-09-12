@@ -1,9 +1,10 @@
 const store = require('./store')
 const { createId } = require('../utils/id')
 const { isoNow } = require('../utils/date')
+const { assertValidGrowthBlueprint } = require('./growth-blueprint')
 
 const PREFIX = {
-  users: 'usr', families: 'fam', students: 'stu', assessments: 'asm', reports: 'rpt',
+  users: 'usr', families: 'fam', students: 'stu', assessments: 'asm', reports: 'rpt', growthBlueprints: 'gbp',
   timelineEvents: 'evt', advisorNotes: 'note', advisorRequests: 'req', analyticsEvents: 'ana',
   partners: 'par', permissions: 'perm', partnerExplorations: 'pex', partnerApplications: 'pap'
 }
@@ -67,6 +68,9 @@ function upsertFamily(userId, form) {
 
 function upsertStudent(familyId, form, studentId) {
   const existing = studentId ? getById('students', studentId) : null
+  if (existing && existing.family_id !== familyId) {
+    throw new Error('Student does not belong to this family')
+  }
   const value = { family_id: familyId, ...form }
   const student = existing ? update('students', existing.id, value) : insert('students', value)
   if (!existing) addTimeline(familyId, 'student_created', `已添加孩子档案：${student.name}`)
@@ -98,6 +102,37 @@ function reportsForFamily(familyId) {
     .map((report) => ({ ...report, assessment: assessments.find((assessment) => assessment.id === report.assessment_id) }))
 }
 
+function growthBlueprintsForFamily(familyId) {
+  return where('growthBlueprints', (blueprint) => blueprint.family_id === familyId)
+    .sort(descendingBy('updated_at'))
+}
+
+function growthBlueprintForReport(reportId) {
+  return where('growthBlueprints', (blueprint) => blueprint.source_report_id === reportId)
+    .sort(descendingBy('updated_at'))[0] || null
+}
+
+function upsertGrowthBlueprint(blueprint) {
+  assertValidGrowthBlueprint(blueprint)
+  const family = getById('families', blueprint.family_id)
+  const student = getById('students', blueprint.student_id)
+  const report = getById('reports', blueprint.source_report_id)
+  const assessment = report ? getById('assessments', report.assessment_id) : null
+  if (!family || !student || student.family_id !== family.id || !report || !assessment ||
+      assessment.student_id !== student.id || report.assessment_id !== assessment.id) {
+    throw new Error('Growth Blueprint identity context is not valid')
+  }
+
+  const existing = growthBlueprintForReport(blueprint.source_report_id)
+  const value = {
+    ...blueprint,
+    id: existing ? existing.id : blueprint.id,
+    created_at: existing ? existing.created_at : blueprint.created_at,
+    updated_at: isoNow()
+  }
+  return existing ? update('growthBlueprints', existing.id, value) : insert('growthBlueprints', value)
+}
+
 function familyOverview(familyId) {
   const family = getById('families', familyId)
   if (!family) return null
@@ -105,6 +140,7 @@ function familyOverview(familyId) {
     family,
     students: studentsForFamily(familyId),
     reports: reportsForFamily(familyId),
+    growthBlueprints: growthBlueprintsForFamily(familyId),
     events: eventsForFamily(familyId),
     notes: where('advisorNotes', (note) => note.family_id === familyId).sort(descendingBy('created_at')),
     requests: where('advisorRequests', (request) => request.family_id === familyId).sort(descendingBy('created_at'))
@@ -122,5 +158,6 @@ function resetDemoData() {
 module.exports = {
   initialize, all, getById, where, insert, update, upsertFamily, upsertStudent,
   addTimeline, familyForUser, studentsForFamily, eventsForFamily, reportsForFamily,
+  growthBlueprintsForFamily, growthBlueprintForReport, upsertGrowthBlueprint,
   familyOverview, resetDemoData
 }

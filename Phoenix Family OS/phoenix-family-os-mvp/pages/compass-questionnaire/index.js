@@ -4,6 +4,7 @@ const aiProvider = require('../../services/ai-provider')
 const { isoNow } = require('../../utils/date')
 const analytics = require('../../services/analytics')
 const questionnaireSync = require('../../services/questionnaire-sync')
+const { buildGrowthBlueprint } = require('../../services/growth-blueprint')
 
 function question(key, label, type, options, placeholder) {
   return { key, label, type, options: (options || []).map((text) => ({ text, selected: false })), placeholder: placeholder || '', value: type === 'multi' ? [] : '' }
@@ -136,9 +137,14 @@ Page({
         },
         created_at: isoNow()
       })
+      const blueprint = repository.upsertGrowthBlueprint(buildGrowthBlueprint({
+        family, student, assessment, report
+      }))
       repository.addTimeline(family.id, 'compass_completed', `${student.name} 已完成 Education Compass`)
       repository.addTimeline(family.id, 'report_generated', `已生成 ${student.name} 的成长洞察报告`)
+      repository.addTimeline(family.id, 'growth_blueprint_created', `已形成 ${student.name} 的 Growth Blueprint`)
       analytics.track('education_compass_completed', { userId: user.id, familyId: family.id, properties: { student_id: student.id, report_id: report.id } })
+      analytics.track('growth_blueprint_created', { userId: user.id, familyId: family.id, properties: { student_id: student.id, blueprint_id: blueprint.id, source_report_id: report.id } })
       try {
         questionnaireSync.enqueue({
           clientSubmissionId: assessment.id,
@@ -152,7 +158,7 @@ Page({
       } catch (_syncError) {
         // The local Demo report remains available; no remote-sync success is shown.
       }
-      wx.redirectTo({ url: `/pages/report/index?id=${report.id}&new=1` })
+      wx.redirectTo({ url: `/pages/report/index?id=${report.id}&blueprintId=${blueprint.id}&new=1` })
     } catch (error) {
       try {
         questionnaireSync.reconcile(repository)

@@ -25,7 +25,7 @@ memory.set(store.STORAGE_KEY, {
 repository.initialize()
 
 const normalized = memory.get(store.STORAGE_KEY)
-assert.strictEqual(normalized.schemaVersion, '0.1.0', 'older local data should be normalized to the current schema')
+assert.strictEqual(normalized.schemaVersion, '0.2.0', 'older local data should be normalized to the current schema')
 assert.strictEqual(normalized.families[0].family_name, '原有家庭', 'schema normalization must preserve family records')
 assert.deepStrictEqual(normalized.futureField, { preserved: true }, 'unknown fields must remain recoverable')
 assert(Array.isArray(normalized.reports), 'missing current tables should be added without deleting existing records')
@@ -78,6 +78,16 @@ const otherUser = repository.insert('users', {
 const otherFamily = repository.insert('families', {
   user_id: otherUser.id, family_name: '其他家庭', created_at: isoNow()
 })
+assert.throws(
+  () => repository.upsertStudent(otherFamily.id, { name: '越权改名' }, student.id),
+  /does not belong to this family/,
+  'repository must reject moving an existing student across family boundaries'
+)
+assert.strictEqual(
+  repository.getById('students', student.id).family_id,
+  'fam_legacy',
+  'rejected cross-family updates must preserve the original ownership'
+)
 const otherStudent = repository.insert('students', { family_id: otherFamily.id, name: '其他孩子' })
 const otherAssessment = repository.insert('assessments', {
   student_id: otherStudent.id, type: 'education', answers: {}, status: 'completed', created_at: isoNow()
@@ -95,4 +105,5 @@ assert(navigationCalls.some((call) => call.method === 'reLaunch' && call.url ===
 assert.strictEqual(unauthorizedPage.data.report, null)
 
 console.log('✓ Sprint 1 data safety: legacy records preserved during schema normalization')
+console.log('✓ Sprint 1 student writes: repository enforces family ownership')
 console.log('✓ Sprint 1 report loading: missing relationships fail safely and ownership is enforced')

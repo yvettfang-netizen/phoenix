@@ -1,0 +1,58 @@
+<view wx:if="{{blueprint}}" class="blueprint">
+  <view class="blueprint__cover">
+    <text class="eyebrow">PHOENIX GROWTH BLUEPRINT</text>
+    <text class="blueprint__name">{{blueprint.profile.student_name}}的
+成长蓝图</text>
+    <text class="blueprint__date">{{blueprint.profile.family_name}} · {{dateLabel}}</text>
+    <view class="blueprint__seal"><text>PN</text><text>PREVIEW</text></view>
+  </view>
+
+  <view class="page blueprint__body">
+    <view class="blueprint__intro">
+      <text class="blueprint__kicker">FAMILY PROFILE</text>
+      <text class="blueprint__title">把当前洞察，整理成家庭可以继续使用的方向。</text>
+      <text class="blueprint__copy">{{blueprint.profile.family_goal}}</text>
+    </view>
+
+    <view class="blueprint-section">
+      <text class="blueprint-section__number">01</text>
+      <text class="blueprint-section__label">GROWTH MAP</text>
+      <text class="blueprint-section__title">{{blueprint.profile.current_stage}}</text>
+      <view class="blueprint-chips">
+        <text wx:for="{{blueprint.growth_map.strengths}}" wx:key="*this">优势 · {{item}}</text>
+        <text>兴趣 · {{blueprint.growth_map.interests}}</text>
+        <text wx:for="{{blueprint.growth_map.challenges}}" wx:key="*this">挑战 · {{item}}</text>
+      </view>
+      <text class="blueprint-section__copy">{{blueprint.growth_map.observation}}</text>
+    </view>
+
+    <view class="blueprint-section">
+      <text class="blueprint-section__number">02</text>
+      <text class="blueprint-section__label">EDUCATION PATH</text>
+      <text class="blueprint-section__title">{{blueprint.education_path.future_goal}}</text>
+      <text class="blueprint-section__copy">{{blueprint.education_path.suggested_direction}}</text>
+      <view class="blueprint-principle"><text>规划原则</text><text>{{blueprint.education_path.principle}}</text></view>
+    </view>
+
+    <view class="blueprint-section">
+      <text class="blueprint-section__number">03</text>
+      <text class="blueprint-section__label">ACTION PLAN · NEXT 30 DAYS</text>
+      <text class="blueprint-section__title">先做一件可以被观察的事</text>
+      <text class="blueprint-section__copy">{{blueprint.action_plan.next_action}}</text>
+      <view class="blueprint-support"><text>可获得的支持</text><text wx:for="{{blueprint.action_plan.support_needs}}" wx:key="*this">{{item}}</text></view>
+    </view>
+
+    <view class="blueprint-note">这是 Family OS 本地演示中的结构化预览，基于当前 Education Compass 报告生成，不代表生产 Core 身份或真实家庭数据。</view>
+    <view class="form-actions">
+      <button class="btn btn--primary" bindtap="viewReport">返回查看原始洞察</button>
+      <button class="btn btn--text" bindtap="home">返回家庭中心</button>
+    </view>
+  </view>
+</view>
+
+<view wx:elif="{{errorMessage}}" class="page page--paper blueprint-error">
+  <view class="empty__mark">!</view>
+  <text class="h2 blueprint-error__title">暂时无法打开这份成长蓝图</text>
+  <text class="muted blueprint-error__copy">{{errorMessage}}</text>
+  <button class="btn btn--primary blueprint-error__button" bindtap="leaveError">返回安全页面</button>
+</view>

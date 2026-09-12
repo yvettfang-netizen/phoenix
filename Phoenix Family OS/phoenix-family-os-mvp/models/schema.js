@@ -1,4 +1,4 @@
-const SCHEMA_VERSION = '0.1.0'
+const SCHEMA_VERSION = '0.2.0'
 
 const tables = {
   users: ['id', 'wechat_id', 'name', 'phone', 'role', 'created_at'],
@@ -6,6 +6,7 @@ const tables = {
   students: ['id', 'family_id', 'name', 'age', 'gender', 'school', 'education_system', 'grade', 'interest', 'goal'],
   assessments: ['id', 'student_id', 'type', 'answers', 'status', 'sync_requested_at', 'created_at'],
   reports: ['id', 'assessment_id', 'summary', 'recommendation', 'created_at'],
+  growthBlueprints: ['id', 'contract_version', 'status', 'family_id', 'student_id', 'source_report_id', 'profile', 'growth_map', 'education_path', 'action_plan', 'source', 'created_at', 'updated_at'],
   timelineEvents: ['id', 'family_id', 'event_type', 'description', 'date'],
   advisorNotes: ['id', 'family_id', 'advisor_id', 'note', 'follow_up_status', 'created_at'],
   advisorRequests: ['id', 'family_id', 'user_id', 'preferred_time', 'topic', 'status', 'created_at'],

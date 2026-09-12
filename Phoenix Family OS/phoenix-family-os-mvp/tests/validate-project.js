@@ -19,10 +19,12 @@ const originalPages = [
   'pages/advisor-request/index', 'pages/mine/index', 'pages/admin-families/index', 'pages/admin-family/index'
 ]
 const partnerPages = ['pages/partner/yuanchao/index', 'pages/partner/music-exploration/index', 'pages/partner/apply/index']
+const blueprintPages = ['pages/blueprint/index']
 assert((projectConfig.packOptions && projectConfig.packOptions.ignore || []).includes('backend'), 'backend must be excluded from the WeChat package')
-assert.strictEqual(appConfig.pages.length, originalPages.length + partnerPages.length, 'unexpected page count')
+assert.strictEqual(appConfig.pages.length, originalPages.length + partnerPages.length + blueprintPages.length, 'unexpected page count')
 for (const page of originalPages) assert(appConfig.pages.includes(page), `original MVP route removed: ${page}`)
 for (const page of partnerPages) assert(appConfig.pages.includes(page), `missing Partner Experience route: ${page}`)
+for (const page of blueprintPages) assert(appConfig.pages.includes(page), `missing Growth Blueprint route: ${page}`)
 for (const page of appConfig.pages) {
   for (const extension of ['js', 'json', 'wxml', 'wxss']) {
     const file = path.join(root, `${page}.${extension}`)
@@ -111,7 +113,7 @@ for (const file of projectFiles.filter((target) => target.endsWith('.wxss'))) {
 }
 
 const schema = require('../models/schema')
-for (const required of ['users', 'families', 'students', 'assessments', 'reports', 'timelineEvents', 'advisorNotes', 'analyticsEvents', 'partners', 'permissions', 'partnerExplorations', 'partnerApplications']) {
+for (const required of ['users', 'families', 'students', 'assessments', 'reports', 'growthBlueprints', 'timelineEvents', 'advisorNotes', 'analyticsEvents', 'partners', 'permissions', 'partnerExplorations', 'partnerApplications']) {
   assert(schema.tables[required], `missing model ${required}`)
 }
 

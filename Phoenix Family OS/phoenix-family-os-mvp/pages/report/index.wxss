@@ -23,6 +23,10 @@
 .action-card__label { color: #d9bd7b; font-size: 19rpx; letter-spacing: 3rpx; }
 .action-card__title { font-family: serif; font-size: 38rpx; font-weight: 700; margin-top: 12rpx; }
 .action-card__copy { color: rgba(255,255,255,.75); font-size: 26rpx; line-height: 1.8; margin-top: 16rpx; }
+.blueprint-entry { align-items: center; background: #f5eee2; border-left: 5rpx solid #c8a24a; display: flex; justify-content: space-between; margin-top: 28rpx; padding: 24rpx; }
+.blueprint-entry__label, .blueprint-entry__title { display: block; }
+.blueprint-entry__label { color: #9a742f; font-size: 19rpx; letter-spacing: 2rpx; }
+.blueprint-entry__title { color: #0d1b2a; font-family: serif; font-size: 28rpx; font-weight: 650; line-height: 1.5; margin-top: 7rpx; }
 .report-note { color: #9a958e; font-size: 20rpx; line-height: 1.6; margin-top: 28rpx; text-align: center; }
 .report-error { padding-top: 150rpx; text-align: center; }
 .report-error__title, .report-error__copy { display: block; }

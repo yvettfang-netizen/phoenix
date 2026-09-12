@@ -4,13 +4,16 @@ const { dateLabel } = require('../../utils/date')
 
 Page({
   data: {
-    report: null, student: null, family: null, dateLabel: '', saved: true,
+    report: null, blueprint: null, student: null, family: null, dateLabel: '', saved: true,
     userRole: '', errorMessage: ''
   },
-  onLoad(options) {
+  onLoad(options = {}) {
     const user = session.guard(['family_user', 'admin'])
     if (!user) return
     const report = repository.getById('reports', options.id)
+    const blueprint = options.blueprintId
+      ? repository.getById('growthBlueprints', options.blueprintId)
+      : repository.growthBlueprintForReport(options.id)
     const assessment = report ? repository.getById('assessments', report.assessment_id) : null
     const student = assessment ? repository.getById('students', assessment.student_id) : null
     const family = student ? repository.getById('families', student.family_id) : null
@@ -19,9 +22,15 @@ Page({
       return
     }
     if (user.role === 'family_user' && family.user_id !== user.id) return wx.reLaunch({ url: '/pages/home/index' })
-    this.setData({ report, student, family, dateLabel: dateLabel(report.created_at), userRole: user.role, errorMessage: '' })
+    const accessibleBlueprint = blueprint && blueprint.family_id === family.id && blueprint.student_id === student.id && blueprint.source_report_id === report.id
+      ? blueprint
+      : null
+    this.setData({ report, blueprint: accessibleBlueprint, student, family, dateLabel: dateLabel(report.created_at), userRole: user.role, errorMessage: '' })
   },
   save() { wx.showToast({ title: '已保存在 Family OS', icon: 'success' }) },
+  viewBlueprint() {
+    if (this.data.blueprint) wx.navigateTo({ url: `/pages/blueprint/index?id=${this.data.blueprint.id}` })
+  },
   contact() { wx.navigateTo({ url: '/pages/advisor-request/index' }) },
   home() { wx.switchTab({ url: '/pages/home/index' }) },
   leaveError() {
