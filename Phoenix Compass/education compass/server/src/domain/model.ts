@@ -1,3 +1,16 @@
+import type {
+  MastersAssignment,
+  MastersAuditLog,
+  MastersConsent,
+  MastersConsultation,
+  MastersDocument,
+  MastersIdempotencyRecord,
+  MastersReport,
+  MastersReportJob,
+  MastersSnapshot,
+  MastersStaff
+} from './masters/contracts'
+
 export type UserRole = 'family_user' | 'admin'
 export type AssessmentStatus = 'DRAFT' | 'SUBMITTED' | 'PREVIEW_READY'
 export type EducationAssessmentKind =
@@ -422,6 +435,18 @@ export interface ProductDeliverable {
   updatedAt: string
 }
 
+/** Application Compass / Hong Kong masters intake entities. */
+export type MastersConsultationEntity = MastersConsultation
+export type MastersDocumentEntity = MastersDocument
+export type MastersConsentEntity = MastersConsent
+export type MastersSnapshotEntity = MastersSnapshot
+export type MastersStaffEntity = MastersStaff
+export type MastersAssignmentEntity = MastersAssignment
+export type MastersReportEntity = MastersReport
+export type MastersReportJobEntity = MastersReportJob
+export type MastersAuditLogEntity = MastersAuditLog
+export type MastersIdempotencyEntity = MastersIdempotencyRecord
+
 export interface IntegrationLink {
   id: string
   provider: 'feishu_bitable'
@@ -561,6 +586,16 @@ export interface EntityMap {
   consentGrants: ConsentGrant
   idempotencyRecords: IdempotencyRecord
   productDeliverables: ProductDeliverable
+  mastersConsultations: MastersConsultationEntity
+  mastersDocuments: MastersDocumentEntity
+  mastersConsents: MastersConsentEntity
+  mastersSnapshots: MastersSnapshotEntity
+  mastersStaff: MastersStaffEntity
+  mastersAssignments: MastersAssignmentEntity
+  mastersReports: MastersReportEntity
+  mastersReportJobs: MastersReportJobEntity
+  mastersAuditLogs: MastersAuditLogEntity
+  mastersIdempotencyRecords: MastersIdempotencyEntity
 }
 
 export type TableName = keyof EntityMap
@@ -593,6 +628,16 @@ export function emptyState(): { [K in TableName]: EntityMap[K][] } {
     agentWorkerHeartbeats: [],
     consentGrants: [],
     idempotencyRecords: [],
-    productDeliverables: []
+    productDeliverables: [],
+    mastersConsultations: [],
+    mastersDocuments: [],
+    mastersConsents: [],
+    mastersSnapshots: [],
+    mastersStaff: [],
+    mastersAssignments: [],
+    mastersReports: [],
+    mastersReportJobs: [],
+    mastersAuditLogs: [],
+    mastersIdempotencyRecords: []
   }
 }

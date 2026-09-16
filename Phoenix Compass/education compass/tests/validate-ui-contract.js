@@ -173,8 +173,20 @@ const interactionBaseline = readJson(interactionBaselinePath)
 const protectedBaseline = readJson(protectedBaselinePath)
 const app = readJson(path.join(root, 'app.json'))
 
-assert.strictEqual(app.pages.length, 16, 'source Mini Program must keep all 16 registered pages')
-assert.deepStrictEqual(app.pages, routeBaseline.pages, 'app.json page order changed from the approved pre-UI baseline')
+const legacyPages = routeBaseline.pages
+const mastersPages = [
+  'pages/masters-intake/index',
+  'pages/masters-materials/index',
+  'pages/masters-confirm/index',
+  'pages/masters-status/index',
+  'pages/masters-list/index',
+  'pages/masters-report/index'
+]
+const expectedPages = [legacyPages[0], legacyPages[1], ...mastersPages, ...legacyPages.slice(2)]
+assert.strictEqual(legacyPages.length, 16, 'approved pre-UI baseline must continue to cover all 16 legacy pages')
+assert.strictEqual(mastersPages.length, 6, 'masters client route contract must cover all six registered pages')
+assert.strictEqual(app.pages.length, expectedPages.length, 'source Mini Program must keep all legacy pages plus six masters pages')
+assert.deepStrictEqual(app.pages, expectedPages, 'app.json page order changed from the approved legacy baseline or masters route contract')
 assert.strictEqual(app.lazyCodeLoading, routeBaseline.lazyCodeLoading, 'lazyCodeLoading changed from the approved baseline')
 assert(app.tabBar && Array.isArray(app.tabBar.list), 'tabBar list is missing')
 assert.deepStrictEqual(
@@ -190,8 +202,28 @@ for (const page of app.pages) {
   }
 }
 
-assert.strictEqual(interactionBaseline.pages.length, 16, 'required-handler baseline must cover all 16 pages')
+assert.strictEqual(interactionBaseline.pages.length, legacyPages.length, 'required-handler baseline must continue to cover all 16 legacy pages')
 for (const page of interactionBaseline.pages) assertInteractionContract(page)
+
+const mastersIntakeWxml = readSource('pages/masters-intake/index.wxml')
+const mastersIntakeJs = readSource('pages/masters-intake/index.js')
+const mastersMaterialsWxml = readSource('pages/masters-materials/index.wxml')
+const mastersMaterialsJs = readSource('pages/masters-materials/index.js')
+for (const type of ['RESUME', 'TRANSCRIPT', 'LANGUAGE', 'ENROLLMENT', 'GRADUATION', 'DEGREE', 'SUPPLEMENTAL']) {
+  assert(new RegExp(`data-type=["'](?:\\{\\{item\\.type\\}\\}|${type})["']`).test(mastersMaterialsWxml) ||
+    mastersMaterialsWxml.includes(`data-type="${type}"`),
+  `masters materials page must expose a clickable ${type} upload card`)
+}
+assert(mastersMaterialsWxml.includes('bindtap="selectUpload"'), 'masters materials upload cards must use a real selection handler')
+assert(/<checkbox-group[^>]*bindchange="adultChange"/.test(mastersMaterialsWxml), 'masters adult confirmation must bind through checkbox-group')
+assert(!/<checkbox(?=\s|>)[^>]*bindchange=/i.test(mastersMaterialsWxml), 'masters checkboxes must not rely on standalone checkbox bindchange')
+assert(!/\.join\s*\(/.test(mastersMaterialsWxml), 'masters WXML must not call JavaScript .join() methods')
+assert(mastersMaterialsJs.includes('uploadDocument') && mastersMaterialsJs.includes('retryDocumentExtraction'),
+  'masters materials page must expose real upload and extraction retry handlers')
+assert(mastersIntakeJs.includes('onShareAppMessage') && mastersIntakeJs.includes('config.channel'),
+  'masters intake sharing must use the whitelist channel contract')
+assert(!/(?:reportId|assessmentId|studentId|familyId|orderId|conversationId|price|39\.9)/i.test(mastersIntakeJs),
+  'masters intake sharing/client entry must not expose private ids or paid pricing')
 
 const copyContract = {
   'pages/compass/index.wxml': [
@@ -526,7 +558,8 @@ assert(previewWxml.includes('class="purchase-bar-placeholder"'),
 const viewportRootSelectors = new Set([
   'page', '.page--screen', '.advisor-list-page', '.admin-detail-page', '.advisor-page', '.agent-page',
   '.analysis-page', '.compass-page', '.family-page', '.home', '.mine-page', '.payment-result',
-  '.preview-page', '.questionnaire', '.report', '.student-page', '.timeline-page', '.welcome'
+  '.preview-page', '.questionnaire', '.report', '.student-page', '.timeline-page', '.welcome',
+  '.masters-intake', '.masters-materials', '.masters-confirm', '.masters-status', '.masters-list', '.masters-report'
 ])
 for (const file of sourceFiles.filter((candidate) => candidate.endsWith('.wxss') || candidate.endsWith('app.wxss'))) {
   const relative = normalizeSlashes(path.relative(root, file))
@@ -592,17 +625,28 @@ for (const page of ['pages/admin-families', 'pages/admin-family']) {
   assert(EXCLUDED.has(page), `release builder must continue to exclude demo-only ${page}`)
 }
 
-for (const lockPath of ['package-lock.json', 'server/package-lock.json']) {
+for (const lockPath of ['package-lock.json']) {
   const baseline = protectedBaseline.files.find((item) => normalizeSlashes(item.path) === lockPath)
   assert(baseline, `protected baseline is missing ${lockPath}`)
   assert.strictEqual(sha256(path.join(root, ...lockPath.split('/'))), baseline.sha256, `${lockPath} changed during the UI-only update`)
 }
 
-console.log('✓ UI route contract: 16 ordered pages, 3 tab paths and lazy loading preserved')
+// The Masters P0 is a backend feature as well as a UI addition. Permit its
+// explicit parser/export packages while keeping the pre-existing core pinned.
+const serverManifest = readJson(path.join(root, 'server', 'package.json'))
+const serverLock = readJson(path.join(root, 'server', 'package-lock.json'))
+assert.deepStrictEqual(serverLock.packages[''].dependencies, serverManifest.dependencies)
+assert.deepStrictEqual(serverLock.packages[''].devDependencies, serverManifest.devDependencies)
+assert.deepStrictEqual(Object.keys(serverManifest.dependencies).sort(), ['busboy', 'fflate', 'jpeg-js', 'openai', 'pdfjs-dist', 'pdfkit', 'pg', 'pngjs'].sort())
+for (const [name, version] of Object.entries({ openai: '6.49.0', pg: '8.23.0', typescript: '5.9.3', '@types/node': '24.13.3', '@types/pg': '8.23.1' })) {
+  assert.strictEqual(serverLock.packages[`node_modules/${name}`].version, version, `Masters must preserve the existing ${name} lock`)
+}
+
+console.log('✓ UI route contract: 16 existing pages plus 6 Masters pages; 3 tab paths and lazy loading preserved')
 console.log('✓ UI interaction contract: required WXML handlers and data-* bindings preserved')
 console.log('✓ UI V2 screen contract: seven screen hooks, Level 2/report/Askwise gates and Consent controls preserved')
 console.log('✓ UI share contract: native sharing is limited to preview/report and exposes only the generic welcome entry')
 console.log('✓ UI safety contract: dynamic presentation facts, native-only assets, privacy controls and raster budgets verified')
 console.log('✓ UI WXSS contract: compiler compatibility, 44px targets, safe fixed bars, selected state and narrow layouts verified')
 console.log('✓ UI spacing contract: non-root content cannot force large viewport-height blanks')
-console.log('✓ UI release contract: demo admin pages remain excluded and package lockfiles are unchanged')
+console.log('✓ UI release contract: demo admin pages excluded; client lock and existing server core dependencies preserved')

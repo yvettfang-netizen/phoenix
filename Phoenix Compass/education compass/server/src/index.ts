@@ -25,11 +25,32 @@ import { AgentRepository } from './store/agent-repository'
 import { InMemoryStore } from './store/memory-store'
 import { PostgresStore } from './store/postgres-store'
 import { Store } from './store/store'
+import { FileStore } from './store/file-store'
+import { loadMastersConfig } from './masters/config'
+import { PrivateFiles } from './masters/private-files'
+import { MastersService } from './services/masters-service'
+import { MastersHttp } from './masters/http'
+import { MastersWorker } from './masters/worker'
+import { resolve, dirname } from 'node:path'
+import { existsSync } from 'node:fs'
 
 async function main(): Promise<void> {
   const config = loadConfig()
+  const mastersConfig = loadMastersConfig()
   const sourceCatalog = await loadSourceCatalog(config.sourceCatalogMode, config.sourceCatalogPath)
-  const store: Store = config.databaseUrl ? new PostgresStore(config.databaseUrl) : new InMemoryStore()
+  let sourceRoot = resolve(process.cwd())
+  while (!existsSync(resolve(sourceRoot, '.git')) && dirname(sourceRoot) !== sourceRoot) sourceRoot = dirname(sourceRoot)
+  let mastersFiles: PrivateFiles | undefined
+  if (mastersConfig.enabled) {
+    mastersFiles = new PrivateFiles(mastersConfig.privateStorageDir)
+    await mastersFiles.initialize(sourceRoot)
+    if (mastersConfig.developmentStorePath) {
+      const databaseDirectory = new PrivateFiles(dirname(mastersConfig.developmentStorePath))
+      await databaseDirectory.initialize(sourceRoot)
+    }
+  }
+  const store: Store = config.databaseUrl ? new PostgresStore(config.databaseUrl)
+    : mastersConfig.enabled ? await FileStore.open(mastersConfig.developmentStorePath) : new InMemoryStore()
   const authProvider = config.wechatAppId && config.wechatAppSecret
     ? new WechatApiAuthProvider(config.wechatAppId, config.wechatAppSecret)
     : new MockWechatAuthProvider()
@@ -67,6 +88,9 @@ async function main(): Promise<void> {
   )
   const reports = new ReportService(store)
   const education = new EducationCompassService(store, config.growthDiscoveryPaymentEnabled)
+  const mastersService = mastersConfig.enabled ? new MastersService(store, undefined, undefined, { retentionDays: mastersConfig.retentionDays }) : undefined
+  const masters = mastersService && mastersFiles ? new MastersHttp(mastersService, mastersFiles, store, mastersConfig.pdfFontPath) : undefined
+  const mastersWorker = mastersService && mastersFiles ? new MastersWorker(mastersService, mastersFiles, store, mastersConfig.retentionDays) : undefined
   let agent: AgentService | undefined
   const currentAgentKey = config.aiContentKeyring[config.aiContentCurrentKeyVersion]
   if (currentAgentKey && Buffer.byteLength(config.openaiSafetyHmacKey, 'utf8') >= 32) {
@@ -116,8 +140,18 @@ async function main(): Promise<void> {
   )
   const server = createAppServer({
     auth, profiles, assessments, orders, reports, education, feishu,
-    ...(agent ? { agent } : {})
+    ...(agent ? { agent } : {}), ...(masters ? { masters } : {})
   })
+  let mastersRunning = false
+  const runMasters = async (): Promise<void> => {
+    if (!mastersWorker || mastersRunning) return
+    mastersRunning = true
+    try { await mastersWorker.runOnce() } catch { process.stderr.write('Masters worker failed; retry remains queued\n') }
+    finally { mastersRunning = false }
+  }
+  const mastersTimer = mastersConfig.workerEnabled ? setInterval(() => { void runMasters() }, 5000) : undefined
+  mastersTimer?.unref()
+  if (mastersConfig.workerEnabled) void runMasters()
   let refundSweepRunning = false
   const reconcileRefunds = async (): Promise<void> => {
     if (refundSweepRunning) return
@@ -155,6 +189,7 @@ async function main(): Promise<void> {
   })
 
   const shutdown = (): void => {
+    if (mastersTimer) clearInterval(mastersTimer)
     clearInterval(refundSweepTimer)
     clearInterval(feishuSyncTimer)
     server.close(() => {

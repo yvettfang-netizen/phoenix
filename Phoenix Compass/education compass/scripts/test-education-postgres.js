@@ -1,6 +1,8 @@
 'use strict'
 
 const { spawnSync } = require('node:child_process')
+const path = require('node:path')
+const { testDatabaseUrl, verifyConnection } = require('./ci/postgres-guard')
 
 const databaseUrl = process.env.EDUCATION_TEST_DATABASE_URL || ''
 const mutationApproved = process.env.EDUCATION_TEST_DATABASE_ALLOW_MUTATION === 'YES'
@@ -31,20 +33,26 @@ try {
   process.stderr.write('EDUCATION_TEST_DATABASE_URL is not a valid URL\n')
   process.exit(2)
 }
-if (!['postgres:', 'postgresql:'].includes(parsed.protocol)) {
-  process.stderr.write('EDUCATION_TEST_DATABASE_URL must use postgres:// or postgresql://\n')
-  process.exit(2)
-}
-const databaseName = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
-if (!/(?:test|testing|ci|sandbox|phoenix_v05_verification)/i.test(databaseName)) {
-  process.stderr.write('Refusing mutation: dedicated database name must contain test, testing, ci, sandbox, or phoenix_v05_verification\n')
+try {
+  parsed = testDatabaseUrl(databaseUrl, 'Education migration database')
+} catch (error) {
+  process.stderr.write(error.message + '\n')
   process.exit(2)
 }
 
-const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
-run(npmCommand, ['--prefix', 'server', 'run', 'build'])
-run(npmCommand, ['--prefix', 'server', 'run', 'db:migrate'], { ...process.env, DATABASE_URL: databaseUrl })
-run(process.execPath, ['scripts/verify-education-postgres-schema.js'], {
-  ...process.env,
-  DATABASE_URL: databaseUrl
+async function main() {
+  const { Pool } = require('../server/node_modules/pg')
+  const pool = new Pool({ connectionString: databaseUrl, max: 1, connectionTimeoutMillis: 10000 })
+  let security
+  try { security = await verifyConnection(pool) } finally { await pool.end() }
+  const npmCommand = process.platform === 'win32' ? process.execPath : 'npm'
+  const prefix = process.platform === 'win32' ? [path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js')] : []
+  run(npmCommand, [...prefix, '--prefix', 'server', 'run', 'build'])
+  run(npmCommand, [...prefix, '--prefix', 'server', 'run', 'db:migrate'], { ...process.env, DATABASE_URL: databaseUrl })
+  run(process.execPath, ['scripts/verify-education-postgres-schema.js'], { ...process.env, DATABASE_URL: databaseUrl })
+  process.stdout.write(JSON.stringify({ ...security, suite: 'education-postgres-security', databaseConnectionAttempted: true }) + '\n')
+}
+main().catch(error => {
+  process.stderr.write(JSON.stringify({ suite: 'education-postgres', status: 'FAIL', reason: 'Verified test database connection or migration failed', code: error.code || 'TEST_FAILURE' }) + '\n')
+  process.exitCode = 1
 })
