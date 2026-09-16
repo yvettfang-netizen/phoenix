@@ -1,6 +1,6 @@
 # Family Timeline Event Contract V1
 
-Status: `DESIGN PREPARATION / APPEND-ONLY EVIDENCE`
+Status: `FOUNDER-APPROVED CONTRACT / APPEND-ONLY EVIDENCE`
 
 ## Purpose
 
@@ -54,7 +54,7 @@ Future domain events require registry review; they are not accepted as arbitrary
 - `ADVISOR_SHARED`: visible to family and an actively assigned advisor.
 - `INTERNAL_RESTRICTED`: operational reference only; not shown to family users.
 
-Visibility is a presentation hint. Server-side RBAC, family assignment, consent, and RLS remain authoritative.
+Visibility is a presentation hint. Server-side RBAC, family assignment, consent, and RLS remain authoritative. `FAMILY` never means every related person automatically receives access. For a minor, `SUBJECT` may include only qualifying guardian views backed by current verified authority. Adult-subject information is not widened to other family members by relationship alone.
 
 ## Data minimisation
 
@@ -69,7 +69,7 @@ Allowed timeline content is short, human-readable continuity information. The fo
 
 ## Immutability and correction
 
-Accepted events are append-only. A correction creates a new event with `supersedes_event_id`; consumers hide or annotate the older presentation while audit evidence remains intact. Deletion/retention policy is controlled separately and cannot be simulated by mutating audit history.
+Accepted events are append-only. A correction creates a new event with `supersedes_event_id`; consumers hide or annotate the older presentation while audit evidence remains intact. Withdrawal immediately prevents new longitudinal, timeline, journey, or advisor processing for the withdrawn purpose. Customer-facing presentation may be hidden or restricted, but withdrawal must not mutate immutable audit evidence or falsely represent that an event never occurred. Exact retention, deletion, anonymisation, DSAR, appeal, and jurisdictional periods remain Legal/Privacy implementation parameters and fail closed until configured.
 
 ## Idempotency
 
