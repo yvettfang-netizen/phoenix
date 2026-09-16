@@ -1,6 +1,6 @@
 # Compass → Family OS Handoff Contract V1
 
-Status: `DESIGN PREPARATION / SYNTHETIC VALIDATION ONLY`
+Status: `FOUNDER-APPROVED CONTRACT / SYNTHETIC VALIDATION ONLY`
 
 ## Scope
 
@@ -127,11 +127,14 @@ An `ACCEPTED` receipt is storage evidence only. It is not Founder approval, prof
 ## Required checks
 
 - Validate the Family Context V1 envelope.
-- Require an active consent for `ASSESSMENT_SCORING` and any separately requested longitudinal storage or advisor follow-up purpose.
+- Require active `ASSESSMENT_SCORING` consent for the assessment and minimum report handoff.
+- Require separate `LONGITUDINAL_GROWTH_RECORD` consent only when creating or persisting a Journey, Growth Blueprint, or Family Timeline record. A one-time minimum report handoff must not infer longitudinal consent.
+- Require separate `ADVISOR_FOLLOW_UP` consent before any advisor request or contact side effect.
 - Verify family/subject consistency and source mapping.
 - Verify source versions and result hash.
-- Reject `HEALTH` and unknown Compass types.
+- Reject `HEALTH` and unknown Compass types. V1 active Compass types are exactly `EDUCATION`, `IDENTITY`, and `WEALTH`; `HEALTH` remains reserved and fail closed.
 - Deny timeline or advisor side effects that lack their own purpose, permission, or assignment checks.
+- A minimum assessment/report handoff does not require a service entitlement unless the target experience is paid or restricted. Paid features, formal advisor service, and restricted delivery experiences require an active service entitlement in addition to consent and permission.
 - Append metadata-only audit evidence; never log raw answers or sensitive documents.
 
 ## Failure codes
