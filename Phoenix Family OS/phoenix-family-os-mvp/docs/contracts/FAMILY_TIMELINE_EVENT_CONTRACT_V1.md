@@ -38,7 +38,7 @@ metadata
 | `FAMILY_PROFILE_CREATED` | Family OS | authorised family membership |
 | `STUDENT_PROFILE_CREATED` | Family OS | verified family/subject relationship |
 | `COMPASS_ASSESSMENT_COMPLETED` | Compass handoff | assessment and longitudinal-record purposes |
-| `COMPASS_REPORT_AVAILABLE` | Compass handoff | report-delivery authority |
+| `COMPASS_REPORT_AVAILABLE` | Compass handoff | report-delivery and longitudinal-record purposes |
 | `JOURNEY_ACTION_DUE` | Family OS journey | authorised journey and date source |
 | `ADVISOR_FOLLOW_UP_REQUESTED` | Family OS | exact advisor-follow-up purpose |
 | `ADVISOR_CASE_STATUS_CHANGED` | Advisor service | active assignment and family-scoped permission |
