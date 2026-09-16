@@ -1,8 +1,8 @@
 # Phoenix Family OS Contract Preparation V1
 
-Status: `DESIGN PREPARATION / REVIEW REQUIRED / NOT RUNTIME`
+Status: `FOUNDER APPROVED / DOCUMENTATION CONTRACT / NOT RUNTIME`
 
-This directory freezes the smallest reviewable contract boundary between Phoenix Core, Family OS, the Compass products, Family Timeline, and Advisor Follow-up. It does not authorize production migration, real-family onboarding, deployment, or a merge to `main`.
+This directory freezes the Founder-approved documentation contract boundary between Phoenix Core, Family OS, the Compass products, Family Timeline, and Advisor Follow-up. Founder approval authorizes this documentation package to merge to `main`; it does not authorize runtime implementation, database migration, real-family onboarding, staging or production deployment, or external writeback.
 
 ## Baseline and evidence
 
@@ -39,5 +39,5 @@ The references above are dependencies, not evidence that the proposed Core schem
 - No runtime code or database migration is changed.
 - No Core ID is minted by Family OS or a Compass.
 - No production database, WeChat identity, secret, customer record, or real-family data is used.
-- No deployment, PR merge, `main` write, payment, CRM, or production external writeback is authorized.
+- This documentation package may merge to `main` at its exact reviewed head. No runtime deployment, database migration, payment, CRM, real-family data, or production external writeback is authorized.
 
