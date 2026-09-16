@@ -1,6 +1,6 @@
 # Family Context Contract V1
 
-Status: `DESIGN PREPARATION / CORE GATE DEPENDENCY`
+Status: `FOUNDER-APPROVED CONTRACT / CORE GATE DEPENDENCY`
 
 ## Purpose
 
