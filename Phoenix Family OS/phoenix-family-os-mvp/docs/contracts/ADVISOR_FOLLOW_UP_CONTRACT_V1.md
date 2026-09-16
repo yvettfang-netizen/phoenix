@@ -1,6 +1,6 @@
 # Advisor Follow-up Contract V1
 
-Status: `DESIGN PREPARATION / NO CRM OR PRODUCTION WRITEBACK`
+Status: `FOUNDER-APPROVED CONTRACT / NO CRM OR PRODUCTION WRITEBACK`
 
 ## Separation of records
 
@@ -12,6 +12,12 @@ Family OS distinguishes:
 - `TimelineEvent`: a minimised family-facing status event.
 
 The legacy local `advisorRequests` and `advisorNotes` remain demo records. They are not evidence of production consent, assignment, or Core identity.
+
+## Founder-approved vocabulary boundary
+
+Customer-facing copy uses only `顾问跟进`, `预约顾问解读`, or `顾问服务`. Internal systems retain `AdvisorRequest`, `AdvisorCase`, and `AdvisorNote`. Internal request and case statuses are operational states and must not be exposed as customer promises, approvals, guaranteed outcomes, or service commitments.
+
+Topic codes, contact-channel allowlists, service levels, and detailed status-to-copy mappings remain implementation parameters. Until separately approved, missing or unknown values fail closed and do not block this contract merge.
 
 ## Advisor request
 
