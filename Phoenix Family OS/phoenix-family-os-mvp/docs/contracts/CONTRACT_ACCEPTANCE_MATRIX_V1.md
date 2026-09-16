@@ -1,6 +1,6 @@
 # Family OS Contract Acceptance Matrix V1
 
-Status: `PREPARED FOR FOUNDER AND ENGINEERING REVIEW`
+Status: `FOUNDER APPROVED / DOCUMENTATION CONTRACT / NOT RUNTIME`
 
 ## Compatibility matrix
 
@@ -51,14 +51,18 @@ These are required for a future synthetic adapter; they are not claimed as execu
 - Data classification, retention, export, correction, withdrawal, and deletion policies.
 - Real WeChat server-side authentication and approved HTTPS infrastructure.
 
-## Founder decisions still required
+## Founder decisions resolved
 
-1. Confirm the shared Compass list is `EDUCATION | IDENTITY | WEALTH`, with `HEALTH` remaining `RESERVED`.
-2. Confirm Family Timeline event registry and visibility meanings.
-3. Confirm whether `LONGITUDINAL_GROWTH_RECORD` consent is mandatory for all Compass handoffs or only for timeline/journey persistence.
-4. Confirm Advisor request topic codes, contact channels, service levels, and case statuses.
-5. Confirm retention and withdrawal effects for reports, journeys, timeline presentation, protected advisor notes, and immutable audit evidence.
-6. Confirm which service experiences require an entitlement before handoff or advisor follow-up.
+Approved on 2026-09-16:
+
+1. The V1 shared Compass list is exactly `EDUCATION | IDENTITY | WEALTH`; `HEALTH` remains `RESERVED` and ingestion fails closed.
+2. Family Timeline uses `FAMILY`, `SUBJECT`, `ADVISOR_SHARED`, and `INTERNAL_RESTRICTED` as presentation meanings. Family Assignment, exact-purpose Consent, RBAC, and RLS remain authoritative.
+3. `LONGITUDINAL_GROWTH_RECORD` is required only when creating or persisting Journey, Growth Blueprint, or Family Timeline state. A minimum one-time assessment/report handoff uses `ASSESSMENT_SCORING` and must not infer longitudinal consent.
+4. Customer-facing vocabulary is limited to `顾问跟进`, `预约顾问解读`, and `顾问服务`; internal systems retain `AdvisorRequest`, `AdvisorCase`, and `AdvisorNote`. Topic codes, channel allowlists, SLA values, and detailed status copy remain implementation parameters.
+5. Withdrawal immediately stops new processing for the withdrawn purpose. Customer presentation may be hidden or restricted, while immutable audit evidence is not rewritten. Exact retention, deletion, anonymisation, DSAR, appeal, and jurisdictional periods remain Legal/Privacy parameters.
+6. Minimum assessment/report handoff does not require a service entitlement unless the target experience is paid or restricted. Paid features, formal advisor service, and restricted delivery require an active entitlement in addition to consent and permission. SKU-to-entitlement mapping remains a Product/Catalogue parameter.
+
+These decisions approve the documentation contract only. They do not approve runtime implementation, database migration, real-family data, staging deployment, production deployment, or external writeback.
 
 ## Release gates
 
