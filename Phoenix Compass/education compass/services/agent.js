@@ -6,6 +6,12 @@ const DEFAULT_MAX_MESSAGE_CHARS = 2000
 const DEFAULT_MAX_REPLIES = 3
 const TERMINAL_RUN_STATUSES = ['SUCCEEDED', 'FAILED', 'BLOCKED', 'CANCELLED']
 
+function boundedNumber(value, fallback, minimum, maximum) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(minimum, Math.min(parsed, maximum))
+}
+
 function unwrap(result, keys = []) {
   let value = result && result.data ? result.data : result
   for (const key of keys) {
@@ -14,15 +20,14 @@ function unwrap(result, keys = []) {
   return value
 }
 
+let keySequence = 0
+
+// wx.getRandomValues is asynchronous in the Mini Program runtime and never fills a
+// caller-supplied array, so it produced an all-zero, constant idempotency key.
+// Keys only need to be unique per user: time + in-process sequence + Math.random.
 function randomPart() {
-  try {
-    if (wx.getRandomValues) {
-      const bytes = new Uint8Array(12)
-      wx.getRandomValues(bytes)
-      return Array.prototype.map.call(bytes, (value) => value.toString(16).padStart(2, '0')).join('')
-    }
-  } catch (error) {}
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 14)}`
+  keySequence = (keySequence + 1) % 1679616
+  return `${Date.now().toString(36)}${keySequence.toString(36).padStart(4, '0')}${Math.random().toString(36).slice(2, 12)}`
 }
 
 function createIdempotencyKey(purpose = 'agent') {
@@ -67,16 +72,23 @@ function normalizeReply(value) {
 function normalizeConversation(result) {
   const conversation = unwrap(result, ['conversation']) || {}
   const limits = conversation.limits || {}
+  const remainingReplies = conversation.remainingReplies === undefined
+    ? (limits.remainingReplies === undefined ? DEFAULT_MAX_REPLIES : limits.remainingReplies)
+    : conversation.remainingReplies
   return {
     ...conversation,
     conversationId: conversation.conversationId || conversation.id || '',
     reportId: conversation.reportId || conversation.report_id || '',
     consentStatus: conversation.consentStatus || conversation.consent_status || '',
-    maxMessageChars: Number(limits.maxMessageChars || conversation.maxMessageChars || DEFAULT_MAX_MESSAGE_CHARS),
-    maxRepliesPerReport: Number(limits.maxRepliesPerReport || limits.maxTurns || conversation.maxRepliesPerReport || DEFAULT_MAX_REPLIES),
-    remainingReplies: Number(conversation.remainingReplies === undefined
-      ? (limits.remainingReplies === undefined ? DEFAULT_MAX_REPLIES : limits.remainingReplies)
-      : conversation.remainingReplies)
+    maxMessageChars: boundedNumber(
+      limits.maxMessageChars || conversation.maxMessageChars,
+      DEFAULT_MAX_MESSAGE_CHARS, 1, DEFAULT_MAX_MESSAGE_CHARS
+    ),
+    maxRepliesPerReport: boundedNumber(
+      limits.maxRepliesPerReport || limits.maxTurns || conversation.maxRepliesPerReport,
+      DEFAULT_MAX_REPLIES, 1, DEFAULT_MAX_REPLIES
+    ),
+    remainingReplies: boundedNumber(remainingReplies, DEFAULT_MAX_REPLIES, 0, DEFAULT_MAX_REPLIES)
   }
 }
 
@@ -90,11 +102,16 @@ function normalizeRun(result) {
     runId: run.runId || run.id || '',
     conversationId: run.conversationId || run.conversation_id || '',
     status,
-    retryAfterMs: Math.max(250, Math.min(Number(run.retryAfterMs || run.retry_after_ms || 1000), 5000)),
+    retryAfterMs: boundedNumber(run.retryAfterMs || run.retry_after_ms, 1000, 250, 5000),
     code: run.code || run.errorCode || run.error_code || error.code || null,
     message: run.message || run.safeMessage || run.userMessage || error.message || (reply && reply.answer) || '',
     reply,
-    remainingReplies: run.remainingReplies === undefined ? null : Number(run.remainingReplies)
+    remainingReplies: run.remainingReplies === undefined && run.remaining_replies === undefined
+      ? null
+      : boundedNumber(
+          run.remainingReplies === undefined ? run.remaining_replies : run.remainingReplies,
+          null, 0, DEFAULT_MAX_REPLIES
+        )
   }
 }
 
@@ -154,7 +171,7 @@ async function getRun(runId) {
 }
 
 async function listMessages(conversationId, options = {}) {
-  const limit = Math.max(1, Math.min(Number(options.limit || 20), 50))
+  const limit = boundedNumber(options.limit, 20, 1, 50)
   const cursor = options.cursor ? `&cursor=${encodeURIComponent(options.cursor)}` : ''
   const result = await api.request(`/v1/agent-conversations/${encodeURIComponent(conversationId)}/messages?limit=${limit}${cursor}`)
   const payload = unwrap(result) || {}

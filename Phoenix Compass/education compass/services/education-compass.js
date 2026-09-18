@@ -32,15 +32,14 @@ function requireId(value, field) {
   return id
 }
 
+let keySequence = 0
+
+// wx.getRandomValues is asynchronous in the Mini Program runtime and never fills a
+// caller-supplied array, so it produced an all-zero, constant idempotency key.
+// Keys only need to be unique per user: time + in-process sequence + Math.random.
 function randomPart() {
-  try {
-    if (typeof wx !== 'undefined' && wx.getRandomValues) {
-      const bytes = new Uint8Array(12)
-      wx.getRandomValues(bytes)
-      return Array.prototype.map.call(bytes, (value) => value.toString(16).padStart(2, '0')).join('')
-    }
-  } catch (error) {}
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 14)}`
+  keySequence = (keySequence + 1) % 1679616
+  return `${Date.now().toString(36)}${keySequence.toString(36).padStart(4, '0')}${Math.random().toString(36).slice(2, 12)}`
 }
 
 function createIdempotencyKey(purpose = 'education') {
@@ -215,7 +214,7 @@ async function getDraft(assessmentId) {
 async function saveDraft(assessmentId, input) {
   ensureRemote()
   const value = input || {}
-  if (!Number.isInteger(value.revision) || value.revision < 0) {
+  if (!Number.isInteger(value.revision) || value.revision < 1) {
     throw new api.ApiError('草稿 revision 无效', { code: 'DRAFT_REVISION_REQUIRED' })
   }
   const clientSaveToken = String(value.clientSaveToken || '').trim()
@@ -234,7 +233,7 @@ async function saveDraft(assessmentId, input) {
 async function submitAssessment(assessmentId, input, idempotencyKey) {
   ensureRemote()
   const value = input || {}
-  if (!Number.isInteger(value.revision) || value.revision < 0) {
+  if (!Number.isInteger(value.revision) || value.revision < 1) {
     throw new api.ApiError('提交 revision 无效', { code: 'DRAFT_REVISION_REQUIRED' })
   }
   return normalizeAssessment(await api.request(`/v1/assessments/${encodeURIComponent(requireId(assessmentId, 'assessmentId'))}/submit`, {
