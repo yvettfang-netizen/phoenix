@@ -1,4 +1,5 @@
 import { createServer, IncomingMessage, Server, ServerResponse } from 'node:http'
+import { randomUUID } from 'node:crypto'
 import { AppError, errorEnvelope, invariant } from '../domain/errors'
 import { AuthService } from '../services/auth-service'
 import { AssessmentService, CreateAssessmentInput } from '../services/assessment-service'
@@ -10,6 +11,8 @@ import { EducationCompassService } from '../services/education-compass-service'
 import { FeishuSyncService } from '../integrations/feishu/sync-service'
 import { routeAgentRequest } from './agent-routes'
 import { InMemoryRateLimiter, RateLimiter } from './rate-limiter'
+import { MastersHttp } from '../masters/http'
+import { workbenchHtml, workbenchCss, workbenchJs } from '../masters/workbench'
 
 export interface AppDependencies {
   auth: AuthService
@@ -18,6 +21,7 @@ export interface AppDependencies {
   orders: OrderService
   reports: ReportService
   education?: EducationCompassService
+  masters?: MastersHttp
   agent?: AgentService
   feishu?: FeishuSyncService
   rateLimiter?: RateLimiter
@@ -147,8 +151,21 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
   return async (request, response) => {
     const url = new URL(request.url ?? '/', 'http://localhost')
     const method = request.method ?? 'GET'
+    const mastersRequest = url.pathname.startsWith('/v1/masters/') || url.pathname.startsWith('/v1/internal/masters')
+    const requestId = randomUUID()
+    if (mastersRequest) response.setHeader('X-Request-ID', requestId)
     try {
       if (method === 'GET' && url.pathname === '/health') return json(response, 200, { ok: true })
+
+      if (method === 'GET' && ['/internal/masters', '/internal/masters/app.js', '/internal/masters/style.css'].includes(url.pathname)) {
+        invariant(deps.masters, 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        securityHeaders(response)
+        response.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'")
+        const js = url.pathname.endsWith('.js'), css = url.pathname.endsWith('.css')
+        response.setHeader('Content-Type', js ? 'application/javascript; charset=utf-8' : css ? 'text/css; charset=utf-8' : 'text/html; charset=utf-8')
+        response.end(js ? workbenchJs : css ? workbenchCss : workbenchHtml)
+        return
+      }
 
       if (method === 'POST' && url.pathname === '/v1/auth/wechat/session') {
         invariant(await rateLimiter.consume(`auth:${request.socket.remoteAddress ?? 'unknown'}`, 10, 60_000), 429, 'RATE_LIMITED', '请求过于频繁，请稍后重试')
@@ -182,6 +199,21 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
       if (method !== 'GET') {
         const normalizedRoute = url.pathname.replace(/\/[A-Za-z0-9_-]{8,}/g, '/:id')
         invariant(await rateLimiter.consume(`write:${user.id}:${normalizedRoute}`, 30, 60_000), 429, 'RATE_LIMITED', '操作过于频繁，请稍后重试')
+      }
+
+      if (mastersRequest) {
+        invariant(deps.masters, 503, 'MASTERS_DISABLED', '香港硕士咨询尚未开启')
+        const result = await deps.masters.route(user.id, method, url, request, () => readRawBody(request).then(parseJson))
+        if (result.binary) {
+          securityHeaders(response)
+          response.statusCode = result.status
+          response.setHeader('Content-Type', result.contentType ?? 'application/octet-stream')
+          response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(result.filename ?? 'document')}`)
+          response.setHeader('Content-Length', result.binary.length)
+          response.end(result.binary)
+          return
+        }
+        return json(response, result.status, { ...(result.body ?? {}), request_id: requestId })
       }
 
       if (/\/(?:agent-conversations|agent-runs|agent-analyses|ai-analysis-consents)(?:\/|$)/.test(url.pathname)) {
@@ -477,6 +509,7 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
       throw new AppError(404, 'ROUTE_NOT_FOUND', '接口不存在')
     } catch (error) {
       const envelope = errorEnvelope(error)
+      if (mastersRequest) envelope.body.request_id = requestId
       const code = ((envelope.body.error as Record<string, unknown>)?.code ?? 'UNKNOWN') as string
       if (envelope.status >= 500) logger.error('request_failed', { method, route: url.pathname, code })
       json(response, envelope.status, envelope.body)

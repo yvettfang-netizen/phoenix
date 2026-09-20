@@ -1,0 +1,72 @@
+name: Masters intake isolated engineering checks
+
+on:
+  push:
+    branches: [codex/masters-intake-p0]
+    paths:
+      - 'Phoenix Compass/education compass/**'
+      - '.github/workflows/masters-intake-ci.yml'
+  pull_request:
+    paths:
+      - 'Phoenix Compass/education compass/**'
+      - '.github/workflows/masters-intake-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: masters-intake-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  isolated-engineering:
+    name: Automated checks (external acceptance remains separate)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+        working-directory: 'Phoenix Compass/education compass'
+    env:
+      GITHUB_TEST_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      NODE_OPTIONS: --dns-result-order=ipv4first
+    steps:
+      - name: Check out the actual PR or branch candidate
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            Phoenix Compass/education compass/package-lock.json
+            Phoenix Compass/education compass/server/package-lock.json
+      - name: Install locked project dependencies
+        run: |
+          npm ci
+          npm ci --prefix server
+      - name: Install isolated browser test dependencies
+        run: |
+          npm install --prefix "$RUNNER_TEMP/masters-browser" --no-audit --no-fund --save-exact playwright@1.58.2
+          "$RUNNER_TEMP/masters-browser/node_modules/.bin/playwright" install --with-deps chromium
+          printf 'MASTERS_BROWSER_TEST_MODULE=%s\n' "$RUNNER_TEMP/masters-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - name: Fetch the fixed open-license Chinese test font
+        run: |
+          font="$RUNNER_TEMP/masters-NotoSansSC-VF.ttf"
+          curl --fail --location --retry 3 --output "$font" 'https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/Variable/TTF/Subset/NotoSansSC-VF.ttf'
+          printf 'd68bafcb48a2707749396aa12bbbd833cb70401f3a9a689fd2902c7e0d295964  %s\n' "$font" | sha256sum --check --strict
+          printf 'MASTERS_TEST_PDF_FONT_PATH=%s\n' "$font" >> "$GITHUB_ENV"
+      - name: Run real tests with disposable TLS PostgreSQL and isolated restore targets
+        run: node scripts/ci/masters-isolated-postgres.js
+      - name: Publish sanitized candidate-bound test evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: masters-engineering-${{ env.GITHUB_TEST_SHA }}-${{ github.run_attempt }}
+          path: 'Phoenix Compass/education compass/outputs/masters-ci/'
+          if-no-files-found: warn
+          retention-days: 14

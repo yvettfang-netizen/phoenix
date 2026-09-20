@@ -82,6 +82,9 @@
         <view class="home-link" bindtap="goAdvisor">
           <text class="home-link__number">02</text><text class="home-link__title">联系 Phoenix 顾问</text><text class="chevron">›</text>
         </view>
+        <view class="home-link" bindtap="goMasters">
+          <text class="home-link__number">03</text><text class="home-link__title">香港硕士免费咨询</text><text class="chevron">›</text>
+        </view>
       </view>
     </view>
   </block>

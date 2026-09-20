@@ -30,7 +30,17 @@ const TABLES: Record<TableName, string> = {
   agentWorkerHeartbeats: 'agent_worker_heartbeats',
   consentGrants: 'consent_grants',
   idempotencyRecords: 'idempotency_records',
-  productDeliverables: 'product_deliverables'
+  productDeliverables: 'product_deliverables',
+  mastersConsultations: 'masters_consultations',
+  mastersDocuments: 'masters_consultation_documents',
+  mastersConsents: 'masters_consultation_consents',
+  mastersSnapshots: 'masters_consultation_snapshots',
+  mastersStaff: 'masters_staff',
+  mastersAssignments: 'masters_consultation_assignments',
+  mastersReports: 'masters_reports',
+  mastersReportJobs: 'masters_report_jobs',
+  mastersAuditLogs: 'masters_audit_logs',
+  mastersIdempotencyRecords: 'masters_idempotency_records'
 }
 
 const JSON_FIELDS = new Set([
@@ -46,7 +56,13 @@ const JSON_FIELDS = new Set([
   'audit_logs.metadata',
   'agent_messages.contentEnvelope',
   'agent_runs.requestEnvelope',
-  'reports.resultPayload'
+  'reports.resultPayload',
+  'masters_consultations.profile',
+  'masters_consultation_documents.extraction',
+  'masters_consultation_snapshots.profile',
+  'masters_consultation_snapshots.documentIds',
+  'masters_reports.payload',
+  'masters_audit_logs.metadata'
 ])
 
 function snake(value: string): string {
