@@ -1,0 +1,50 @@
+name: Identity Gate 2 Validation
+
+on:
+  push:
+    branches:
+      - "feat/identity-compass-gate2-sprint"
+    paths:
+      - "Phoenix Compass/Identity Compass/**"
+      - ".github/workflows/identity-gate2-validation.yml"
+  pull_request:
+    paths:
+      - "Phoenix Compass/Identity Compass/**"
+      - ".github/workflows/identity-gate2-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: "Phoenix Compass/Identity Compass"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Production build
+        run: pnpm build
