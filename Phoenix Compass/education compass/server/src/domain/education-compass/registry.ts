@@ -186,7 +186,11 @@ function loadVerifiedJson(relativePath: string, expectedSha256: string): {
 } {
   const resolvedPath = resolveFrozenPath(relativePath)
   const raw = readFileSync(resolvedPath)
-  const actualSha256 = createHash('sha256').update(raw).digest('hex').toUpperCase()
+  // Git may materialize text files with CRLF on Windows. The freeze hashes are
+  // defined over the canonical LF representation so verification must not
+  // depend on the checkout platform.
+  const canonical = Buffer.from(raw.toString('utf8').replace(/\r\n?/g, '\n'), 'utf8')
+  const actualSha256 = createHash('sha256').update(canonical).digest('hex').toUpperCase()
   invariant(actualSha256 === expectedSha256, 500, 'EDUCATION_COMPASS_FREEZE_HASH_MISMATCH', '服务端冻结题库校验失败', {
     relativePath,
     expectedSha256,
@@ -194,7 +198,7 @@ function loadVerifiedJson(relativePath: string, expectedSha256: string): {
   })
   let parsed: unknown
   try {
-    parsed = JSON.parse(raw.toString('utf8')) as unknown
+    parsed = JSON.parse(canonical.toString('utf8')) as unknown
   } catch {
     invariant(false, 500, 'EDUCATION_COMPASS_FREEZE_JSON_INVALID', '服务端冻结题库 JSON 无效', { relativePath })
   }

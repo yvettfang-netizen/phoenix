@@ -62,6 +62,7 @@ test('Agent enqueue uses report-before-conversation PostgreSQL lock ordering', (
 
 test('migration baselines stay immutable and Agent schema has no plaintext or response ID columns', () => {
   const migration = (name: string): string => readFileSync(resolve(__dirname, `../../migrations/${name}`), 'utf8')
+    .replace(/\r\n?/g, '\n')
   const initial = migration('001_initial_schema.sql')
   const feishu = migration('002_feishu_bitable_integration.sql')
   const agent = migration('003_openai_agent.sql')

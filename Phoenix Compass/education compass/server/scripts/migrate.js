@@ -24,6 +24,16 @@ function migrationBody(raw) {
     .replace(/\s*COMMIT\s*;\s*$/i, '')
 }
 
+function canonicalMigration(raw) {
+  return raw.replace(/\r\n?/g, '\n')
+}
+
+function migrationChecksums(raw) {
+  const canonical = canonicalMigration(raw)
+  const values = [raw, canonical, canonical.replace(/\n/g, '\r\n')]
+  return new Set(values.map((value) => createHash('sha256').update(value).digest('hex')))
+}
+
 async function main() {
   const client = await pool.connect()
   try {
@@ -42,10 +52,11 @@ async function main() {
 
     for (const name of names) {
       const raw = await readFile(path.join(migrationsDirectory, name), 'utf8')
-      const checksum = createHash('sha256').update(raw).digest('hex')
+      const checksum = createHash('sha256').update(canonicalMigration(raw)).digest('hex')
+      const compatibleChecksums = migrationChecksums(raw)
       const applied = await client.query('SELECT checksum FROM schema_migrations WHERE name = $1', [name])
       if (applied.rowCount) {
-        if (applied.rows[0].checksum !== checksum) throw new Error(`Applied migration checksum changed: ${name}`)
+        if (!compatibleChecksums.has(applied.rows[0].checksum)) throw new Error(`Applied migration checksum changed: ${name}`)
         process.stdout.write(`Already applied: ${name}\n`)
         continue
       }
