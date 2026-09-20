@@ -6,6 +6,12 @@ node_modules/
 .next/
 dist/
 build/
+!website/phoenix-nova-website-v5/build/
+!website/phoenix-nova-website-v5/build/sites-vite-plugin.ts
+!website/phoenix-digital-world/build/
+!website/phoenix-digital-world/build/sites-vite-plugin.ts
+!website/phoenix-east/build/
+!website/phoenix-east/build/sites-vite-plugin.ts
 out/
 *.tsbuildinfo
 
