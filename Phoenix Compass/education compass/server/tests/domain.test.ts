@@ -7,8 +7,11 @@ import { MockWechatAuthProvider } from '../src/auth/wechat-auth-provider'
 import { loadConfig } from '../src/config'
 import { AppError } from '../src/domain/errors'
 import { QUESTIONNAIRE_FIELDS, QUESTIONNAIRE_TOTAL_WEIGHT, calculateCompleteness, normalizeAnswers } from '../src/domain/questionnaire'
+import { assertReportQa, generateSixModuleReport } from '../src/domain/report-builder'
 import { SourceCatalog, validateSourceCatalog, PLACEHOLDER_SOURCE_CATALOG } from '../src/domain/source-catalog'
 import { MockPaymentProvider } from '../src/payments/mock-payment-provider'
+import { AccountService, dependencyOrder } from '../src/services/account-service'
+import { ExportService } from '../src/services/export-service'
 import { AssessmentService } from '../src/services/assessment-service'
 import { AuthService } from '../src/services/auth-service'
 import { OrderService, seedProducts } from '../src/services/order-service'
@@ -17,6 +20,7 @@ import { ReportService } from '../src/services/report-service'
 import { FileStore } from '../src/store/file-store'
 import { InMemoryStore } from '../src/store/memory-store'
 import { PostgresStore } from '../src/store/postgres-store'
+import { Store, StoreTransaction } from '../src/store/store'
 import { Clock, randomId } from '../src/utils/runtime'
 
 const fixedDate = new Date('2026-08-20T10:00:00.000Z')
@@ -125,6 +129,59 @@ async function createPaid(context: Awaited<ReturnType<typeof setup>>) {
   return { order, submitted, notification }
 }
 
+test('student profile age accepts numbers and strings, normalizes blanks, and rejects invalid values', async () => {
+  const context = await setup()
+
+  for (const age of [null, '', '   ']) {
+    const student = await context.profiles.createStudent(context.session.user.id, { age })
+    assert.equal(student.age, null)
+  }
+
+  for (const [input, expected] of [[3, 3], [100, 100], [' 16 ', 16]] as const) {
+    const student = await context.profiles.createStudent(context.session.user.id, { age: input })
+    assert.equal(student.age, expected)
+  }
+
+  for (const age of [2, 101, 16.5, '2', '101', '16.5', 'not-a-number', '1e2', '0x10', '+16']) {
+    await assert.rejects(
+      context.profiles.createStudent(context.session.user.id, { age }),
+      (error: unknown) => error instanceof AppError && error.status === 400 && error.code === 'INVALID_PROFILE'
+    )
+  }
+
+  await assert.rejects(
+    context.profiles.createStudent(context.session.user.id, { age: true as unknown as string }),
+    (error: unknown) => error instanceof AppError && error.status === 400 && error.code === 'INVALID_PROFILE'
+  )
+})
+
+test('student profile education system canonicalizes codes and legacy labels', async () => {
+  const context = await setup()
+  const cases = [
+    ['GAOKAO', 'GAOKAO'], ['DSE', 'DSE'], ['IGCSE', 'IGCSE'], ['A_LEVEL', 'A_LEVEL'],
+    ['AP_US', 'AP_US'], ['IB', 'IB'], ['OTHER', 'OTHER'],
+    ['内地课程', 'GAOKAO'], ['内地课程／高考', 'GAOKAO'], ['A-Level', 'A_LEVEL'],
+    ['内地课程/高考', 'GAOKAO'], ['高考', 'GAOKAO'], ['A LEVEL', 'A_LEVEL'],
+    ['AP / 美式课程', 'AP_US'], ['AP／美式课程', 'AP_US'], ['AP／美国课程', 'AP_US'],
+    ['美式课程', 'AP_US'], ['其他', 'OTHER'], ['其他体系', 'OTHER']
+  ] as const
+
+  for (const [input, expected] of cases) {
+    const student = await context.profiles.createStudent(context.session.user.id, { educationSystem: input })
+    assert.equal(student.educationSystem, expected)
+  }
+
+  for (const educationSystem of [null, '', '   ']) {
+    const student = await context.profiles.createStudent(context.session.user.id, { educationSystem })
+    assert.equal(student.educationSystem, null)
+  }
+
+  await assert.rejects(
+    context.profiles.createStudent(context.session.user.id, { educationSystem: 'UNKNOWN_SYSTEM' }),
+    (error: unknown) => error instanceof AppError && error.status === 400 && error.code === 'INVALID_PROFILE'
+  )
+})
+
 test('23-field questionnaire contract matches the client contract and preserves 69/70/100 answers', async () => {
   assert.equal(QUESTIONNAIRE_FIELDS.length, 23)
   assert.equal(QUESTIONNAIRE_TOTAL_WEIGHT, 100)
@@ -144,6 +201,9 @@ test('23-field questionnaire contract matches the client contract and preserves 
 test('paid Compass kill switch defaults off and rejects invalid configuration', () => {
   const base = { NODE_ENV: 'test', SESSION_SECRET: sessionSecret }
   assert.equal(loadConfig(base).paidCompassEnabled, false)
+  assert.equal(loadConfig(base).listenHost, '127.0.0.1')
+  assert.equal(loadConfig({ ...base, LISTEN_HOST: '0.0.0.0' }).listenHost, '0.0.0.0')
+  assert.throws(() => loadConfig({ ...base, LISTEN_HOST: 'localhost' }), (error: unknown) => error instanceof AppError && error.code === 'CONFIG_INVALID')
   assert.equal(loadConfig({ ...base, PAID_COMPASS_ENABLED: 'true' }).paidCompassEnabled, true)
   assert.throws(() => loadConfig({ ...base, PAID_COMPASS_ENABLED: 'yes' }), (error: unknown) => error instanceof AppError && error.code === 'CONFIG_INVALID')
 })
@@ -161,6 +221,8 @@ test('production config pins verified TLS database and exact public WeChat callb
     SOURCE_CATALOG_MODE: 'verified', SOURCE_CATALOG_PATH: '/run/config/source-catalog.json'
   }
   assert.equal(loadConfig(production).publicBaseUrl, production.PUBLIC_BASE_URL)
+  assert.equal(loadConfig(production).listenHost, '127.0.0.1')
+  assert.throws(() => loadConfig({ ...production, LISTEN_HOST: '0.0.0.0' }), (error: unknown) => error instanceof AppError && error.code === 'CONFIG_INVALID')
   assert.throws(() => loadConfig({ ...production, DATABASE_URL: 'postgresql://db.example.com/phoenix?sslmode=require' }), (error: unknown) => error instanceof AppError && error.code === 'CONFIG_INVALID')
   assert.throws(() => loadConfig({ ...production, WECHAT_PAY_NOTIFY_URL: 'https://evil.example/v1/webhooks/wechat-pay/transactions' }), (error: unknown) => error instanceof AppError && error.code === 'CONFIG_INVALID')
   assert.throws(() => loadConfig({ ...production, PUBLIC_BASE_URL: 'https://user@api.example.com' }), (error: unknown) => error instanceof AppError && error.code === 'CONFIG_INVALID')
@@ -188,12 +250,91 @@ test('draft round-trip, 69 gate, and pre-charge six-module QA lock', async () =>
   assert.equal(locked?.deliveryStatus, 'LOCKED')
   assert.equal(locked?.qaPassed, true)
   assert.equal(locked?.sourceCatalogVerified, true)
+  assert.equal(locked?.sourceCatalogVersion, catalog.version)
+  assert.equal(locked?.dataAsOf, catalog.dataAsOf)
+  assert.deepEqual(locked?.versions, {
+    studentVersion: context.student.studentVersion,
+    ruleVersion: 'education-rules-v1',
+    dataVersion: catalog.version,
+    promptVersion: 'deterministic-explanation-v1',
+    templateVersion: 'compass-six-modules-v1'
+  })
+  assert.deepEqual(locked?.sources, [
+    {
+      sourceId: `USER_INPUT:${assessment.id}`,
+      applicableYear: catalog.dataAsOf.slice(0, 4),
+      verifiedAt: catalog.dataAsOf,
+      dataVersion: 'education_compass_v1'
+    },
+    {
+      sourceId: 'PHOENIX_RULESET:EDUCATION_V1',
+      applicableYear: catalog.dataAsOf.slice(0, 4),
+      verifiedAt: catalog.dataAsOf,
+      dataVersion: 'rules-v1'
+    },
+    {
+      sourceId: 'HKU-UG-ADMISSIONS-2026',
+      applicableYear: '2026',
+      verifiedAt: '2026-08-19',
+      dataVersion: catalog.version
+    }
+  ])
   assert.deepEqual(locked?.modules?.map((module) => module.key), [
     'student_profile', 'strengths', 'major_directions', 'university_match', 'routes', 'action_plan'
   ])
   const job = await context.store.read((tx) => tx.findOne('reportJobs', { reportId: submitted.reportId }))
   assert.equal(job?.status, 'SUCCEEDED')
   assert.equal(job?.orderId, null)
+})
+
+test('report QA rejects every prohibited admissions promise phrase', () => {
+  const keys = ['student_profile', 'strengths', 'major_directions', 'university_match', 'routes', 'action_plan'] as const
+  for (const phrase of ['保证', '一定录取', '保录', '稳进', '保底', '百分百', '录取率']) {
+    const modules = keys.map((key, index) => ({
+      key,
+      title: `模块${index + 1}`,
+      summary: index === 3 ? `违规表述：${phrase}` : '合成安全说明',
+      items: []
+    }))
+    assert.throws(() => assertReportQa(modules), (error: unknown) =>
+      error instanceof AppError && error.code === 'REPORT_QA_FAILED', phrase)
+  }
+})
+
+test('assessment submit independently rejects a generator that forges QA or report provenance', async () => {
+  const context = await setup()
+  const assessment = await context.assessments.create(context.session.user.id, context.student.id, {
+    familyId: context.family.id,
+    questionnaireVersion: 'education_compass_v1',
+    studentVersion: context.student.studentVersion,
+    consent: {
+      consentVersion: 'education_compass_guardian_v1',
+      scope: 'education_compass_report',
+      guardianConfirmed: true
+    }
+  })
+  await context.assessments.saveDraft(context.session.user.id, assessment.id, validAnswers)
+
+  const forgedQa = new AssessmentService(context.store, catalog, clock, randomId, (shell, current, student, now) => {
+    const report = generateSixModuleReport(shell, current, student, now)
+    report.modules![0]!.summary = '保证获得目标学校录取'
+    report.qaPassed = true
+    return report
+  })
+  await expectCode(forgedQa.submit(context.session.user.id, assessment.id), 'REPORT_QA_FAILED')
+
+  const forgedSource = new AssessmentService(context.store, catalog, clock, randomId, (shell, current, student, now) => {
+    const report = generateSixModuleReport(shell, current, student, now)
+    report.sources.push({
+      sourceId: 'UNAPPROVED-CANDIDATE-FACT', applicableYear: '2099',
+      verifiedAt: '2099-01-01', dataVersion: 'unreviewed'
+    })
+    return report
+  })
+  await expectCode(forgedSource.submit(context.session.user.id, assessment.id), 'REPORT_QA_FAILED')
+  const persisted = await context.assessments.getDraft(context.session.user.id, assessment.id)
+  assert.equal(persisted.status, 'DRAFT')
+  assert.equal((await context.store.read((tx) => tx.findMany('reports', { assessmentId: assessment.id }))).length, 0)
 })
 
 test('placeholder catalog, failed QA, and report generation failure all block ordering', async () => {
@@ -227,7 +368,54 @@ test('placeholder catalog, failed QA, and report generation failure all block or
   }), 'ASSESSMENT_NOT_READY')
 })
 
-test('prepay rechecks guardian consent and active product after order creation', async () => {
+test('prepay independently rechecks launch switch, source catalog, report QA, consent, and active product', async () => {
+  const switchedOff = await setup()
+  const switchedOffSubmitted = await createSubmitted(switchedOff)
+  const switchedOffOrder = await switchedOff.orders.createOrder(
+    switchedOff.session.user.id,
+    switchedOffSubmitted.submitted.assessmentId,
+    { productCode: 'COMPASS_REPORT_SINGLE_39_9', idempotencyKey: 'prepay-kill-switch' }
+  )
+  const disabledPrepay = new OrderService(switchedOff.store, switchedOff.mockPay, catalog, false, clock)
+  await expectCode(
+    disabledPrepay.createWechatPrepay(switchedOff.session.user.id, switchedOffOrder.orderId),
+    'PAID_COMPASS_DISABLED'
+  )
+
+  const catalogChanged = await setup()
+  const catalogChangedSubmitted = await createSubmitted(catalogChanged)
+  const catalogChangedOrder = await catalogChanged.orders.createOrder(
+    catalogChanged.session.user.id,
+    catalogChangedSubmitted.submitted.assessmentId,
+    { productCode: 'COMPASS_REPORT_SINGLE_39_9', idempotencyKey: 'prepay-source-catalog' }
+  )
+  const unverifiedPrepay = new OrderService(
+    catalogChanged.store,
+    catalogChanged.mockPay,
+    PLACEHOLDER_SOURCE_CATALOG,
+    true,
+    clock
+  )
+  await expectCode(
+    unverifiedPrepay.createWechatPrepay(catalogChanged.session.user.id, catalogChangedOrder.orderId),
+    'SOURCE_CATALOG_NOT_VERIFIED'
+  )
+
+  const qaChanged = await setup()
+  const qaChangedSubmitted = await createSubmitted(qaChanged)
+  const qaChangedOrder = await qaChanged.orders.createOrder(
+    qaChanged.session.user.id,
+    qaChangedSubmitted.submitted.assessmentId,
+    { productCode: 'COMPASS_REPORT_SINGLE_39_9', idempotencyKey: 'prepay-report-qa' }
+  )
+  await qaChanged.store.transaction(async (tx) => {
+    await tx.update('reports', qaChangedSubmitted.submitted.reportId, { qaPassed: false })
+  })
+  await expectCode(
+    qaChanged.orders.createWechatPrepay(qaChanged.session.user.id, qaChangedOrder.orderId),
+    'REPORT_QA_REQUIRED'
+  )
+
   const revoked = await setup()
   const revokedSubmitted = await createSubmitted(revoked)
   const revokedOrder = await revoked.orders.createOrder(revoked.session.user.id, revokedSubmitted.submitted.assessmentId, {
@@ -250,6 +438,26 @@ test('prepay rechecks guardian consent and active product after order creation',
   })
   await disabled.store.transaction(async (tx) => { await tx.update('products', 'COMPASS_REPORT_SINGLE_39_9', { active: false }) })
   await expectCode(disabled.orders.createWechatPrepay(disabled.session.user.id, disabledOrder.orderId), 'PRODUCT_UNAVAILABLE')
+})
+
+test('concurrent duplicate order creation is idempotent and membership SKU cannot unlock a report', async () => {
+  const context = await setup()
+  const { submitted } = await createSubmitted(context)
+  const input = {
+    productCode: 'COMPASS_REPORT_SINGLE_39_9',
+    idempotencyKey: 'concurrent-order-key'
+  }
+  const orders = await Promise.all(Array.from({ length: 20 }, () =>
+    context.orders.createOrder(context.session.user.id, submitted.assessmentId, input)
+  ))
+  assert.equal(new Set(orders.map((order) => order.orderId)).size, 1)
+  assert.equal((await context.store.read((tx) => tx.findMany('orders', {
+    userId: context.session.user.id,
+    assessmentId: submitted.assessmentId
+  }))).length, 1)
+  await expectCode(context.orders.createOrder(context.session.user.id, submitted.assessmentId, {
+    productCode: 'PHOENIX_MEMBER_199', idempotencyKey: 'membership-not-report'
+  }), 'PRODUCT_NOT_SUPPORTED')
 })
 
 test('server query reconciliation is throttled, recovers a missing callback, and closes expired NOTPAY orders', async () => {
@@ -512,4 +720,350 @@ test('file adapter persists isolated state and migration matches production mode
   assert.match(feishuMigration, /UNIQUE \(provider, table_id, external_record_id\)/)
   const postgres = new PostgresStore({ connectionString: 'postgresql://unused:unused@127.0.0.1:1/unused', connectionTimeoutMillis: 1 })
   await postgres.close()
+})
+
+test('portable store does not expose a transaction whose durable commit hook failed', async () => {
+  class RejectingCommitStore extends InMemoryStore {
+    rejectCommits = true
+
+    protected override async afterCommit(): Promise<void> {
+      if (this.rejectCommits) throw new Error('simulated durable write failure')
+    }
+  }
+
+  const store = new RejectingCommitStore()
+  await assert.rejects(store.transaction(async (tx) => {
+    await tx.insert('users', { id: 'usr_failed_commit', role: 'family_user', createdAt: clock().toISOString() })
+  }), /simulated durable write failure/)
+  assert.equal(await store.read((tx) => tx.findById('users', 'usr_failed_commit')), null)
+
+  store.rejectCommits = false
+  await store.transaction(async (tx) => {
+    await tx.insert('users', { id: 'usr_committed', role: 'family_user', createdAt: clock().toISOString() })
+  })
+  assert.equal((await store.read((tx) => tx.findById('users', 'usr_committed')))?.id, 'usr_committed')
+})
+
+test('account deletion removes personal data, keeps the financial record, and cannot run twice', async () => {
+  const context = await setup()
+  const { order } = await createPaid(context)
+  const userId = context.session.user.id
+  const accounts = new AccountService(context.store, clock)
+
+  const before = await context.store.read(async (tx) => ({
+    families: await tx.findMany('families', { userId }),
+    students: await tx.findMany('students', { familyId: context.family.id }),
+    assessments: await tx.findMany('assessments', { userId }),
+    reports: await tx.findMany('reports', { userId }),
+    identities: await tx.findMany('wechatIdentities', { userId }),
+    sessions: await tx.findMany('sessions', { userId }),
+    entitlements: await tx.findMany('entitlements', { userId })
+  }))
+  assert.ok(before.families.length && before.students.length && before.assessments.length &&
+    before.reports.length && before.identities.length && before.entitlements.length,
+    'the fixture must actually contain personal data before deletion is meaningful')
+
+  // 幂等记录：夹具里的旧式下单不写这张表，手动放一条，否则下面的断言是空转。
+  await context.store.transaction(async (tx) => {
+    await tx.insert('idempotencyRecords', {
+      id: 'idem_deletion_probe', userId, domain: 'ORDER_CREATE', keyDigest: 'k', inputDigest: 'i',
+      status: 'COMPLETED', resourceType: 'order', resourceId: order.orderId, responseStatus: 201,
+      responseDigest: 'r', createdAt: clock().toISOString(), updatedAt: clock().toISOString(), completedAt: clock().toISOString()
+    })
+  })
+
+  const receipt = await accounts.deleteAccount(userId)
+  assert.equal(receipt.retainedOrders, 1)
+
+  const after = await context.store.read(async (tx) => ({
+    families: await tx.findMany('families', { userId }),
+    students: await tx.findMany('students', { familyId: context.family.id }),
+    assessments: await tx.findMany('assessments', { userId }),
+    reports: await tx.findMany('reports', { userId }),
+    consents: await tx.findMany('consents', { userId }),
+    identities: await tx.findMany('wechatIdentities', { userId }),
+    sessions: await tx.findMany('sessions', { userId }),
+    timeline: await tx.findMany('timelineEvents', { userId }),
+    orders: await tx.findMany('orders', { userId }),
+    entitlements: await tx.findMany('entitlements', { userId }),
+    user: await tx.findById('users', userId),
+    audit: await tx.findMany('auditLogs', { entityId: userId })
+  }))
+
+  // 个人数据必须删干净
+  assert.deepEqual(after.families, [])
+  assert.deepEqual(after.students, [])
+  assert.deepEqual(after.assessments, [])
+  assert.deepEqual(after.reports, [])
+  assert.deepEqual(after.consents, [])
+  assert.deepEqual(after.timeline, [])
+  assert.deepEqual(after.identities, [], 'the openid link to a real person must not survive deletion')
+  assert.deepEqual(after.sessions, [], 'every session must be revoked')
+  assert.deepEqual(await context.store.read((tx) => tx.findMany('idempotencyRecords', { userId })), [],
+    'idempotency records hold digests of personal input and outlive their purpose once the account is gone')
+
+  // 财务凭证必须留下，且与个人数据脱钩
+  assert.equal(after.orders.length, 1)
+  assert.equal(after.orders[0]!.id, order.orderId)
+  assert.equal(after.orders[0]!.amountFen, 3990)
+  assert.equal(after.orders[0]!.status, 'PAID')
+  assert.equal(after.orders[0]!.familyId, null)
+  assert.equal(after.orders[0]!.studentId, null)
+  assert.equal(after.orders[0]!.assessmentId, null)
+  assert.equal(after.orders[0]!.reportId, null)
+  assert.equal(after.entitlements.length, 1)
+  assert.equal(after.entitlements[0]!.reportId, null)
+
+  // users 行保留但只剩下没有个人信息的字段
+  assert.ok(after.user?.deletedAt, 'the tombstone must record when the account was closed')
+  assert.deepEqual(Object.keys(after.user ?? {}).sort(), ['createdAt', 'deletedAt', 'id', 'role'])
+
+  // 审计记录只留数量，不留个人信息
+  const entry = after.audit.find((row) => row.action === 'ACCOUNT_DELETED')
+  assert.ok(entry, 'deletion must be auditable')
+  assert.equal(entry?.actorUserId, null)
+  const metadata = JSON.stringify(entry?.metadata ?? {})
+  assert.ok(!metadata.includes('13800000000') && !metadata.includes('示例学校'),
+    'the audit trail must not become the place personal data survives deletion')
+
+  // 不可重复执行
+  await expectCode(accounts.deleteAccount(userId), 'ACCOUNT_ALREADY_DELETED')
+})
+
+test('an order detached by account deletion cannot re-enter a business flow', async () => {
+  const context = await setup()
+  // 用未支付订单：已支付的订单在更早的状态检查就被拒，走不到脱钩守卫。
+  const { submitted } = await createSubmitted(context)
+  const order = await context.orders.createOrder(context.session.user.id, submitted.assessmentId, {
+    productCode: 'COMPASS_REPORT_SINGLE_39_9', idempotencyKey: `detached-${submitted.assessmentId}`
+  })
+  const accounts = new AccountService(context.store, clock)
+  await accounts.deleteAccount(context.session.user.id)
+
+  const detached = await context.store.read((tx) => tx.findById('orders', order.orderId))
+  assert.equal(detached?.amountFen, 3990, 'the financial record must survive')
+  assert.equal(detached?.assessmentId, null, 'but it must no longer point at personal data')
+
+  // 需要个人数据的流程必须明确拒绝，而不是拿着 null 去查库、报出难以追查的错。
+  await expectCode(
+    context.orders.createWechatPrepay(context.session.user.id, order.orderId),
+    'ORDER_DETACHED'
+  )
+})
+
+test('refund window closes after seven days or once the PDF is downloaded, and merchant fault overrides both', async () => {
+  const context = await setup()
+  const adminId = 'usr_admin_window'
+  await context.store.transaction(async (tx) => {
+    await tx.insert('users', { id: adminId, role: 'admin', createdAt: clock().toISOString() })
+  })
+
+  // 1. 窗口内、未下载 → 允许
+  const inWindow = await createPaid(context)
+  const refund = await context.orders.requestRefund(adminId, inWindow.order.orderId, {
+    idempotencyKey: 'window-ok-0001', reason: '窗口内未下载'
+  })
+  assert.equal(refund.status, 'PROCESSING')
+
+  // 2. 支付超过 7 天 → 拒绝
+  const expired = await setup()
+  const expiredPaid = await createPaid(expired)
+  await expired.store.transaction(async (tx) => {
+    await tx.insert('users', { id: adminId, role: 'admin', createdAt: clock().toISOString() })
+    await tx.update('orders', expiredPaid.order.orderId, {
+      paidAt: new Date(clock().getTime() - 8 * 86_400_000).toISOString()
+    })
+  })
+  await expectCode(expired.orders.requestRefund(adminId, expiredPaid.order.orderId, {
+    idempotencyKey: 'window-expired-1', reason: '超期退款'
+  }), 'REFUND_WINDOW_EXPIRED')
+
+  // 我方原因豁免窗口
+  const merchantFault = await expired.orders.requestRefund(adminId, expiredPaid.order.orderId, {
+    idempotencyKey: 'window-expired-2', reason: '来源目录撤回', policyException: 'MERCHANT_FAULT'
+  })
+  assert.equal(merchantFault.status, 'PROCESSING')
+  const audit = await expired.store.read((tx) => tx.findMany('auditLogs', { entityId: expiredPaid.order.orderId }))
+  const requested = audit.find((row) => row.action === 'refund_requested')
+  assert.equal((requested?.metadata as Record<string, unknown>)?.policyException, 'MERCHANT_FAULT',
+    'bypassing the window must be recorded, or nobody can later answer why this one was refundable')
+
+  // 3. 已下载 PDF → 拒绝
+  const downloaded = await setup()
+  const downloadedPaid = await createPaid(downloaded)
+  await downloaded.store.transaction(async (tx) => {
+    await tx.insert('users', { id: adminId, role: 'admin', createdAt: clock().toISOString() })
+  })
+  const downloadedReportId = downloadedPaid.order.reportId
+  assert.ok(downloadedReportId, 'a paid order must still carry its report id')
+  const pdf = await downloaded.reports.pdf(downloaded.session.user.id, downloadedReportId)
+  assert.ok(pdf.length > 0)
+  const afterDownload = await downloaded.store.read((tx) => tx.findById('reports', downloadedReportId))
+  assert.ok(afterDownload?.pdfFirstDownloadedAt, 'the first download must be recorded, or the policy has nothing to read')
+
+  await expectCode(downloaded.orders.requestRefund(adminId, downloadedPaid.order.orderId, {
+    idempotencyKey: 'downloaded-1', reason: '已下载后退款'
+  }), 'REFUND_REPORT_DOWNLOADED')
+
+  const forced = await downloaded.orders.requestRefund(adminId, downloadedPaid.order.orderId, {
+    idempotencyKey: 'downloaded-2', reason: '报告事实错误', policyException: 'MERCHANT_FAULT'
+  })
+  assert.equal(forced.status, 'PROCESSING')
+})
+
+test('the first PDF download timestamp does not drift on later downloads', async () => {
+  const context = await setup()
+  const { order } = await createPaid(context)
+  const reportId = order.reportId
+  assert.ok(reportId, 'a paid order must still carry its report id')
+  await context.reports.pdf(context.session.user.id, reportId)
+  const first = await context.store.read((tx) => tx.findById('reports', reportId))
+  await context.reports.pdf(context.session.user.id, reportId)
+  const second = await context.store.read((tx) => tx.findById('reports', reportId))
+  assert.equal(second?.pdfFirstDownloadedAt, first?.pdfFirstDownloadedAt,
+    '"first downloaded" must stay the first, otherwise the refund window silently reopens')
+})
+
+test('an in-flight refund can always be retried, whatever the window says', async () => {
+  const context = await setup()
+  const { order } = await createPaid(context)
+  const adminId = 'usr_admin_retry'
+  await context.store.transaction(async (tx) => {
+    await tx.insert('users', { id: adminId, role: 'admin', createdAt: clock().toISOString() })
+  })
+  const started = await context.orders.requestRefund(adminId, order.orderId, {
+    idempotencyKey: 'retry-0001', reason: '窗口内发起'
+  })
+  // 退款已在途；此时窗口过期不该把它卡死在中间状态。
+  await context.store.transaction(async (tx) => {
+    await tx.update('orders', order.orderId, {
+      paidAt: new Date(clock().getTime() - 30 * 86_400_000).toISOString()
+    })
+  })
+  const retried = await context.orders.requestRefund(adminId, order.orderId, {
+    idempotencyKey: 'retry-0002', reason: '超期后重试同一笔'
+  })
+  assert.equal(retried.id, started.id, 'a retry must reuse the in-flight refund rather than be rejected')
+})
+
+test('personal data export covers the account, excludes credentials, and never leaks another user', async () => {
+  const context = await setup()
+  const { order, submitted } = await createPaid(context)
+
+  // 第二个用户，用来证明导出以 userId 为界
+  const other = await context.auth.createWechatSession('bob-login-code')
+  const otherProfiles = new ProfileService(context.store, clock)
+  await otherProfiles.upsertFamily(other.user.id, {
+    familyName: '另一个家庭', parentName: '另一位家长', phone: '13700000000', location: '深圳', goal: '不该出现在别人的导出里'
+  })
+
+  const exports = new ExportService(context.store, clock)
+  const bundle = await exports.exportForUser(context.session.user.id)
+  const data = bundle.data as Record<string, unknown>
+
+  assert.equal(bundle.schema, 'phoenix_education_compass_personal_data_export_v1')
+  assert.ok(bundle.exportedAt)
+
+  // 覆盖到该用户的实际数据
+  assert.equal((data.families as unknown[]).length, 1)
+  assert.equal((data.students as unknown[]).length, 1)
+  assert.equal((data.assessments as unknown[]).length, 1)
+  assert.equal((data.reports as unknown[]).length, 1)
+  assert.equal((data.orders as unknown[]).length, 1)
+  assert.equal((data.guardianConsents as unknown[]).length, 1)
+
+  // 问卷答案必须真的在里面——导出一份没有答案的"答案"没有意义
+  const assessment = (data.assessments as Array<Record<string, unknown>>)[0]
+  assert.equal(assessment?.id, submitted.assessmentId)
+  assert.ok(assessment?.answers && Object.keys(assessment.answers as object).length > 0)
+
+  const serialized = JSON.stringify(bundle)
+
+  // 凭据类字段必须缺席。断言真实值而不是字段名——"openid" 这个词本身会出现在
+  // 下面的排除说明里，按词匹配会把说明文字误判成泄露。
+  const credentials = await context.store.read(async (tx) => ({
+    identity: (await tx.findMany('wechatIdentities', { userId: context.session.user.id }))[0],
+    session: (await tx.findMany('sessions', { userId: context.session.user.id }))[0]
+  }))
+  assert.ok(credentials.identity?.openid, 'the fixture must actually have an openid for this check to mean anything')
+  assert.ok(!serialized.includes(credentials.identity.openid),
+    'the WeChat account identifier must not travel in an export file')
+  assert.ok(credentials.session?.tokenHash)
+  assert.ok(!serialized.includes(credentials.session.tokenHash),
+    'session credentials are authentication material, not personal data')
+
+  // 排除项要写明，而不是悄悄省略
+  const excluded = bundle.excludedFields as Array<Record<string, string>>
+  assert.ok(excluded.some((item) => item.field.includes('openid') && item.reason.length > 0))
+
+  // 另一个用户的数据一条都不能出现
+  assert.ok(!serialized.includes('另一个家庭'))
+  assert.ok(!serialized.includes('13700000000'))
+  assert.ok(!serialized.includes(other.user.id))
+
+  // 本人的数据确实在
+  assert.ok(serialized.includes('13800000000'))
+  assert.ok(serialized.includes(order.orderId))
+})
+
+test('export refuses a deleted account and states the AI gap honestly when the agent is off', async () => {
+  const context = await setup()
+  await createSubmitted(context)
+  const exports = new ExportService(context.store, clock)
+
+  // Agent 未启用时，如实标注而不是假装这部分不存在
+  const bundle = await exports.exportForUser(context.session.user.id)
+  const ai = (bundle.data as Record<string, unknown>).aiConversations as Record<string, unknown>
+  assert.equal(ai.exported, false)
+  assert.ok(String(ai.reason).length > 0, 'an un-exported section must say why')
+
+  // 注销之后没有可导出的东西，且要明确区别于"账号不存在"
+  await new AccountService(context.store, clock).deleteAccount(context.session.user.id)
+  await expectCode(exports.exportForUser(context.session.user.id), 'ACCOUNT_DELETED')
+  await expectCode(exports.exportForUser('usr_never_existed'), 'USER_NOT_FOUND')
+})
+
+test('assessments are deleted children-first so no RESTRICT reference is ever violated', () => {
+  const level1 = { id: 'asm_l1', sourceAssessmentId: null }
+  const level2 = { id: 'asm_l2', sourceAssessmentId: 'asm_l1' }
+  const level3 = { id: 'asm_l3', sourceAssessmentId: 'asm_l2' }
+  const loose = { id: 'asm_x', sourceAssessmentId: null }
+  const order = dependencyOrder([level1, loose, level2, level3]).map((item) => item.id)
+  assert.ok(order.indexOf('asm_l3') < order.indexOf('asm_l2'), 'level 3 must go before the level 2 it references')
+  assert.ok(order.indexOf('asm_l2') < order.indexOf('asm_l1'), 'level 2 must go before the level 1 it references')
+  assert.equal(order.length, 4)
+  // 数据里不该有环；真出现时不能死循环，要把剩下的交给数据库报出真实错误。
+  assert.equal(dependencyOrder([{ id: 'a', sourceAssessmentId: 'b' }, { id: 'b', sourceAssessmentId: 'a' }]).length, 2)
+})
+
+test('account deletion never UPDATEs an assessment, because the v005 trigger re-validates on update', async () => {
+  const context = await setup()
+  const { submitted } = await createPaid(context)
+  // 造一条真实的引用链：第二级测评的 sourceAssessmentId 指向第一级。
+  // 没有这条链，"先置空再删"的旧逻辑一次 UPDATE 都不会发出，测试就是空转。
+  const childId = 'asm_level2_child'
+  await context.store.transaction(async (tx) => {
+    const parent = await tx.findById('assessments', submitted.assessmentId)
+    assert.ok(parent)
+    await tx.insert('assessments', { ...parent, id: childId, reportId: null, sourceAssessmentId: parent.id })
+  })
+  const deletedAssessments: string[] = []
+  const updatedTables: string[] = []
+  const spying: Store = {
+    read: (work) => context.store.read(work),
+    transaction: (work) => context.store.transaction((tx) => work({
+      ...tx,
+      findById: tx.findById.bind(tx), findOne: tx.findOne.bind(tx), findMany: tx.findMany.bind(tx),
+      insert: tx.insert.bind(tx),
+      delete: (table, id) => { if (table === 'assessments') deletedAssessments.push(id); return tx.delete(table, id) },
+      update: (table, id, changes) => { updatedTables.push(table); return tx.update(table, id, changes) }
+    } as StoreTransaction))
+  }
+  await new AccountService(spying, clock).deleteAccount(context.session.user.id)
+  // 内存库没有触发器，测不出数据库会拒绝；所以把规则本身钉住：
+  // 注销时 assessments 只能 DELETE。在真实库上 UPDATE 它会撞上
+  // assessments_consent_links_v005_trigger，整个注销事务回滚。
+  assert.ok(!updatedTables.includes('assessments'), `assessments must not be updated during deletion, got: ${updatedTables.join(',')}`)
+  assert.ok(deletedAssessments.indexOf(childId) >= 0 && deletedAssessments.indexOf(childId) < deletedAssessments.indexOf(submitted.assessmentId),
+    `the referencing level 2 must be deleted before its level 1 source, got: ${deletedAssessments.join(',')}`)
 })

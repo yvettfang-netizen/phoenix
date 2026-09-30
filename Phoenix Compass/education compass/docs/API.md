@@ -66,6 +66,8 @@
 - `GET /v1/me/advisor-requests` → `{ "requests": AdvisorRequest[] }`
 - `POST /v1/advisor-requests` → `{ "request": AdvisorRequest }`
 
+学生档案中，`age` 的规范请求值是 3–100 的整数；为了兼容旧小程序，服务端也接受等价的十进制数字字符串，并把空白值归一为 `null`。`educationSystem` 非空时落库为 `GAOKAO`、`DSE`、`IGCSE`、`A_LEVEL`、`AP_US`、`IB` 或 `OTHER`；服务端会将旧版已发布的显示标签归一为这些编码，未知非空值返回 `400 INVALID_PROFILE`。
+
 服务端从Bearer会话解析owner。资源不属于当前家庭时返回403或404；不得接受客户端传入的owner user ID作为授权依据。
 
 ## 4. 测评合同与草稿
@@ -520,7 +522,7 @@ owner可在任何权益状态下执行；204幂等。服务端关闭会话、撤
 
 ### DELETE /v1/agent-conversations/:conversationId/consent
 
-owner撤回专项同意；204幂等。关闭会话、取消/隔离未完成任务，迟到模型结果不得保存或展示。撤回后仍可调用会话DELETE。
+owner撤回专项同意；204幂等。与会话DELETE走同一清理路径：关闭会话、取消/隔离未完成任务并立即清理在线消息正文，迟到模型结果不得保存或展示；同时关闭该学生其他仍活动的 Agent 会话，V0.5 报告还会撤回该学生的 `AI_ANALYSIS` 授权。撤回后仍可调用会话DELETE（幂等）。
 
 ### DELETE /v1/me/ai-analysis-consents/:studentId
 

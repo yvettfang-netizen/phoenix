@@ -5,6 +5,7 @@ const analytics = require('../../services/analytics')
 const educationCompass = require('../../services/education-compass')
 const questionnaireModel = require('../../models/education-compass-questionnaire')
 const reportModel = require('../../models/education-compass-report')
+const educationNavigation = require('../../utils/education-compass-navigation')
 const runtime = require('../../config/runtime')
 const { PRODUCT } = require('../../config/compass')
 
@@ -18,17 +19,6 @@ const RESULT_LABELS = {
   STUDENT_NEEDS_EXPLANATION: '学生可能需要先了解测评用途与退出权利',
   STUDENT_DECLINED: '学生当前不愿参与，应尊重其选择',
   STUDENT_READINESS_UNKNOWN: '学生参与意愿尚未确认'
-}
-
-function codeLabelMap(bank) {
-  return bank.questions.reduce((labels, question) => {
-    ;(question.options || []).forEach((option) => { labels[option.code] = option.label })
-    if (question.matrix) {
-      question.matrix.subjects.forEach((option) => { labels[option.code] = option.label })
-      question.matrix.ranges.forEach((option) => { labels[option.code] = option.label })
-    }
-    return labels
-  }, {})
 }
 
 function displayLine(value, labels) {
@@ -132,7 +122,7 @@ Page({
         let labels = {}
         try {
           const rawBank = await educationCompass.getAssessmentQuestionnaire(this.data.assessmentId)
-          labels = codeLabelMap(questionnaireModel.normalizeQuestionBank(rawBank, { educationSystem: rendered.educationSystem }))
+          labels = questionnaireModel.optionLabelMap(questionnaireModel.normalizeQuestionBank(rawBank, { educationSystem: rendered.educationSystem }))
         } catch (error) {}
         const familySections = rendered.sections.map((section) => sectionView(section, labels))
         const presentation = familyPresentation(familySections)
@@ -171,7 +161,7 @@ Page({
         if (!reportId) {
           try {
             const state = await educationCompass.getState()
-            if (!state.assessmentId || state.assessmentId === this.data.assessmentId) reportId = state.reportId || ''
+            reportId = educationNavigation.reportIdForAssessment(state, this.data.assessmentId)
           } catch (error) {}
         }
         this.setData({ viewKind: 'growth-full', rendered, reportId, product: null, loading: false })
@@ -213,6 +203,8 @@ Page({
       if (order.productCode !== this.data.product.productCode || order.amountFen !== this.data.product.amountFen) {
         throw new Error('订单商品或金额与服务端产品不一致，请勿支付')
       }
+      // “我的”页的本机最近订单只读这份缓存；不记下来，支付很快确认、直接进报告的订单就不会出现在那里。
+      payment.cacheOrder({ ...order, assessmentId: this.data.assessmentId })
       if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(order.status)) {
         this.orderKey = ''
         throw new Error('当前订单已失效，请再次点击创建新订单')
@@ -241,6 +233,7 @@ Page({
   },
 
   goToVerifiedOrder(order, clientOutcome) {
+    payment.cacheOrder({ ...order, assessmentId: this.data.assessmentId })
     if (order.status === 'PAID' && order.reportId) {
       wx.redirectTo({ url: `/pages/report/index?id=${encodeURIComponent(order.reportId)}` })
       return
@@ -278,7 +271,15 @@ Page({
   },
 
   openFreeAnalysis() {
-    if (!this.data.preview || !this.data.assessmentId) return
+    if (!this.data.assessmentId) return
+    if (!runtime.isDemo()) {
+      if (this.data.viewKind !== 'family') return
+      wx.navigateTo({
+        url: `/pages/assessment-analysis/index?mode=free&assessmentId=${encodeURIComponent(this.data.assessmentId)}`
+      })
+      return
+    }
+    if (!this.data.preview) return
     wx.showModal({
       title: '后端联调能力',
       content: '本地演示不会把测评数据发送给外部 AI。切换到已配置的 Phoenix remote API 后，监护人可单独同意并生成免费有限分析。',

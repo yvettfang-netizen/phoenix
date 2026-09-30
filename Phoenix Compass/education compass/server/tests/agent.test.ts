@@ -535,6 +535,49 @@ test('refund removes content access but preserves owner management, consent with
   await context.service.deleteConversation(ownerId, conversationId)
 })
 
+// The chat page's withdrawal confirmation tells families exactly this; keep the two in step.
+test('revoking Agent consent purges conversation text and stops the student\'s other conversations', async () => {
+  const context = await setupAgent()
+  const request = { consentVersion: 'ai_agent_guardian_v1' as const, scope: 'ai_education_agent' as const, guardianConfirmed: true as const }
+  const first = await context.service.createConversation(ownerId, reportId, request, 'create-agent-revoke-purge-0001')
+  const firstId = String(first.conversationId)
+  await context.service.sendMessage(ownerId, firstId, '解释这份报告。', 'message-agent-revoke-purge-0001')
+  const worker = new AgentWorker<FrozenAgentRequest, AgentReplyDto>(
+    context.repository, context.crypto, context.service,
+    { workerId: 'agent-revoke-purge-worker-0001', buildVersion: 'test-v1', batchSize: 2, leaseMs: 60_000, intervalMs: 1000 },
+    clock
+  )
+  assert.equal((await worker.runOnce()).succeeded, 1)
+  // A second purchased report for the same student, with its own open conversation.
+  const otherReportId = 'rpt_agent_report_0002'
+  const otherReport = paidReport({ id: otherReportId, assessmentId: 'asm_agent_second_0002' })
+  await context.store.transaction(async (tx) => {
+    await tx.insert('assessments', submittedAssessment(otherReport))
+    await tx.insert('reports', otherReport)
+    await tx.insert('entitlements', {
+      id: 'ent_agent_paid_0002', userId: ownerId, orderId: 'ord_agent_paid_0002', reportId: otherReportId,
+      productCode: 'COMPASS_REPORT_SINGLE_39_9', status: 'ACTIVE', grantedAt: NOW, revokedAt: null
+    })
+  })
+  const second = await context.service.createConversation(ownerId, otherReportId, request, 'create-agent-revoke-purge-0002')
+  const secondId = String(second.conversationId)
+  assert.notEqual(secondId, firstId)
+
+  await context.service.revokeConsent(ownerId, firstId)
+  const messages = await context.store.read((tx) => tx.findMany('agentMessages', { conversationId: firstId }))
+  assert.equal(messages.length, 2)
+  assert(messages.every((message) => message.contentEnvelope === null), 'withdrawal must purge the conversation text, not keep it for a later delete')
+  type Listed = { conversations: Array<{ conversationId: string; status: string; consentStatus: string; retainedContentCount: number }> }
+  const row = async (id: string) => {
+    const listed = await context.service.listConversations(ownerId, id) as Listed
+    return listed.conversations.map((item) => [item.conversationId, item.status, item.consentStatus, item.retainedContentCount])
+  }
+  assert.deepEqual(await row(reportId), [[firstId, 'CLOSED', 'REVOKED', 0]])
+  assert.deepEqual(await row(otherReportId), [[secondId, 'CLOSED', 'REVOKED', 0]],
+    'the student\'s other open conversation must stop with the withdrawal')
+  await context.service.deleteConversation(ownerId, firstId)
+})
+
 test('idempotency is conflict-safe and three successful replies are cumulative across conversations', async () => {
   const context = await setupAgent()
   const request = {
@@ -976,5 +1019,30 @@ test('HTTP Agent contract uses flat strict consent, returns 202 runs, and extend
     assert.deepEqual(context.provider.calls, { moderation: 2, generation: 2 })
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
+  }
+})
+
+// The mock provider is what the joint-debugging environment runs, so its wording is what
+// testers read. Context items are option codes (ACADEMIC_SUBJECTS, grade_stage：PRIMARY);
+// quoting them made every mock answer show a raw code to the family.
+test('mock provider answers name the module instead of echoing option codes', async () => {
+  const provider = new MockAgentProvider()
+  for (const taskType of ['ASSESSMENT_ANALYSIS', 'REPORT_ANALYSIS', 'REPORT_FOLLOWUP'] as const) {
+    const output = await provider.createReportFollowup({
+      taskType,
+      safetyIdentifier: 'sid_mock_wording',
+      report: {
+        dataAsOf: '2026-09-28', confidence: 'high', disclaimer: '仅供参考',
+        modules: [{
+          key: 'family_concerns', title: '家庭教育关注（家长观察）',
+          summary: '仅解释家长本次选择的结构化关注项。', items: ['ACADEMIC_SUBJECTS', 'grade_stage：PRIMARY']
+        }],
+        sources: [{ alias: 'S1', applicableYear: '2026', verifiedAt: '2026-09-28', dataVersion: 'v1' }]
+      },
+      history: [],
+      message: '解释一下'
+    })
+    assert.equal(/[A-Za-z]+_[A-Za-z_]+/.test(output.draft.answer), false, `${taskType} answer quotes a code: ${output.draft.answer}`)
+    assert.ok(output.draft.answer.includes('家庭教育关注（家长观察）'), output.draft.answer)
   }
 })

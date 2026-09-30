@@ -22,7 +22,7 @@
       <text class="h3">完整报告尚未交付</text>
       <text class="muted">当前结果仍处于锁定或生成状态。页面不会用占位内容冒充六项结果，也不会依据客户端支付回调自行解锁。</text>
       <button class="btn btn--outline report-state__button" bindtap="retry">刷新服务端状态</button>
-      <button wx:if="{{rendered.assessmentId && userRole === 'family_user'}}" class="btn btn--text report-state__button" bindtap="unlock">返回解锁页面</button>
+      <button wx:if="{{userRole === 'family_user'}}" class="btn btn--text report-state__button" bindtap="unlock">返回解锁页面</button>
     </view>
 
     <view wx:else class="page report__body report__body--growth" data-ui-screen="growth-report">
@@ -41,12 +41,11 @@
 
       <view class="growth-context">
         <view><text class="growth-context__label">EDUCATION SYSTEM</text><text class="growth-context__value">{{growthEducationSystem || '未提供'}}</text></view>
-        <view><text class="growth-context__label">SYSTEM ROUTE</text><text class="growth-context__value">{{rendered.systemResultMarker || 'COMMON BANK'}}</text></view>
+        <view><text class="growth-context__label">SYSTEM ROUTE</text><text class="growth-context__value">{{systemRouteLabel || 'COMMON BANK'}}</text></view>
       </view>
 
       <view wx:for="{{growthSections}}" wx:key="key" class="report-section report-section--growth">
         <text class="report-section__number">{{item.number}}</text>
-        <text class="report-section__label">{{item.key}}</text>
         <text class="report-section__title">{{item.title}}</text>
         <view wx:if="{{item.lines.length}}" class="growth-lines">
           <view wx:for="{{item.lines}}" wx:key="*this" class="growth-line"><text class="growth-line__mark">•</text><text>{{item}}</text></view>
@@ -149,7 +148,6 @@
 
       <view wx:for="{{response.full.modules}}" wx:key="key" class="report-section">
         <text class="report-section__number">{{index + 1 < 10 ? '0' : ''}}{{index + 1}}</text>
-        <text class="report-section__label">{{item.key}}</text>
         <text class="report-section__title">{{item.title}}</text>
         <text class="report-section__copy">{{item.summary}}</text>
         <view wx:if="{{item.items.length}}" class="module-items">
