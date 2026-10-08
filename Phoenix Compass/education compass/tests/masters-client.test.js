@@ -77,6 +77,18 @@ async function run() {
   const originalRequest = api.request
   const originalUploadResult = global.__uploadResult
 
+  // The Mini Program runtime's wx.getRandomValues is asynchronous: it returns a Promise and leaves a
+  // caller-supplied array untouched. Keys must still be unique, otherwise every document after the
+  // first one fails with IDEMPOTENCY_KEY_REUSED in devtools and on real devices.
+  const syncFillingStub = global.wx.getRandomValues
+  global.wx.getRandomValues = () => Promise.resolve({ randomValues: new ArrayBuffer(12) })
+  const generatedKeys = new Set()
+  for (let index = 0; index < 500; index += 1) generatedKeys.add(masters.createIdempotencyKey('document'))
+  assert.strictEqual(generatedKeys.size, 500, 'idempotency keys must be unique per call in the Mini Program runtime')
+  assert(![...generatedKeys].some((key) => /_0{24}$/.test(key)), 'idempotency keys must not be the all-zero constant')
+  assert([...generatedKeys].every((key) => /^[A-Za-z0-9._:-]{8,128}$/.test(key)), 'keys must still match the server key format')
+  global.wx.getRandomValues = syncFillingStub
+
   api.setAccessToken('trusted-token')
   api.request = async (path, options = {}) => {
     requestCalls.push({ path, options })
@@ -351,6 +363,29 @@ async function run() {
   assert(materialsWxml.includes('toggleMissingProfile') && materialsWxml.includes('missingEditInstitution'), 'RESUME missing-only editor must have its own stable controls')
   assert(materialsWxml.includes('item.uploadStatusLabel') && materialsWxml.includes('item.parseStatusLabel'), 'document status text must come from normalized labels')
   assert(materialsWxml.indexOf('extraction-review') < materialsWxml.indexOf('materials-section'), 'extraction review must stay near the résumé check')
+
+  // The real server answers a withdrawal with { withdrawn: true } and no consultation body. The status
+  // page must then show 已撤回 from the server instead of falling back to DRAFT, which also kept the
+  // edit and submit buttons on screen for a withdrawn consultation.
+  const requestBeforeWithdraw = api.request
+  let withdrawnOnServer = false
+  api.request = async (path, options = {}) => {
+    if (path === '/v1/masters/consultations/c1/withdraw') { withdrawnOnServer = true; return { withdrawn: true } }
+    if (path === '/v1/masters/consultations/c1') return { consultation: { id: 'c1', profileVersion: 3, status: withdrawnOnServer ? 'WITHDRAWN' : 'SUBMITTED', profile: model.emptyProfile(), documents: [] } }
+    return requestBeforeWithdraw(path, options)
+  }
+  const statusPage = loadPage('../pages/masters-status/index.js')
+  statusPage.onLoad({ id: 'c1' })
+  await statusPage.load()
+  assert.strictEqual(statusPage.data.status, 'SUBMITTED')
+  await new Promise((resolve) => {
+    const originalShowModal = global.wx.showModal
+    global.wx.showModal = (options) => { global.wx.showModal = originalShowModal; Promise.resolve(options.success({ confirm: true })).then(resolve) }
+    statusPage.withdraw()
+  })
+  assert.strictEqual(statusPage.data.status, 'WITHDRAWN', 'after a withdrawal the page must show the server status, not DRAFT')
+  assert.strictEqual(statusPage.data.statusLabel, '已撤回')
+  api.request = requestBeforeWithdraw
 
   masters.clearDraftId('c1')
   config.resetEnabledForTests()
