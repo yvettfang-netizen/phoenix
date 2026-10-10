@@ -24,4 +24,7 @@ export default function MobileMenu() {
       <nav className="mobile-nav" aria-label="手机导航">
         {links.map(([label, href]) => <a href={href} key={href} onClick={closeMenu}>{label}</a>)}
         <a className="mobile-nav-action" href="/#contact" onClick={closeMenu}>预约初步沟通</a>
-      </n
+      </nav>
+    </details>
+  );
+}

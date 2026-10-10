@@ -173,4 +173,7 @@ export const insightArticles: InsightArticle[] = [
 export const publishedInsights = insightArticles.filter(
   (article) =>
     article.status === "published" &&
-    article.all
+    article.allowedBrands.includes("WisWealth") &&
+    (article.ownerBrand !== "Phoenix Nova" ||
+      (article.reuseMode === "brand-adapted" && article.kylinReviewStatus === "passed")),
+);

@@ -32,4 +32,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="zh-CN">
-      <body>{ch
+      <body>{children}</body>
+    </html>
+  );
+}

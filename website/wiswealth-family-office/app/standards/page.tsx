@@ -16,4 +16,6 @@ export default function StandardsPage() {
         </div>
       </section>
       <SiteFooter />
- 
+    </main>
+  );
+}

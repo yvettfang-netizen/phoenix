@@ -32,4 +32,7 @@ export default async function InsightPage({ params }: { params: Promise<{ slug: 
         </div>
       </article>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      
+      <SiteFooter />
+    </main>
+  );
+}

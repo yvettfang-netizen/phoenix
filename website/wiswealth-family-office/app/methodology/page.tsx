@@ -29,4 +29,7 @@ export default function MethodologyPage() {
         <p>路线图记录优先级、关键节点、责任方、所需资料、专业意见与复盘时间，让每一次决定都能够被理解和追踪。</p>
         <a className="button button-gold" href="/#contact">预约初步沟通</a>
       </section>
-      <Si
+      <SiteFooter />
+    </main>
+  );
+}

@@ -25,4 +25,7 @@ export default function AboutPage() {
         <p>智富家办连接身份、教育、健康与财富，但不会替代需要持牌或专业资格的法律、税务、投资、保险及医疗意见。</p>
         <a className="text-link" href="/methodology">了解家庭规划方法 →</a>
       </section>
-      <SiteFo
+      <SiteFooter />
+    </main>
+  );
+}

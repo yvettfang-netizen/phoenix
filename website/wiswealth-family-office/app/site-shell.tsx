@@ -49,4 +49,8 @@ export function PageHero({ eyebrow, title, intro }: { eyebrow: string; title: st
       <div>
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
-       
+        <p>{intro}</p>
+      </div>
+    </section>
+  );
+}

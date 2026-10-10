@@ -16,4 +16,6 @@ export default function InsightsPage() {
         </div>
       </section>
       <SiteFooter />
- 
+    </main>
+  );
+}

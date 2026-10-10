@@ -14,4 +14,5 @@ export const phoenixContentHub = {
   requiredKylinReviewStatus: "Passed",
   requireSlug: true,
   requireReviewer: true,
-  requireVerifiedSourceDate: tr
+  requireVerifiedSourceDate: true,
+} as const;

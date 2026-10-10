@@ -180,4 +180,10 @@ import { writeFile } from "node:fs/promises";
 await writeFile(
   process.argv[2],
   `${JSON.stringify({
-    lockfile_sha
+    lockfile_sha256: process.argv[3],
+    node: process.version,
+    platform: `${process.platform}-${process.arch}`,
+  }, null, 2)}\n`,
+);
+NODE
+echo "[sites] npm ci passed and vinext is available"

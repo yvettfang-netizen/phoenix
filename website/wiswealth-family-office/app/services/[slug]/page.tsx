@@ -31,4 +31,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
       </section>
       <section className="boundary-note"><span>Professional Boundary</span><p>{service.boundary}</p><a href="/standards">查看完整专业边界 →</a></section>
       {related.length > 0 && <section className="related-insights"><p className="editorial-kicker">Related Insights</p><h2>相关洞察</h2><div className="insight-grid">{related.map((article) => <a href={`/insights/${article.slug}`} key={article.slug}><span>{article.pillar}</span><h3>{article.title}</h3><p>{article.summary}</p></a>)}</div></section>}
-      <
+      <SiteFooter />
+    </main>
+  );
+}

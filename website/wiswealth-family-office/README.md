@@ -103,4 +103,5 @@ The timeout defaults can be overridden for a controlled canary with `SITES_INSTA
 
 ## Learn More
 
-- [vinext Documentation](http
+- [vinext Documentation](https://github.com/cloudflare/vinext)
+- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)

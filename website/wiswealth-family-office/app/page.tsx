@@ -119,4 +119,11 @@ export default function Home() {
           <p className="eyebrow">Begin with a Conversation</p>
           <h2>每一个长期方案，<br />都从一次真实沟通开始。</h2>
           <p>第一次沟通的目标不是推介产品，而是理解你的家庭阶段与当前问题，确认我们是否适合继续同行。</p>
-          <a className="button button-gold" href="mailto:info@wwfo.online?subject=�
+          <a className="button button-gold" href="mailto:info@wwfo.online?subject=智富家办初步咨询">预约初步沟通</a>
+        </div>
+      </section>
+
+      <SiteFooter />
+    </main>
+  );
+}
