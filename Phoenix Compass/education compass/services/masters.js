@@ -21,15 +21,15 @@ function unwrap(value) {
   return payload || {}
 }
 
+let keySequence = 0
+
+// wx.getRandomValues is asynchronous in the Mini Program runtime and never fills a
+// caller-supplied array, so it produced an all-zero, constant idempotency key and every
+// document after the first was rejected as IDEMPOTENCY_KEY_REUSED. Keys only need to be
+// unique per user: time + in-process sequence + Math.random.
 function randomPart() {
-  try {
-    if (typeof wx !== 'undefined' && wx.getRandomValues) {
-      const bytes = new Uint8Array(12)
-      wx.getRandomValues(bytes)
-      return Array.prototype.map.call(bytes, (value) => value.toString(16).padStart(2, '0')).join('')
-    }
-  } catch (error) {}
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 14)}`
+  keySequence = (keySequence + 1) % 1679616
+  return `${Date.now().toString(36)}${keySequence.toString(36).padStart(4, '0')}${Math.random().toString(36).slice(2, 12)}`
 }
 
 function createIdempotencyKey(purpose = 'request') {
@@ -470,12 +470,13 @@ function chooseMessageFiles(count = 1) {
 function chooseImages(count = 1) {
   return privacyAuthorize().then(() => new Promise((resolve, reject) => {
     if (wx.chooseMedia) {
-      wx.chooseMedia({ count, mediaType: ['image'], sourceType: ['album', 'camera'],
+      // Without sizeType the picker may hand over a re-encoded JPEG instead of the student's file.
+      wx.chooseMedia({ count, mediaType: ['image'], sourceType: ['album', 'camera'], sizeType: ['original'],
         success: (result) => resolve((result && result.tempFiles) || []), fail: reject })
       return
     }
     if (wx.chooseImage) {
-      wx.chooseImage({ count, sourceType: ['album', 'camera'], success: (result) => resolve((result && result.tempFiles) || []), fail: reject })
+      wx.chooseImage({ count, sizeType: ['original'], sourceType: ['album', 'camera'], success: (result) => resolve((result && result.tempFiles) || []), fail: reject })
       return
     }
     reject(new api.ApiError('当前微信版本不支持图片选择', { code: 'IMAGE_PICKER_UNAVAILABLE' }))
