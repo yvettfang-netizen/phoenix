@@ -139,6 +139,9 @@
 | `POST /v1/masters/consultations/:id/withdraw` | 可选 JSON `{version}` | 撤回咨询、取消未完成处理并撤销附件访问；撤回后状态为 `WITHDRAWN` |
 | `GET /v1/masters/consultations/:id/report` | 可信会话 | 仅本人可取当前资料版本的 `RELEASED` 报告；草稿、待复核、已批准未开放均拒绝 |
 | `GET /v1/masters/consultations/:id/report/export?format=pdf\|xlsx` | 可信会话 | 仅导出当前 `RELEASED`；导出前后比较报告 ID、版本、资料版本和内容 digest，变化则 `REPORT_STALE` |
+| `GET /v1/masters/workbench/status` | 可信会话 | 返回本人工作台角色和状态（无角色时为 `null`），供"工作人员入口"页使用 |
+| `POST /v1/masters/workbench/login-code` | 空 JSON | 仅活动 `masters_staff`；签发 10 位一次性工作台登录码，5 分钟有效 |
+| `POST /v1/masters/workbench/enroll-code` | 空 JSON | 任何已登录用户；签发 10 位一次性申请码，30 分钟有效，交给 Founder 授予角色 |
 
 JSON 详情中的附件至少含 `id`、`consultationId`、canonical `type`、`originalName`、`mimeType`、`sizeBytes`、`profileVersion`、`uploadStatus`、`extractionStatus`、上传/更新/撤除时间；学生响应不含私有 `storageKey`。文件选择在原生端完成后仍须走 `wx.uploadFile`，仅有临时路径不算成功。
 
@@ -146,8 +149,12 @@ JSON 详情中的附件至少含 `id`、`consultationId`、canonical `type`、`o
 
 | 方法和路径 | 请求 | 权限/规则 |
 | --- | --- | --- |
+| `POST /v1/internal/masters/workbench-session` | `{code}`，无 bearer | 用一次性登录码换 8 小时工作台会话；码只能用一次，过期、已用或角色已暂停都拒绝；按来源地址每 10 分钟 30 次限流 |
 | `GET /v1/internal/masters/me` | 可信会话 | 仅活动 `masters_staff` 返回自己的 Masters 角色 |
 | `GET /v1/internal/masters/advisors` | 可信会话 | 活动员工可查看可分配顾问的用户 ID 列表；不返回不必要个人资料 |
+| `GET /v1/internal/masters/staff` | 可信会话 | 仅 Founder；列出全部工作人员及状态 |
+| `POST /v1/internal/masters/staff` | `{enrollCode, role}` | 仅 Founder；用对方的申请码授予或恢复角色（不能给自己授予），申请码只能用一次 |
+| `POST /v1/internal/masters/staff/:userId/suspend` | 空 JSON | 仅 Founder；暂停工作台角色，已签发的登录码随之失效 |
 | `GET /v1/internal/masters/consultations` | 可信会话 | Founder/分配管理员看全量；顾问只看自己的活动分配 |
 | `GET /v1/internal/masters/consultations/:id` | 可信会话 | 按下方权限矩阵返回内部详情和按 canonical 类别分组的材料 |
 | `POST /v1/internal/masters/consultations/:id/assignment` | `Idempotency-Key`；`{advisorUserId,version}` | 仅 Founder/分配管理员；服务端确认目标是活动顾问，改派结束旧分配 |
@@ -162,6 +169,14 @@ JSON 详情中的附件至少含 `id`、`consultationId`、canonical `type`、`o
 | `GET /v1/internal/masters/consultations/:id/report/export?format=pdf\|xlsx` | 可信会话 | 内部也只能导出已开放版本；不绕过审批下载草稿 |
 
 内部报告编辑/复核/决策必须由最终实现补充网络重试下的幂等证据（当前路由明确要求版本和审计，`assignment`/`reports` 已有幂等头）。普通 `admin` 用户角色不等于 `masters_staff` 授权；隐藏按钮不构成权限控制。
+
+### 5.3 工作台登录与授予角色
+
+- 工作人员在小程序"我的申请咨询 → 工作人员入口"生成登录码，在电脑打开 `/internal/masters` 输入登录码进入；网页只在内存保留会话，"退出并作废会话"会调用 `DELETE /v1/auth/session`。原"可信服务端会话"输入框保留为运维备用。
+- 没有角色的人在同一入口生成申请码，私下告诉 Founder；Founder 在工作台"工作人员与角色"里输入申请码、选择角色授予，也可暂停。
+- 第一个 Founder 没有人能授予：在服务器上用对方的申请码运行 `node --env-file=<服务运行环境> server/scripts/masters-grant-first-founder.js --code XXXXX-XXXXX`（先 `npm run build`）。只在还没有活动 Founder 时生效。
+- 授予、恢复、暂停和首个 Founder 引导都写入 `masters_audit_logs`（`consultation_id` 为空；动作 `STAFF_GRANTED`、`STAFF_SUSPENDED`、`STAFF_FOUNDER_BOOTSTRAPPED`，后者没有操作人），记录对象、角色和变更前的角色与状态，不记录任何码。
+- 一次性码保存在 `sessions` 表（id 前缀 `mwc_`），摘要用由 `SESSION_SECRET` 派生的独立密钥计算，因此任何码都不能当作 bearer 会话使用；码字母表去掉 0/O/1/I/L，约 49.5 位随机性，单次使用、限时、换取接口限流。不新增数据表或迁移。
 
 ## 6. 持久化、归属、版本和分类
 
@@ -197,19 +212,20 @@ JSON 详情中的附件至少含 `id`、`consultationId`、canonical `type`、`o
 
 ### 7.2 原生小程序导入和路径
 
-当前实现对应文件为：
+当前实现对应文件为（六个页面在 `app.json` 的 `masters` 分包里，与主包同一版本上传和发布；`pages/home/index`、`pages/mine/index` 会预下载该分包。发布包校验按包计算：主包、每个分包各不超过 1.75 MiB）：
 
-- `pages/masters-intake/index.*`：介绍、`RESUME`/`GUIDED` 两条路径、登录和咨询列表入口。
-- `pages/masters-materials/index.*`：授权、字段保存、七类独立卡片、选择/上传、材料状态和继续流程。
-- `pages/masters-confirm/index.*`：资料核对、冲突和准确性确认。
-- `pages/masters-status/index.*`：提交、缺件、补件和进度。
-- `pages/masters-list/index.*`：本人咨询记录。
-- `pages/masters-report/index.*`：只展示已开放报告/导出。
-- `services/masters.js`、`models/masters-intake.js`、`config/masters.js`：API、卡片模型、上限和 fail-closed 客户端开关。
+- `masters/intake/index.*`：介绍、`RESUME`/`GUIDED` 两条路径、登录和咨询列表入口。
+- `masters/materials/index.*`：授权、字段保存、七类独立卡片、选择/上传、材料状态和继续流程。
+- `masters/confirm/index.*`：资料核对、冲突和准确性确认。
+- `masters/status/index.*`：提交、缺件、补件和进度。
+- `masters/list/index.*`：本人咨询记录。
+- `masters/report/index.*`：只展示已开放报告/导出。
+- `masters/workbench/index.*`：工作人员入口，生成工作台登录码（已有角色）或申请码（尚无角色）。
+- `masters/services/masters.js`、`masters/models/masters-intake.js`（及 `masters-labels.js`、`masters-profile-payload.js`）、`masters/config/masters.js`：API、卡片模型、上限和 fail-closed 客户端开关。它们只供咨询页面使用，放在分包里，不占主包；主包页面不能引用分包模块（发布包校验会检查）。
 
-`services/masters.js` 应在文件选择前调用 `wx.requirePrivacyAuthorize()`；普通文件使用 `wx.chooseMessageFile`，图片提供 `wx.chooseMedia`/`wx.chooseImage` 的相册/拍照入口；上传使用带 bearer 身份和 `Idempotency-Key` 的 `wx.uploadFile`，查看/导出使用带身份的 `wx.downloadFile`。客户端必须从服务端重新加载咨询和文件清单，不能以短期本地路径恢复永久附件。
+`masters/services/masters.js` 应在文件选择前调用 `wx.requirePrivacyAuthorize()`；普通文件使用 `wx.chooseMessageFile`，图片提供 `wx.chooseMedia`/`wx.chooseImage` 的相册/拍照入口；上传使用带 bearer 身份和 `Idempotency-Key` 的 `wx.uploadFile`，查看/导出使用带身份的 `wx.downloadFile`。客户端必须从服务端重新加载咨询和文件清单，不能以短期本地路径恢复永久附件。
 
-六个 Masters 页面已注册在 app.json。导入目录为当前 education compass（原生小程序，不是旧 Next.js 工程）。客户端 config/masters.js 默认关闭；仅在隔离开发副本显式启用 MASTERS_ENABLED，同时在 config/runtime.js 配置获批准的测试 HTTPS 地址并打开 FORCE_REMOTE_IN_DEVELOPMENT。不能用关闭 urlCheck 绕过域名验收。开发工具和真机的隐私授权、文件选择、拍照、上传、下载尚未执行，保持 BLOCKED_EXTERNAL。
+六个 Masters 页面已注册在 app.json。导入目录为当前 education compass（原生小程序，不是旧 Next.js 工程）。客户端 masters/config/masters.js 默认关闭；仅在隔离开发副本显式启用 MASTERS_ENABLED，同时在 config/runtime.js 配置获批准的测试 HTTPS 地址并打开 FORCE_REMOTE_IN_DEVELOPMENT。不能用关闭 urlCheck 绕过域名验收。开发工具和真机的隐私授权、文件选择、拍照、上传、下载尚未执行，保持 BLOCKED_EXTERNAL。
 
 ## 8. 服务授权、隐私和 AI 边界
 
