@@ -137,6 +137,7 @@ function extractionView(item, profile) {
         : Array.isArray(rawValue) ? rawValue.map((value) => labels.studentValue(value)).join('、') : labels.studentValue(rawValue)
   return {
     ...item,
+    key: `${item && item.documentId || ''}:${field}`,
     field,
     label: labels.fieldLabel(field),
     valueLabel,
@@ -168,6 +169,7 @@ Page({
   onLoad(options = {}) {
     this.options = options
     this.routeConsultationId = String(options.id || '')
+    this.startNew = String(options.new || '') === '1'
     const path = config.path(options.path)
     this.setData({
       path, channel: config.channel(options.channel), consultationId: this.routeConsultationId,
@@ -230,14 +232,21 @@ Page({
     try {
       await this.loadUploadConfiguration()
       if (!requestUserId || requestUserId !== sessionUserId()) return
-      const id = this.data.consultationId || masters.draftId()
+      const remembered = !this.data.consultationId && !this.startNew
+      const id = this.data.consultationId || (remembered ? masters.draftId() : '')
       if (!id) {
-        const profile = model.emptyProfile()
-        this.setData({ loading: false, profile, documents: [], ...this.presentation([], profile.educationStatus), extraction: null, extractionFields: [], extractionError: '' })
+        this.showEmptyForm()
         return
       }
       const consultation = await masters.getConsultation(id)
       if (!requestUserId || requestUserId !== sessionUserId()) return
+      // The remembered pointer only resumes an unfinished draft. Submitted, withdrawn or closed
+      // consultations are reopened from 我的咨询 by id, so this entry starts a new one instead.
+      if (remembered && consultation.status !== 'DRAFT') {
+        masters.clearDraftId(id)
+        this.showEmptyForm()
+        return
+      }
       this.applyConsultation(consultation)
       this.loadExtraction()
     } catch (error) {
@@ -250,6 +259,11 @@ Page({
         this.setData({ loading: false, error: errorMessage(error, '咨询草稿暂时无法读取') })
       }
     }
+  },
+
+  showEmptyForm() {
+    const profile = model.emptyProfile()
+    this.setData({ loading: false, profile, documents: [], ...this.presentation([], profile.educationStatus), extraction: null, extractionFields: [], extractionError: '' })
   },
 
   async loadUploadConfiguration() {
@@ -290,7 +304,8 @@ Page({
       ...this.presentation(documents, profile.educationStatus),
       resumeReview: model.buildResumeReview(profile, documents, this.data.extractionFields)
     })
-    if (consultation.id || consultation.consultationId) masters.rememberDraftId(consultation.id || consultation.consultationId)
+    const id = consultation.id || consultation.consultationId
+    if (id && String(consultation.status || 'DRAFT').toUpperCase() === 'DRAFT') masters.rememberDraftId(id)
   },
 
   async loadExtraction() {
@@ -403,8 +418,10 @@ Page({
     const accepted = Array.isArray(detail && detail.value) && detail.value.includes('service')
     this.setData({ serviceConsent: accepted })
     if (!accepted || !this.ensureLoggedIn()) return
-    this.ensureConsultation().catch((error) => {
-      this.setData({ error: errorMessage(error, '咨询草稿创建失败') })
+    return this.ensureConsultation().catch((error) => {
+      // Untick so the student can change 入学年份 (for example after MASTERS_SEASON_CONFLICT) and tick again.
+      this.setData({ serviceConsent: false, error: errorMessage(error, '咨询草稿创建失败') })
+      wx.showToast({ title: errorMessage(error, '咨询草稿创建失败'), icon: 'none' })
     })
   },
 
@@ -610,6 +627,7 @@ Page({
     const requestUserId = sessionUserId()
     const draftProfile = model.normalizeProfile(this.data.profile)
     let documents = this.data.documents.slice()
+    const failures = []
     for (let index = 0; index < selectedFiles.length; index += 1) {
       const selected = selectedFiles[index] || {}
       const path = selected.tempFilePath || selected.path || selected.filePath || ''
@@ -647,11 +665,14 @@ Page({
       } catch (error) {
         if (!requestUserId || requestUserId !== sessionUserId()) return
         documents = documents.map((item) => item.localId === localId ? { ...item, uploadStatus: 'FAILED', uploadError: errorMessage(error, '上传失败') } : item)
-        this.setData({ documents, error: errorMessage(error, '上传失败'), ...this.presentation(documents, this.data.profile.educationStatus), resumeReview: model.buildResumeReview(this.data.profile, documents, this.data.extractionFields) })
+        failures.push(`「${name}」${errorMessage(error, '上传失败')}`)
+        this.setData({ documents, error: failures.join('；'), ...this.presentation(documents, this.data.profile.educationStatus), resumeReview: model.buildResumeReview(this.data.profile, documents, this.data.extractionFields) })
       } finally {
         if (requestUserId && requestUserId === sessionUserId()) this.setData({ pendingUploads: Math.max(0, this.data.pendingUploads - 1) })
       }
     }
+    // The failed card can sit in a collapsed or hidden section, so name every refused file in one dialog.
+    if (failures.length) wx.showModal({ title: '有材料未上传', content: failures.join('\n'), showCancel: false })
   },
 
   retryUpload({ currentTarget }) {
@@ -710,7 +731,10 @@ Page({
     const local = this.data.documents.find((item) => String(item.localId || '') === id && !item.id)
     if (local) {
       const documents = this.data.documents.filter((item) => String(item.localId || '') !== id)
-      this.setData({ documents, pendingUploads: Math.max(0, this.data.pendingUploads - (local.uploadStatus === 'UPLOADING' ? 1 : 0)), ...this.presentation(documents, this.data.profile.educationStatus) })
+      // Keep the page error in step with the failed items that are still listed.
+      const stillFailed = documents.filter((item) => item.uploadStatus === 'FAILED' && !item.id)
+      const error = local.uploadStatus === 'FAILED' ? stillFailed.map((item) => `「${item.name}」${item.uploadError || '上传失败'}`).join('；') : this.data.error
+      this.setData({ documents, error, pendingUploads: Math.max(0, this.data.pendingUploads - (local.uploadStatus === 'UPLOADING' ? 1 : 0)), ...this.presentation(documents, this.data.profile.educationStatus) })
       return
     }
     if (!options.silent) this.setData({ saving: true })
@@ -774,7 +798,7 @@ Page({
       wx.showModal({ title: '还有材料正在上传', content: '请等待上传完成，或撤下待上传项后再继续。', showCancel: false }); return
     }
     if (!(await this.saveProfile())) return
-    wx.navigateTo({ url: `/pages/masters-confirm/index?id=${encodeURIComponent(this.data.consultationId)}` })
+    wx.navigateTo({ url: `/masters/confirm/index?id=${encodeURIComponent(this.data.consultationId)}` })
   },
 
   saveLater() { return this.saveProfile() },
@@ -784,7 +808,7 @@ Page({
   },
 
   onShareAppMessage() {
-    return { title: '香港硕士免费咨询', path: `/pages/masters-intake/index?channel=${encodeURIComponent(config.channel(this.data.channel))}` }
+    return { title: '香港硕士免费咨询', path: `/masters/intake/index?channel=${encodeURIComponent(config.channel(this.data.channel))}` }
   },
 
   back() {
