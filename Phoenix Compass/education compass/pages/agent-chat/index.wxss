@@ -486,7 +486,7 @@
   color: #80520c;
   font-size: 22rpx;
   line-height: 1;
-  margin: 12rpx auto 0;
+  margin: 12rpx 0 0;
   min-height: 72rpx;
   padding: 16rpx 24rpx;
 }
@@ -502,6 +502,12 @@
   box-shadow: 0 14rpx 36rpx rgba(84, 57, 25, .08);
   margin: 0 32rpx;
   padding: 26rpx;
+}
+
+.composer--done {
+  color: #6f6558;
+  font-size: 24rpx;
+  line-height: 1.7;
 }
 
 .composer__input {
@@ -617,7 +623,7 @@
 }
 
 .back-button {
-  margin: 18rpx auto 30rpx;
+  margin: 18rpx 0 30rpx;
 }
 
 .agent-page .btn {

@@ -4,8 +4,10 @@ const assessmentService = require('../../services/assessment')
 const legacyQuestionnaire = require('../../models/questionnaire-schema')
 const educationCompass = require('../../services/education-compass')
 const questionnaireModel = require('../../models/education-compass-questionnaire')
+const educationNavigation = require('../../utils/education-compass-navigation')
 const runtime = require('../../config/runtime')
 const analytics = require('../../services/analytics')
+const draftBuffer = require('../../services/draft-buffer')
 
 const QUESTIONS_PER_STEP = 4
 const UI_SCREENS = Object.freeze({
@@ -165,7 +167,16 @@ Page({
         educationCompass.getState()
       ])
       const draftAnswers = draft.answers || {}
-      const educationSystem = draftAnswers.EGD03 || draftAnswers.education_system || state.educationSystem || ''
+      const requestedStudentId = options.studentId || ''
+      const assessmentStudentId = educationNavigation.studentIdForAssessment(state, options.assessmentId)
+      if (assessmentStudentId && requestedStudentId && assessmentStudentId !== requestedStudentId) {
+        throw new educationNavigation.NavigationContractError('Assessment 与当前 Student ID 不一致，请从家庭中心重新进入')
+      }
+      const selectedState = educationNavigation.selectStudentState(
+        state, assessmentStudentId || requestedStudentId || state.studentId
+      )
+      const educationSystem = draftAnswers.EGD03 || draftAnswers.education_system || draft.educationSystem ||
+        rawBank.educationSystem || rawBank.education_system || selectedState.educationSystem || ''
       const bank = questionnaireModel.normalizeQuestionBank(rawBank, { educationSystem, assessmentKind: draft.assessmentKind })
       this.remoteBank = bank
       this.remoteAnswers = toIdAnswers(bank, toKeyAnswers(bank, draftAnswers))
@@ -173,7 +184,10 @@ Page({
       this.dirty = false
       const level = draft.assessmentKind === educationCompass.ASSESSMENT_KINDS.STUDENT_GROWTH ? 2 : 1
       this.setData({
-        student: { id: options.studentId || state.studentId || '', name: state.studentDisplayName || '学生本人' },
+        student: {
+          id: assessmentStudentId || requestedStudentId || selectedState.studentId || '',
+          name: selectedState.studentDisplayName || '学生本人'
+        },
         assessmentId: options.assessmentId,
         level,
         uiScreen: uiScreen(level),
@@ -181,9 +195,39 @@ Page({
         savedLabel: draft.revision ? `已恢复服务端草稿 · v${draft.revision}` : '尚未填写', loading: false
       })
       this.applyRemoteView(0)
+      this.offerBufferedDraft(options.assessmentId, draft, draftAnswers)
     } catch (error) {
       this.setData({ loading: false, error: error.message || '问卷或草稿加载失败' })
     }
+  },
+
+  /**
+   * 上次有答案没能存进服务端时，问用户要不要接着用本机那份。
+   * 不自动恢复：用户可能已经在别的设备上重填，静默覆盖比丢失更难察觉。
+   */
+  offerBufferedDraft(assessmentId, draft, serverAnswers) {
+    const buffered = draftBuffer.recall(assessmentId)
+    if (!buffered) return
+    // 服务端已经走到更新的版本，说明别处存成功了，本机这份作废。
+    if (Number(draft.revision) > Number(buffered.revision)) return draftBuffer.forget(assessmentId)
+    if (!draftBuffer.hasUnsavedAnswers(buffered, serverAnswers)) return draftBuffer.forget(assessmentId)
+
+    wx.showModal({
+      title: '有未保存的答案',
+      content: '上次填写时网络中断，有部分答案没能保存到服务端。是否恢复这些内容？',
+      confirmText: '恢复',
+      cancelText: '丢弃',
+      success: ({ confirm }) => {
+        if (!confirm) return draftBuffer.forget(assessmentId)
+        const merged = { ...(serverAnswers || {}), ...buffered.answers }
+        this.remoteAnswers = toIdAnswers(this.remoteBank, toKeyAnswers(this.remoteBank, merged))
+        this.dirty = true
+        this.editGeneration = (this.editGeneration || 0) + 1
+        this.applyRemoteView(this.data.stepIndex || 0)
+        this.setData({ savedLabel: '已恢复本机暂存，正在保存到服务端…' })
+        this.saveDraft(true).catch(() => {})
+      }
+    })
   },
 
   async loadLegacy(options) {
@@ -223,7 +267,9 @@ Page({
     const min = Number(presentation.estimatedMinutesMin)
     const max = Number(presentation.estimatedMinutesMax)
     const estimatedMinutesMin = Number.isFinite(min) && min > 0 ? min : defaultMin
-    const estimatedMinutesMax = Number.isFinite(max) && max >= estimatedMinutesMin ? max : defaultMax
+    const estimatedMinutesMax = Number.isFinite(max) && max >= estimatedMinutesMin
+      ? max
+      : Math.max(defaultMax, estimatedMinutesMin)
     const current = steps[stepIndex] || null
     this.setData({
       steps, stepIndex, current, coverage: view.coverage,
@@ -304,6 +350,7 @@ Page({
   },
 
   addMatrixRow({ currentTarget, detail }) {
+    if (this.data.saving || this.data.submitting || this.data.routeReloading) return
     const question = this.remoteBank.questions.find((item) => item.id === currentTarget.dataset.id)
     if (!question || !question.matrix) return
     const indexes = detail.value || []
@@ -323,6 +370,7 @@ Page({
   },
 
   updateMatrixRange({ currentTarget, detail }) {
+    if (this.data.saving || this.data.submitting || this.data.routeReloading) return
     const question = this.remoteBank.questions.find((item) => item.id === currentTarget.dataset.id)
     if (!question || !question.matrix) return
     const rows = Array.isArray(this.remoteAnswers[question.id]) ? this.remoteAnswers[question.id].slice() : []
@@ -335,6 +383,7 @@ Page({
   },
 
   removeMatrixRow({ currentTarget }) {
+    if (this.data.saving || this.data.submitting || this.data.routeReloading) return
     const question = this.remoteBank.questions.find((item) => item.id === currentTarget.dataset.id)
     if (!question) return
     const rows = Array.isArray(this.remoteAnswers[question.id]) ? this.remoteAnswers[question.id].slice() : []
@@ -362,7 +411,7 @@ Page({
 
   async saveDraft(silent) {
     if (!this.data.isV05) return this.saveLegacyDraft(silent)
-    if (!this.dirty && silent) return null
+    if (!this.dirty) return null
     if (this.savePromise) {
       this.saveQueued = true
       await this.savePromise
@@ -389,11 +438,21 @@ Page({
       if (result.clientSaveToken && result.clientSaveToken !== clientSaveToken) return null
       if (Number(result.revision) < Number(this.data.revision)) return null
       if (generation === this.editGeneration) this.dirty = false
+      // 服务端已经收下了，设备上就不该再留一份。
+      draftBuffer.forget(this.data.assessmentId)
       this.setData({ revision: result.revision, savedLabel: `已保存 · v${result.revision}` })
       return result
     } catch (error) {
       const stale = error && error.code === 'DRAFT_REVISION_STALE'
-      this.setData({ savedLabel: stale ? '检测到其他设备的新版本' : '保存失败，请重试' })
+      // 存不进服务端时把答案留在本机，否则用户退出小程序就白填了。
+      // revision 冲突除外：那说明服务端已有更新的版本，留着反而可能覆盖别人的修改。
+      const buffered = !stale && draftBuffer.remember(this.data.assessmentId, {
+        answers, revision, ...(educationSystem ? { educationSystem } : {})
+      })
+      this.setData({
+        savedLabel: stale ? '检测到其他设备的新版本'
+          : buffered ? '未能保存到服务端，已在本机暂存' : '保存失败，请重试'
+      })
       if (!silent && stale) {
         wx.showModal({
           title: '草稿已在其他设备更新',
@@ -412,7 +471,7 @@ Page({
   },
 
   async saveLegacyDraft(silent) {
-    if (!this.dirty && silent) return null
+    if (!this.dirty) return null
     this.setData({ saving: true, savedLabel: '正在保存…' })
     try {
       const result = await assessmentService.saveDraft(this.data.assessmentId, this.data.student.id, this.collectAnswers())
@@ -509,6 +568,8 @@ Page({
       const result = await educationCompass.submitAssessment(this.data.assessmentId, { revision: this.data.revision }, this.submitKey)
       this.submitKey = ''
       this.submitted = true
+      // 提交之后这份问卷不会再编辑，本机暂存没有存在的理由。
+      draftBuffer.forget(this.data.assessmentId)
       wx.redirectTo({
         url: `/pages/compass-preview/index?assessmentId=${encodeURIComponent(result.assessmentId || this.data.assessmentId)}&mode=${this.data.level === 1 ? 'family-snapshot' : 'growth-locked'}`
       })

@@ -1,0 +1,223 @@
+# 运维脚本
+
+这些脚本运行在腾讯云服务器（Ubuntu 24.04，`ubuntu` 用户）和本机 Windows 上，用于部署、数据库迁移、备份和联调。
+仓库里保存的是**服务器上正在运行的版本**，修改后需要重新拷贝到服务器才会生效。
+
+脚本里不包含任何密钥。所有密钥由脚本交互式录入，写进服务器上权限 600 的文件（`server/.env`、`server/.env.uat`、`~/.config/rclone/rclone.conf`），不进仓库。
+
+## 目录
+
+| 目录 | 内容 | 部署位置 |
+| --- | --- | --- |
+| `server/` | 服务器脚本 | `/home/ubuntu/`，权限 700 |
+| `systemd/` | 生产服务单元 | `/etc/systemd/system/` |
+| `nginx/` | 对外 HTTPS 站点与证书续期钩子 | `/etc/nginx/sites-available/`、`/etc/letsencrypt/renewal-hooks/deploy/` |
+| `windows/` | 本机开发脚本 | 任意位置，双击运行 |
+
+脚本中的绝对路径假设：项目位于 `/home/ubuntu/education-compass/Phoenix Compass/education compass`，
+Node 24 位于 `/home/ubuntu/.nvm/versions/node/v24.20.0/bin/node`（主机默认的 Node 18 不满足项目要求）。
+
+## 服务器上的代码目录
+
+Education Compass 有**自己的 git worktree**：
+
+| 路径 | 内容 | 分支 |
+| --- | --- | --- |
+| `/home/ubuntu/phoenix` | 主工作区，askwise / Identity Compass / Wealth Compass 从这里运行 | 各自部署分支 |
+| `/home/ubuntu/education-compass` | 本项目，稀疏检出只含 `Phoenix Compass/education compass` | 本项目部署分支 |
+
+两者共享同一个对象库（`.git` 98M 不重复），但各自持有分支。**这是 2026-09-23 从单检出改过来的**：
+在那之前四个项目共用一个检出，部署 Education Compass 需要切分支，会同时改写另外三个项目正在运行的文件，
+`update-education-compass.sh` 因此有一道 `--switch` 确认。现在切分支只影响本项目，那道确认已经去掉。
+
+新建方式（仅供重建时参考）：
+
+```bash
+cd /home/ubuntu/phoenix
+git worktree add --no-checkout /home/ubuntu/education-compass <分支>
+cd /home/ubuntu/education-compass
+git sparse-checkout init --cone
+git sparse-checkout set "Phoenix Compass/education compass"
+git checkout
+```
+
+`server/.env` 与 `server/.env.uat` 不在 git 里，重建后需要从备份复制（权限 600）。
+改配置的脚本会在同目录留下 `.env.bak-<时间>` / `.env.uat.bak-<时间>` 回滚点，同样被 `.gitignore` 的 `.env.*` 忽略，
+不影响部署脚本的"工作区干净"检查。
+
+主工作区 `/home/ubuntu/phoenix` 里的 education compass 目录**不再存放任何密钥文件**（2026-09-28 清理：
+两份重复的 `.env` 已删除，5 个回滚备份已并入本项目 worktree）。那里只剩 git 跟踪的 `.env.example` 模板。
+
+## server/
+
+| 脚本 | 作用 | 何时运行 |
+| --- | --- | --- |
+| `update-education-compass.sh <分支>` | 把服务器代码快进到指定分支；后端有改动时跑测试、构建、重启联调后端与 AI 处理进程，测试不过就不构建、不重启 | 每次部署 |
+| `apply-migrations.sh [库名]` | 以数据库管理员身份应用未执行的迁移并登记到 `schema_migrations`，校验和与 `server/scripts/migrate.js` 一致，可重复运行 | 新增迁移后（默认 `phoenix_uat`） |
+| `backup-databases.sh` | 备份 `compass` 和 `phoenix_uat`，校验备份可读，保留 14 天，日志写入 `~/backups/db/backup.log` | 每天 03:30（cron） |
+| `sync-backups-to-cos.sh` | 把备份上传到腾讯云 COS，云端保留 30 天，日志写入 `~/backups/db/cos-sync.log` | 每天 04:10（cron） |
+| `set-cos-backup.sh` | 一次性配置 COS：录入桶名、地域、SecretId/SecretKey（隐藏输入），验证读写权限后写入 rclone 配置并加定时任务 | 更换备份桶或密钥时 |
+| `check-cos-access.sh` | 用已保存的凭据复测 COS 读写权限，并解释失败原因 | COS 上传失败时排查 |
+| `set-uat-wechat-secret.sh` | 录入小程序 AppSecret（隐藏输入），让联调环境改用真实微信登录并重启 | 更换 AppSecret 时 |
+| `set-uat-deepseek-key.sh` | 录入 DeepSeek API Key（隐藏输入），验证余额、应用迁移 006、切换联调 AI 供应商并重启 | 启用 DeepSeek 时 |
+| `set-wechat-pay.sh --check` | 只读体检生产 `server/.env` 的微信支付配置：格式、密钥文件权限与位数、回调地址同源 | 随时 |
+| `set-wechat-pay.sh --base-url … --key … --pub … [--cert …]` | 录入商户号、证书序列号、APIv3 密钥、公钥 ID（隐藏输入），核对私钥与证书配套，把 PEM 装到 `/etc/phoenix/wechatpay`，写好两个回调地址 | 拿到商户凭据后 |
+| `setup-postgres-tls.sh` | 生成私有 CA 和服务端证书（各 10 年），让 PostgreSQL 支持 `sslmode=verify-full` | 首次配置或轮换 CA 时 |
+| `setup-postgres-tls.sh --check` | 体检证书、`ssl_cert_file`、客户端 CA 副本和已强制 TLS 的库 | 随时 |
+| `setup-postgres-tls.sh --enforce <库名>…` | 对指定库加 `hostnossl reject` + `hostssl`，拒绝明文连接 | 目标库的连接串都改好之后 |
+| `set-feishu-alert.sh` | 配置飞书群机器人告警：录入 webhook 与 secret（隐藏输入），发测试消息，**成功后**才安装下面两个定时任务 | 首次配置、更换机器人时 |
+| `set-feishu-alert.sh --test` | 用已保存的配置再发一条测试消息 | 怀疑告警失灵时 |
+| `health-check.sh` | 检查联调后端、公网入口、生产后端（启用后自动纳入），以及进程是否反复崩溃；只在状态变化时通知 | 每 2 分钟（cron） |
+| `daily-check.sh` | 检查今天的备份、异地同步、nginx 实际使用的证书剩余天数、磁盘，汇总 24 小时重启次数；**正常也发一条** | 每天 05:00（cron） |
+| `phoenix-alert-notify.mjs` | 上面三个脚本共用的飞书发送器（签名、错误码翻译） | 被调用 |
+| `phoenix_uat_start.sh` | pm2 进程 `phoenix_uat_api` 的启动脚本：加载 `.env.uat`，仅监听 127.0.0.1，固定 Node 24 | 由 pm2 调用 |
+| `phoenix_uat_agent_worker_start.sh` | pm2 进程 `phoenix_uat_agent_worker` 的启动脚本 | 由 pm2 调用 |
+
+服务器上的定时任务：
+
+```cron
+30 3 * * * /home/ubuntu/backup-databases.sh >/dev/null 2>&1
+10 4 * * * /home/ubuntu/sync-backups-to-cos.sh >/dev/null 2>&1
+*/2 * * * * /home/ubuntu/health-check.sh >/dev/null 2>&1      # 由 set-feishu-alert.sh 安装
+0 5 * * * /home/ubuntu/daily-check.sh >/dev/null 2>&1         # 由 set-feishu-alert.sh 安装
+```
+
+## systemd/
+
+生产环境的两个服务，目前都是 `inactive/disabled`，等 HTTPS 域名、微信与支付凭据、verified 来源目录就绪后再启用：
+
+- `education-compass.service`：后端 API，`NODE_ENV=production`，仅监听 `127.0.0.1:3100`，由 nginx 反向代理。
+- `education-compass-agent-worker.service`：AI 任务处理进程，与 API 同源同配置。启用 AI 时才需要。
+
+安装后执行 `sudo systemctl daemon-reload`；启用为 `sudo systemctl enable --now <服务名>`。
+
+联调环境不使用 systemd，由 pm2 管理，且已配置开机自启（`pm2-ubuntu` 服务 + `pm2 save`）。
+
+## nginx/
+
+`education-compass-api.conf`：`api.phoenixnova.com.cn` 的 80/443 站点。80 端口只保留 ACME 校验路径和
+301 跳转；443 用 Let's Encrypt 证书，反代到后端，带限流、请求体上限、HSTS，并屏蔽 `/v1/admin/`。
+另有一个 `default_server` 块，用 IP 或未知域名访问 443 时直接 `return 444`，不暴露接口。
+
+**当前 443 反代的是联调后端 `127.0.0.1:3010`**（development 模式、模拟支付）。生产后端
+`127.0.0.1:3100` 尚未通过启动闸门，切换时改 `proxy_pass` 端口并同步 `server/.env` 的 `PUBLIC_BASE_URL`。
+
+```bash
+sudo cp education-compass-api.conf /etc/nginx/sites-available/education-compass-api
+sudo ln -sfn /etc/nginx/sites-available/education-compass-api /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+`renewal-hook-reload-nginx.sh`：certbot 续期成功后重载 nginx。**没有它，续下来的新证书不会生效**，
+nginx 会一直用内存里的旧证书直到下次手动 reload。安装：
+
+```bash
+sudo install -m 700 -o root -g root renewal-hook-reload-nginx.sh /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+```
+
+证书用 webroot 方式签发，webroot 为 `/var/www/letsencrypt`，续期由 `certbot.timer` 每天检查两次，
+到期前 30 天自动续。验证：`sudo certbot renew --dry-run`。
+
+## windows/
+
+`phoenix-uat-tunnel.cmd`：建立 SSH 隧道，把本机 `127.0.0.1:3000` 转发到服务器的联调后端 `127.0.0.1:3010`，断线自动重连。
+微信开发者工具的开发版产物只允许访问 `127.0.0.1`，因此本机联调必须先运行它，保持窗口打开。
+
+## 数据库 TLS
+
+`server/src/config.ts` 在 production 下强制要求 `DATABASE_URL` 显式带 `sslmode=verify-full`。这台实例同时跑
+`compass`、`phoenix_uat` 和 `phoenix_core`，**`pg_hba.conf` 是四个项目共用的**，所以强制规则按库下，
+不能改全局的 `host all all`。
+
+证书由私有 CA 签发，均为 10 年期：
+
+| 文件 | 位置 | 权限 |
+| --- | --- | --- |
+| CA 私钥 | `/etc/postgresql/16/main/ssl/phoenix-db-ca.key` | 600 postgres |
+| CA 证书 | `/etc/postgresql/16/main/ssl/phoenix-db-ca.crt` | 644 postgres |
+| 服务端私钥/证书 | `/etc/postgresql/16/main/ssl/server.{key,crt}` | 600 / 644 postgres |
+| 客户端读的 CA 副本 | `/etc/phoenix/pgtls/ca.crt` | 644 root |
+
+服务端证书的 SAN 同时覆盖 `DNS:localhost`、`IP:127.0.0.1` 和 `IP:::1`——`verify-full` 校验的是连接串里
+写的那个主机名，生产用 `localhost`、联调用 `127.0.0.1`，两种写法都要能过。
+
+连接串追加两个参数（`&` 见下方注意事项）：
+
+```
+?sslmode=verify-full&sslrootcert=/etc/phoenix/pgtls/ca.crt
+```
+
+**注意：`.env` 里的值不要用 `source` 加载。** 连接串含 `&`，bash 会把它当成后台执行符，
+变量只剩前半截，服务端启动时报 `AppError` 却看不到原因（启动失败只打印 `error.name`）。
+pm2 启动脚本和生产 systemd 单元统一用 `node --env-file=`。
+
+顺序很重要：**先把目标库的连接串都改成 TLS 并重启，再 `--enforce`**。反过来会直接打断正在跑的服务。
+
+备份不受影响：`backup-databases.sh` 用 `sudo -u postgres pg_dump` 走本地 socket，`hostssl` 只管 TCP 连接。
+
+## 告警
+
+通知发到飞书群的自定义机器人。配置存在 `~/.config/phoenix-alert/feishu.env`（600），
+状态与日志在 `~/.local/state/phoenix-alert/`。
+
+| 触发条件 | 何时通知 |
+| --- | --- |
+| 联调后端、公网入口、生产后端（启用后）健康检查失败 | 连续 2 次（约 2–4 分钟）后报一次；恢复时再报一次；持续故障期间不重复 |
+| 进程 2 分钟内重启 ≥ 3 次（崩溃循环） | 立即。部署只让每个进程重启 1 次，不会误报 |
+| 今天缺备份、异地同步没成功、证书剩不到 20 天、磁盘 ≥ 85% | 每天 05:00 汇总 |
+| 一切正常 | 每天 05:00 发「巡检正常」 |
+
+**每天那条「巡检正常」是有意的。**告警系统最危险的故障是它自己坏了——cron 停了、机器人被删、
+签名失效——而这时"没有消息"和"一切正常"看起来一模一样。固定每天一条，哪天没收到就说明是告警本身出了问题，
+用 `~/set-feishu-alert.sh --test` 排查。
+
+证书检查读的是 nginx **正在对外提供**的那张，不是磁盘上的文件，所以"续期成功但 nginx 没重载"也能发现。
+
+局限：公网检查是从服务器自己访问自己的域名，能发现 nginx、证书、DNS 的问题，
+但发现不了**安全组被关掉**这类只有外部才看得到的故障。要覆盖这一点需要一个外部探测点。
+
+所有检查脚本都支持 `PHOENIX_ALERT_DRY_RUN=1`：只打印将要发送的内容，不真正发送，
+配合 `PHOENIX_ALERT_STATE_DIR` 指向临时目录，可以安全地演练各种故障。
+
+## 部署流程
+
+```bash
+# 本机：推送到 GitHub（走 PR）和服务器（走 SSH，国内访问 GitHub 不稳定时更可靠）
+git push fork <分支>
+git push tencent <分支>
+
+# 服务器：快进到指定分支，必要时测试、构建并重启
+ssh phoenix-tencent '~/update-education-compass.sh <分支>'
+```
+
+分支必须显式写出。脚本作用于本项目专属的 worktree（见上文「服务器上的代码目录」），切换分支不影响其他项目：
+
+- 指定分支与当前检出分支相同 → 直接快进。
+- 当前分支已包含目标分支的全部提交 → 提示无需切换并退出。
+- 两者确实不同 → 直接切换；但工作区有未提交改动时拒绝，避免悄悄冲掉。
+- 不带参数运行 → 打印用法和本机已推送过来的分支列表。
+
+## 备份与恢复
+
+备份为 PostgreSQL 自定义格式（`pg_dump -Fc`），含个人数据，目录与文件均为属主可读（700/600）。
+
+```bash
+# 查看最近结果
+ssh phoenix-tencent 'tail -4 ~/backups/db/backup.log; tail -2 ~/backups/db/cos-sync.log'
+
+# 从本地备份恢复到临时库核对
+sudo -u postgres createdb restore_check
+cat ~/backups/db/phoenix_uat-<时间戳>.dump | sudo -u postgres pg_restore -d restore_check --no-owner --no-privileges
+sudo -u postgres psql -d restore_check -c 'select count(*) from users'
+sudo -u postgres dropdb restore_check
+
+# 从云端取回某个备份
+rclone copy "cos:$(cat ~/.config/phoenix-cos-bucket)/db/<文件名>" /tmp
+```
+
+保留策略分三层，周期错开，正常情况下只有脚本在清理：本地 14 天、云端 30 天、存储桶生命周期规则 60 天（兜底）。
+
+## 已知前提
+
+- COS 备份账号是仅能访问该存储桶的 CAM 子用户，没有创建存储桶的权限，因此 rclone 配置必须保留 `no_check_bucket = true`，否则上传前的建桶探测会被拒绝（403）。
+- 联调库 `phoenix_uat` 的表属于数据库管理员，应用账号只有数据读写权限，因此迁移要用 `apply-migrations.sh`；生产库 `compass` 的表属于应用账号，可直接用 `npm --prefix server run db:migrate`。

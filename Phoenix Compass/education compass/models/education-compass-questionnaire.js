@@ -200,7 +200,9 @@ function presentationMeta(raw, questions, assessmentKind) {
   const providedMin = Number(source.estimatedMinutesMin === undefined ? source.estimated_minutes_min : source.estimatedMinutesMin)
   const providedMax = Number(source.estimatedMinutesMax === undefined ? source.estimated_minutes_max : source.estimatedMinutesMax)
   const estimatedMinutesMin = Number.isFinite(providedMin) && providedMin > 0 ? providedMin : defaultMin
-  const estimatedMinutesMax = Number.isFinite(providedMax) && providedMax >= estimatedMinutesMin ? providedMax : defaultMax
+  const estimatedMinutesMax = Number.isFinite(providedMax) && providedMax >= estimatedMinutesMin
+    ? providedMax
+    : Math.max(defaultMax, estimatedMinutesMin)
   const copyValue = (camelKey, snakeKey) => {
     const candidate = source[camelKey] === undefined ? source[snakeKey] : source[camelKey]
     return typeof candidate === 'string' && candidate.trim() ? candidate.trim() : copyFallbacks[camelKey]
@@ -266,6 +268,18 @@ function normalizeQuestionBank(result, context = {}) {
     questions,
     questionByKey: questions.reduce((map, question) => { map[question.key] = question; return map }, {})
   }
+}
+
+// 结果与报告里的答案都是选项 code，展示给家庭时要换回题库原文。
+function optionLabelMap(bank) {
+  return bank.questions.reduce((labels, question) => {
+    ;(question.options || []).forEach((option) => { labels[option.code] = option.label })
+    if (question.matrix) {
+      question.matrix.subjects.forEach((option) => { labels[option.code] = option.label })
+      question.matrix.ranges.forEach((option) => { labels[option.code] = option.label })
+    }
+    return labels
+  }, {})
 }
 
 function isEmpty(value) {
@@ -418,6 +432,7 @@ module.exports = {
   buildViewModel,
   isEmpty,
   normalizeQuestionBank,
+  optionLabelMap,
   switchEducationSystem,
   validateAnswers,
   validateQuestion
