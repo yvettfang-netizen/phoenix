@@ -25,7 +25,7 @@
 | `unionid` | `wechat_identities` | 同一微信开放平台主体下的用户标识，可选 |
 | `token_hash` | `sessions` | 会话凭据的哈希，不存明文 |
 
-服务端调用微信 `code2Session` 换取 openid，**不保留 `session_key`**（`server/src/auth/wechat-auth-provider.ts` 只取 openid 与 unionid）。
+服务端调用微信 `code2Session` 换取 openid，**不保留 `session_key`**。登录只存 openid 与 unionid；虚拟支付时客户端再传一个新的登录 code，服务端用换到的 `session_key` 计算这一次的用户态签名后即丢弃，不写库、不写日志（`server/src/services/auth-service.ts` 的 `payerSession`）。
 不收集微信昵称、头像、手机号授权。
 
 ### 2.2 家长（`families`）
@@ -66,8 +66,8 @@
 
 ### 2.5 交易与权益
 
-`orders`、`entitlements`、`payment_events`、`refunds` 保存订单号、金额（固定 3990 分）、支付状态、
-第三方交易号与回调摘要。**不保存银行卡号、支付密码或任何支付凭据**。
+`orders`、`entitlements`、`payment_events`、`refunds` 保存订单号（含同一订单历次支付尝试的单号）、金额（固定 3990 分）、支付状态、
+第三方交易号与推送摘要。**不保存银行卡号、支付密码或任何支付凭据**。虚拟支付的投诉推送只记投诉单号，不存投诉正文。
 
 ### 2.6 报告与衍生内容
 
@@ -102,7 +102,7 @@ AI 对话正文在入库前用 `AI_CONTENT_KEYRING_JSON` 的密钥加密（`serv
 
 | 接收方 | 发出的内容 | 当前状态 |
 | --- | --- | --- |
-| **微信**（腾讯） | 登录 code 换取 openid；支付时的订单号与金额 | 登录已启用 |
+| **微信**（腾讯） | 登录 code 换取 openid；虚拟支付时的 openid、订单号、道具 ID、金额和我方订单 ID（作为透传字段 attach）；iOS 上由微信转交 Apple 支付 | 登录已启用；虚拟支付已签约，未开放收款 |
 | **AI 服务商**（OpenAI 或 DeepSeek） | 见下方 3.3 | **未启用**，`AGENT_PROVIDER=mock` |
 | **飞书多维表格** | 见下方 3.4 | **未启用**，`FEISHU_BITABLE_ENABLED=false` |
 | **腾讯云 COS** | 数据库备份（含全部个人信息） | 已启用 |
@@ -145,9 +145,36 @@ AI 对话保留期：`AI_CONVERSATION_RETENTION_DAYS`，默认 **30 天**（可�
 | 删除某次 AI 对话 | `DELETE /v1/agent-conversations/{id}` |
 | 关闭顾问联系同意 | `PUT /v1/me/integration-consents/advisor-contact`，`enabled: false`（**不是删除接口**） |
 | 关闭飞书资料镜像同意 | `PUT /v1/me/integration-consents/feishu-profile` |
+| 删除一个孩子档案（见 4.2a） | `DELETE /v1/me/students/{studentId}`，请求体 `{"confirm":"DELETE_STUDENT"}` |
+| 删除一份问卷（见 4.2b） | `DELETE /v1/assessments/{assessmentId}` |
+| 清空一份草稿的答案 | `PUT /v1/assessments/{assessmentId}/draft`，`answers: {}` |
 
-> 核对：服务端全部 DELETE 路由共 6 条（含下方的账号注销），见 `server/src/http/app.ts`
+家庭档案只能修改，不能单独删除；要删除家庭档案只能整号注销。
+
+> 核对：服务端全部 DELETE 路由共 8 条（含下方的账号注销），见 `server/src/http/app.ts`
 > 与 `server/src/http/agent-routes.ts`。
+
+### 4.2a 删除一个孩子档案（2026-10-14 定）
+
+小程序「我的 → 孩子档案」提供入口，两步确认。有支付或退款正在进行时拒绝，等结果出来。
+
+- **没买过报告的孩子**：学生资料、全部问卷与答案、结果与报告、该孩子的监护人同意与各项授权、AI 对话、
+  第三方镜像链接全部删除。
+- **买过报告的孩子**：按"已购报告和订单留存到历史订单记录中"的决定，孩子档案只标记删除（`students.deleted_at`），
+  学生资料行、已购报告、它所依据的问卷与答案、该孩子的同意记录**保留**，已购报告仍可从「我的 → 历史订单」打开；
+  其余问卷、结果和未购买的报告删除。这个孩子不再出现在任何列表里，也不能再开始问卷或下单。
+  之后某份购买退款成功，那份就不再算"已买过"，它的问卷和报告随即删除；最后一份退完，孩子和其余资料一起删除。
+- 订单、权益、支付事件、退款记录与整号注销一样保留，只和被删的问卷、报告脱钩。
+- **飞书运营镜像**：删除时撤回这个孩子的镜像同意并阻断同步，此后不再投影这个孩子的资料、问卷、报告、反馈和顾问申请
+  （订单作为财务记录仍可镜像）。同步不会删除远端已有的记录，有远端记录时写审计 `FEISHU_REMOTE_MINIMIZATION_REVIEW_REQUIRED`
+  （`reason: STUDENT_DELETED`），由运营按人工最小化流程处理，与撤回镜像同意相同。
+- 审计记录 `STUDENT_DELETED`、`STUDENT_DELETION_CONTINUED`（退款后继续删除）只记录删除方式、保留的已购报告数和各表删除行数。
+
+### 4.2b 删除一份问卷（2026-10-14 定）
+
+小程序「我的 → 孩子档案 → 问卷记录」提供入口。能删的只有：草稿；已提交但报告从未买过的学生问卷（连同锁定的报告）。
+已出免费结果的家长问卷不能删（可以重新测评，旧的留在问卷记录里）；买过的（含已退款的）和支付进行中的不能删。
+审计记录 `ASSESSMENT_DELETED` 只记录问卷类型、状态和各表删除行数。
 
 ### 4.2 账号注销（2026-09-23 起可用）
 
@@ -186,7 +213,8 @@ AI 对话与消息、报告反馈、顾问申请、时间线、第三方镜像�
 
 ### 4.4 ⚠ 仍然**没有**的能力
 
-- 撤回同意会阻止后续使用，但**不删除已有记录**（要删除需走账号注销）。
+- 撤回同意会阻止后续使用，但**不删除已有记录**（要删除需删除孩子档案、删除问卷或整号注销）。
+- 已出免费结果的家长问卷、买过报告的问卷，以及买过报告的孩子的已购部分，用户不能单独删除，只能整号注销。
 
 ### 4.5 备份中的残留
 

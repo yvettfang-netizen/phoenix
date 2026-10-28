@@ -2,6 +2,7 @@ import { AppError, invariant } from '../domain/errors'
 import { TableName } from '../domain/model'
 import { Store, StoreTransaction } from '../store/store'
 import { Clock, IdFactory, iso, randomId, systemClock } from '../utils/runtime'
+import { dependencyOrder, PersonalDataRemoval, removeUnpurchasedStudentData } from './personal-data-removal'
 
 /**
  * 账号注销。
@@ -28,22 +29,16 @@ export interface AccountDeletionReceipt {
   retainedOrders: number
 }
 
-/**
- * 把测评排成可以逐条删除的顺序：被别的测评引用的排在后面。
- * 引用链可能不止两级，所以一轮一轮剥：每轮取出当前没有被剩余测评引用的。
- */
-export function dependencyOrder<T extends { id: string; sourceAssessmentId?: string | null }>(items: T[]): T[] {
-  const remaining = [...items]
-  const ordered: T[] = []
-  while (remaining.length) {
-    const referenced = new Set(remaining.map((item) => item.sourceAssessmentId).filter(Boolean))
-    const leaves = remaining.filter((item) => !referenced.has(item.id))
-    // 有环（数据本身不该出现）时不死循环：剩下的原样追加，让数据库的约束报出真实错误。
-    if (!leaves.length) return ordered.concat(remaining)
-    ordered.push(...leaves)
-    for (const leaf of leaves) remaining.splice(remaining.indexOf(leaf), 1)
-  }
-  return ordered
+export { dependencyOrder }
+
+/** 删除一个孩子档案的回执，只含数量。 */
+export interface StudentDeletionReceipt {
+  studentId: string
+  deletedAt: string
+  /** HARD：孩子和他的资料全部删除；RETAINED_PURCHASES：买过报告，孩子行标记删除，已购报告和订单保留。 */
+  mode: 'HARD' | 'RETAINED_PURCHASES'
+  retainedReports: number
+  deletedRows: Readonly<Record<string, number>>
 }
 
 export class AccountService {
@@ -80,7 +75,10 @@ export class AccountService {
       // 1. 先让财务记录与个人数据脱钩，否则下面的删除会撞上 ON DELETE RESTRICT。
       for (const order of orders) {
         await tx.update('orders', order.id, {
-          familyId: null, studentId: null, assessmentId: null, reportId: null
+          familyId: null, studentId: null, assessmentId: null, reportId: null,
+          // 还没签过支付的订单不可能再收到付款，直接关掉，免得永远停在 CREATED。
+          // 已签过支付的（PENDING）可能还有付款在路上，保持原状。
+          ...(order.status === 'CREATED' ? { status: 'CANCELLED' as const, updatedAt: now } : {})
         })
       }
       for (const entitlement of entitlements) {
@@ -147,6 +145,82 @@ export class AccountService {
 
       return { deletedAt: now, deletedRows: counts, retainedOrders: orders.length }
     })
+  }
+
+  /**
+   * 删除一个孩子档案（家庭档案本身不能删，只能整号注销）。
+   *
+   * 规则（2026-10-14 定）：已经买过的报告和订单保留在历史订单里。所以买过报告的孩子只把档案标记
+   * 为已删除：已购报告、它所依据的问卷和同意记录原样保留，仍可从订单打开；其余问卷、结果和未购买
+   * 的报告删除。没买过报告的孩子连同全部资料直接删除。有支付或退款正在进行时拒绝，等结果出来。
+   */
+  async deleteStudent(userId: string, studentId: string): Promise<StudentDeletionReceipt> {
+    return this.store.transaction(async (tx) => {
+      const student = await tx.findById('students', studentId, { forUpdate: true })
+      invariant(student && !student.deletedAt, 404, 'STUDENT_NOT_FOUND', '孩子档案不存在')
+      const family = await tx.findById('families', student.familyId)
+      invariant(family?.userId === userId, 403, 'STUDENT_FORBIDDEN', '无权删除该孩子档案')
+
+      const now = iso(this.clock)
+      const orders = await tx.findMany('orders', { userId, studentId })
+      invariant(!orders.some((order) => order.status === 'PENDING' || order.status === 'REFUNDING'), 409,
+        'STUDENT_PAYMENT_IN_PROGRESS', '这个孩子有正在进行的支付或退款，处理完成后再删除')
+
+      // 飞书运营镜像：按撤回镜像同意的方式停掉——撤回这个孩子的镜像同意、阻断他的同步；
+      // 同步不会删除远端已有的记录，所以有远端记录时记一条审计，交给运营走人工最小化流程。
+      const assessments = await tx.findMany('assessments', { userId, studentId })
+      const studentReports = await tx.findMany('reports', { userId, studentId })
+      const remoteRecords = await this.stopFeishuMirror(tx, userId, family.id, studentId,
+        [studentId, ...assessments.map((item) => item.id), ...studentReports.map((item) => item.id)], now)
+      if (remoteRecords > 0) {
+        await tx.insert('auditLogs', {
+          id: this.ids('aud'), actorUserId: userId, action: 'FEISHU_REMOTE_MINIMIZATION_REVIEW_REQUIRED',
+          entityType: 'student', entityId: studentId,
+          metadata: { reason: 'STUDENT_DELETED', remoteRecordCount: remoteRecords, sopStatus: 'BLOCKED_EXTERNAL_PRIVACY_APPROVAL' },
+          createdAt: now
+        })
+      }
+
+      const removal = new PersonalDataRemoval(tx, now)
+      const outcome = await removeUnpurchasedStudentData(tx, removal, userId, studentId)
+      // 已购报告的访问要检查它的同意记录，所以买过报告的孩子保留全部同意记录，只标记删除。
+      if (outcome.mode === 'RETAINED_PURCHASES') await tx.update('students', studentId, { deletedAt: now, updatedAt: now })
+
+      const receipt: StudentDeletionReceipt = {
+        studentId, deletedAt: now, mode: outcome.mode, retainedReports: outcome.retainedReports, deletedRows: removal.counts
+      }
+      await tx.insert('auditLogs', {
+        id: this.ids('aud'), actorUserId: userId, action: 'STUDENT_DELETED', entityType: 'students', entityId: studentId,
+        metadata: { mode: receipt.mode, retainedReports: receipt.retainedReports, deletedRows: removal.counts }, createdAt: now
+      })
+      return receipt
+    })
+  }
+
+  /**
+   * 撤回孩子的飞书镜像同意，阻断这个孩子及其问卷、报告的同步关联；家里没有别的孩子还在镜像时，
+   * 家庭记录也一起阻断（和撤回同意时一样，家庭镜像依附于孩子的同意）。返回远端已有记录的条数。
+   */
+  private async stopFeishuMirror(
+    tx: StoreTransaction, userId: string, familyId: string, studentId: string, entityIds: string[], now: string
+  ): Promise<number> {
+    for (const grant of await tx.findMany('consentGrants', { userId, studentId, scope: 'FEISHU_PROFILE_MIRROR', withdrawnAt: null })) {
+      await tx.update('consentGrants', grant.id, { withdrawnAt: now, updatedAt: now })
+    }
+    const familyStillMirrored = Boolean(await tx.findOne('consentGrants', {
+      userId, familyId, scope: 'FEISHU_PROFILE_MIRROR', withdrawnAt: null
+    }))
+    let remoteRecords = 0
+    for (const entityId of familyStillMirrored ? entityIds : [...entityIds, familyId]) {
+      for (const link of await tx.findMany('integrationLinks', { provider: 'feishu_bitable', entityId })) {
+        if (link.externalRecordId) remoteRecords += 1
+        await tx.update('integrationLinks', link.id, {
+          status: 'BLOCKED', leaseToken: null, operationToken: null, operationDigest: null, operationBody: null,
+          lastErrorCode: 'FEISHU_SUBJECT_DELETED', nextAttemptAt: null, updatedAt: now
+        })
+      }
+    }
+    return remoteRecords
   }
 
   /** 注销后的 users 行不得再通过微信登录复活，登录路径据此拒绝。 */

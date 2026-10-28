@@ -99,6 +99,8 @@ export interface Student {
   profileStatus?: 'PROVISIONAL' | 'COMPLETE_FOR_LEVEL_2' | 'COMPLETE' | 'LEGACY_COMPLETE'
   profileSchemaVersion?: string
   gradeStage?: string | null
+  /** Set when the family deleted this child but purchased reports keep the row (migration 011). */
+  deletedAt?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -258,13 +260,12 @@ export interface Order {
   idempotencyKey: string
   provider: 'mock' | 'wechat'
   providerPrepayId?: string | null
-  paymentParams?: {
-    timeStamp: string
-    nonceStr: string
-    package: string
-    signType: 'RSA'
-    paySign: string
-  } | null
+  /**
+   * Virtual payment accepts an order number once, so every attempt gets its own; all of them are
+   * kept so a late delivery push for an earlier attempt still finds this order. outTradeNo is the
+   * latest attempt, or the one that was paid.
+   */
+  paymentParams?: { attempts: string[] } | null
   providerTransactionId?: string | null
   lastProviderQueryAt?: string | null
   createdAt: string

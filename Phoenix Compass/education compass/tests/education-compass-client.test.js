@@ -1110,15 +1110,18 @@ async function testGrowthPurchaseRecordsLocalOrder() {
     getStorageSync: wx.getStorageSync,
     setStorageSync: wx.setStorageSync,
     removeStorageSync: wx.removeStorageSync,
-    requestPayment: wx.requestPayment,
+    login: wx.login,
+    requestVirtualPayment: wx.requestVirtualPayment,
     redirectTo: wx.redirectTo,
     showModal: wx.showModal,
     createGrowthOrder: educationCompass.createGrowthOrder,
-    createWechatPrepay: educationCompass.createWechatPrepay,
+    createVirtualPayment: educationCompass.createVirtualPayment,
     getOrder: educationCompass.getOrder
   }
   const storage = new Map()
   const redirects = []
+  const attempts = []
+  const sheets = []
   let definition
   const order = {
     orderId: 'ord_growth_cache', outTradeNo: 'PX_growth_cache', status: 'PENDING',
@@ -1129,15 +1132,22 @@ async function testGrowthPurchaseRecordsLocalOrder() {
     wx.getStorageSync = (key) => storage.get(key)
     wx.setStorageSync = (key, value) => { storage.set(key, JSON.parse(JSON.stringify(value))) }
     wx.removeStorageSync = (key) => { storage.delete(key) }
-    wx.requestPayment = (options) => options.success({ errMsg: 'requestPayment:ok' })
+    // Each attempt is signed with the session_key of a fresh login code, then paid through
+    // wx.requestVirtualPayment (Apple payment on iOS, WeChat Pay elsewhere).
+    wx.login = ({ success }) => success({ code: `fresh-code-${attempts.length + 1}` })
+    wx.requestVirtualPayment = (options) => { sheets.push(options); options.success({ errMsg: 'requestVirtualPayment:ok' }) }
     wx.redirectTo = ({ url }) => { redirects.push(url) }
     wx.showModal = (options) => { throw new Error(`unexpected modal: ${options.content}`) }
     global.getApp = () => ({ getCurrentUser: () => ({ id: 'usr_growth_cache', role: 'family_user' }) })
     global.Page = (value) => { definition = value }
     educationCompass.createGrowthOrder = async () => ({ ...order })
-    educationCompass.createWechatPrepay = async () => ({
-      paymentParams: { timeStamp: '1', nonceStr: 'n', package: 'prepay_id=p', signType: 'RSA', paySign: 's' }
-    })
+    educationCompass.createVirtualPayment = async (orderId, code) => {
+      attempts.push({ orderId, code })
+      return {
+        orderId, status: 'PENDING', outTradeNo: 'PX_growth_cache',
+        virtualPayment: { signData: '{"outTradeNo":"PX_growth_cache"}', paySig: 'pay-sig', signature: 'user-sig', mode: 'short_series_goods' }
+      }
+    }
     // The common case: the notification lands first, so the very first check is already PAID.
     educationCompass.getOrder = async () => ({ ...order, status: 'PAID', paidAt: '2026-09-28T08:00:00.000Z' })
     payment.clearOrderCache()
@@ -1154,17 +1164,43 @@ async function testGrowthPurchaseRecordsLocalOrder() {
     await definition.purchase.call(instance)
 
     assert.deepStrictEqual(redirects, ['/pages/report/index?id=rpt_growth_cache'])
+    assert.deepStrictEqual(attempts, [{ orderId: 'ord_growth_cache', code: 'fresh-code-1' }])
+    assert.strictEqual(sheets.length, 1)
+    assert.deepStrictEqual(
+      { signData: sheets[0].signData, paySig: sheets[0].paySig, signature: sheets[0].signature, mode: sheets[0].mode },
+      { signData: '{"outTradeNo":"PX_growth_cache"}', paySig: 'pay-sig', signature: 'user-sig', mode: 'short_series_goods' }
+    )
+
     const cached = payment.listCachedOrders()
     assert.strictEqual(cached.length, 1, 'a confirmed growth purchase must appear in the local recent orders')
     assert.strictEqual(cached[0].orderId, 'ord_growth_cache')
     assert.strictEqual(cached[0].status, 'PAID', 'the local list must show the server-verified status, not the creation status')
     assert.strictEqual(cached[0].assessmentId, 'asm_growth_cache')
+
+    // A cancelled sheet lands on the result page, which reads the server order.
+    redirects.length = 0
+    wx.requestVirtualPayment = (options) => options.fail({ errMsg: 'requestVirtualPayment:fail cancel', errCode: -2 })
+    educationCompass.getOrder = async () => ({ ...order, status: 'PENDING' })
+    await definition.purchase.call(instance)
+    assert.strictEqual(redirects.length, 1)
+    assert.ok(redirects[0].startsWith('/pages/payment-result/index?orderId=ord_growth_cache') && redirects[0].includes('clientOutcome=cancelled'), redirects[0])
+    assert.deepStrictEqual(attempts.map((item) => item.code), ['fresh-code-1', 'fresh-code-2'], 'every attempt brings its own login code')
+
+    // A WeChat version without virtual payment is told to upgrade instead of being sent to pay.
+    const modals = []
+    wx.requestVirtualPayment = undefined
+    wx.showModal = (options) => { modals.push(options.content) }
+    redirects.length = 0
+    await definition.purchase.call(instance)
+    assert.strictEqual(redirects.length, 0)
+    assert.strictEqual(attempts.length, 2, 'no attempt is signed for a client that cannot pay')
+    assert.ok(modals.length === 1 && modals[0].includes('升级微信'), modals.join('|'))
   } finally {
     payment.clearOrderCache()
     educationCompass.createGrowthOrder = originals.createGrowthOrder
-    educationCompass.createWechatPrepay = originals.createWechatPrepay
+    educationCompass.createVirtualPayment = originals.createVirtualPayment
     educationCompass.getOrder = originals.getOrder
-    for (const name of ['getAccountInfoSync', 'getStorageSync', 'setStorageSync', 'removeStorageSync', 'requestPayment', 'redirectTo', 'showModal']) {
+    for (const name of ['getAccountInfoSync', 'getStorageSync', 'setStorageSync', 'removeStorageSync', 'login', 'requestVirtualPayment', 'redirectTo', 'showModal']) {
       const original = name === 'getAccountInfoSync' ? originals.accountInfo : originals[name]
       if (original === undefined) delete wx[name]
       else wx[name] = original
@@ -1315,6 +1351,19 @@ async function testPaymentCacheStorageFailure() {
     assert.strictEqual(instance.data.error, '')
     assert.strictEqual(instance.data.order.status, 'PAID',
       'payment status rendering must not fail merely because cache persistence failed')
+
+    // After the buyer closes the payment sheet the order is still pending on the server: the page
+    // says the payment was cancelled, and checks once instead of polling as if a payment were coming.
+    let orderReads = 0
+    api.request = async () => {
+      orderReads += 1
+      return { order: { id: 'ord_storage_failure', report_id: 'rpt_storage_failure', amount_fen: 3990, currency: 'CNY', status: 'PENDING' } }
+    }
+    const cancelled = { ...definition, data: { ...definition.data, orderId: 'ord_storage_failure', clientOutcome: 'cancelled', checking: false } }
+    cancelled.setData = function setData(update) { this.data = { ...this.data, ...update } }
+    await definition.check.call(cancelled, true)
+    assert.strictEqual(cancelled.data.view.title, '已取消本次支付')
+    assert.strictEqual(orderReads, 1)
     api.request = async (path) => {
       assert.strictEqual(path, '/v1/auth/session')
       return undefined
@@ -1369,7 +1418,10 @@ async function testApiAdapter() {
     if (path === '/v1/assessments/asm_growth/result') return { assessmentId: 'asm_growth', resultState: 'LOCKED' }
     if (path === '/v1/education-compass/products/growth-discovery') return { product: { product_code: 'EDUCATION_GROWTH_DISCOVERY_SINGLE_V1', amount_fen: 3990, currency: 'CNY', payment_timing: 'AFTER_SUBMIT_BEFORE_REPORT' } }
     if (path === '/v1/assessments/asm_growth/orders') return { order: { id: 'ord_1', assessment_id: 'asm_growth', product_code: 'EDUCATION_GROWTH_DISCOVERY_SINGLE_V1', amount_fen: 3990, status: 'CREATED' } }
-    if (path === '/v1/orders/ord_1/wechat-prepay') return { payment: { orderId: 'ord_1', paymentParams: { package: 'prepay_id=test' } } }
+    if (path === '/v1/orders/ord_1/virtual-payment') {
+      assert.deepStrictEqual(options.data, { code: 'login-code-1' })
+      return { orderId: 'ord_1', status: 'PENDING', outTradeNo: 'PX_1', virtualPayment: { signData: '{}', paySig: 'p', signature: 's', mode: 'short_series_goods' } }
+    }
     if (path === '/v1/orders/ord_1') return { order: { id: 'ord_1', status: 'PAID', amount_fen: 3990 } }
     if (path === '/v1/me/integration-consents/feishu-profile') return { consent: { status: 'ACTIVE' } }
     if (path === '/v1/me/education-compass/consents/stu_1/STUDENT_ASSESSMENT_ASSENT') {
@@ -1425,7 +1477,8 @@ async function testApiAdapter() {
     api.request = validRequest
     const orderKey = client.createIdempotencyKey('order')
     assert.strictEqual((await client.createGrowthOrder('asm_growth', orderKey)).productCode, client.GROWTH_PRODUCT_CODE)
-    assert.strictEqual((await client.createWechatPrepay('ord_1')).paymentParams.package, 'prepay_id=test')
+    assert.strictEqual((await client.createVirtualPayment('ord_1', 'login-code-1')).virtualPayment.mode, 'short_series_goods')
+    await assert.rejects(client.createVirtualPayment('ord_1', ''), (error) => error.code === 'WECHAT_LOGIN_CODE_REQUIRED')
     assert.strictEqual((await client.getOrder('ord_1')).status, 'PAID')
     assert.strictEqual((await client.updateFeishuProfileConsent({
       studentId: 'stu_1', consentVersion: 'feishu_profile_mirror_opt_in_v1.0.0-rc1',
@@ -1543,6 +1596,203 @@ async function testDraftBufferSurvivesFailedSaves() {
   }
 }
 
+async function testChildAndQuestionnaireManagementServices() {
+  const api = require('../services/api')
+  const client = require('../services/education-compass')
+  const familyData = require('../services/family-data')
+  const payment = require('../services/payment')
+  const draftBuffer = require('../services/draft-buffer')
+  const currentStudent = require('../utils/current-student')
+  const originalRequest = api.request
+  const originalAccountInfo = wx.getAccountInfoSync
+  const calls = []
+  wx.getAccountInfoSync = () => ({ miniProgram: { envVersion: 'release' } })
+  api.request = async (path, options = {}) => {
+    calls.push({ path, method: options.method || 'GET', data: options.data })
+    if (path === '/v1/students/stu_1/education-assessments') {
+      return { assessments: [{ assessmentId: 'asm_draft', level: 1, status: 'DRAFT', canDelete: true, canReset: true }] }
+    }
+    if (path === '/v1/assessments/asm_draft' && options.method === 'DELETE') return { assessmentId: 'asm_draft', deleted: true }
+    if (path === '/v1/assessments/asm_reset/draft' && options.method === 'PUT') {
+      return { draft: { id: 'asm_reset', revision: 4, status: 'DRAFT', answers: options.data.answers } }
+    }
+    if (path === '/v1/assessments/asm_reset/draft') return { draft: { id: 'asm_reset', revision: 3, status: 'DRAFT', answers: { FP01: 'UPPER_SECONDARY' } } }
+    if (path === '/v1/me/students/stu_1' && options.method === 'DELETE') {
+      return { deletion: { studentId: 'stu_1', mode: 'RETAINED_PURCHASES', retainedReports: 1 } }
+    }
+    if (path === '/v1/me/orders') {
+      return { orders: [{ orderId: 'ord_1', status: 'PAID', amountFen: 3990, reportId: 'rpt_1', studentName: '甲', studentDeleted: true, canViewReport: true, createdAt: '2026-10-14T00:00:00.000Z' }] }
+    }
+    throw new Error(`unexpected path ${options.method || 'GET'} ${path}`)
+  }
+  try {
+    assert.deepStrictEqual((await client.listStudentAssessments('stu_1')).map((item) => item.assessmentId), ['asm_draft'])
+
+    draftBuffer.remember('asm_draft', { revision: 2, answers: { FP01: 'UPPER_SECONDARY' } })
+    await client.deleteAssessment('asm_draft')
+    assert.strictEqual(draftBuffer.recall('asm_draft'), null, 'a deleted questionnaire leaves no local draft behind')
+
+    draftBuffer.remember('asm_reset', { revision: 3, answers: { FP01: 'UPPER_SECONDARY' } })
+    await client.resetDraft('asm_reset')
+    const reset = calls.find((call) => call.path === '/v1/assessments/asm_reset/draft' && call.method === 'PUT')
+    assert.deepStrictEqual([reset.data.revision, reset.data.answers], [3, {}], 'reset saves the current revision with no answers')
+    assert.strictEqual(draftBuffer.recall('asm_reset'), null, 'reset also drops the local draft, or the page would offer the old answers back')
+
+    const deletion = await familyData.deleteStudent('stu_1')
+    const remove = calls.find((call) => call.path === '/v1/me/students/stu_1')
+    assert.deepStrictEqual([remove.method, remove.data], ['DELETE', { confirm: 'DELETE_STUDENT' }])
+    assert.strictEqual(deletion.mode, 'RETAINED_PURCHASES')
+
+    const [order] = await payment.listOrders()
+    assert.deepStrictEqual([order.orderId, order.studentName, order.studentDeleted, order.canViewReport], ['ord_1', '甲', true, true])
+
+    currentStudent.set('stu_gone')
+    const students = [{ id: 'stu_a' }, { id: 'stu_b' }]
+    assert.strictEqual(currentStudent.resolve(students, 'stu_b'), 'stu_b', 'a remembered child that no longer exists falls back to the server default')
+    currentStudent.set('stu_a')
+    assert.strictEqual(currentStudent.resolve(students, 'stu_b'), 'stu_a', 'the remembered child wins while it exists')
+    currentStudent.clear()
+    assert.strictEqual(currentStudent.resolve(students), 'stu_a')
+  } finally {
+    api.request = originalRequest
+    wx.getAccountInfoSync = originalAccountInfo
+    currentStudent.clear()
+  }
+}
+
+async function testMineDeletesChildOnlyAfterTwoConfirmations() {
+  const familyData = require('../services/family-data')
+  const currentStudent = require('../utils/current-student')
+  const originalPage = global.Page
+  const originalShowModal = wx.showModal
+  const originalShowToast = wx.showToast
+  const originalDelete = familyData.deleteStudent
+  const deleted = []
+  const modals = []
+  let definition
+  try {
+    global.Page = (value) => { definition = value }
+    wx.showToast = () => undefined
+    familyData.deleteStudent = async (studentId) => { deleted.push(studentId); return { mode: 'HARD' } }
+    delete require.cache[require.resolve('../pages/mine/index')]
+    require('../pages/mine/index')
+    const students = [{ id: 'stu_first', name: '甲', current: true }, { id: 'stu_second', name: '乙', current: false }]
+    const instance = { ...definition, data: { ...definition.data, students } }
+    instance.setData = function setData(update) { Object.assign(this.data, update) }
+    instance.onShow = async () => undefined
+    const event = { currentTarget: { dataset: { id: 'stu_first' } } }
+
+    // Cancelling either step deletes nothing.
+    wx.showModal = (options) => { modals.push(options); if (options.success) return options.success({ confirm: false }) }
+    definition.deleteStudent.call(instance, event)
+    let step = 0
+    wx.showModal = (options) => { modals.push(options); step += 1; if (options.success) return options.success({ confirm: step === 1 }) }
+    definition.deleteStudent.call(instance, event)
+    assert.deepStrictEqual(deleted, [], 'nothing is deleted unless both confirmations are accepted')
+
+    currentStudent.set('stu_first')
+    wx.showModal = (options) => { modals.push(options); if (options.success) return options.success({ confirm: true }) }
+    await definition.deleteStudent.call(instance, event)
+    await new Promise((resolve) => setImmediate(resolve))
+    assert.deepStrictEqual(deleted, ['stu_first'])
+    assert(modals.some((modal) => modal.content.includes('已经购买的报告和订单会保留在历史订单里')),
+      'the confirmation states that purchased reports stay in the order history')
+    assert.strictEqual(currentStudent.get(), '', 'deleting the current child forgets it on this phone')
+  } finally {
+    familyData.deleteStudent = originalDelete
+    currentStudent.clear()
+    if (originalShowModal === undefined) delete wx.showModal
+    else wx.showModal = originalShowModal
+    if (originalShowToast === undefined) delete wx.showToast
+    else wx.showToast = originalShowToast
+    if (originalPage === undefined) delete global.Page
+    else global.Page = originalPage
+  }
+}
+
+async function testHomeSwitchesChildFromTheChildLine() {
+  const currentStudent = require('../utils/current-student')
+  const originalPage = global.Page
+  const originalActionSheet = wx.showActionSheet
+  const originalNavigateTo = wx.navigateTo
+  let definition
+  try {
+    global.Page = (value) => { definition = value }
+    delete require.cache[require.resolve('../pages/home/index')]
+    require('../pages/home/index')
+    const students = [{ id: 'stu_a', name: '甲' }, { id: 'stu_b', name: '乙' }]
+    const instance = { ...definition, data: { ...definition.data, students, primaryStudent: students[0] } }
+    let reloads = 0
+    instance.onShow = () => { reloads += 1 }
+    let sheet
+    wx.showActionSheet = (options) => { sheet = options }
+    const visited = []
+    wx.navigateTo = ({ url }) => visited.push(url)
+
+    definition.goStudent.call(instance)
+    assert.deepStrictEqual(sheet.itemList, ['甲（当前）', '乙', '编辑当前孩子档案', '添加孩子档案'])
+    sheet.success({ tapIndex: 1 })
+    assert.strictEqual(currentStudent.get(), 'stu_b', 'picking a child remembers it')
+    assert.strictEqual(reloads, 1, 'the home page reloads for the picked child')
+    sheet.success({ tapIndex: 2 })
+    assert.deepStrictEqual(visited, ['/pages/student-edit/index?id=stu_a'])
+  } finally {
+    currentStudent.clear()
+    if (originalActionSheet === undefined) delete wx.showActionSheet
+    else wx.showActionSheet = originalActionSheet
+    if (originalNavigateTo === undefined) delete wx.navigateTo
+    else wx.navigateTo = originalNavigateTo
+    if (originalPage === undefined) delete global.Page
+    else global.Page = originalPage
+  }
+}
+
+async function testCompassRecordsOfferTheServerActions() {
+  const familyData = require('../services/family-data')
+  const client = require('../services/education-compass')
+  const originalPage = global.Page
+  const originalAccountInfo = wx.getAccountInfoSync
+  const originalNavigateTo = wx.navigateTo
+  const originals = { getFamily: familyData.getFamily, getStudents: familyData.getStudents, list: client.listStudentAssessments }
+  let definition
+  try {
+    wx.getAccountInfoSync = () => ({ miniProgram: { envVersion: 'release' } })
+    global.Page = (value) => { definition = value }
+    delete require.cache[require.resolve('../pages/compass/index')]
+    require('../pages/compass/index')
+    familyData.getFamily = async () => ({ id: 'fam_1' })
+    familyData.getStudents = async () => [{ id: 'stu_1', name: '甲' }]
+    client.listStudentAssessments = async () => [
+      { assessmentId: 'asm_l2', level: 2, status: 'SUBMITTED', resultState: 'LOCKED', paymentStatus: null, sourceAssessmentId: 'asm_l1', consentActive: true, canDelete: true, canRedo: true, createdAt: '2026-10-14T01:00:00.000Z' },
+      { assessmentId: 'asm_l1', level: 1, status: 'SUBMITTED', resultState: 'READY', consentActive: true, canDelete: false, canRedo: true, createdAt: '2026-10-13T01:00:00.000Z' },
+      { assessmentId: 'asm_new', level: 1, status: 'DRAFT', resultState: 'NONE', completenessCoverage: 38, consentActive: true, canDelete: true, canReset: true, createdAt: '2026-10-14T02:00:00.000Z' }
+    ]
+    const instance = { ...definition, data: { ...definition.data } }
+    instance.setData = function setData(update) { Object.assign(this.data, update) }
+    definition.onLoad.call(instance, { mode: 'records', studentId: 'stu_1' })
+    await definition.loadRecords.call(instance, { id: 'usr_1' })
+    assert.strictEqual(instance.data.error, '')
+    assert.deepStrictEqual(instance.data.records.map((record) => record.statusLabel), ['已提交 · 待解锁', '已出免费结果', '填写中 · 已完成 38%'])
+    const visited = []
+    wx.navigateTo = ({ url }) => visited.push(url)
+    definition.redoRecord.call(instance, { currentTarget: { dataset: { id: 'asm_l2' } } })
+    definition.redoRecord.call(instance, { currentTarget: { dataset: { id: 'asm_l1' } } })
+    assert.deepStrictEqual(visited, [
+      '/pages/compass/index?level=2&redo=1&studentId=stu_1&sourceAssessmentId=asm_l1',
+      '/pages/compass/index?level=1&redo=1&studentId=stu_1'
+    ], 'taking a student questionnaire again starts from the same family questionnaire')
+  } finally {
+    familyData.getFamily = originals.getFamily
+    familyData.getStudents = originals.getStudents
+    client.listStudentAssessments = originals.list
+    wx.getAccountInfoSync = originalAccountInfo
+    if (originalNavigateTo === undefined) delete wx.navigateTo
+    else wx.navigateTo = originalNavigateTo
+    if (originalPage === undefined) delete global.Page
+    else global.Page = originalPage
+  }
+}
+
 async function run() {
   testQuestionnaireModel()
   testStudentProfileNormalization()
@@ -1565,6 +1815,10 @@ async function run() {
   await testLoginAsAnotherAccountDropsPreviousAccountCache()
   await testDraftBufferSurvivesFailedSaves()
   await testApiAdapter()
+  await testChildAndQuestionnaireManagementServices()
+  await testMineDeletesChildOnlyAfterTwoConfirmations()
+  await testHomeSwitchesChildFromTheChildLine()
+  await testCompassRecordsOfferTheServerActions()
   console.log('✓ Education Compass V0.5 client: remote adapter, canonical bank, result registry, revision and server nextAction navigation')
 }
 

@@ -268,11 +268,17 @@ async function createGrowthOrder(assessmentId, idempotencyKey) {
   }))
 }
 
-async function createWechatPrepay(orderId) {
+/**
+ * Signs one virtual payment attempt. The code comes from a wx.login made just before paying: the
+ * server signs with the session_key it yields, which also rules out an expired login state.
+ */
+async function createVirtualPayment(orderId, code) {
   ensureRemote()
-  return unwrap(await api.request(`/v1/orders/${encodeURIComponent(requireId(orderId, 'orderId'))}/wechat-prepay`, {
-    method: 'POST', data: {}
-  }), ['payment', 'prepay'])
+  const loginCode = String(code || '').trim()
+  if (!loginCode) throw new api.ApiError('微信登录 code 不能为空', { code: 'WECHAT_LOGIN_CODE_REQUIRED' })
+  return unwrap(await api.request(`/v1/orders/${encodeURIComponent(requireId(orderId, 'orderId'))}/virtual-payment`, {
+    method: 'POST', data: { code: loginCode }
+  }))
 }
 
 async function getOrder(orderId) {
@@ -298,6 +304,35 @@ async function updateFeishuProfileConsent(consent) {
   }), ['consent'])
 }
 
+/** 一个孩子的全部问卷（问卷记录），新的在前；每份带着服务端算好的可做操作。 */
+async function listStudentAssessments(studentId) {
+  ensureRemote()
+  const result = await api.request(`/v1/students/${encodeURIComponent(requireId(studentId, 'studentId'))}/education-assessments`)
+  return Array.isArray(result && result.assessments) ? result.assessments : []
+}
+
+/** 删除一份问卷；哪些能删由服务端决定（见 assessments 列表里的 canDelete）。 */
+async function deleteAssessment(assessmentId) {
+  ensureRemote()
+  const id = requireId(assessmentId, 'assessmentId')
+  const result = await api.request(`/v1/assessments/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  try { require('./draft-buffer').forget(id) } catch (error) {}
+  return result
+}
+
+/**
+ * 清空重填：服务端保存的是整份答案，用空答案覆盖草稿即可；
+ * 本机还没提交的兜底缓存也要清掉，否则问卷页会提示恢复旧答案。
+ */
+async function resetDraft(assessmentId) {
+  ensureRemote()
+  const id = requireId(assessmentId, 'assessmentId')
+  const draft = await getDraft(id)
+  const saved = await saveDraft(id, { revision: draft.revision, answers: {}, clientSaveToken: createClientSaveToken() })
+  try { require('./draft-buffer').forget(id) } catch (error) {}
+  return saved
+}
+
 async function withdrawAssessmentConsent(studentId, scope) {
   ensureRemote()
   const allowed = ['CORE_ASSESSMENT', 'STUDENT_ASSESSMENT_ASSENT']
@@ -319,7 +354,8 @@ module.exports = {
   createGrowthOrder,
   createIdempotencyKey,
   createStudentGrowthAssessment,
-  createWechatPrepay,
+  createVirtualPayment,
+  deleteAssessment,
   getAssessmentQuestionnaire,
   getDraft,
   getGrowthProduct,
@@ -327,11 +363,13 @@ module.exports = {
   getQuestionnaireVersion,
   getResult,
   getState,
+  listStudentAssessments,
   normalizeAssessment,
   normalizeDraft,
   normalizeOrder,
   normalizeProduct,
   normalizeState,
+  resetDraft,
   saveDraft,
   submitAssessment,
   updateFeishuProfileConsent,

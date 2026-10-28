@@ -61,6 +61,7 @@
 - `POST /v1/me/students` → `{ "student": Student }`
 - `GET /v1/me/students/:studentId` → `{ "student": Student }`
 - `PUT /v1/me/students/:studentId` → `{ "student": Student }`
+- `DELETE /v1/me/students/:studentId`，请求体 `{ "confirm": "DELETE_STUDENT" }` → `{ "deletion": StudentDeletionReceipt }`
 - `GET /v1/me/reports` → `{ "reports": ReportSummary[] }`
 - `GET /v1/me/timeline` → `{ "events": TimelineEvent[] }`
 - `GET /v1/me/advisor-requests` → `{ "requests": AdvisorRequest[] }`
@@ -69,6 +70,20 @@
 学生档案中，`age` 的规范请求值是 3–100 的整数；为了兼容旧小程序，服务端也接受等价的十进制数字字符串，并把空白值归一为 `null`。`educationSystem` 非空时落库为 `GAOKAO`、`DSE`、`IGCSE`、`A_LEVEL`、`AP_US`、`IB` 或 `OTHER`；服务端会将旧版已发布的显示标签归一为这些编码，未知非空值返回 `400 INVALID_PROFILE`。
 
 服务端从Bearer会话解析owner。资源不属于当前家庭时返回403或404；不得接受客户端传入的owner user ID作为授权依据。
+
+家庭档案只能修改，不能单独删除（整号注销除外）。删除一个孩子档案（2026-10-14 定）：
+
+- 不带确认串返回 `400 STUDENT_DELETION_NOT_CONFIRMED`；这个孩子有 `PENDING` 或 `REFUNDING` 订单时返回 `409 STUDENT_PAYMENT_IN_PROGRESS`。
+- 没买过报告的孩子：孩子、问卷、结果、同意记录全部删除，回执 `mode: "HARD"`。
+- 买过报告的孩子：孩子档案标记删除（`students.deleted_at`，迁移 011），已购报告、它所依据的问卷和同意记录保留，仍可从历史订单打开；其余问卷和结果删除，回执 `mode: "RETAINED_PURCHASES"`、`retainedReports` 为保留的已购报告数。
+- 订单是财务记录，只和被删的问卷、报告脱钩，还停在 `CREATED` 的关闭。
+- 删除后这个孩子不再出现在列表和 Education Compass 状态里，读取、修改、新建问卷、开启同意、下单和发起支付都返回 `404 STUDENT_NOT_FOUND`（或顾问申请的 `403`）；撤回同意仍然可以。
+- 之后这个孩子的某份购买退款成功，那份就不再算"已买过"：它的问卷和报告按同一规则删除；最后一份退完，孩子和其余资料一起删除（审计 `STUDENT_DELETION_CONTINUED`）。订单仍留在历史订单里。
+- 飞书运营镜像：删除时撤回这个孩子的镜像同意，阻断他及其问卷、报告的同步（家里没有别的孩子还在镜像时，家庭记录也阻断）；远端已有记录时写审计 `FEISHU_REMOTE_MINIMIZATION_REVIEW_REQUIRED`（`reason: STUDENT_DELETED`），交给运营人工最小化。同步本身也不再投影已删除孩子的任何资料。
+
+~~~json
+{ "deletion": { "studentId": "stu_xxx", "deletedAt": "2026-10-14T08:00:00.000Z", "mode": "RETAINED_PURCHASES", "retainedReports": 1, "deletedRows": { "assessments": 1, "reports": 0 } } }
+~~~
 
 ## 4. 测评合同与草稿
 
@@ -102,6 +117,35 @@
 ~~~
 
 服务端验证家庭/学生所有权、studentVersion和版本化同意。未成年人或年龄未知时必须有有效监护人确认。
+
+### GET /v1/students/:studentId/education-assessments
+
+问卷记录：这个孩子的全部 V0.5 问卷，新的在前。每份带上服务端算好的可做操作，客户端照着显示按钮：
+
+~~~json
+{
+  "assessments": [{
+    "assessmentId": "asm_xxx", "assessmentKind": "STUDENT_GROWTH_DISCOVERY", "level": 2, "status": "SUBMITTED",
+    "createdAt": "…", "updatedAt": "…", "submittedAt": "…", "completenessCoverage": 100,
+    "sourceAssessmentId": "asm_level1", "reportId": "rpt_xxx",
+    "resultState": "LOCKED", "paymentStatus": null, "consentActive": true,
+    "canDelete": true, "deleteBlockedReason": null, "canReset": false, "canRedo": true
+  }]
+}
+~~~
+
+`resultState`：`NONE`（填写中）、`READY`（家长问卷已出免费结果）、`LOCKED`（学生问卷已提交、未购买）、`UNLOCKED`（已购买）。`canReset` 只对同意仍有效的草稿为真；`canRedo` 对同意仍有效的已提交问卷为真：家长问卷重新测评就是再建一份，学生问卷用同一份 `sourceAssessmentId` 再建一份。
+
+### DELETE /v1/assessments/:assessmentId
+
+删除一份问卷（2026-10-14 定），返回 `{ "assessmentId": "…", "deleted": true }`：
+
+- 草稿随时能删。
+- 学生问卷提交后没买过的，连同锁定的报告一起删；还停在 `CREATED` 的订单关闭并脱钩。
+- 家长问卷提交后已出免费结果，返回 `409 ASSESSMENT_RESULT_READY`，可以重新测评。
+- 买过的（含已退款的：退款后只能重新购买一次是按问卷计的）返回 `409 ASSESSMENT_PURCHASED`；支付进行中返回 `409 ASSESSMENT_PAYMENT_IN_PROGRESS`。
+
+清空重填不需要单独接口：用当前 `revision` 和空的 `answers` 调一次 `PUT /v1/assessments/:assessmentId/draft`，服务端保存的是整份答案。
 
 ### PUT /v1/assessments/:assessmentId/draft
 
@@ -225,25 +269,35 @@ placeholder、Source版本不一致、生成/QA失败或未锁定报告返回错
 
 相同用户和幂等键返回同一业务结果；幂等键不得复用于其他测评或商品。
 
-### POST /v1/orders/:orderId/wechat-prepay
+### POST /v1/orders/:orderId/virtual-payment
 
-服务端创建或复用同一安全订单的prepay；预支付事务会再次检查购买开关、测评/报告关联、监护人同意未撤回、商品仍启用且为单次3990分/CNY、Source Catalog版本与QA锁定状态，并在微信返回后落库前再次复核。中途状态变化时先关微信订单，关单成功后才本地取消。微信下单请求的 `time_expire` 使用服务端订单 `expiresAt`；进入收银台等待阶段后订单主状态为 `PENDING`。
+本产品属于小程序内销售的虚拟商品，按微信要求通过**小程序虚拟支付**收款（`wx.requestVirtualPayment`，iOS 走 Apple 支付，其他终端走微信支付），不再使用普通 JSAPI 支付。
+
+请求体只有 `code`：支付前刚调用 `wx.login` 得到的登录码。服务端用它调 code2Session，要求得到的 OpenID 就是当前登录用户的微信身份（否则 `403 PAYMENT_PAYER_MISMATCH`），再用返回的 `session_key` 计算用户态签名；`session_key` 只在这次请求的内存中使用，不落库。每个用户每分钟最多 20 次。
+
+签名前会再次检查购买开关、测评/报告关联、同意未撤回、商品仍启用且为单次3990分/CNY、该商品已配置虚拟支付道具（否则 `409 VIRTUAL_PAYMENT_PRODUCT_NOT_CONFIGURED`）、Source Catalog 与 QA 锁定状态。
+
+平台的订单号只能使用一次，所以同一订单的每次尝试都会得到新的 `outTradeNo`（第一次沿用订单号），全部尝试号都记在订单上；重新尝试前，服务端先查此前的尝试，已付款就直接结算并返回 `409 ORDER_ALREADY_PAID`，不会重复收费。一个订单最多 10 次尝试。
 
 ~~~json
 {
   "orderId": "ord_xxx",
   "status": "PENDING",
-  "paymentParams": {
-    "timeStamp": "1787215000",
-    "nonceStr": "...",
-    "package": "prepay_id=...",
-    "signType": "RSA",
-    "paySign": "..."
+  "outTradeNo": "PX...",
+  "virtualPayment": {
+    "signData": "{\"offerId\":\"...\",\"buyQuantity\":1,\"env\":0,\"currencyType\":\"CNY\",\"productId\":\"EC_GROWTH_REPORT_V1\",\"goodsPrice\":3990,\"outTradeNo\":\"PX...\",\"attach\":\"ord_xxx\"}",
+    "paySig": "...",
+    "signature": "...",
+    "mode": "short_series_goods"
   }
 }
 ~~~
 
-客户端只把 `paymentParams` 传给 `wx.requestPayment`。success/cancel/fail只能改变页面提示，不能修改服务端订单或解锁报告。
+客户端把 `virtualPayment` 原样传给 `wx.requestVirtualPayment`。success/cancel/fail 只能改变页面提示，不能修改服务端订单或解锁报告。
+
+### GET /v1/me/orders
+
+历史订单：本账号的全部订单，新的在前，返回 `{ "orders": [...] }`。每笔是 `OrderDto` 加上 `createdAt`、`assessmentId`、`studentId`、`studentName`、`studentDeleted`（孩子档案已删除）和 `canViewReport`（已支付且有报告）。已删除孩子的已购报告也在这里，仍可打开。只读，不触发查单。
 
 ### GET /v1/orders/:orderId
 
@@ -264,30 +318,34 @@ placeholder、Source版本不一致、生成/QA失败或未锁定报告返回错
 
 客户端轮询使用退避和最大等待时间；超时显示“仍在确认”，不能自行把订单标为失败。
 
-`PENDING` 到达 `expiresAt` 时不能直接改为取消：服务端先查微信订单；`SUCCESS` 走正常交付，`USERPAYING` 保持等待，只有 `NOTPAY` 且微信关单成功后才写 `CANCELLED`。`CREATED` 且从未预支付的过期订单可本地取消。
+`PENDING` 到达 `expiresAt` 时：虚拟支付没有关单接口，服务端逐个查询该订单的全部尝试；有已付款的走正常交付并调用 `notify_provide_goods` 告知已发货；全部未付款时本地写 `CANCELLED`。平台明确回答没有这笔单（`268490002`「数据不存在」，买家没付款就关了支付弹窗）算未付款；其他查单错误算情况不明，要等过期 30 分钟后才算未付款。`CREATED` 且从未发起支付的过期订单可本地取消。同一测评再次下单前，会先这样处理已过期但仍占着购买位置的订单。
 
-微信查单的非成功响应可省略 `payer` 与 `amount`。服务端对 `SUCCESS` 始终严格要求并核对OpenID、3990分、CNY和transaction_id；对 `NOTPAY/CLOSED/USERPAYING` 等状态，appid、mchid、out_trade_no、trade_type仍为必检，amount/payer若返回也必须匹配。
+查单结果按 `query_order` 的 `status` 映射：2/3/4 为已支付，5/7/8 为退款状态，6 为已关闭，其余为未支付。对已支付结果严格核对 3990 分、本环境、尝试号属于该订单和付款 OpenID。
 
-## 7. 微信支付通知
+## 7. 消息推送（虚拟支付事件）
 
-### POST /v1/webhooks/wechat-pay/transactions
+### GET/POST /v1/webhooks/wechat-message
 
-- 不使用用户Bearer会话，必须读取原始body；
-- 在占用回调处理槽前快速检查必需 `Wechatpay-*` 头、5分钟时间窗及Content-Length；应用层使用128KB上限和5秒body读取期限，服务端设置短headers/request/keepalive timeout；
-- 验证 `Wechatpay-*` 请求头、签名时间窗及微信支付公钥ID；
-- AES-256-GCM解密resource；
-- 核对appid、mchid、out_trade_no、transaction_id、SUCCESS、3990、CNY及付款OpenID；
-- provider event ID、transaction_id和权益唯一约束防重；
-- 在同一事务中写事件、订单PAID、一次ACTIVE entitlement、报告DELIVERED及一次时间线/交付记录；
-- 不在支付后才生成或QA报告。
+小程序后台「开发管理 → 消息推送」配置为本地址，**安全模式 + JSON**。沙箱与现网共用这一个地址。
 
-重复的合法成功通知返回成功，但不能重复授权或交付。无效签名或业务字段不一致返回错误并写脱敏安全记录。
+- GET：保存配置时微信发来的校验，`signature = sha1(sort(Token, timestamp, nonce))` 正确才原样返回 `echostr`；
+- POST：只接受安全模式（`encrypt_type=aes`），先校验 `msg_signature = sha1(sort(Token, timestamp, nonce, Encrypt))`，再用 EncodingAESKey 做 AES-256-CBC 解密，明文末尾的 AppID 必须是本小程序；明文模式、签名不符一律 401。不使用用户 Bearer 会话，128KB 上限、5 秒读取期限，按来源每分钟 300 次；
+- 回包为 `success`（无需加密）；需要内容的回包（iOS 退款问询）加密并签名后返回 `{Encrypt, MsgSignature, TimeStamp, Nonce}`。返回非成功时微信会重试，最多 15 次。
 
-关闭 `PAID_COMPASS_ENABLED` 只阻止新的创单/预支付。若某订单已取得签名支付参数，随后开关关闭或当前Source Catalog被撤回，其通过签名、appid、mchid、金额、币种、transaction_id和付款OpenID校验的成功通知/查单结果仍授予既有锁定报告权益，避免扣款后拒绝交付。目录异常须进入人工事故与退款流程，不能用静默不交付代替退款。
+按事件处理：
 
-### POST /v1/webhooks/wechat-pay/refunds
+- `xpay_goods_deliver_notify`：`Env` 与本服务环境不同的直接确认、不生效（写 `PAYMENT_PUSH_OTHER_ENV_IGNORED` 审计）。否则用 `GoodsInfo.Attach`（订单 ID）找到订单，要求 `OutTradeNo` 是该订单的尝试号，核对道具 ID、数量 1、实付 3990 分和付款 OpenID，再在同一事务中写事件、订单 PAID（订单号改为付款的那次尝试）、一次 ACTIVE entitlement、报告 DELIVERED 及一次时间线。按尝试号幂等；同内容重复推送只处理一次。找不到订单返回 404，让微信重试；
+- 同一订单两次尝试都付款，或已取消的订单在新订单付款后又收到付款：保留一笔，另一笔写 `DUPLICATE_PAYMENT_MANUAL_REFUND_REQUIRED` 审计，需在虚拟支付后台人工退款。已取消订单晚到的付款会让同一测评下新的未付款订单让位；
+- `xpay_refund_notify`：本库没有对应订单的视为另一环境的推送，确认后不处理。`RetCode=0` 为退款成功，撤回权益；`SUCCESS` 为单调终态，后到的其他状态不得恢复访问。没有对应退款记录的（Apple 自行退款、商户后台手工退款）补记一条 `PLATFORM_REFUND` 退款记录再撤回权益；
+- `xpay_subscribe_ios_refund_query_notify`：Apple 询问是否同意 iOS 退款，须 3 秒内应答。按 OD-07 的同一政策：支付 7 天内且报告 PDF 未下载回 `result_code=0`（不拦截），已下载或超过 7 天回 `1` 并附依据；找不到已支付订单回 `0`。最终由 Apple 决定；
+- `xpay_complaint_notify`、`xpay_wxpay_callback_notify`：只记录投诉单号、事件类型等到审计日志，不保存投诉正文；
+- 其他事件：直接确认。
 
-执行同等的原始body验签、解密、字段核对和幂等处理。当前安全默认是退款成功后把该订单的 entitlement 改为 `REVOKED`；`SUCCESS` 为单调终态，后到的 `PROCESSING/CLOSED/ABNORMAL` 不得恢复访问或倒退账本。持久化对账任务每分钟扫描 `PROCESSING`：正常情况主动查退款；若只落了退款意图、尚无provider退款ID，则以同一 `out_refund_no` 幂等重放申请，再通过验签查询进入相同迁移。任何保留或恢复访问的例外须等OD-07批准并修改合同测试。
+关闭购买开关只阻止新的创单和签名。已签名的尝试之后若付款成功，仍按既有锁定报告交付，避免扣款后拒绝交付；目录异常须进入人工事故与退款流程。
+
+### 退款
+
+管理员退款通过 `refund_order` 发起（需要买家 OpenID；账号已注销的订单只能在虚拟支付后台人工退款），再用 `query_order` 查退款单（5/8 成功、7 失败）。iOS 订单开发者不能主动退款，返回 `409 REFUND_APPLE_UNSUPPORTED`。持久化对账任务每分钟扫描 `PROCESSING` 的退款，以同一退款单号幂等重放申请并查询。支付时间 180 天内的退款平台退还手续费。
 
 ## 8. 完整报告、PDF与反馈
 
@@ -630,6 +688,10 @@ V0.5 owner 可独立、幂等撤回该学生的 `AI_ANALYSIS` 授权；成功返
 | 409 | AGENT_ASSESSMENT_NOT_READY | 免费测评尚未完成提交、完整度或安全快照门槛 |
 | 409 | AGENT_ANALYSIS_IS_ONE_SHOT | 一次性测评/报告分析不接受追加消息 |
 | 409 | REPORT_NOT_LOCKED / REPORT_QA_REQUIRED | 报告未达到收费前门槛 |
+| 409 | REPURCHASE_LIMIT_REACHED | 这份报告已退款两次（退款后只能重新购买一次），不能再下单 |
+| 400 | STUDENT_DELETION_NOT_CONFIRMED | 删除孩子档案缺少确认串 |
+| 409 | STUDENT_PAYMENT_IN_PROGRESS | 这个孩子有支付或退款正在进行，不能删除 |
+| 409 | ASSESSMENT_RESULT_READY / ASSESSMENT_PURCHASED / ASSESSMENT_PAYMENT_IN_PROGRESS / ASSESSMENT_HAS_FOLLOW_UP | 问卷已出免费结果、报告买过、支付进行中或之后还有学生问卷，不能删除 |
 | 409 | ORDER_STATE_CHANGED / ORDER_NOT_PAYABLE | 订单状态不允许操作 |
 | 409 | IDEMPOTENCY_KEY_REUSED / AGENT_RUN_PENDING / AGENT_REPLY_LIMIT_REACHED | Agent幂等冲突、会话已有未决任务或成功回复额度用尽 |
 | 503 | PAID_COMPASS_DISABLED | 购买开关关闭，禁止新的创单或预支付 |
