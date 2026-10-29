@@ -1,0 +1,191 @@
+{
+  "version": "3.0-review-candidate",
+  "date": "2026-10-30",
+  "approval": "FOUNDER_REVIEW_PENDING",
+  "source_file": "phoenix-nova-primary-original.png",
+  "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+  "method": "Original-pixel extraction, alpha matte and aspect-preserving Lanczos resampling; no generative modification or vector tracing",
+  "alpha_rule": "alpha=round(clamp((maxRGB-minRGB-3)/12,0,1)*255); source RGB unchanged before resampling",
+  "limitations": [
+    "Flattened RGB source has no original alpha or vector paths. White-matted edge RGB is preserved; faint pale fringes can remain on dark backgrounds.",
+    "Small 16/32px complete composite loses fine detail. All icons remain Founder-review candidates.",
+    "No SVG or second-batch colour variants are manufactured."
+  ],
+  "assets": [
+    {
+      "file": "phoenix-nova-primary-original.png",
+      "usage": "Immutable Founder master / brand archive",
+      "sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "width": 1254,
+      "height": 1254,
+      "transparent_background": false,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30"
+    },
+    {
+      "file": "phoenix-nova-primary-trimmed.png",
+      "usage": "Complete primary lockup, lossless rectangular trim",
+      "sha256": "66119BBCB7660E838727C9FF15BD112E49A7BE80FBA4556D207E35BF2976985D",
+      "width": 1059,
+      "height": 1116,
+      "transparent_background": false,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "source_crop": [
+        102,
+        53,
+        1161,
+        1169
+      ],
+      "rgb_exact_source_crop": true
+    },
+    {
+      "file": "phoenix-nova-primary-transparent.png",
+      "usage": "Complete primary lockup, full original canvas with candidate alpha",
+      "sha256": "4C3A303510453A449090144619C45A79787BFB119F4C8056A3B40B4A28FB7027",
+      "width": 1254,
+      "height": 1254,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "rgb_exact_source_canvas": true
+    },
+    {
+      "file": "phoenix-nova-symbol-transparent.png",
+      "usage": "Complete phoenix + globe + star composite",
+      "sha256": "EB2C03880227E5C840048D1F13DD030FE6182ED7DE6C201A3DF2704D5BCFF573",
+      "width": 632,
+      "height": 784,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "source_crop": [
+        309,
+        61,
+        941,
+        845
+      ],
+      "rgb_exact_source_crop": true
+    },
+    {
+      "file": "phoenix-nova-wordmark-extracted.png",
+      "usage": "Internal source part for reproducible header arrangement; not a separate approved brand version",
+      "sha256": "A66075C1B6092A257E80D2939F3ADD0840192B7D22C7F70422F3F853AE82953A",
+      "width": 1032,
+      "height": 157,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "source_crop": [
+        117,
+        845,
+        1149,
+        1002
+      ],
+      "rgb_exact_source_crop": true
+    },
+    {
+      "file": "phoenix-nova-header@2x.png",
+      "usage": "Horizontal header, native-source 2x for a 520x160 CSS box",
+      "sha256": "C566AA2813A1D08D02C71230C7E2360BA2C681A056F1A7FDB900C2A40396B4DA",
+      "width": 1040,
+      "height": 320,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "layout": "Unmodified extracted composite at left; extracted Phoenix Nova TM wordmark at right"
+    },
+    {
+      "file": "phoenix-nova-header.png",
+      "usage": "Horizontal header, 1x",
+      "sha256": "CEBCE45B4787DDBB03F1320BF23DF522119100BB19D0B57384F033B29D8C3208",
+      "width": 520,
+      "height": 160,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "display_ratio": "13:4"
+    },
+    {
+      "file": "phoenix-nova-symbol-512.png",
+      "usage": "Application icon",
+      "sha256": "0D27CE2BA08FB16F2FD4DFB69B32973D3809DAA48A8B060D4EF3E68DFB06B366",
+      "width": 512,
+      "height": 512,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "readability": "Review at actual size; no simplification"
+    },
+    {
+      "file": "phoenix-nova-symbol-192.png",
+      "usage": "Application icon",
+      "sha256": "27E72C3DC28F00B5B6E2D24C1A6DC33932A554E3048ED5D4108E84D1DF6C969F",
+      "width": 192,
+      "height": 192,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "readability": "Review at actual size; no simplification"
+    },
+    {
+      "file": "phoenix-nova-symbol-48.png",
+      "usage": "Favicon review candidate",
+      "sha256": "60753C4A114C587A68879FDB35A30B86E44A065C461F265339CDA490A59360BB",
+      "width": 48,
+      "height": 48,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "readability": "Review at actual size; no simplification"
+    },
+    {
+      "file": "phoenix-nova-symbol-32.png",
+      "usage": "Favicon review candidate",
+      "sha256": "37EDCC3CDA961B49312F7FD90228224F876E427C38388B4A30901F81D175E736",
+      "width": 32,
+      "height": 32,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "readability": "Fine globe/star details are limited; not approved for automatic website use"
+    },
+    {
+      "file": "phoenix-nova-symbol-16.png",
+      "usage": "Favicon review candidate",
+      "sha256": "AB29874299BB06C97B7BABBDEB903461772994C882130DEA6C759F91B3F0FB9A",
+      "width": 16,
+      "height": 16,
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30",
+      "readability": "Fine globe/star details are limited; not approved for automatic website use"
+    },
+    {
+      "file": "favicon-review.ico",
+      "usage": "Multi-resolution review-only favicon; not referenced by site",
+      "sha256": "8AA6FF35981AFB50F13C4067CAD3CD82ACDD0DBA073E8ABA585BCC5D8DC1D5DC",
+      "sizes": [
+        16,
+        32,
+        48
+      ],
+      "transparent_background": true,
+      "source_sha256": "A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30"
+    }
+  ]
+}
