@@ -10,7 +10,7 @@ Founder steering: PHOENIX-HEALTH-FAMILY-ENTRY-V1 plus Health 双目标模式 V1.
 | 国际医疗服务 / International medical services | #services, then optional #consultation | No |
 | 两者兼顾 / Both, together | /[locale]/health/family#integrated-support | No |
 
-The family page contains its own hero, six planning directions, the existing 14-question Compass introduction, audiences, international service bridge and independent #family-consultation preparation demo. It reuses canonical `dimensions` titles/actions from lib/health-compass.ts, without changing or inventing questions or decision rules.
+The family page contains its own hero, six planning directions, the existing 14-question Compass introduction, audiences, international service bridge and independent #family-consultation preparation demo. It reuses canonical `dimensions` titles from lib/health-compass.ts, with Founder-supplied introduction copy for each direction. No questions or decision rules are changed or invented. The later supplied family-page headline, introductory paragraphs, six descriptions, CTA labels and important notice are applied in Chinese with corresponding English translations.
 
 All assessment links on both pages point to the same existing /zh/compass/health or /en/compass/health, only when the original server switch allows them. When off, family assessment buttons are disabled with visible explanatory text; service browsing and both consultation demos remain available. There is no goal-specific questionnaire copy, query-string answer transfer or persisted goal selector.
 

@@ -1,4 +1,6 @@
 .family { color:#0d1b2a; }
+.pageName { font-family:var(--serif); font-size:19px; color:#79612d; margin:15px 0 0; }
+.disclaimer { padding-block:0 38px; }.disclaimer p { margin:0; font-size:11px; line-height:1.9; color:#626c73; border-top:1px solid #d4d2c8; padding-top:24px; }
 .hero { display:grid; grid-template-columns:1.1fr 1fr; gap:70px; padding-block:75px 90px; align-items:center; }
 .hero h1 { font-family:var(--serif); font-weight:400; white-space:pre-line; line-height:1.5; font-size:clamp(34px,3.4vw,52px); margin:25px 0; }
 .lead { color:#56616a; font-size:14px; line-height:2; max-width:560px; }

@@ -39,6 +39,7 @@ Task PHOENIX-HEALTH-WEB-20261029. Work performed 2026-10-29–30, Asia/Shanghai.
 | Native Windows Worker full suite | BLOCKED/FAILED runtime start: workerd structured exception 0xc0000005 / Miniflare ERR_RUNTIME_FAILURE. Reproduced outside restricted execution. The suite was terminated after hanging; not labelled PASS. |
 | Local frontend browser QA, gate off | PASS, 17 checks on final built frontend; two locales, 320/375/390/768/1024/1440px, metadata, no horizontal overflow/header overlap, truthful consultation, no interaction requests/storage, refresh reset, FAQ/mobile navigation/language links. |
 | Local frontend browser QA, gate on | PASS, 18 checks including landing → original questionnaire, adult acknowledgment, back/edit, skips, no context-only invented result and no answer requests/storage. |
+| Local family/dual-goal browser QA | PASS, 13 checks per switch state: zh/en 390/768/1440px, six directions, three homepage entries, independent consultation, reset and locale routes. All four local browser runs total 61 checks. |
 | Actual physical iOS/Android/WeChat | NOT RUN. Synthetic Edge viewport checks are not physical-device acceptance. |
 
 Local frontend browser evidence uses the built application through the limited Node adapter with an empty Cloudflare binding and no D1. It does not prove Worker/D1 or authentication runtime behavior. The existing real Worker tests and original Python Health browser suite are retained for Ubuntu CI on the exact PR commit.
@@ -69,3 +70,7 @@ Local screenshots/results are in ignored `outputs/health-landing/` (default off)
 Technical status: frontend candidate ready for review, with real Worker CI evidence required separately. Founder visual/wording acceptance pending. Formal consultation integration is intentionally absent. Both routes retain candidate noindex; release metadata needs an approved absolute origin. Core lead/service ID contracts, sensitive-data authorisation, server permissions, PostgreSQL RLS and audit/retention remain future gates, not implemented capabilities.
 
 No independent Xuanwu human review or physical-device approval is claimed. See the PR checks for exact remote execution status; local success is not remote or production readiness.
+
+## Remote first run and CI environment repair
+
+PR #29 initial head `6ba3e6a5a966e25d3ea2f391f9410c4e603b4fdb`: Website PR checks run 40912473585 passed all three sites. Health run 40912473701 passed install, typecheck, lint, build and all Node/real Worker tests, then failed before browser tests because ubuntu-latest resolved to Ubuntu 26.04, unsupported by the existing Playwright 1.57 package. Original/new browser tests were skipped by CI and were not marked PASS. The Health workflow runner is now pinned to Ubuntu 24.04; no assertions or original regressions were removed. Final exact-head results are recorded in the PR.
