@@ -128,6 +128,14 @@ export function HealthCompass({ locale }: { locale: HealthLocale }) {
             {showPlan ? <pre className={styles.plan} data-testid="health-plan">{actionText(selected, locale)}</pre> : null}
           </div>
         </> : <div className={styles.panel} data-testid="health-empty"><h2>{t("信息不足，不生成个性化结果。", "Not enough information for a personalised result.")}</h2><p>{t("12个安排问题均未回答。关系与地区选择不能用来推断你的安排。", "All 12 arrangement questions were skipped. Relationship and region do not tell us about your arrangements.")}</p></div>}
+        <aside className={styles.panel} data-testid="health-independent-consultation">
+          <h2>{t("希望继续了解支持？", "Would you like to explore support?")}</h2>
+          <p>{t("咨询完全自愿，无需分享本次回答。以下链接不附带问卷答案，离开页面会清空本次会话。", "Consultation is optional. These links carry no questionnaire answers. Leaving clears this session.")}</p>
+          <div className={styles.actions}>
+            <a href={`/${locale}/health/family#family-consultation`}>{t("家庭健康规划咨询准备", "Family planning consultation preparation")} ↗</a>
+            <a href={`/${locale}/health#consultation`}>{t("国际医疗服务咨询准备", "International care consultation preparation")} ↗</a>
+          </div>
+        </aside>
         <button type="button" onClick={() => { setStep("review"); setNotice(""); }} data-testid="health-review">{t("返回核对回答", "Review answers")}</button>
       </> : null}
       <p className={styles.notice} role="status" aria-live="polite">{notice}</p>

@@ -23,6 +23,7 @@ export type PageId = "home" | (typeof pageIds)[number];
 export type Locale = "zh" | "en";
 
 const routeLabels = {
+  health: ["健康与国际医疗", "Global Health"],
   home: ["首页", "Home"],
   compass: ["凤启罗盘", "Compass"],
   lighthouse: ["成长灯塔", "Growth Lighthouse"],
@@ -156,7 +157,7 @@ function pick(locale: Locale, zh: string, en: string) {
   return locale === "zh" ? zh : en;
 }
 
-function hrefFor(locale: Locale, page: PageId) {
+function hrefFor(locale: Locale, page: PageId | "health" | "health/family") {
   return page === "home" ? `/${locale}` : `/${locale}/${page}`;
 }
 
@@ -186,7 +187,7 @@ function SectionIntro({
   );
 }
 
-export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId; inverse?: boolean }) {
+export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId | "health" | "health/family"; inverse?: boolean }) {
   const otherLocale: Locale = locale === "zh" ? "en" : "zh";
   return (
     <header className={`site-header ${inverse ? "site-header--inverse" : ""}`}>
@@ -239,7 +240,7 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
   );
 }
 
-function SiteFooter({ locale }: { locale: Locale }) {
+export function SiteFooter({ locale }: { locale: Locale }) {
   return (
     <footer className="site-footer">
       <div className="shell site-footer__top">
@@ -249,6 +250,7 @@ function SiteFooter({ locale }: { locale: Locale }) {
           <span>{pick(locale, "每一次启程，都值得更好的未来。", "Every beginning deserves a better future.")}</span>
         </div>
         <nav aria-label={pick(locale, "页脚导航", "Footer navigation")}>
+          <Link href={`/${locale}/health`}>{pick(locale, "健康与国际医疗服务", "Global Health Services")}</Link>
           {primaryNavigation.slice(1).map((item) => item.kind === "internal"
             ? <Link href={hrefFor(locale, item.page)} key={item.page}>{routeLabels[item.page][locale === "zh" ? 0 : 1]}</Link>
             : <a href={digitalWorldUrl} key={item.id} rel="noreferrer" target="_blank">{pick(locale, "数字凤启", "Digital World")} <Arrow /></a>)}
@@ -317,6 +319,7 @@ function HomePage({ locale }: { locale: Locale }) {
       </section>
 
       <HealthCompassEntry locale={locale} />
+      <div className="shell" style={{ padding: "24px 0" }}><Link className="center-text-link" href={`/${locale}/health`}>{pick(locale, "Health｜了解全球健康与国际医疗协调服务", "Health | Explore global health and medical coordination")} <Arrow /></Link></div>
       <AdmissionsShortcut locale={locale} />
       <section className="portal-directory" id="portal-directory">
         <div className="shell portal-directory__heading">
@@ -489,7 +492,7 @@ function CompassPage({ locale }: { locale: Locale }) {
           {compassItems.map((item, index) => (
             <article id={item.id} key={item.id}>
               <div className="compass-list__visual"><PatternMedallion variant={item.id} size="card" /></div>
-              <span>0{index+1}</span><div><small>{item.en}</small><h2>{pick(locale, item.zh, item.en)}</h2><p>{pick(locale, item.description[0], item.description[1])}</p><div className="compass-entry-actions"><span className="center-pill">{item.id==="health"?pick(locale,healthEnabled?"健康安排 · 候选体验":"健康安排体验 · 尚未开放",healthEnabled?"Health arrangements · candidate":"Health arrangements preview · not open"):pick(locale,"正式测评入口待接通","Live assessment entry not connected")}</span>{item.id==="health"&&healthEnabled?<Link className="center-text-link" prefetch={false} data-testid="health-entry" href={`/${locale}/compass/health`}>{pick(locale,"进入健康罗盘候选体验","Try Health Compass")} <Arrow /></Link>:<Link className="center-text-link" href={hrefFor(locale,item.id==="education"?"admissions":"family-center")}>{pick(locale,item.id==="education"?"已有升学目标？查看申请登记":"查看家庭中心预览",item.id==="education"?"Have an admissions goal? View intake":"Preview Family Center")} <Arrow /></Link>}</div></div>
+              <span>0{index+1}</span><div><small>{item.en}</small><h2>{pick(locale, item.zh, item.en)}</h2><p>{pick(locale, item.description[0], item.description[1])}</p><div className="compass-entry-actions">{item.id === "health" && <Link className="center-text-link" href={`/${locale}/health`}>{pick(locale,"了解全球健康服务","Explore Global Health Services")} <Arrow /></Link>}<span className="center-pill">{item.id==="health"?pick(locale,healthEnabled?"健康安排 · 候选体验":"健康安排体验 · 尚未开放",healthEnabled?"Health arrangements · candidate":"Health arrangements preview · not open"):pick(locale,"正式测评入口待接通","Live assessment entry not connected")}</span>{item.id==="health"&&healthEnabled?<Link className="center-text-link" prefetch={false} data-testid="health-entry" href={`/${locale}/compass/health`}>{pick(locale,"进入健康罗盘候选体验","Try Health Compass")} <Arrow /></Link>:<Link className="center-text-link" href={hrefFor(locale,item.id==="education"?"admissions":"family-center")}>{pick(locale,item.id==="education"?"已有升学目标？查看申请登记":"查看家庭中心预览",item.id==="education"?"Have an admissions goal? View intake":"Preview Family Center")} <Arrow /></Link>}</div></div>
               <em>{pick(locale,"后续关联：","Planned destination: ")}{pick(locale,item.next[0],item.next[1])}<br/>{pick(locale,"测评结果尚未同步","Assessment results are not synced")}</em>
             </article>
           ))}
