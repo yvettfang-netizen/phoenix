@@ -1,0 +1,92 @@
+{
+  "date": "2026-10-30",
+  "status": "PASS",
+  "scope": "Isolated asset review only; not live website validation",
+  "browser": "147.0.3912.98",
+  "checks": [
+    {
+      "width": 1440,
+      "imagesDecoded": true,
+      "noHorizontalOverflow": true,
+      "allLinksResolved": true,
+      "noRuntimeErrors": true,
+      "noExternalRequests": true
+    },
+    {
+      "width": 768,
+      "imagesDecoded": true,
+      "noHorizontalOverflow": true,
+      "allLinksResolved": true,
+      "noRuntimeErrors": true,
+      "noExternalRequests": true
+    },
+    {
+      "width": 390,
+      "imagesDecoded": true,
+      "noHorizontalOverflow": true,
+      "allLinksResolved": true,
+      "noRuntimeErrors": true,
+      "noExternalRequests": true
+    },
+    {
+      "width": 320,
+      "imagesDecoded": true,
+      "noHorizontalOverflow": true,
+      "allLinksResolved": true,
+      "noRuntimeErrors": true,
+      "noExternalRequests": true
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "review/logo-three-versions.png",
+      "sha256": "CADEB71F0DCE0067BA63EF3B0A68F5405204FD15DA86F46211FDCFE6098892A2",
+      "width": 1280,
+      "height": 497,
+      "transparent_background": false,
+      "source": "review.html with Logo V3 review candidates",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30"
+    },
+    {
+      "file": "review/logo-transparency-check.png",
+      "sha256": "99AA7C06F054CCD0974340B495F304DA609AB45A5A6FCB4CCAA0CF90D0ECD329",
+      "width": 1280,
+      "height": 934,
+      "transparent_background": false,
+      "source": "review.html with Logo V3 review candidates",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30"
+    },
+    {
+      "file": "review/header-desktop.png",
+      "sha256": "0EB81B8C3E764C67C1A5F90E4FB9B2E6AF3B220F7166D99B8453F92DB24ED047",
+      "width": 1280,
+      "height": 111,
+      "transparent_background": false,
+      "source": "review.html with Logo V3 review candidates",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30"
+    },
+    {
+      "file": "review/icons-actual-size.png",
+      "sha256": "FFCD202ECA21A3C52E1BC1FA0F1E938EE78BAEC13749184F359393DC2314A853",
+      "width": 1280,
+      "height": 394,
+      "transparent_background": false,
+      "source": "review.html with Logo V3 review candidates",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30"
+    },
+    {
+      "file": "review/header-mobile.png",
+      "sha256": "CF95FABF1F28FBA1687D53CF06545D72E9079C96B71EB73902E194ACBC616DA0",
+      "width": 358,
+      "height": 374,
+      "transparent_background": false,
+      "source": "review.html with Logo V3 review candidates",
+      "version": "3.0-review-candidate",
+      "date": "2026-10-30"
+    }
+  ]
+}
