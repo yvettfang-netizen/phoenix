@@ -28,7 +28,7 @@ export default async function HealthPage({ params }: Props) {
       </div>
     </header>
     <main><HealthCompass locale={locale} /></main>
-    <footer className="site-footer" style={{ padding: "24px 0", color: "#f7f3e9" }}>
+    <footer className="site-footer" style={{ padding: "24px 0", color: "#123f48" }}>
       <div className="shell site-footer__bottom" style={{ flexWrap: "wrap", gap: 16, fontSize: 12, color: "inherit" }}>
         <span>© 2026 Phoenix Nova™ · 凤启环球信息科技（深圳）有限公司</span>
         <span>{zh ? "V5 候选体验 · 尚未正式发布" : "V5 candidate preview · Not released"}</span>

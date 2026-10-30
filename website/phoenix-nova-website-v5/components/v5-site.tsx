@@ -23,13 +23,17 @@ export type PageId = "home" | (typeof pageIds)[number];
 export type Locale = "zh" | "en";
 
 const routeLabels = {
+  health: ["健康", "Health"],
   home: ["首页", "Home"],
+  education: ["教育", "Education"],
+  identity: ["身份", "Identity"],
+  finance: ["财务", "Finance"],
   compass: ["凤启罗盘", "Compass"],
   lighthouse: ["成长灯塔", "Growth Lighthouse"],
   services: ["专业服务", "Services"],
-  insights: ["凤启洞察", "Insights"],
+  insights: ["资讯洞察", "Insights"],
   oriental: ["凤启东方", "Phoenix Oriental"],
-  about: ["关于凤启", "About"],
+  about: ["关于我们", "About Us"],
   "family-center": ["家庭中心", "Family Center"],
   admissions: ["升学申请", "Admissions"],
   application: ["申请登记", "Application intake"],
@@ -50,14 +54,13 @@ export const routeMetadata = {
 const digitalWorldUrl = "https://fengqi-research-institute.yvettfang.chatgpt.site";
 
 const primaryNavigation = [
-  { kind: "internal", page: "home" },
-  { kind: "internal", page: "compass" },
-  { kind: "internal", page: "lighthouse" },
-  { kind: "internal", page: "services" },
-  { kind: "internal", page: "insights" },
-  { kind: "internal", page: "oriental" },
-  { kind: "external", id: "digital" },
-  { kind: "internal", page: "about" },
+  { id: "home", kind: "internal", page: "home" },
+  { id: "education", kind: "anchor", hash: "education" },
+  { id: "identity", kind: "anchor", hash: "identity" },
+  { id: "finance", kind: "anchor", hash: "wealth" },
+  { id: "health", kind: "internal", page: "health" },
+  { id: "about", kind: "internal", page: "about" },
+  { id: "insights", kind: "internal", page: "insights" },
 ] as const;
 
 const journeyData = [
@@ -156,8 +159,22 @@ function pick(locale: Locale, zh: string, en: string) {
   return locale === "zh" ? zh : en;
 }
 
-function hrefFor(locale: Locale, page: PageId) {
+function hrefFor(locale: Locale, page: PageId | "health" | "health/family") {
   return page === "home" ? `/${locale}` : `/${locale}/${page}`;
+}
+
+function navigationHref(locale: Locale, item: (typeof primaryNavigation)[number]) {
+  return item.kind === "anchor"
+    ? `/${locale}/compass#${item.hash}`
+    : hrefFor(locale, item.page);
+}
+
+function navigationLabel(locale: Locale, item: (typeof primaryNavigation)[number]) {
+  return routeLabels[item.id][locale === "zh" ? 0 : 1];
+}
+
+function navigationIsActive(page: PageId | "health" | "health/family", item: (typeof primaryNavigation)[number]) {
+  return item.kind === "internal" && (page === item.page || (item.page === "health" && page === "health/family"));
 }
 
 function Arrow() {
@@ -186,7 +203,7 @@ function SectionIntro({
   );
 }
 
-export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId; inverse?: boolean }) {
+export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId | "health" | "health/family"; inverse?: boolean }) {
   const otherLocale: Locale = locale === "zh" ? "en" : "zh";
   return (
     <header className={`site-header ${inverse ? "site-header--inverse" : ""}`}>
@@ -198,14 +215,10 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
           label={pick(locale, "Phoenix Nova 首页", "Phoenix Nova home")}
         />
         <nav className="desktop-nav" aria-label={pick(locale, "主导航", "Primary navigation")}>
-          {primaryNavigation.map((item) => item.kind === "internal" ? (
-            <Link className={page === item.page ? "is-active" : ""} href={hrefFor(locale, item.page)} key={item.page}>
-              {routeLabels[item.page][locale === "zh" ? 0 : 1]}
+          {primaryNavigation.map((item) => (
+            <Link className={navigationIsActive(page, item) ? "is-active" : ""} href={navigationHref(locale, item)} key={item.id}>
+              {navigationLabel(locale, item)}
             </Link>
-          ) : (
-            <a href={digitalWorldUrl} key={item.id} rel="noreferrer" target="_blank">
-              {pick(locale, "数字凤启", "Digital World")}
-            </a>
           ))}
         </nav>
         <div className="header-actions">
@@ -218,17 +231,13 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
           <details className="mobile-menu">
             <summary aria-label={pick(locale, "打开导航", "Open navigation")}><span /><span /></summary>
             <nav aria-label={pick(locale, "移动端导航", "Mobile navigation")}>
-              {primaryNavigation.map((item, index) => item.kind === "internal" ? (
-                <Link href={hrefFor(locale, item.page)} key={item.page}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>{routeLabels[item.page][locale === "zh" ? 0 : 1]}
+              {primaryNavigation.map((item, index) => (
+                <Link className={navigationIsActive(page, item) ? "is-active" : ""} href={navigationHref(locale, item)} key={item.id}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>{navigationLabel(locale, item)}
                 </Link>
-              ) : (
-                <a href={digitalWorldUrl} key={item.id} rel="noreferrer" target="_blank">
-                  <span>{String(index + 1).padStart(2, "0")}</span>{pick(locale, "数字凤启", "Digital World")} <Arrow />
-                </a>
               ))}
               <Link href={hrefFor(locale, "family-center")}>
-                <span>09</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
+                <span>08</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
               </Link>
               <Link className="mobile-locale" href={hrefFor(otherLocale, page)}>{locale === "zh" ? "English" : "中文"}</Link>
             </nav>
@@ -239,19 +248,19 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
   );
 }
 
-function SiteFooter({ locale }: { locale: Locale }) {
+export function SiteFooter({ locale }: { locale: Locale }) {
   return (
     <footer className="site-footer">
       <div className="shell site-footer__top">
         <div className="site-footer__brand">
-          <BrandMark inverse href={`/${locale}`} label={pick(locale, "Phoenix Nova 首页", "Phoenix Nova home")} />
+          <BrandMark href={`/${locale}`} label={pick(locale, "Phoenix Nova 首页", "Phoenix Nova home")} />
           <p>For Every Beginning.</p>
           <span>{pick(locale, "每一次启程，都值得更好的未来。", "Every beginning deserves a better future.")}</span>
         </div>
         <nav aria-label={pick(locale, "页脚导航", "Footer navigation")}>
-          {primaryNavigation.slice(1).map((item) => item.kind === "internal"
-            ? <Link href={hrefFor(locale, item.page)} key={item.page}>{routeLabels[item.page][locale === "zh" ? 0 : 1]}</Link>
-            : <a href={digitalWorldUrl} key={item.id} rel="noreferrer" target="_blank">{pick(locale, "数字凤启", "Digital World")} <Arrow /></a>)}
+          {primaryNavigation.map((item) => (
+            <Link href={navigationHref(locale, item)} key={item.id}>{navigationLabel(locale, item)}</Link>
+          ))}
         </nav>
         <div className="site-footer__company">
           <small>{pick(locale, "公司主体", "Company")}</small>
@@ -299,7 +308,7 @@ function HomePage({ locale }: { locale: Locale }) {
           <div className="gateway-hero__visual" aria-label={pick(locale, "Phoenix Nova 官方凤凰罗盘", "Phoenix Nova official phoenix compass")}>
             <span className="gateway-hero__coordinate gateway-hero__coordinate--top">22.3193° N · 114.1694° E</span>
             <PatternMedallion variant="master" size="hero" />
-            <div className="gateway-hero__mark"><Image src="/brand/phoenix-nova-mark-official.png" alt="" width={145} height={145} priority unoptimized /></div>
+            <div className="gateway-hero__mark"><Image src="/brand/official/v3/phoenix-nova-symbol-transparent.png" alt="" width={632} height={784} priority unoptimized /></div>
             <span className="gateway-hero__coordinate gateway-hero__coordinate--bottom">DIRECTION · GROWTH · CONTINUITY</span>
           </div>
         </div>
@@ -317,6 +326,7 @@ function HomePage({ locale }: { locale: Locale }) {
       </section>
 
       <HealthCompassEntry locale={locale} />
+      <div className="shell" style={{ padding: "24px 0" }}><Link className="center-text-link" href={`/${locale}/health`}>{pick(locale, "Health｜了解全球健康与国际医疗协调服务", "Health | Explore global health and medical coordination")} <Arrow /></Link></div>
       <AdmissionsShortcut locale={locale} />
       <section className="portal-directory" id="portal-directory">
         <div className="shell portal-directory__heading">
@@ -489,7 +499,7 @@ function CompassPage({ locale }: { locale: Locale }) {
           {compassItems.map((item, index) => (
             <article id={item.id} key={item.id}>
               <div className="compass-list__visual"><PatternMedallion variant={item.id} size="card" /></div>
-              <span>0{index+1}</span><div><small>{item.en}</small><h2>{pick(locale, item.zh, item.en)}</h2><p>{pick(locale, item.description[0], item.description[1])}</p><div className="compass-entry-actions"><span className="center-pill">{item.id==="health"?pick(locale,healthEnabled?"健康安排 · 候选体验":"健康安排体验 · 尚未开放",healthEnabled?"Health arrangements · candidate":"Health arrangements preview · not open"):pick(locale,"正式测评入口待接通","Live assessment entry not connected")}</span>{item.id==="health"&&healthEnabled?<Link className="center-text-link" prefetch={false} data-testid="health-entry" href={`/${locale}/compass/health`}>{pick(locale,"进入健康罗盘候选体验","Try Health Compass")} <Arrow /></Link>:<Link className="center-text-link" href={hrefFor(locale,item.id==="education"?"admissions":"family-center")}>{pick(locale,item.id==="education"?"已有升学目标？查看申请登记":"查看家庭中心预览",item.id==="education"?"Have an admissions goal? View intake":"Preview Family Center")} <Arrow /></Link>}</div></div>
+              <span>0{index+1}</span><div><small>{item.en}</small><h2>{pick(locale, item.zh, item.en)}</h2><p>{pick(locale, item.description[0], item.description[1])}</p><div className="compass-entry-actions">{item.id === "health" && <Link className="center-text-link" href={`/${locale}/health`}>{pick(locale,"了解全球健康服务","Explore Global Health Services")} <Arrow /></Link>}<span className="center-pill">{item.id==="health"?pick(locale,healthEnabled?"健康安排 · 候选体验":"健康安排体验 · 尚未开放",healthEnabled?"Health arrangements · candidate":"Health arrangements preview · not open"):pick(locale,"正式测评入口待接通","Live assessment entry not connected")}</span>{item.id==="health"&&healthEnabled?<Link className="center-text-link" prefetch={false} data-testid="health-entry" href={`/${locale}/compass/health`}>{pick(locale,"进入健康罗盘候选体验","Try Health Compass")} <Arrow /></Link>:<Link className="center-text-link" href={hrefFor(locale,item.id==="education"?"admissions":"family-center")}>{pick(locale,item.id==="education"?"已有升学目标？查看申请登记":"查看家庭中心预览",item.id==="education"?"Have an admissions goal? View intake":"Preview Family Center")} <Arrow /></Link>}</div></div>
               <em>{pick(locale,"后续关联：","Planned destination: ")}{pick(locale,item.next[0],item.next[1])}<br/>{pick(locale,"测评结果尚未同步","Assessment results are not synced")}</em>
             </article>
           ))}
@@ -558,7 +568,7 @@ function AboutPage({ locale }: { locale: Locale }) {
   return (
     <>
       <PageHero locale={locale} page="about" eyebrow="About Phoenix Nova™" title={pick(locale, "一个以家庭成长为核心的\n长期平台。", "A long-term platform\nbuilt around family growth.")} lead={pick(locale, "Phoenix Nova™ 不是单一申请机构、身份服务商或销售平台，而是连接方向判断、专业支持与长期数字系统的家庭成长平台。", "Phoenix Nova™ is not a single-purpose admissions agency, identity provider or sales platform. It connects direction, professional support and a long-term digital system around family growth.")} />
-      <section className="brand-proof"><div className="shell brand-proof__layout"><div><Image src="/brand/phoenix-nova-logo-official.png" alt="Phoenix Nova 鳳啟 Official Logo" width={470} height={320} unoptimized /></div><p><span>OFFICIAL LOGO SYSTEM V1.0</span>{pick(locale,"凤凰羽翼象征启程、成长与连接。V5 只使用已确认的正式标志，不重新绘制或生成近似图形。","The phoenix wing represents beginnings, growth and connection. V5 uses only the approved official mark, with no redraw or generated approximation.")}</p></div></section>
+      <section className="brand-proof"><div className="shell brand-proof__layout"><div><Image src="/brand/official/v3/phoenix-nova-primary-original.png" alt="Phoenix Nova 鳳啟 Official Logo" width={1254} height={1254} unoptimized /></div><p><span>OFFICIAL PHOENIX NOVA™ LOGO</span>{pick(locale,"凤凰、地球与星光连接家庭的每一次启程。官网使用 Founder 于2026年10月30日确认的原始标志，完整保留颜色、画布与比例。","The phoenix, globe and star connect every family beginning. The website uses the original logo confirmed by the Founder on 30 October 2026, preserving its colours, canvas and proportions.")}</p></div></section>
       <section className="principles-section"><div className="shell"><SectionIntro index="01" eyebrow="How we work" title={pick(locale, "长期主义，需要一套不同的工作原则。", "Long-term thinking requires a different set of principles.")} /><div className="principles-grid"><article><span>01</span><h3>Knowledge First.</h3><p>{pick(locale,"先理解，再行动。","Understand before acting.")}</p></article><article><span>02</span><h3>AI for efficiency.</h3><p>{pick(locale,"让科技处理复杂，让人保留温度。","Let technology handle complexity while people preserve care.")}</p></article><article><span>03</span><h3>Continuity by design.</h3><p>{pick(locale,"每一次服务，都应成为家庭长期成长的一部分。","Every service should become part of a family's long-term growth.")}</p></article></div></div></section>
       <section className="about-statement"><div className="shell"><p>{pick(locale,"植根东方，连接世界。","Rooted in the East, connected to the world.")}</p><h2>For Every Beginning.</h2><span>{pick(locale,"每一次启程，都值得更好的未来。","Every beginning deserves a better future.")}</span></div></section>
     </>

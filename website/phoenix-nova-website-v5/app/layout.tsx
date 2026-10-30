@@ -18,10 +18,7 @@ export const metadata: Metadata = {
   other: {
     "candidate-status": "private-review",
   },
-  icons: {
-    icon: "/brand/phoenix-nova-mark-official.png",
-    shortcut: "/brand/phoenix-nova-mark-official.png",
-  },
+  // Founder deferred small-size favicon acceptance; no candidate icon is enabled.
 };
 
 export default function RootLayout({

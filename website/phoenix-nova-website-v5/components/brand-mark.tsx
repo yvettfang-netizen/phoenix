@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 
 type BrandMarkProps = {
   inverse?: boolean;
@@ -10,6 +9,7 @@ type BrandMarkProps = {
 };
 
 export function BrandMark({ inverse = false, compact = false, className = "", href = "/", label = "Phoenix Nova 首页" }: BrandMarkProps) {
+  const asset = { src: "/brand/official/v3/phoenix-nova-header@2x.png", width: 1040, height: 320 };
   return (
     <Link
       href={href}
@@ -17,19 +17,19 @@ export function BrandMark({ inverse = false, compact = false, className = "", hr
       className={`brand-mark ${compact ? "brand-mark--compact" : ""} ${inverse ? "brand-mark--inverse" : ""} ${className}`}
     >
       <span className="brand-asset-wrap">
-        <Image
+        {/* Serve approved raster bytes directly: the image shim emits density
+            srcsets even for unoptimized images. No rescaling proxy for logos. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           className="brand-asset brand-asset--mark"
-          src="/brand/phoenix-nova-mark-official.png"
-          width={145}
-          height={145}
-          priority
-          unoptimized
+          src={asset.src}
+          width={asset.width}
+          height={asset.height}
+          loading={compact ? "eager" : "lazy"}
+          fetchPriority={compact ? "high" : undefined}
+          decoding="async"
           alt=""
         />
-      </span>
-      <span className="brand-lockup" aria-hidden="true">
-        <span className="brand-cn">鳳啟</span>
-        <span className="brand-en">PHOENIX NOVA™</span>
       </span>
     </Link>
   );
