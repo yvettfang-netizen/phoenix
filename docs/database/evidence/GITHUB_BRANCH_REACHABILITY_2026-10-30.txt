@@ -1,0 +1,31 @@
+Phoenix origin branch reachability audit
+Date: 2026-10-30 Asia/Shanghai
+Baseline: origin/main@2e00b2c83bf54d5699fa3326d159448fda8afc0c
+
+Format:
+branch | sha | merged into main | main-only commits | branch-only commits
+
+brand/phoenix-nova-logo-v3 | a84ec8f | NO | 0 | 1
+codex/core-identity-gates-0-1-delivery | 38199a3 | NO | 107 | 1
+codex/education-founder-final-alignment | 6db8db0 | NO | 107 | 2
+codex/family-os-architecture-20260920 | dcbb5fe | YES | 103 | 0
+codex/family-os-contract-prep-20260906 | eba5828 | NO | 104 | 8
+codex/family-os-doc-baseline-and-ux-v0.2 | c32f819 | NO | 110 | 2
+codex/family-os-synthetic-contract-validation-20260906 | f3bd9ee | NO | 103 | 1
+codex/family-os-v7-core-alignment-20260912 | 65d7c02 | NO | 110 | 2
+codex/fengqi-east-source-baseline | 9ec131a | NO | 107 | 1
+codex/masters-intake-p0 | c03af7c | NO | 104 | 9
+codex/v5-health-compass-integration-20260906 | 21b859f | YES | 99 | 0
+codex/v5-unified-family-center-admissions-20260906 | 91608c1 | YES | 93 | 0
+codex/website-phoenix-v5-digital-east | 0466a41 | NO | 101 | 4
+codex/weekend-engineering-closeout-2026-08-29 | 09cc6c8 | NO | 107 | 2
+codex/wiswealth-family-office-sites-20261009 | 57d1063 | NO | 101 | 2
+feat/academy-phase1-shell | 846f77c | YES | 104 | 0
+feat/identity-compass-gate2-sprint | 622f425 | NO | 104 | 18
+feature/phoenix-health-landing-v1 | ada733e | NO | 0 | 2
+integration/family-os-sprint2-20260829 | b97dcd4 | NO | 107 | 2
+integration/wealth-compass-v0.1-20260829 | c8a18a9 | YES | 105 | 0
+migration/family-os-sprint2-20260829 | c859a12 | NO | 116 | 22
+migration/wealth-compass-v0.1-20260829 | 340cdac | NO | 116 | 1
+
+No branch was deleted or archived by this audit.

@@ -1,0 +1,43 @@
+Phoenix Canonical source copy verification
+Date: 2026-10-30 Asia/Shanghai
+
+Source:
+  repository: yvettfang-netizen/phoenix-canonical-db
+  branch: codex/canonical-postgresql-phase1
+  commit: 48bb6c3ae18906f870ea9e8a717c03ebb2da34bd
+  path: canonical-db/
+
+Target:
+  repository: yvettfang-netizen/phoenix
+  branch: codex/canonical-postgresql-mainline-copy
+  path: database/canonical/
+
+Command method:
+  1. Enumerate source with: git ls-files canonical-db
+  2. Copy only those tracked paths to database/canonical
+  3. Compute SHA-256 for every source and destination file
+  4. Search the destination for .env, .local-roles.env, .pgpass,
+     runtime/ and backups/
+
+Raw result:
+SOURCE_COMMIT=48bb6c3ae18906f870ea9e8a717c03ebb2da34bd
+SOURCE_FILES=668
+MATCHED=668
+MISSING=0
+MISMATCH=0
+SECRET_OR_RUNTIME_FILES=0
+
+Git index identity result:
+SOURCE_INDEX_FILES=668
+TARGET_STAGED_FILES=672
+IDENTICAL_SOURCE_BLOBS=668
+MISSING_FROM_TARGET_INDEX=0
+BLOB_MISMATCH=0
+
+The four additional target files are SOURCE_SNAPSHOT.md plus the schema,
+policies and verification index READMEs.
+
+Additional static checks:
+- ordered migration SQL files: 25
+- private-key / AWS access-key signature scan: no matches
+- git diff --check: PASS

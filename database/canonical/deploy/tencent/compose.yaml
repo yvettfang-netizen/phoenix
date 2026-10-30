@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: mirror.ccs.tencentyun.com/library/postgres@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d
+    restart: unless-stopped
+    # FD-7 rule 5: server log in the data volume, one file per day (0600), kept for audit extraction
+    # (audit_extract.sh). Container stdout/stderr is size-capped below.
+    command:
+      - postgres
+      - -c
+      - logging_collector=on
+      - -c
+      - log_directory=log
+      - -c
+      - log_filename=postgresql-%Y-%m-%d.log
+      - -c
+      - log_rotation_age=1d
+      - -c
+      - log_rotation_size=0
+      - -c
+      - log_truncate_on_rotation=off
+      - -c
+      - log_file_mode=0600
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"
+    environment:
+      POSTGRES_DB: ${PHOENIX_DB_NAME}
+      POSTGRES_USER: phoenix_bootstrap
+      POSTGRES_PASSWORD: ${PHOENIX_DB_BOOTSTRAP_PASSWORD}
+      POSTGRES_INITDB_ARGS: --encoding=UTF8 --locale=C.UTF-8 --auth-local=scram-sha-256 --auth-host=scram-sha-256
+    volumes:
+      - phoenix_canonical_pg16_data:/var/lib/postgresql/data
+      - ../../migrations/canonical:/opt/phoenix/migrations:ro
+      - ./backups:/backups
+    networks:
+      - phoenix_canonical_private
+    shm_size: 256mb
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U phoenix_bootstrap -d ${PHOENIX_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  phoenix_canonical_pg16_data:
+    name: phoenix_canonical_pg16_data
+
+networks:
+  phoenix_canonical_private:
+    name: phoenix_canonical_private
+    internal: true
