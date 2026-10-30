@@ -301,7 +301,7 @@ function HomePage({ locale }: { locale: Locale }) {
           <div className="gateway-hero__visual" aria-label={pick(locale, "Phoenix Nova 官方凤凰罗盘", "Phoenix Nova official phoenix compass")}>
             <span className="gateway-hero__coordinate gateway-hero__coordinate--top">22.3193° N · 114.1694° E</span>
             <PatternMedallion variant="master" size="hero" />
-            <div className="gateway-hero__mark"><Image src="/brand/phoenix-nova-mark-official.png" alt="" width={145} height={145} priority unoptimized /></div>
+            <div className="gateway-hero__mark"><Image src="/brand/official/v3/phoenix-nova-symbol-transparent.png" alt="" width={632} height={784} priority unoptimized /></div>
             <span className="gateway-hero__coordinate gateway-hero__coordinate--bottom">DIRECTION · GROWTH · CONTINUITY</span>
           </div>
         </div>
@@ -561,7 +561,7 @@ function AboutPage({ locale }: { locale: Locale }) {
   return (
     <>
       <PageHero locale={locale} page="about" eyebrow="About Phoenix Nova™" title={pick(locale, "一个以家庭成长为核心的\n长期平台。", "A long-term platform\nbuilt around family growth.")} lead={pick(locale, "Phoenix Nova™ 不是单一申请机构、身份服务商或销售平台，而是连接方向判断、专业支持与长期数字系统的家庭成长平台。", "Phoenix Nova™ is not a single-purpose admissions agency, identity provider or sales platform. It connects direction, professional support and a long-term digital system around family growth.")} />
-      <section className="brand-proof"><div className="shell brand-proof__layout"><div><Image src="/brand/phoenix-nova-logo-official.png" alt="Phoenix Nova 鳳啟 Official Logo" width={470} height={320} unoptimized /></div><p><span>OFFICIAL LOGO SYSTEM V1.0</span>{pick(locale,"凤凰羽翼象征启程、成长与连接。V5 只使用已确认的正式标志，不重新绘制或生成近似图形。","The phoenix wing represents beginnings, growth and connection. V5 uses only the approved official mark, with no redraw or generated approximation.")}</p></div></section>
+      <section className="brand-proof"><div className="shell brand-proof__layout"><div><Image src="/brand/official/v3/phoenix-nova-primary-original.png" alt="Phoenix Nova 鳳啟 Official Logo" width={1254} height={1254} unoptimized /></div><p><span>OFFICIAL PHOENIX NOVA™ LOGO</span>{pick(locale,"凤凰、地球与星光连接家庭的每一次启程。官网使用 Founder 于2026年10月30日确认的原始标志，完整保留颜色、画布与比例。","The phoenix, globe and star connect every family beginning. The website uses the original logo confirmed by the Founder on 30 October 2026, preserving its colours, canvas and proportions.")}</p></div></section>
       <section className="principles-section"><div className="shell"><SectionIntro index="01" eyebrow="How we work" title={pick(locale, "长期主义，需要一套不同的工作原则。", "Long-term thinking requires a different set of principles.")} /><div className="principles-grid"><article><span>01</span><h3>Knowledge First.</h3><p>{pick(locale,"先理解，再行动。","Understand before acting.")}</p></article><article><span>02</span><h3>AI for efficiency.</h3><p>{pick(locale,"让科技处理复杂，让人保留温度。","Let technology handle complexity while people preserve care.")}</p></article><article><span>03</span><h3>Continuity by design.</h3><p>{pick(locale,"每一次服务，都应成为家庭长期成长的一部分。","Every service should become part of a family's long-term growth.")}</p></article></div></div></section>
       <section className="about-statement"><div className="shell"><p>{pick(locale,"植根东方，连接世界。","Rooted in the East, connected to the world.")}</p><h2>For Every Beginning.</h2><span>{pick(locale,"每一次启程，都值得更好的未来。","Every beginning deserves a better future.")}</span></div></section>
     </>

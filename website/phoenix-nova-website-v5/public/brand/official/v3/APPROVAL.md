@@ -1,0 +1,15 @@
+# Founder acceptance — 2026-10-30
+
+Founder reviewed Draft PR #30 and explicitly selected: **“通过三种排布，仅用于浅色底；暂不启用小尺寸 favicon”**.
+
+This accepts the Primary, horizontal Header and complete Symbol arrangements, subject to light backgrounds. The historical manifest, screenshots and audit in asset commit `a84ec8f2d570f55edd7f24369e794e0650db3c2a` retain their review-time status; this record captures the later approval without changing source or asset bytes.
+
+Website use in the Health development branch:
+
+- Header and compact assessment chrome: `phoenix-nova-header@2x.png`, on an explicit ivory backing.
+- Footer: `phoenix-nova-primary-trimmed.png`, complete elements on its white backing, with no inverse filter or recolouring.
+- Homepage emblem: `phoenix-nova-symbol-transparent.png`, contained on an explicit ivory backing.
+- Brand archive/proof: `phoenix-nova-primary-original.png`, byte-identical to the Founder source.
+- No favicon candidate or second-batch dark, mono, reversed or print-vector version is enabled or produced by this acceptance.
+
+Source SHA-256 remains `A48513AA31039B0467C6322B64FF2ED69DC74CDA976C274B22328F70C8C7E45E`. Approval does not authorise main merge, production deployment or database changes. Health page visual acceptance remains a separate Founder step.

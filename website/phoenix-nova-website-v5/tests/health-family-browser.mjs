@@ -85,6 +85,10 @@ try {
       assert.ok(medicalHrefs.every(href => href && !href.includes("?")), `${locale}: medical link carries query`);
 
       if ([390, 768, 1440].includes(width)) {
+        await page.locator("footer").scrollIntoViewIfNeeded();
+        await page.locator("footer img").evaluateAll(images => Promise.all(images.map(image => image.decode())));
+        await page.evaluate(() => document.fonts.ready);
+        await page.evaluate(() => scrollTo(0, 0));
         await page.screenshot({ path: resolve(out, `health-family-${locale}-${width}.png`), fullPage: true });
       }
       passed(`${locale} family page ${width}px: six directions, gate state and responsive header`);
@@ -92,6 +96,11 @@ try {
 
     await page.goto(pathFor(locale), { waitUntil: "networkidle" });
     assert.equal(await page.locator("#family-consultation").count(), 1);
+    await page.locator("#family-consultation").scrollIntoViewIfNeeded();
+    await page.locator("footer").scrollIntoViewIfNeeded();
+    await page.locator("footer img").evaluateAll(images => Promise.all(images.map(image => image.decode())));
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(() => scrollTo(0, 0));
     const requests = [];
     page.on("request", request => requests.push(request.url()));
     await page.locator("#health-service").selectOption({ index: 1 });
@@ -126,11 +135,13 @@ try {
   for (const locale of ["zh", "en"]) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${origin}/${locale}/health`, { waitUntil: "networkidle" });
-    assert.equal(await page.getByTestId("health-goals").count(), 1);
-    assert.equal(await page.locator(`a[href="/${locale}/health/family"]`).count(), 1);
-    assert.equal(await page.locator('a[href="#services"]').count(), 1);
-    assert.equal(await page.locator(`a[href="/${locale}/health/family#integrated-support"]`).count(), 1);
-    const goalText = await page.getByTestId("health-goals").innerText();
+    const goals = page.getByTestId("health-goals");
+    assert.equal(await goals.count(), 1);
+    assert.equal(await goals.locator("a").count(), 3, "Exactly three peer starting choices");
+    assert.equal(await goals.locator(`a[href="/${locale}/health/family"]`).count(), 1);
+    assert.equal(await goals.locator('a[href="#services"]').count(), 1);
+    assert.equal(await goals.locator(`a[href="/${locale}/health/family#integrated-support"]`).count(), 1);
+    const goalText = await goals.innerText();
     if (locale === "zh") {
       assert.match(goalText, /家庭健康规划/);
       assert.match(goalText, /国际医疗服务/);

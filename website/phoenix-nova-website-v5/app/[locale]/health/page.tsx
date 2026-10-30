@@ -14,8 +14,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title, description,
     alternates: { languages: { "zh-Hans": "/zh/health", en: "/en/health" } },
-    openGraph: { title: `Phoenix Nova™ ${title}`, description, type: "website", locale: locale === "zh" ? "zh_CN" : "en_GB", siteName: "Phoenix Nova™", images: [{ url: "/images/health-lounge.jpg", width: 1400, height: 933, alt: locale === "zh" ? "国际医疗协调服务示意" : "Illustrative international care coordination" }] },
-    twitter: { card: "summary_large_image", title: `Phoenix Nova™ ${title}`, description, images: ["/images/health-lounge.jpg"] },
+    openGraph: { title: `Phoenix Nova™ ${title}`, description, type: "website", locale: locale === "zh" ? "zh_CN" : "en_GB", siteName: "Phoenix Nova™", images: [{ url: "/images/health-v2-landscape.png",  alt: locale === "zh" ? "国际医疗协调服务示意" : "Illustrative international care coordination" }] },
+    twitter: { card: "summary_large_image", title: `Phoenix Nova™ ${title}`, description, images: ["/images/health-v2-landscape.png"] },
     robots: { index: false, follow: false, nocache: true },
   };
 }
