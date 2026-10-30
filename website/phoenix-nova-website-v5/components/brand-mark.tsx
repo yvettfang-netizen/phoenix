@@ -9,9 +9,7 @@ type BrandMarkProps = {
 };
 
 export function BrandMark({ inverse = false, compact = false, className = "", href = "/", label = "Phoenix Nova 首页" }: BrandMarkProps) {
-  const asset = compact
-    ? { src: "/brand/official/v3/phoenix-nova-header@2x.png", width: 1040, height: 320 }
-    : { src: "/brand/official/v3/phoenix-nova-primary-trimmed.png", width: 1059, height: 1116 };
+  const asset = { src: "/brand/official/v3/phoenix-nova-header@2x.png", width: 1040, height: 320 };
   return (
     <Link
       href={href}

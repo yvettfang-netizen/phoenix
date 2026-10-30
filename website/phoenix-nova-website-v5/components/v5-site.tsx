@@ -23,14 +23,17 @@ export type PageId = "home" | (typeof pageIds)[number];
 export type Locale = "zh" | "en";
 
 const routeLabels = {
-  health: ["健康与国际医疗", "Global Health"],
+  health: ["健康", "Health"],
   home: ["首页", "Home"],
+  education: ["教育", "Education"],
+  identity: ["身份", "Identity"],
+  finance: ["财务", "Finance"],
   compass: ["凤启罗盘", "Compass"],
   lighthouse: ["成长灯塔", "Growth Lighthouse"],
   services: ["专业服务", "Services"],
-  insights: ["凤启洞察", "Insights"],
+  insights: ["资讯洞察", "Insights"],
   oriental: ["凤启东方", "Phoenix Oriental"],
-  about: ["关于凤启", "About"],
+  about: ["关于我们", "About Us"],
   "family-center": ["家庭中心", "Family Center"],
   admissions: ["升学申请", "Admissions"],
   application: ["申请登记", "Application intake"],
@@ -51,14 +54,13 @@ export const routeMetadata = {
 const digitalWorldUrl = "https://fengqi-research-institute.yvettfang.chatgpt.site";
 
 const primaryNavigation = [
-  { kind: "internal", page: "home" },
-  { kind: "internal", page: "compass" },
-  { kind: "internal", page: "lighthouse" },
-  { kind: "internal", page: "services" },
-  { kind: "internal", page: "insights" },
-  { kind: "internal", page: "oriental" },
-  { kind: "external", id: "digital" },
-  { kind: "internal", page: "about" },
+  { id: "home", kind: "internal", page: "home" },
+  { id: "education", kind: "anchor", hash: "education" },
+  { id: "identity", kind: "anchor", hash: "identity" },
+  { id: "finance", kind: "anchor", hash: "wealth" },
+  { id: "health", kind: "internal", page: "health" },
+  { id: "about", kind: "internal", page: "about" },
+  { id: "insights", kind: "internal", page: "insights" },
 ] as const;
 
 const journeyData = [
@@ -161,6 +163,20 @@ function hrefFor(locale: Locale, page: PageId | "health" | "health/family") {
   return page === "home" ? `/${locale}` : `/${locale}/${page}`;
 }
 
+function navigationHref(locale: Locale, item: (typeof primaryNavigation)[number]) {
+  return item.kind === "anchor"
+    ? `/${locale}/compass#${item.hash}`
+    : hrefFor(locale, item.page);
+}
+
+function navigationLabel(locale: Locale, item: (typeof primaryNavigation)[number]) {
+  return routeLabels[item.id][locale === "zh" ? 0 : 1];
+}
+
+function navigationIsActive(page: PageId | "health" | "health/family", item: (typeof primaryNavigation)[number]) {
+  return item.kind === "internal" && (page === item.page || (item.page === "health" && page === "health/family"));
+}
+
 function Arrow() {
   return <span aria-hidden="true">↗</span>;
 }
@@ -199,14 +215,10 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
           label={pick(locale, "Phoenix Nova 首页", "Phoenix Nova home")}
         />
         <nav className="desktop-nav" aria-label={pick(locale, "主导航", "Primary navigation")}>
-          {primaryNavigation.map((item) => item.kind === "internal" ? (
-            <Link className={page === item.page ? "is-active" : ""} href={hrefFor(locale, item.page)} key={item.page}>
-              {routeLabels[item.page][locale === "zh" ? 0 : 1]}
+          {primaryNavigation.map((item) => (
+            <Link className={navigationIsActive(page, item) ? "is-active" : ""} href={navigationHref(locale, item)} key={item.id}>
+              {navigationLabel(locale, item)}
             </Link>
-          ) : (
-            <a href={digitalWorldUrl} key={item.id} rel="noreferrer" target="_blank">
-              {pick(locale, "数字凤启", "Digital World")}
-            </a>
           ))}
         </nav>
         <div className="header-actions">
@@ -219,17 +231,13 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
           <details className="mobile-menu">
             <summary aria-label={pick(locale, "打开导航", "Open navigation")}><span /><span /></summary>
             <nav aria-label={pick(locale, "移动端导航", "Mobile navigation")}>
-              {primaryNavigation.map((item, index) => item.kind === "internal" ? (
-                <Link href={hrefFor(locale, item.page)} key={item.page}>
-                  <span>{String(index + 1).padStart(2, "0")}</span>{routeLabels[item.page][locale === "zh" ? 0 : 1]}
+              {primaryNavigation.map((item, index) => (
+                <Link className={navigationIsActive(page, item) ? "is-active" : ""} href={navigationHref(locale, item)} key={item.id}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>{navigationLabel(locale, item)}
                 </Link>
-              ) : (
-                <a href={digitalWorldUrl} key={item.id} rel="noreferrer" target="_blank">
-                  <span>{String(index + 1).padStart(2, "0")}</span>{pick(locale, "数字凤启", "Digital World")} <Arrow />
-                </a>
               ))}
               <Link href={hrefFor(locale, "family-center")}>
-                <span>09</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
+                <span>08</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
               </Link>
               <Link className="mobile-locale" href={hrefFor(otherLocale, page)}>{locale === "zh" ? "English" : "中文"}</Link>
             </nav>
@@ -245,15 +253,14 @@ export function SiteFooter({ locale }: { locale: Locale }) {
     <footer className="site-footer">
       <div className="shell site-footer__top">
         <div className="site-footer__brand">
-          <BrandMark inverse href={`/${locale}`} label={pick(locale, "Phoenix Nova 首页", "Phoenix Nova home")} />
+          <BrandMark href={`/${locale}`} label={pick(locale, "Phoenix Nova 首页", "Phoenix Nova home")} />
           <p>For Every Beginning.</p>
           <span>{pick(locale, "每一次启程，都值得更好的未来。", "Every beginning deserves a better future.")}</span>
         </div>
         <nav aria-label={pick(locale, "页脚导航", "Footer navigation")}>
-          <Link href={`/${locale}/health`}>{pick(locale, "健康与国际医疗服务", "Global Health Services")}</Link>
-          {primaryNavigation.slice(1).map((item) => item.kind === "internal"
-            ? <Link href={hrefFor(locale, item.page)} key={item.page}>{routeLabels[item.page][locale === "zh" ? 0 : 1]}</Link>
-            : <a href={digitalWorldUrl} key={item.id} rel="noreferrer" target="_blank">{pick(locale, "数字凤启", "Digital World")} <Arrow /></a>)}
+          {primaryNavigation.map((item) => (
+            <Link href={navigationHref(locale, item)} key={item.id}>{navigationLabel(locale, item)}</Link>
+          ))}
         </nav>
         <div className="site-footer__company">
           <small>{pick(locale, "公司主体", "Company")}</small>

@@ -11,11 +11,6 @@
   color: var(--health-ink);
 }
 .page :global(.site-header) { position: relative; background: var(--health-ivory); }
-.page :global(.site-footer) { color: var(--health-ivory); background: var(--health-deep); }
-.page :global(.site-footer__company p),
-.page :global(.site-footer__bottom),
-.page :global(.site-footer__brand > span),
-.page :global(.site-footer nav a) { color: #d3dfda; }
 .wrap { width: min(1280px, calc(100% - 96px)); margin-inline: auto; }
 .skip { position: absolute; left: 16px; top: -100px; z-index: 100; padding: 12px; background: var(--health-deep); color: white; }
 .skip:focus { top: 12px; }
@@ -68,10 +63,10 @@
 .services article:nth-child(n+4) { grid-column: span 3; }
 .serviceImage { aspect-ratio: 1.9; }
 .photo1 { background-image: url('/images/health-planning.jpg'); }
-.photo2 { background-image: url('/images/health-language.jpg'); }
-.photo3 { background-image: url('/images/health-navigation.jpg'); }
-.photo4 { background-image: url('/images/health-concierge.jpg'); }
-.photo5 { background-image: url('/images/health-claims.jpg'); }
+.photo2 { background-image: url('/images/health-v21-communication.jpg'); background-position:center 78%; }
+.photo3 { background-image: url('/images/health-v21-navigation.jpg'); }
+.photo4 { background-image: url('/images/health-v21-concierge.jpg'); background-position:45% center; }
+.photo5 { background-image: url('/images/health-v21-claims.jpg'); background-position:64% center; }
 .serviceBody { padding: 26px 28px 28px; position: relative; }
 .number { position: absolute; top: 24px; right: 24px; color: var(--health-gold); font-size: 11px; }
 .serviceEnglish { font-size: 10px; letter-spacing: .06em; color: var(--health-teal); max-width: 85%; margin: 0 0 12px; }
@@ -240,8 +235,8 @@
 .reasonPhoto { height:150px; background-size:cover; background-position:center; }
 .reasonPhoto1 { background-image:url('/images/health-v2-landscape.png'); background-position:75% 65%; }
 .reasonPhoto2 { background-image:url('/images/health-planning.jpg'); }
-.reasonPhoto3 { background-image:url('/images/health-language.jpg'); }
-.reasonPhoto4 { background-image:url('/images/health-concierge.jpg'); }
+.reasonPhoto3 { background-image:url('/images/health-v21-communication.jpg'); background-position:center 78%; }
+.reasonPhoto4 { background-image:url('/images/health-v21-concierge.jpg'); }
 .reasons article > div:last-child { padding:20px; }
 .reasons h3 { font-family:var(--serif); font-size:20px; font-weight:400; margin:0 0 10px; }
 .reasons p { font-size:12px; color:var(--health-muted); line-height:1.9; margin:0; }
@@ -264,6 +259,30 @@
 .contactSection .consultation { border-color:#8caea4; }
 .contactSection .primary { background:var(--health-gold); color:var(--health-deep); border-color:var(--health-gold); }
 .contactSection .prepared { color:var(--health-ink); }
+.journeySection { background:#e9efeb; border-block:1px solid var(--health-line); scroll-margin-top:24px; }
+.journey { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:26px 0; padding:0; list-style:none; }
+.journey li { background:var(--health-ivory); border:1px solid var(--health-line); border-radius:5px; }
+.journey summary { display:flex; align-items:center; gap:14px; padding:20px; min-height:86px; cursor:pointer; list-style:none; }
+.journey summary::-webkit-details-marker { display:none; }
+.journey summary > span { font-size:12px; color:#8d682e; }
+.journey summary > span:last-child { margin-left:auto; }
+.journey .stepTitle { font-family:var(--serif); font-size:19px; line-height:1.6; font-weight:400; margin:0; color:var(--health-ink); }
+.journey details[open] summary > span:last-child { transform:rotate(45deg); }
+.journey details > p { margin:0; padding:0 20px 22px; font-size:13px; color:var(--health-muted); line-height:1.9; }
+.scopeNote { border-left:2px solid var(--health-gold); padding-left:20px; font-size:13px; line-height:1.9; color:var(--health-ink); }
+.clientCards { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:26px; }
+.clientCards article { padding:28px; border:1px solid var(--health-line); background:#f3efe5; border-radius:5px; }
+.clientCards h3 { font-family:var(--serif); font-weight:400; font-size:25px; margin:15px 0; }
+.clientCards article > p:not(.eyebrow) { color:var(--health-muted); font-size:13px; line-height:1.9; }
+.clientCards a { display:flex; align-items:center; min-height:44px; font-size:13px; color:var(--health-deep); }
+.closedActions { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; }
+.closedActions a { display:flex; align-items:center; min-height:44px; padding:10px 14px; border:1px solid var(--health-celadon); font-size:12px; color:var(--health-ivory); }
+.consultation form > details { margin-top:22px; padding-block:8px; border-block:1px solid var(--health-celadon); }
+.consultation form > details > summary { cursor:pointer; min-height:44px; display:flex; align-items:center; font-size:13px; line-height:1.8; }
+.consultation form > details > p { font-size:12px; line-height:1.9; }
+.prepared button { min-height:44px; }
+@media(max-width:980px) { .journey { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .journey,.clientCards { grid-template-columns:1fr; gap:12px; }.journey summary { min-height:76px; }.clientCards article { padding:23px; } }
 @media(max-width:1100px) { .services { grid-template-columns:repeat(3,minmax(0,1fr)); }.lifeStages article { grid-template-columns:1fr; }.lifePhoto { min-height:210px; }.lifeBody { padding:22px; }.heroCopy { width:62%; }.serviceBody > p:not(.serviceEnglish) { min-height:0; } }
 @media(max-width:760px) { .heroCopy { width:75%; }.reasons { grid-template-columns:repeat(2,minmax(0,1fr)); }.lifeStages { grid-template-columns:1fr; }.lifeStages article { grid-template-columns:42% 58%; }.moreDetails { width:calc(100% - 56px); }.imageCaption { display:none; } }
 @media(max-width:640px) {

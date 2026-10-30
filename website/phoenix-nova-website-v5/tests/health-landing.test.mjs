@@ -43,7 +43,9 @@ test("Health landing contains the five services, four regions and shared brand c
   const worker = createV5Worker();
   t.after(() => worker.dispose());
   const { response, html } = await page(worker, "/zh/health");
+  const english = await page(worker, "/en/health");
   assert.equal(response.status, 200);
+  assert.equal(english.response.status, 200);
 
   for (const label of [
     "全家人的健康，",
@@ -59,18 +61,31 @@ test("Health landing contains the five services, four regions and shared brand c
     "国际患者导航",
     "在地就医礼宾",
     "国际保险理赔协助",
+    "海外客户赴华就医协调",
+    "香港保险客户医疗协调",
+    "咨询来源渠道",
+    "当前所在地区",
+    "保险协调渠道",
     "香港",
     "中国内地",
     "英国",
     "其他国际地区",
   ]) assert.ok(html.includes(label), label);
+  for (const label of ["Overseas-to-China care coordination", "Hong Kong insurance coordination", "Referral source", "Current region", "Insurance channel"]) {
+    assert.ok(english.html.includes(label), label);
+  }
+
+  const servicesAt = html.indexOf('id="services"');
+  const crossBorderAt = html.indexOf('id="cross-border-process"');
+  const whyAt = html.indexOf('id="why-phoenix"');
+  assert.ok(servicesAt >= 0 && crossBorderAt > servicesAt && whyAt > crossBorderAt, "cross-border process must sit between services and why-phoenix");
+  assert.equal((html.match(/<details\b/gi) ?? []).length >= 7, true, "Health landing must retain native service, FAQ and local consultation details");
 
   assert.match(html, /<header class="site-header[^"]*"/);
   assert.match(html, /\/brand\/official\/v3\/phoenix-nova-header@2x\.png/);
-  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-primary-trimmed\.png/);
   assertBrandMarkup(html, "/zh/health");
   assert.match(html, /<footer class="site-footer">/);
-  assert.match(html, /href="\/zh\/health"[^>]*>健康与国际医疗服务/);
+  assert.match(html, /href="\/zh\/health"[^>]*>健康/);
   assert.match(html, /专业连接，安心同行/);
   assert.match(html, /当前为前端候选预览，正式咨询渠道尚未接通/);
 });
@@ -84,6 +99,8 @@ test("Health Compass remains controlled: off hides assessment and direct route, 
     const landingOff = await page(off, `/${locale}/health`);
     assert.doesNotMatch(landingOff.html, new RegExp(`href="/${locale}/compass/health"`));
     assert.match(landingOff.html, /health-landing-closed/);
+    assert.match(landingOff.html, /href="#services"/);
+    assert.match(landingOff.html, /href="#consultation"/);
     assert.equal((await request(off, `/${locale}/compass/health`)).status, 404);
 
     const landingOn = await page(on, `/${locale}/health`);
