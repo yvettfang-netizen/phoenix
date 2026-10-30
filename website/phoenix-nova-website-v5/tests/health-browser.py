@@ -16,13 +16,31 @@ def passed(name):
     checks.append({"name": name, "status": "PASS"})
 
 def fit(page, label):
-    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth"), label
-    header = page.locator("header.site-header").bounding_box()
-    content = page.locator("[data-health-compass]").bounding_box()
-    assert content["y"] >= header["y"] + header["height"] - 1, "Header overlaps Health content"
-    brand = page.locator("header .brand-mark").bounding_box()
-    nav = page.locator("header nav").bounding_box()
-    assert (brand["x"] + brand["width"] <= nav["x"] + 1 or brand["y"] + brand["height"] <= nav["y"] + 1), "Logo overlaps navigation"
+    # Focus and viewport changes can start smooth scrolling. Read all geometry
+    # synchronously: separate protocol calls can observe different scroll frames
+    # and falsely compare a header from one frame with content from the next.
+    layout = page.evaluate("""() => {
+        const rect = selector => {
+            const element = document.querySelector(selector);
+            if (!element) return null;
+            const box = element.getBoundingClientRect();
+            return {x: box.x, y: box.y, width: box.width, height: box.height};
+        };
+        return {
+            viewportWidth: innerWidth,
+            scrollWidth: document.documentElement.scrollWidth,
+            scrollY,
+            header: rect('header.site-header'),
+            content: rect('[data-health-compass]'),
+            brand: rect('header .brand-mark'),
+            nav: rect('header nav'),
+        };
+    }""")
+    assert layout["scrollWidth"] <= layout["viewportWidth"], label
+    header, content, brand, nav = (layout[key] for key in ("header", "content", "brand", "nav"))
+    assert all((header, content, brand, nav)), f"Missing layout elements: {label}"
+    assert content["y"] >= header["y"] + header["height"] - 1, f"Header overlaps Health content: {label}; {layout}"
+    assert (brand["x"] + brand["width"] <= nav["x"] + 1 or brand["y"] + brand["height"] <= nav["y"] + 1), f"Logo overlaps navigation: {label}; {layout}"
     passed(label)
 
 def start(page):
