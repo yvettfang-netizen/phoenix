@@ -51,9 +51,11 @@ test("Identity remains controlled without a questionnaire, invented results or c
 test("Shared V3 footer has five product groups and no fabricated product or internal links", async t => {
   const worker = createV5Worker(); t.after(() => worker.dispose());
   const html = await (await request(worker, "/zh/identity")).text();
-  for (const label of ["规划与专业服务", "教育与学习平台", "家庭与会员服务", "凤启世界", "关于凤启", "Phoenix Academy", "ASKWISE", "启明堂", "学苑约课管理系统", "学员入口", "导师入口", "Family OS", "NOVA DIGITAL"]) assert.ok(html.includes(label), label);
+  for (const label of ["规划与专业服务", "教育与学习平台", "家庭与会员服务", "凤启世界", "关于凤启", "Phoenix Academy", "ASKWISE", "学苑约课管理系统", "学员入口", "导师入口", "Family OS", "NOVA DIGITAL"]) assert.ok(html.includes(label), label);
   assert.match(html, /凤启环球信息科技（深圳）有限公司/);
   const footer = html.slice(html.indexOf('<footer class="site-footer'));
+  assert.doesNotMatch(footer, /启明堂|Qiming Learning/);
+  assert.match(footer, /href="\/zh\/education#academy"/);
   assert.doesNotMatch(footer, /href="[^\"]*(?:dashboard|founder|internal|tutor-admin|teacher-admin)/i);
   assert.doesNotMatch(footer, /href="[^\"]*\/(academy|askwise|booking|student|tutor)"/i);
   for (const path of ["/zh", "/zh/compass", "/zh/health", "/zh/health/family", "/en/about"]) assert.equal((await request(worker, path)).status, 200, path);

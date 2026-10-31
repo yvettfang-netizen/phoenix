@@ -1,0 +1,69 @@
+{
+  "origin": "http://127.0.0.1:4402",
+  "results": [
+    {
+      "name": "zh 1440px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 1024px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 768px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 390px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 320px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh: mobile menu and locale-preserving switch",
+      "status": "PASS"
+    },
+    {
+      "name": "zh: native details, controlled Compass, local consultation, Footer and accessibility checks",
+      "status": "PASS"
+    },
+    {
+      "name": "en 1440px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 1024px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 768px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 390px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 320px: route, structure, navigation, assets and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en: mobile menu and locale-preserving switch",
+      "status": "PASS"
+    },
+    {
+      "name": "en: native details, controlled Compass, local consultation, Footer and accessibility checks",
+      "status": "PASS"
+    },
+    {
+      "name": "No-JS route has readable content and no native submission",
+      "status": "PASS"
+    },
+    {
+      "name": "No browser runtime errors",
+      "status": "PASS"
+    }
+  ]
+}
