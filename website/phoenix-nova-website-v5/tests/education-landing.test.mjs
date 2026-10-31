@@ -77,7 +77,7 @@ function assertEducationFooter(html, locale) {
   for (const label of locale === "zh"
     ? ["凤启学苑", "ASKWISE", "学苑约课管理系统", "学员入口", "导师入口", "教育与学习平台"]
     : ["Phoenix Academy", "ASKWISE", "Academy booking platform", "Student entry", "Tutor entry", "Education & learning"]) {
-    assert.ok(footer.includes(label), `${locale}: Footer label ${label} is missing`);
+    assert.ok(footer.includes(label.replaceAll("&", "&amp;")), `${locale}: Footer label ${label} is missing`);
   }
   assert.match(footer, new RegExp(`href=["']/${locale}/education#academy["']`, "i"), `${locale}: Academy footer link must target Education`);
   assert.match(footer, new RegExp(`href=["']/${locale}/education#askwise["']`, "i"), `${locale}: ASKWISE footer link must target Education`);
