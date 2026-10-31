@@ -27,7 +27,7 @@ test("Identity bilingual landing is a real route with independent SEO and comple
     assert.match(html, /name="twitter:card"[^>]+summary_large_image/);
     assert.match(html, /noindex/);
     assert.match(html, new RegExp(`href="/${locale === "zh" ? "en" : "zh"}/identity"`));
-    assert.match(html, /aria-current="page"[^>]*href="\/(zh|en)\/identity"/);
+    assert.match(html, /<a\b(?=[^>]*aria-current="page")(?=[^>]*href="\/(zh|en)\/identity")[^>]*>/);
     assertBrandMarkup(html, `/${locale}/identity`);
   }
 });
