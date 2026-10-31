@@ -1,0 +1,65 @@
+name: Education V3 landing validation
+
+on:
+  pull_request:
+    paths:
+      - "website/phoenix-nova-website-v5/**"
+      - ".github/workflows/education-page-validation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  education:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: website/phoenix-nova-website-v5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+          cache-dependency-path: website/phoenix-nova-website-v5/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+      - run: node --test tests/education-landing.test.mjs
+      - name: Preserve existing Education Compass client and UI contracts
+        working-directory: Phoenix Compass/education compass
+        run: |
+          node tests/run-tests.js
+          node tests/validate-ui-contract.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install playwright==1.57.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Education bilingual responsive browser checks
+        run: |
+          export PLAYWRIGHT_MODULE="$(python -c 'import pathlib, playwright; print(pathlib.Path(playwright.__file__).parent / "driver" / "package")')"
+          export HEALTH_COMPASS_PREVIEW=0
+          export HEALTH_TEST_PORT=4402
+          export EDUCATION_ORIGIN=http://127.0.0.1:4402
+          export EDUCATION_EVIDENCE_DIR=education-evidence
+          mkdir -p "$EDUCATION_EVIDENCE_DIR"
+          node scripts/health-preview-server.mjs > "$EDUCATION_EVIDENCE_DIR/preview.log" 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent "$EDUCATION_ORIGIN/zh/education" > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/education-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: education-v3-${{ github.event.pull_request.head.sha }}
+          path: website/phoenix-nova-website-v5/education-evidence/
+          if-no-files-found: warn
+          retention-days: 14

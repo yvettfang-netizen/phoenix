@@ -3,7 +3,7 @@ import { SiteDirectory } from "./site-directory";
 import type { Locale } from "./v5-site";
 import styles from "./site-chrome-v3.module.css";
 
-export function SiteEcosystemContent({ locale }: { locale: Locale }) {
+export function SiteEcosystemContent({ locale, consultationPath }: { locale: Locale; consultationPath?: string }) {
   const zh = locale === "zh";
   return <div className={styles.inner}>
     <div className={styles.top}>
@@ -15,7 +15,7 @@ export function SiteEcosystemContent({ locale }: { locale: Locale }) {
       <div className={styles.mission}><small>GLOBAL FAMILY GROWTH PLATFORM</small><p>{zh ? <>承东方之源，<br />启全球新程。</> : <>Rooted in the East.<br />Opening a global chapter.</>}</p></div>
       <div className={styles.digital}><strong>NOVA DIGITAL</strong><p>{zh ? "进入凤启世界" : "Enter the Phoenix world"}</p><small>{zh ? "公开入口待确认 · 暂未开放" : "Public entry unconfirmed · Not open"}</small></div>
     </div>
-    <SiteDirectory locale={locale} />
+    <SiteDirectory locale={locale} consultationPath={consultationPath} />
     <div className={styles.company}><div><small>{zh ? "公司主体" : "LEGAL ENTITY"}</small><strong>凤启环球信息科技（深圳）有限公司</strong></div><p>{zh ? "公开信息仅用于方向理解，不构成录取、身份、医疗、法律或收益保证。" : "Public information supports understanding only and is not a guarantee of admission, immigration, medical, legal or financial outcomes."}</p></div>
     <div className={styles.bottom}><span>© 2026 Phoenix Nova™</span><span>{zh ? "品牌版权保留 · 候选预览，尚未正式发布" : "All brand rights reserved · Candidate preview, not released"}</span></div>
   </div>;

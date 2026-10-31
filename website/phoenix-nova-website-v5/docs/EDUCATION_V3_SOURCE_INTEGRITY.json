@@ -1,0 +1,249 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-11-01",
+  "purpose": "Verify that the approved Education Compass and Health Compass source files are content-equivalent to the requested base commit while preserving all pre-existing dirty worktree state.",
+  "repository": {
+    "path": "D:/CODEX/PhoenixNova/_Worktrees/education-page-v3",
+    "branch": "codex/education-page-v3",
+    "head": "3cbf1cb71c36ad074b18f736dbe1b9f325eb93ae",
+    "base_commit": "3cbf1cb71c36ad074b18f736dbe1b9f325eb93ae",
+    "base_commit_title": "test(identity): verify active link independently of SSR attribute order",
+    "base_commit_author_date": "2026-10-31T22:11:04+08:00",
+    "base_commit_committer_date": "2026-10-31T22:11:04+08:00",
+    "observed_core_autocrlf": true
+  },
+  "method": {
+    "baseline_bytes": "git cat-file -p <base_commit>:<path> (raw blob bytes)",
+    "worktree_bytes": "filesystem read of each worktree path (raw bytes)",
+    "digest": "SHA-256",
+    "normalized_comparison": "Convert worktree CRLF line endings to LF, then compare bytes to the raw Git blob.",
+    "status_snapshot": "Git status and protected-folder counts were captured before this artifact was written.",
+    "read_only_scope": true
+  },
+  "integrity_summary": {
+    "files_checked": 10,
+    "raw_sha256_matches": 0,
+    "normalized_content_matches": 10,
+    "result": "PASS: all checked source files are content-equivalent to base after line-ending normalization.",
+    "raw_hash_note": "Raw hashes differ because Git blobs are LF and the Windows worktree is CRLF; every checked worktree file has only CRLF line endings and its normalized hash equals the base blob hash.",
+    "approved_source_changed_by_this_pr": false
+  },
+  "files": [
+    {
+      "path": "Phoenix Compass/education compass/models/questionnaire-contract.json",
+      "baseline_sha256": "f629475b3d75106e95c5c65dd2c61f465875875b97ec7fb3b2066d76adaaee85",
+      "worktree_sha256": "d2d925e2da5a665a87f7ebb41ecd02510d391d4a4289a79c89eec83ce17d6ced",
+      "normalized_worktree_sha256": "f629475b3d75106e95c5c65dd2c61f465875875b97ec7fb3b2066d76adaaee85",
+      "baseline_bytes": 1559,
+      "worktree_bytes": 1588,
+      "crlf_count": 29,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "Phoenix Compass/education compass/models/education-compass-questionnaire.js",
+      "baseline_sha256": "1d834fc842e7b23e761d9253df96e1437f2ba8543b5e8fbf4c0f056259d09851",
+      "worktree_sha256": "7bc4d16cf85e96dd3f48e622b38efae3c821910e2dde50d259eac7c0ad04c650",
+      "normalized_worktree_sha256": "1d834fc842e7b23e761d9253df96e1437f2ba8543b5e8fbf4c0f056259d09851",
+      "baseline_bytes": 20758,
+      "worktree_bytes": 21197,
+      "crlf_count": 439,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "Phoenix Compass/education compass/models/questionnaire-schema.js",
+      "baseline_sha256": "da71db0272a0b370ae4cd4ed0a10cb2980c43e9e54698572eb88def1549d2d36",
+      "worktree_sha256": "005d22f1b859e4527f6cce7cfa19f500dd6e2089e51582ee91bc430294b96b66",
+      "normalized_worktree_sha256": "da71db0272a0b370ae4cd4ed0a10cb2980c43e9e54698572eb88def1549d2d36",
+      "baseline_bytes": 7549,
+      "worktree_bytes": 7672,
+      "crlf_count": 123,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "Phoenix Compass/education compass/src/lib/compass/questions.ts",
+      "baseline_sha256": "af3631fb013a3651663be14feed30290d96062943325c7a248e5ef9ef3e386c9",
+      "worktree_sha256": "3648709bae20fc921154052d3610af28f154dd8310391d2f8e097b3f9b710204",
+      "normalized_worktree_sha256": "af3631fb013a3651663be14feed30290d96062943325c7a248e5ef3e386c9",
+      "baseline_bytes": 3758,
+      "worktree_bytes": 3853,
+      "crlf_count": 95,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "Phoenix Compass/education compass/src/lib/compass/result.ts",
+      "baseline_sha256": "5516a06a110bbad7b573829c4a2606777c4b1a709220d45d6a412578394e8451",
+      "worktree_sha256": "498ea491131a18e683c30527827a3d387aff1097404f14bc39fe762dbf6623bc",
+      "normalized_worktree_sha256": "5516a06a110bbad7b573829c4a2606777c4b1a709220d45d6a412578394e8451",
+      "baseline_bytes": 8211,
+      "worktree_bytes": 8403,
+      "crlf_count": 192,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "Phoenix Compass/education compass/server/src/domain/questionnaire.ts",
+      "baseline_sha256": "bf23de90a65bf911982f26056d07a48885cf07492cd7db2f1bb21f9ea8d68fef",
+      "worktree_sha256": "07e298cf6c10ea6f0b12911d52ed0263891ee34a6752e4d33e01608ae5d25b95",
+      "normalized_worktree_sha256": "bf23de90a65bf911982f26056d07a48885cf07492cd7db2f1bb21f9ea8d68fef",
+      "baseline_bytes": 5960,
+      "worktree_bytes": 6053,
+      "crlf_count": 93,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "Phoenix Compass/education compass/server/src/domain/education-compass/result-builder.ts",
+      "baseline_sha256": "d7bba4fab8cfbd337c79e99bb4a6f506ac49760cc6bcae4633fb039091ab3d52",
+      "worktree_sha256": "262adf0e60e2e263d3f19889a670772f5278b5d6eb9b3aed79928975b20cbfea",
+      "normalized_worktree_sha256": "d7bba4fab8cfbd337c79e99bb4a6f506ac49760cc6bcae4633fb039091ab3d52",
+      "baseline_bytes": 17120,
+      "worktree_bytes": 17473,
+      "crlf_count": 353,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "Phoenix Compass/education compass/server/src/domain/education-compass/consent-policy.ts",
+      "baseline_sha256": "191dd14240d929a9f467ed61e4daeffc8c0a42fa1e6f87c70d96cb9b2d179905",
+      "worktree_sha256": "2a52f4fee4d1483654bc085e3c53419ff75930052ceab59f14a3ba903a81c59d",
+      "normalized_worktree_sha256": "191dd14240d929a9f467ed61e4daeffc8c0a42fa1e6f87c70d96cb9b2d179905",
+      "baseline_bytes": 5258,
+      "worktree_bytes": 5378,
+      "crlf_count": 120,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "website/phoenix-nova-website-v5/lib/health-compass.ts",
+      "baseline_sha256": "60d7658ac09ee3b88592f511353cd40ec767787eeb8d449e9288e05cc7c6e488",
+      "worktree_sha256": "e29589f470317cd0144f14d80cab4ca9d67d404853715156c284b2787a73224b",
+      "normalized_worktree_sha256": "60d7658ac09ee3b88592f511353cd40ec767787eeb8d449e9288e05cc7c6e488",
+      "baseline_bytes": 11146,
+      "worktree_bytes": 11219,
+      "crlf_count": 73,
+      "raw_match": false,
+      "normalized_match": true
+    },
+    {
+      "path": "website/phoenix-nova-website-v5/lib/health-compass-gate.ts",
+      "requested_alias": "website lib/health-compass.ts/gate.ts",
+      "baseline_sha256": "99c28fc00de56612c08332d046fee772a2b3607785d5bf408450d97471b8acab",
+      "worktree_sha256": "4831e782265854860e6cdc7a8907adb1b6e48b3b29b071c78b4fc4fa26137e39",
+      "normalized_worktree_sha256": "99c28fc00de56612c08332d046fee772a2b3607785d5bf408450d97471b8acab",
+      "baseline_bytes": 196,
+      "worktree_bytes": 201,
+      "crlf_count": 5,
+      "raw_match": false,
+      "normalized_match": true
+    }
+  ],
+  "protected_folder_status": {
+    "target_worktree_snapshot_before_artifact_write": {
+      "repository": "D:/CODEX/PhoenixNova/_Worktrees/education-page-v3",
+      "status": "dirty_due_to_pre_existing_education_changes",
+      "total_status_lines": 17,
+      "tracked_modified_count": 5,
+      "untracked_count": 12,
+      "folders": [
+        {
+          "path": "Phoenix Compass",
+          "exists": true,
+          "status_lines": 0,
+          "tracked_changes": 0,
+          "untracked_changes": 0,
+          "status": "clean"
+        },
+        {
+          "path": "askwise",
+          "exists": true,
+          "status_lines": 0,
+          "tracked_changes": 0,
+          "untracked_changes": 0,
+          "status": "clean"
+        },
+        {
+          "path": "Phoenix Family OS",
+          "exists": true,
+          "status_lines": 0,
+          "tracked_changes": 0,
+          "untracked_changes": 0,
+          "status": "clean"
+        },
+        {
+          "path": "database",
+          "exists": false,
+          "status_lines": 0,
+          "tracked_changes": 0,
+          "untracked_changes": 0,
+          "status": "absent"
+        },
+        {
+          "path": "migrations",
+          "exists": false,
+          "status_lines": 0,
+          "tracked_changes": 0,
+          "untracked_changes": 0,
+          "status": "absent"
+        }
+      ]
+    },
+    "main_repository_context_snapshot": {
+      "repository": "D:/CODEX/PhoenixNova",
+      "purpose": "Context-only observation of the pre-existing dirty root; no baseline-equivalence claim is made.",
+      "tracked_modified_count": 21,
+      "untracked_count": 3152,
+      "folders": [
+        {
+          "path": "Phoenix Compass",
+          "exists": true,
+          "status_lines": 111,
+          "tracked_changes": 8,
+          "untracked_changes": 103,
+          "status": "dirty_pre_existing"
+        },
+        {
+          "path": "askwise",
+          "exists": true,
+          "status_lines": 25,
+          "tracked_changes": 13,
+          "untracked_changes": 12,
+          "status": "dirty_pre_existing"
+        },
+        {
+          "path": "Phoenix Family OS",
+          "exists": true,
+          "status_lines": 300,
+          "tracked_changes": 0,
+          "untracked_changes": 300,
+          "status": "dirty_pre_existing"
+        },
+        {
+          "path": "database",
+          "exists": false,
+          "status_lines": 0,
+          "tracked_changes": 0,
+          "untracked_changes": 0,
+          "status": "absent"
+        },
+        {
+          "path": "migrations",
+          "exists": false,
+          "status_lines": 0,
+          "tracked_changes": 0,
+          "untracked_changes": 0,
+          "status": "absent"
+        }
+      ]
+    }
+  },
+  "scope_notes": [
+    "Only this JSON artifact is written by this task; existing source, database, migration, and Git states are left untouched.",
+    "The root dirty counts are observations at audit time. No claim is made that the root dirty state is unchanged from a baseline snapshot that was not available.",
+    "The target branch already contains pre-existing Education website changes; this integrity check covers the ten approved source files and protected-folder status only.",
+    "No personal-data filenames or file contents are included in the root status context; only aggregate counts are recorded."
+  ]
+}

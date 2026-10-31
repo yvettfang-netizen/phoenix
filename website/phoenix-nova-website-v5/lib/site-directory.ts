@@ -5,16 +5,15 @@ export type DirectoryItem = { label: Label; path?: string; status?: Label };
 export const directoryGroups: readonly { title: Label; items: readonly DirectoryItem[] }[] = [
   { title: ["规划与专业服务", "Planning & professional services"], items: [
     { label: ["凤启罗盘 Phoenix Compass", "Phoenix Compass"], path: "/compass" },
-    { label: ["Education｜教育规划", "Education"], path: "/compass#education" },
+    { label: ["Education｜教育规划", "Education"], path: "/education" },
     { label: ["Identity｜全球身份规划", "Identity"], path: "/identity" },
     { label: ["Wealth｜财富保障", "Wealth"], path: "/compass#wealth" },
     { label: ["Health｜健康与医疗", "Health"], path: "/health" },
   ] },
   { title: ["教育与学习平台", "Education & learning"], items: [
-    { label: ["凤启学苑 Phoenix Academy", "Phoenix Academy"] },
-    { label: ["ASKWISE｜问思", "ASKWISE"] },
-    { label: ["启明堂", "Qiming Learning"] },
-    { label: ["学苑约课管理系统", "Academy booking platform"] },
+    { label: ["凤启学苑 Phoenix Academy", "Phoenix Academy"], path: "/education#academy", status: ["产品介绍", "Product introduction"] },
+    { label: ["ASKWISE｜问思", "ASKWISE"], path: "/education#askwise", status: ["产品介绍", "Product introduction"] },
+    { label: ["学苑约课管理系统", "Academy booking platform"], path: "/education#academy-booking", status: ["能力预览", "Capability preview"] },
     { label: ["学员入口", "Student entry"] },
     { label: ["导师入口", "Tutor entry"] },
   ] },

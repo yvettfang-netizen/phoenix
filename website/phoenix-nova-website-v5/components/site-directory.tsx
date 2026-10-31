@@ -6,7 +6,7 @@ import type { Locale } from "./v5-site";
 import { directoryGroups, directoryText } from "@/lib/site-directory";
 import styles from "./site-chrome-v3.module.css";
 
-export function SiteDirectory({ locale }: { locale: Locale }) {
+export function SiteDirectory({ locale, consultationPath = "/identity#consultation" }: { locale: Locale; consultationPath?: string }) {
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const mobile = window.matchMedia("(max-width: 700px)");
@@ -19,7 +19,7 @@ export function SiteDirectory({ locale }: { locale: Locale }) {
     {directoryGroups.map(group => <details className={styles.group} key={group.title[1]} open>
       <summary>{directoryText(group.title, locale)}<span aria-hidden="true">+</span></summary>
       <ul>{group.items.map(item => <li key={item.label[1]}>
-        {item.path !== undefined ? <Link href={`/${locale}${item.path}`}>
+        {item.path !== undefined ? <Link href={`/${locale}${item.path === "/identity#consultation" ? consultationPath : item.path}`}>
           {directoryText(item.label, locale)}{item.status && <small>{directoryText(item.status, locale)}</small>}
         </Link> : <span className={styles.pending}>{directoryText(item.label, locale)}<small>{locale === "zh" ? "待开放" : "Not open"}</small></span>}
       </li>)}</ul>
