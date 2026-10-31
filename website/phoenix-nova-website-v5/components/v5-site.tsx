@@ -6,6 +6,8 @@ import { compassItems } from "@/lib/family-demo";
 import { HealthCompassEntry } from "./health-compass-entry";
 import { healthPreviewEnabled } from "@/lib/health-compass-gate";
 import { PatternMedallion } from "./pattern-medallion";
+import { SiteEcosystemContent } from "./site-ecosystem-content";
+import chromeStyles from "./site-chrome-v3.module.css";
 
 export const pageIds = [
   "compass",
@@ -159,7 +161,7 @@ function pick(locale: Locale, zh: string, en: string) {
   return locale === "zh" ? zh : en;
 }
 
-function hrefFor(locale: Locale, page: PageId | "health" | "health/family") {
+function hrefFor(locale: Locale, page: PageId | "health" | "health/family" | "identity") {
   return page === "home" ? `/${locale}` : `/${locale}/${page}`;
 }
 
@@ -173,8 +175,8 @@ function navigationLabel(locale: Locale, item: (typeof primaryNavigation)[number
   return routeLabels[item.id][locale === "zh" ? 0 : 1];
 }
 
-function navigationIsActive(page: PageId | "health" | "health/family", item: (typeof primaryNavigation)[number]) {
-  return item.kind === "internal" && (page === item.page || (item.page === "health" && page === "health/family"));
+function navigationIsActive(page: PageId | "health" | "health/family" | "identity", item: (typeof primaryNavigation)[number]) {
+  return (page === "identity" && item.id === "identity") || (item.kind === "internal" && (page === item.page || (item.page === "health" && page === "health/family")));
 }
 
 function Arrow() {
@@ -203,10 +205,11 @@ function SectionIntro({
   );
 }
 
-export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; page: PageId | "health" | "health/family"; inverse?: boolean }) {
+export function SiteHeader({ locale, page, inverse = false, appearance = "classic" }: { locale: Locale; page: PageId | "health" | "health/family" | "identity"; inverse?: boolean; appearance?: "classic" | "v3" }) {
   const otherLocale: Locale = locale === "zh" ? "en" : "zh";
+  const navHref = (item: (typeof primaryNavigation)[number]) => appearance === "v3" && item.id === "identity" ? hrefFor(locale, "identity") : navigationHref(locale, item);
   return (
-    <header className={`site-header ${inverse ? "site-header--inverse" : ""}`}>
+    <header className={`site-header ${inverse ? "site-header--inverse" : ""}${appearance === "v3" ? ` ${chromeStyles.header}` : ""}`}>
       <div className="site-header__inner shell">
         <BrandMark
           compact
@@ -216,7 +219,7 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
         />
         <nav className="desktop-nav" aria-label={pick(locale, "主导航", "Primary navigation")}>
           {primaryNavigation.map((item) => (
-            <Link className={navigationIsActive(page, item) ? "is-active" : ""} href={navigationHref(locale, item)} key={item.id}>
+            <Link className={navigationIsActive(page, item) ? "is-active" : ""} aria-current={navigationIsActive(page, item) ? "page" : undefined} href={navHref(item)} key={item.id}>
               {navigationLabel(locale, item)}
             </Link>
           ))}
@@ -232,7 +235,7 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
             <summary aria-label={pick(locale, "打开导航", "Open navigation")}><span /><span /></summary>
             <nav aria-label={pick(locale, "移动端导航", "Mobile navigation")}>
               {primaryNavigation.map((item, index) => (
-                <Link className={navigationIsActive(page, item) ? "is-active" : ""} href={navigationHref(locale, item)} key={item.id}>
+                <Link className={navigationIsActive(page, item) ? "is-active" : ""} aria-current={navigationIsActive(page, item) ? "page" : undefined} href={navHref(item)} key={item.id}>
                   <span>{String(index + 1).padStart(2, "0")}</span>{navigationLabel(locale, item)}
                 </Link>
               ))}
@@ -248,7 +251,8 @@ export function SiteHeader({ locale, page, inverse = false }: { locale: Locale; 
   );
 }
 
-export function SiteFooter({ locale }: { locale: Locale }) {
+export function SiteFooter({ locale, appearance = "classic" }: { locale: Locale; appearance?: "classic" | "v3" }) {
+  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} /></footer>;
   return (
     <footer className="site-footer">
       <div className="shell site-footer__top">
