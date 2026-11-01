@@ -1,0 +1,11 @@
+import { createRequire } from "node:module";
+import assert from "node:assert/strict";
+import {mkdir,writeFile} from "node:fs/promises";
+const origin=process.env.EDUCATION_ORIGIN||"http://127.0.0.1:4420";
+const { chromium } = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE || "playwright");
+const out="outputs/education-v20";await mkdir(out,{recursive:true});
+const browser=await chromium.launch({headless:true,...(process.env.EDUCATION_BROWSER?{executablePath:process.env.EDUCATION_BROWSER}:{})});
+const page=await browser.newPage();const results=[];
+try{for(const locale of ["zh","en"]){for(const width of [320,768,1440]){await page.setViewportSize({width,height:900});for(const route of ["",...['kindergarten','primary-schools','secondary-schools','hong-kong-universities','subdegrees','postgraduate','global','academy','schools'].map(s=>`/${s}`)]){const response=await page.goto(`${origin}/${locale}/education${route}`,{waitUntil:"networkidle"});assert.equal(response.status(),200,route);assert.equal(await page.locator("h1").count(),1);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${locale} ${route} ${width} overflow`);results.push({locale,route,width,status:"PASS"});}if(width!==768){await page.goto(`${origin}/${locale}/education`,{waitUntil:"networkidle"});await page.screenshot({path:`${out}/${locale}-${width}.png`,fullPage:true});}}
+await page.goto(`${origin}/${locale}/education/schools`,{waitUntil:"networkidle"});await page.locator('select[name="district"]').selectOption({index:1});await page.locator('select[name="curriculum"]').selectOption("ib-dp");await page.locator('button[type="submit"]').click();await page.waitForURL(/district=/);assert.ok(page.url().includes('ib-dp'));assert.equal(await page.locator('select[name="district"]').inputValue(),"central-and-western");results.push({locale,status:"PASS",check:"composed GET filters preserve choices"});}
+}finally{await browser.close();await writeFile(`${out}/results.json`,JSON.stringify({results},null,2));console.log({passed:results.length});}
