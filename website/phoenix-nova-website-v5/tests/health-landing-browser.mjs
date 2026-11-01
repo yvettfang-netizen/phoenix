@@ -138,6 +138,7 @@ async function assertSharedBrandChrome(page, route, width) {
 }
 
 async function assertCompassHeader(page, route, width) {
+  assert.equal(await page.locator("html").getAttribute("lang"), route.startsWith("/en/") ? "en" : "zh-Hans");
   await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   assert.equal(await page.locator("footer .brand-mark img").count(), 0, `${route}: questionnaire must not invent a second footer brand image`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
@@ -359,6 +360,13 @@ try {
         passed(`${path} ${width}px shared Header/Footer brand integrity and no overflow`);
       }
     }
+  }
+  for (const locale of ["zh", "en"]) {
+    await page.goto(`${origin}/${locale}/education`, { waitUntil: "networkidle" });
+    await page.locator(`.desktop-nav a[href="/${locale}/health"]`).click();
+    await page.waitForURL(`**/${locale}/health`);
+    await page.waitForFunction(expected => document.documentElement.lang === expected, locale === "zh" ? "zh-Hans" : "en");
+    passed(`${locale} client navigation from Education keeps the correct document language`);
   }
   if (process.env.HEALTH_EXPECT_ENABLED === "1") {
     await page.goto(`${origin}/zh/health`, { waitUntil: "networkidle" });

@@ -648,6 +648,32 @@
         }
       ],
       "passed": 16
+    },
+    "client-language": {
+      "passed": 5,
+      "results": [
+        {
+          "name": "zh Education to Health client navigation language",
+          "status": "PASS"
+        },
+        {
+          "name": "en Education to Health client navigation language",
+          "status": "PASS"
+        },
+        {
+          "name": "Language switch preserves regions anchor",
+          "status": "PASS"
+        },
+        {
+          "name": "zh Health to original questionnaire client navigation language",
+          "status": "PASS"
+        },
+        {
+          "name": "en Health to original questionnaire client navigation language",
+          "status": "PASS"
+        }
+      ],
+      "failed": 0
     }
   },
   "lint": {
@@ -657,7 +683,7 @@
     "errors": 0
   },
   "branch": "codex/health-v31-founder-20261101",
-  "captured_at": "2026-11-01T21:14:48.9995890+08:00",
+  "captured_at": "2026-11-01T21:30:20.0162922+08:00",
   "runtime": "Windows frontend-only Node adapter; real Workers validation remains required in Ubuntu CI",
   "baseline": "259753248ff54b07fd9c52f270e45ae1c877bc09",
   "pure_tests": {

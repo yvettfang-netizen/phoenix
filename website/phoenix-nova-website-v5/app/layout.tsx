@@ -4,6 +4,7 @@ import "./globals.css";
 import "./customer-center.css";
 import "./account.css";
 import { FamilyDemoProvider } from "@/components/family-demo-provider";
+import { HealthDocumentLanguage } from "@/components/health-locale-link";
 
 export const metadata: Metadata = {
   title: {
@@ -31,7 +32,7 @@ export default async function RootLayout({
   const documentLanguage = requestHeaders.get("x-phoenix-health-locale") === "en" ? "en" : "zh-Hans";
   return (
     <html lang={documentLanguage}>
-      <body className="antialiased"><FamilyDemoProvider>{children}</FamilyDemoProvider></body>
+      <body className="antialiased"><HealthDocumentLanguage /><FamilyDemoProvider>{children}</FamilyDemoProvider></body>
     </html>
   );
 }
