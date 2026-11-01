@@ -135,23 +135,26 @@ try {
   for (const locale of ["zh", "en"]) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${origin}/${locale}/health`, { waitUntil: "networkidle" });
-    const goals = page.getByTestId("health-goals");
+    // Founder V3.1 replaces the old three homepage choices with family,
+    // cross-border care and partner introduction. Family questionnaire tests
+    // above stay unchanged; partners do not receive a fake login route.
+    const goals = page.locator('section[aria-labelledby="health-entry-title"]');
     assert.equal(await goals.count(), 1);
-    assert.equal(await goals.locator("a").count(), 3, "Exactly three peer starting choices");
+    assert.equal(await goals.locator("article").count(), 3, "Exactly three starting cards");
     assert.equal(await goals.locator(`a[href="/${locale}/health/family"]`).count(), 1);
     assert.equal(await goals.locator('a[href="#services"]').count(), 1);
-    assert.equal(await goals.locator(`a[href="/${locale}/health/family#integrated-support"]`).count(), 1);
+    assert.equal(await goals.locator('a[href="#partners"]').count(), 1, "Partner card links to the controlled introduction");
     const goalText = await goals.innerText();
     if (locale === "zh") {
       assert.match(goalText, /家庭健康规划/);
-      assert.match(goalText, /国际医疗服务/);
-      assert.match(goalText, /两者兼顾/);
+      assert.match(goalText, /跨境医疗服务/);
+      assert.match(goalText, /医疗服务合作伙伴/);
     } else {
-      assert.match(goalText, /Family health planning/);
-      assert.match(goalText, /International medical services/);
-      assert.match(goalText, /Both, together/);
+      assert.match(goalText, /Family health planning/i);
+      assert.match(goalText, /cross-border care/i);
+      assert.match(goalText, /Medical service partners/i);
     }
-    passed(`${locale} Health homepage exposes family, medical and combined entries`);
+    passed(`${locale} Health homepage exposes family, cross-border care and controlled partner introduction`);
   }
 
   assert.deepEqual(errors, [], "No browser runtime errors");

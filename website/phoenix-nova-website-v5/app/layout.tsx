@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import "./customer-center.css";
 import "./account.css";
@@ -21,13 +22,15 @@ export const metadata: Metadata = {
   // Founder deferred small-size favicon acceptance; no candidate icon is enabled.
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const requestHeaders = await headers();
+  const documentLanguage = requestHeaders.get("x-phoenix-health-locale") === "en" ? "en" : "zh-Hans";
   return (
-    <html lang="zh-Hans">
+    <html lang={documentLanguage}>
       <body className="antialiased"><FamilyDemoProvider>{children}</FamilyDemoProvider></body>
     </html>
   );

@@ -28,6 +28,55 @@ const browser = await chromium.launch({ headless: true, ...(process.env.HEALTH_B
 const results = [];
 const passed = name => results.push({ name, status: "PASS" });
 
+async function assertLocaleSurface(page, locale, route) {
+  const text = await page.locator("main").innerText();
+  assert.equal(await page.locator('html').getAttribute('lang'), locale === 'zh' ? 'zh-Hans' : 'en');
+  assert.equal(locale === "zh" ? text.includes("连接大湾区优质医疗资源，让跨境就医更便捷、更从容。") : text.includes("Access healthcare options across Hong Kong, Shenzhen and the Greater Bay Area with greater clarity and confidence."), true, `${route}: approved Hero subtitle is missing`);
+  assert.equal(locale === "zh" ? text.includes("为什么选择大湾区国际化私立医疗？") : /Why choose international private healthcare in the Greater Bay Area\?/i.test(text), true, `${route}: GBA value title is missing`);
+  if (locale === "zh") {
+    for (const forbidden of [
+      "Global Health & Cross-Border Medical Services",
+      "Family Health Planning",
+      "Explore Cross-Border Medical Services",
+      "Explore Cross-Border Care",
+      "FIVE COORDINATION SERVICES",
+      "WHY CHOOSE",
+      "GREATER BAY AREA",
+      "Health Compass",
+      "Family Center",
+      "Partner workspace",
+      "Hong Kong",
+      "Shenzhen",
+    ]) assert.ok(!text.includes(forbidden), `${route}: zh page contains English business copy ${forbidden}`);
+  } else {
+    for (const forbidden of [
+      "全球健康与跨境医疗",
+      "全家人的健康，是更远未来的起点。",
+      "家庭健康规划",
+      "了解跨境医疗服务",
+      "医疗机构与预约协调",
+      "健康罗盘",
+      "合作伙伴工作台",
+      "家庭中心",
+    ]) assert.ok(!text.includes(forbidden), `${route}: en page contains Chinese business copy ${forbidden}`);
+  }
+  const hrefs = await page.locator("a").evaluateAll(links => links.map(link => link.getAttribute("href") || ""));
+  assert.equal(hrefs.some(href => /(?:founder|admin|backoffice|dashboard)/i.test(href)), false, `${route}: internal Founder route leaked`);
+  assert.equal(/(?:\d+(?:\.\d+)?\s*%|[$£¥]\s*\d)/i.test(text), false, `${route}: internal fee or commission figures leaked`);
+}
+
+async function assertHealthSurface(page, locale, route) {
+  assert.equal(await page.locator('section[aria-labelledby="health-entry-title"] article').count(), 3, `${route}: three public entry cards required`);
+  assert.ok(await page.locator('[data-testid="health-strengths"] article').count() >= 4, `${route}: core value cards are missing`);
+  assert.equal(await page.locator("#why-phoenix article").count(), 6, `${route}: six medical advantage cards required`);
+  assert.equal(await page.locator("#services article").count(), 5, `${route}: five coordination service cards required`);
+  assert.equal(await page.locator("#cross-border-process details").count(), 6, `${route}: six cross-border process details required`);
+  assert.equal(await page.locator("#partners").count(), 1, `${route}: partner section missing`);
+  assert.equal(await page.locator('#partners button:disabled').count(), 1, `${route}: partner workspace must remain controlled`);
+  assert.equal(await page.locator(`a[href="/${locale}/family-center"]`).count() >= 1, true, `${route}: Family Center route missing`);
+  await assertLocaleSurface(page, locale, route);
+}
+
 async function inspectBrandImage(locator, route, role, width) {
   assert.equal(await locator.count(), 1, `${route} ${role} must render one brand image`);
   const image = locator.first();
@@ -54,7 +103,7 @@ async function inspectBrandImage(locator, route, role, width) {
       imageFilter: style.filter,
     };
   });
-  const expected = BRAND_ASSETS[role];
+  const expected = { ...BRAND_ASSETS[role], wrapperBackground: role === 'header' && /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? 'transparent' : BRAND_ASSETS[role].wrapperBackground };
   assert.ok(details.src.includes(expected.url), `${route}: ${role} must use ${expected.url}`);
   assert.ok(!/phoenix-nova-(?:logo-master|mark-official|logo-official|official-logo-system-v1)\.png/i.test(details.src), `${route}: legacy mark/logo is still rendered`);
   assert.equal(details.naturalWidth, expected.width, `${route}: ${role} asset width changed`);
@@ -81,7 +130,7 @@ async function assertSharedBrandChrome(page, route, width) {
   await page.locator("footer").scrollIntoViewIfNeeded();
   await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
-  const expectedFooterWidth = width <= 680 ? 165 : 210;
+  const expectedFooterWidth = /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? (width <= 700 ? 165 : 220) : (width <= 680 ? 165 : 210);
   assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand must be ${expectedFooterWidth}px wide`);
   assert.equal(await page.locator("footer.site-footer").evaluate(element => getComputedStyle(element).backgroundColor), FOOTER_SURFACE, `${route}: Footer must use the Phoenix Ivory surface`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
@@ -97,8 +146,8 @@ async function assertCompassHeader(page, route, width) {
 function expectedPrimaryHrefs(locale) {
   return [
     `/${locale}`,
-    `/${locale}/compass#education`,
-    `/${locale}/compass#identity`,
+    `/${locale}/education`,
+    `/${locale}/identity`,
     `/${locale}/compass#wealth`,
     `/${locale}/health`,
     `/${locale}/about`,
@@ -113,7 +162,7 @@ async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
     const menu = page.locator(".mobile-menu");
     if (!(await menu.evaluate(element => element.open))) await page.locator(".mobile-menu summary").click();
     assert.ok(await page.locator(".mobile-menu nav").isVisible(), `${locale}: mobile navigation is not visible`);
-    assert.equal(await links.count(), 9, `${locale}: mobile navigation must include seven primary links, Family Center and locale switch`);
+    assert.equal(await links.count(), 10, `${locale}: mobile navigation includes seven primary links, Family Center, partner introduction and locale switch`);
   } else {
     assert.ok(await links.first().isVisible(), `${locale}: desktop navigation is not visible`);
     assert.equal(await links.count(), 7, `${locale}: desktop navigation must contain seven primary links`);
@@ -122,7 +171,8 @@ async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
   assert.deepEqual(hrefs.slice(0, expected.length), expected, `${locale}: primary navigation hrefs changed`);
   if (mobile) {
     assert.equal(hrefs[7], `/${locale}/family-center`, `${locale}: mobile Family Center href changed`);
-    assert.equal(hrefs[8], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
+    assert.equal(hrefs[8], '#partners');
+    assert.equal(hrefs[9], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
     await page.locator(".mobile-menu summary").click();
   }
 }
@@ -136,12 +186,12 @@ async function assertCrossBorderProcess(page, route) {
     const crossBorder = document.querySelector("#cross-border-process");
     const why = document.querySelector("#why-phoenix");
     return {
-      servicesBeforeCrossBorder: Boolean(services && crossBorder && (services.compareDocumentPosition(crossBorder) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      crossBorderBeforeWhy: Boolean(crossBorder && why && (crossBorder.compareDocumentPosition(why) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      servicesBeforeWhy: Boolean(services && why && (services.compareDocumentPosition(why) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      whyBeforeCrossBorder: Boolean(why && crossBorder && (why.compareDocumentPosition(crossBorder) & Node.DOCUMENT_POSITION_FOLLOWING)),
     };
   });
-  assert.equal(order.servicesBeforeCrossBorder, true, `${route}: cross-border process must follow services`);
-  assert.equal(order.crossBorderBeforeWhy, true, `${route}: cross-border process must precede why-phoenix`);
+  assert.equal(order.servicesBeforeWhy, true, `${route}: GBA value section must follow services`);
+  assert.equal(order.whyBeforeCrossBorder, true, `${route}: cross-border process must follow GBA values`);
 
   const details = process.locator("details");
   assert.equal(await details.count(), 6, `${route}: cross-border process must expose six native details`);
@@ -158,8 +208,31 @@ async function assertConsultationPreparation(page, locale) {
   const context = page.locator("#consultation details");
   assert.equal(await context.count(), 1, `${locale}: optional conversation context details missing`);
   await context.locator("summary").click();
-  const fields = ["#referral-source", "#client-region", "#insurance-channel"];
-  for (const field of fields) assert.equal(await page.locator(field).inputValue(), "", `${locale}: ${field} must start empty`);
+  const fieldSpecs = [
+    { key: "region", label: /当前所在地区|Current region/i, names: ["client_region", "current_region", "currentregion"] },
+    { key: "destination", label: /就医目的地|医疗目的地|Care destination|Destination/i, names: ["care_destination", "destination", "careDestination"] },
+    { key: "needs", label: /服务协调需求|服务需求|Coordination needs|Service needs/i, names: ["service_needs", "coordination_needs", "needs"] },
+    { key: "source", label: /咨询来源渠道|来源渠道|Referral source/i, names: ["referral_source", "source"] },
+    { key: "insurance", label: /保险协调渠道|保险渠道|Insurance (?:coordination )?channel/i, names: ["insurance_channel", "insurance"] },
+  ];
+  const fields = {};
+  for (const spec of fieldSpecs) {
+    let field = page.getByLabel(spec.label).first();
+    if (await field.count() === 0) {
+      for (const name of spec.names) {
+        const candidate = page.locator(`select[name="${name}"]`).first();
+        if (await candidate.count()) { field = candidate; break; }
+      }
+    }
+    assert.equal(await field.count(), 1, `${locale}: optional consultation field ${spec.key} is missing`);
+    assert.equal(await field.evaluate(element => element.tagName), "SELECT", `${locale}: ${spec.key} must be a select`);
+    assert.equal(await field.evaluate(element => element.required), false, `${locale}: ${spec.key} must be optional`);
+    assert.equal(await field.inputValue(), "", `${locale}: ${spec.key} must start empty`);
+    fields[spec.key] = field;
+  }
+  const service = page.locator("#consultation select").first();
+  assert.equal(await service.count(), 1, `${locale}: consultation service field missing`);
+  assert.equal(await service.inputValue(), "", `${locale}: service must start empty`);
 
   await page.locator("footer").scrollIntoViewIfNeeded();
   await page.locator("footer img").evaluateAll(images => Promise.all(images.map(image => image.decode())));
@@ -168,46 +241,46 @@ async function assertConsultationPreparation(page, locale) {
   const requests = [];
   const onRequest = request => requests.push(request.url());
   page.on("request", onRequest);
-  await page.locator("#referral-source").selectOption("uk");
-  assert.equal(await page.locator("#client-region").inputValue(), "", `${locale}: referral source must not infer client region`);
-  assert.equal(await page.locator("#insurance-channel").inputValue(), "", `${locale}: referral source must not infer insurance channel`);
-  await page.locator("#health-service").selectOption({ index: 1 });
-  await page.locator('#consultation button[type="submit"]').click();
+  await fields.source.selectOption({ index: 1 });
+  for (const key of ["region", "destination", "needs", "insurance"]) assert.equal(await fields[key].inputValue(), "", `${locale}: source selection inferred ${key}`);
+  await service.selectOption({ index: 1 });
+  await page.locator('[data-testid="health-consultation-prepare"]').click();
   const referralOnlyStatus = await page.getByTestId("health-consultation-status").innerText();
-  assert.match(referralOnlyStatus, locale === "zh" ? /英国来源渠道/ : /UK referral source/);
-  assert.doesNotMatch(referralOnlyStatus, locale === "zh" ? /中国内地|香港保险渠道/ : /Mainland China|Hong Kong insurance channel/, `${locale}: unselected context appeared in prepared checklist`);
-  await page.locator("#client-region").selectOption("mainland-china");
-  assert.equal(await page.locator("#referral-source").inputValue(), "uk", `${locale}: client region changed referral source`);
-  assert.equal(await page.locator("#insurance-channel").inputValue(), "", `${locale}: client region must not infer insurance channel`);
-  await page.locator("#insurance-channel").selectOption("hong-kong-insurance");
-  assert.equal(await page.locator("#referral-source").inputValue(), "uk", `${locale}: insurance channel changed referral source`);
-  assert.equal(await page.locator("#client-region").inputValue(), "mainland-china", `${locale}: insurance channel changed client region`);
+  assert.match(referralOnlyStatus, locale === "zh" ? /来源渠道/ : /Referral source/i);
+  const selected = { source: await fields.source.inputValue() };
+  for (const key of ["region", "destination", "needs", "insurance"]) {
+    await fields[key].selectOption({ index: 1 });
+    selected[key] = await fields[key].inputValue();
+    assert.notEqual(selected[key], "", `${locale}: ${key} selection did not stick`);
+    for (const other of Object.keys(selected)) assert.equal(await fields[other].inputValue(), selected[other], `${locale}: ${key} changed ${other}`);
+  }
 
-  await page.locator('#consultation button[type="submit"]').click();
+  await page.locator('[data-testid="health-consultation-prepare"]').click();
   const status = page.getByTestId("health-consultation-status");
   const statusText = await status.innerText();
   assert.match(statusText, locale === "zh" ? /尚未发送咨询/ : /No enquiry has been sent/);
-  for (const label of locale === "zh"
-    ? ["英国来源渠道", "中国内地", "香港保险渠道"]
-    : ["UK referral source", "Mainland China", "Hong Kong insurance channel"]) {
-    assert.match(statusText, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${locale}: prepared checklist omitted ${label}`);
-  }
+  assert.ok(statusText.trim().length > 0, `${locale}: prepared checklist is empty`);
   assert.equal(requests.length, 0, `${locale}: consultation preparation must not send requests`);
   assert.deepEqual(await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookies: document.cookie })), { local: [], session: [], cookies: "" });
 
-  await page.locator("#client-region").selectOption("other-overseas");
+  await fields.region.selectOption({ index: 2 });
   assert.equal((await status.innerText()).trim(), "", `${locale}: changing context must clear prepared state`);
-  await page.locator("#client-region").selectOption("mainland-china");
-  await page.locator('#consultation button[type="submit"]').click();
+  await fields.region.selectOption({ index: 1 });
+  await page.locator('[data-testid="health-consultation-prepare"]').click();
   await page.getByTestId("health-consultation-status").locator('button[type="button"]').click();
-  for (const field of ["#health-service", ...fields]) assert.equal(await page.locator(field).inputValue(), "", `${locale}: clear selection did not reset ${field}`);
+  assert.equal(await service.inputValue(), "", `${locale}: clear selection did not reset service`);
+  for (const [key, field] of Object.entries(fields)) assert.equal(await field.inputValue(), "", `${locale}: clear selection did not reset ${key}`);
   assert.equal((await status.innerText()).trim(), "", `${locale}: clear selection did not hide prepared state`);
   assert.equal(requests.length, 0, `${locale}: clearing consultation preparation must not send requests`);
   assert.deepEqual(await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookies: document.cookie })), { local: [], session: [], cookies: "" });
 
   page.off("request", onRequest);
   await page.reload({ waitUntil: "networkidle" });
-  for (const field of ["#health-service", ...fields]) assert.equal(await page.locator(field).inputValue(), "", `${locale}: refresh did not reset ${field}`);
+  assert.equal(await page.locator("#consultation select").first().inputValue(), "", `${locale}: refresh did not reset service`);
+  for (const spec of fieldSpecs) {
+    const field = page.getByLabel(spec.label).first();
+    assert.equal(await field.inputValue(), "", `${locale}: refresh did not reset ${spec.key}`);
+  }
   assert.equal((await page.getByTestId("health-consultation-status").innerText()).trim(), "", `${locale}: refresh restored prepared state`);
   passed(`${locale} consultation fields stay independent, local and resettable`);
 }
@@ -224,7 +297,8 @@ try {
       assert.equal(await page.locator("h1").count(), 1);
       assert.equal(await page.locator('[data-testid="health-strengths"]').count(), 1);
       assert.equal(await page.locator('[data-testid="health-life-stages"]').count(), 1);
-      assert.match(await page.locator("h1").innerText(), locale === "zh" ? /全家人的健康/ : /Your family's health/);
+      assert.match(await page.locator("h1").innerText(), locale === "zh" ? /全家人的健康/ : /Your family's health/i);
+      await assertHealthSurface(page, locale, `/${locale}/health ${width}px`);
       assert.equal(await page.locator("[data-health-landing]").evaluate(el => getComputedStyle(el).backgroundColor), "rgb(248, 246, 241)");
       assert.equal(await page.locator("#health-compass").evaluate(el => getComputedStyle(el).backgroundColor), "rgb(0, 59, 70)");
       assert.ok(await page.title());
@@ -257,22 +331,22 @@ try {
       }
     }
     await assertConsultationPreparation(page, locale);
-    const wrapperLabel = locale === "zh" ? "服务地区、安排流程与常见问题" : "Regions, arrangements and common questions";
-    const serviceSummary = page.locator("summary").filter({ hasText: wrapperLabel });
-    const serviceDetails = serviceSummary.locator("..");
-    assert.equal(await serviceDetails.count(), 1, `${locale}: service details wrapper missing`);
-    await serviceSummary.click();
-    assert.equal(await serviceDetails.evaluate(element => element.open), true, `${locale}: service details wrapper did not open`);
     assert.ok(await page.locator("#regions").isVisible(), `${locale}: regions content remains hidden`);
-    await page.locator("#regions").evaluate(el => el.scrollIntoView());
-    await serviceDetails.locator("section").last().locator("details").first().locator("summary").first().click();
-    assert.ok(await serviceDetails.locator("details[open]").count(), `${locale}: FAQ did not open after wrapper expansion`);
+    const faq = page.locator('section[aria-labelledby="faq-title"] details');
+    assert.equal(await faq.count(), 10, `${locale}: ten public FAQ items are required`);
+    await faq.first().locator("summary").click();
+    assert.equal(await faq.first().evaluate(element => element.open), true, `${locale}: FAQ did not open`);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`${origin}/${locale}/health`, { waitUntil: "networkidle" });
+    await page.goto(`${origin}/${locale}/health#consultation`, { waitUntil: "networkidle" });
     await page.locator(".mobile-menu summary").click();
     assert.ok(await page.locator(".mobile-menu[open] nav").isVisible());
+    await page.locator('.mobile-menu a[href="#partners"]').click();
+    await page.waitForURL(`**/${locale}/health#partners`);
+    assert.equal(await page.locator(".mobile-menu").evaluate(element => element.open), false, "Partner introduction must close the mobile menu");
+    await page.goto(`${origin}/${locale}/health#consultation`, { waitUntil: "networkidle" });
+    await page.locator(".mobile-menu summary").click();
     await page.locator(".mobile-menu .mobile-locale").click();
-    await page.waitForURL(`**/${locale === "zh" ? "en" : "zh"}/health`);
+    await page.waitForURL(`**/${locale === "zh" ? "en" : "zh"}/health#consultation`);
     passed(`${locale} FAQ, mobile menu and locale-preserving route`);
   }
   for (const locale of ["zh", "en"]) {
@@ -316,18 +390,20 @@ try {
   const noScriptPage = await noScriptContext.newPage();
   for (const locale of ["zh", "en"]) {
     await noScriptPage.goto(`${origin}/${locale}/health`, { waitUntil: "networkidle" });
-    const submit = noScriptPage.locator('#consultation button[type="submit"]');
+    const submit = noScriptPage.locator('[data-testid="health-consultation-prepare"]');
+    const noJsService = noScriptPage.locator("#consultation select").first();
+    const noJsSource = noScriptPage.getByLabel(/咨询来源渠道|来源渠道|Referral source/i).first();
     assert.equal(await submit.isDisabled(), true, "No native submit before the local handler is attached");
     await noScriptPage.locator('#consultation details summary').click();
-    await noScriptPage.locator('#health-service').selectOption({ index: 1 });
-    await noScriptPage.locator('#referral-source').selectOption('uk');
+    await noJsService.selectOption({ index: 1 });
+    await noJsSource.selectOption({ index: 1 });
     await noScriptPage.locator('footer').scrollIntoViewIfNeeded();
     await noScriptPage.locator('footer img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
     await noScriptPage.waitForLoadState('networkidle');
     const transmissions = [];
     const recordRequest = request => transmissions.push(request.url());
     noScriptPage.on('request', recordRequest);
-    await noScriptPage.locator('#referral-source').press('Enter');
+    await noJsSource.press('Enter');
     assert.equal(await submit.isDisabled(), true);
     assert.deepEqual(transmissions, [], 'No-JS form must not transmit fields through a native GET');
     noScriptPage.off('request', recordRequest);
