@@ -1,0 +1,696 @@
+{
+  "typecheck": "PASS",
+  "browser": {
+    "health-on": {
+      "failed": 0,
+      "results": [
+        {
+          "name": "zh responsive 320px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 375px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 390px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 768px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 1024px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 1440px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh consultation fields stay independent, local and resettable",
+          "status": "PASS"
+        },
+        {
+          "name": "zh FAQ, mobile menu and locale-preserving route",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 320px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 375px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 390px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 768px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 1024px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 1440px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en consultation fields stay independent, local and resettable",
+          "status": "PASS"
+        },
+        {
+          "name": "en FAQ, mobile menu and locale-preserving route",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "Landing → original questionnaire, consent, back/edit, skip, no invented results or transmission",
+          "status": "PASS"
+        },
+        {
+          "name": "No-JS consultation remains disabled without URL or network transmission",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ],
+      "passed": 43
+    },
+    "family-on": {
+      "failed": 0,
+      "results": [
+        {
+          "name": "zh family page 390px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family page 768px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family page 1440px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family consultation is a local demo and refresh resets it",
+          "status": "PASS"
+        },
+        {
+          "name": "zh locale switch preserves the Health family route",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 390px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 768px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 1440px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family consultation is a local demo and refresh resets it",
+          "status": "PASS"
+        },
+        {
+          "name": "en locale switch preserves the Health family route",
+          "status": "PASS"
+        },
+        {
+          "name": "zh Health homepage exposes family, cross-border care and controlled partner introduction",
+          "status": "PASS"
+        },
+        {
+          "name": "en Health homepage exposes family, cross-border care and controlled partner introduction",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ],
+      "passed": 13
+    },
+    "identity": {
+      "failed": 0,
+      "results": [
+        {
+          "name": "zh 1440px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh 1024px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh 768px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh 390px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh 320px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 1440px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 1024px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 768px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 390px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 320px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh: mobile menu and locale-preserving switch",
+          "status": "PASS"
+        },
+        {
+          "name": "zh: all four service details and five process stages work with pointer/keyboard",
+          "status": "PASS"
+        },
+        {
+          "name": "zh: independent consultation, truthful status, clear, no network/storage/URL transmission",
+          "status": "PASS"
+        },
+        {
+          "name": "zh: five-group mobile Footer and expanded education links",
+          "status": "PASS"
+        },
+        {
+          "name": "zh: refresh clears preparation",
+          "status": "PASS"
+        },
+        {
+          "name": "en: mobile menu and locale-preserving switch",
+          "status": "PASS"
+        },
+        {
+          "name": "en: all four service details and five process stages work with pointer/keyboard",
+          "status": "PASS"
+        },
+        {
+          "name": "en: independent consultation, truthful status, clear, no network/storage/URL transmission",
+          "status": "PASS"
+        },
+        {
+          "name": "en: five-group mobile Footer and expanded education links",
+          "status": "PASS"
+        },
+        {
+          "name": "en: refresh clears preparation",
+          "status": "PASS"
+        },
+        {
+          "name": "No-JS route has readable content and no native submission",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ],
+      "passed": 22
+    },
+    "health-off": {
+      "failed": 0,
+      "results": [
+        {
+          "name": "zh responsive 320px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 375px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 390px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 768px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 1024px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 1440px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh consultation fields stay independent, local and resettable",
+          "status": "PASS"
+        },
+        {
+          "name": "zh FAQ, mobile menu and locale-preserving route",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 320px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 375px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 390px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 768px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 1024px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 1440px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en consultation fields stay independent, local and resettable",
+          "status": "PASS"
+        },
+        {
+          "name": "en FAQ, mobile menu and locale-preserving route",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "No-JS consultation remains disabled without URL or network transmission",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ],
+      "passed": 42
+    },
+    "family-off": {
+      "failed": 0,
+      "results": [
+        {
+          "name": "zh family page 390px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family page 768px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family page 1440px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family consultation is a local demo and refresh resets it",
+          "status": "PASS"
+        },
+        {
+          "name": "zh locale switch preserves the Health family route",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 390px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 768px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 1440px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family consultation is a local demo and refresh resets it",
+          "status": "PASS"
+        },
+        {
+          "name": "en locale switch preserves the Health family route",
+          "status": "PASS"
+        },
+        {
+          "name": "zh Health homepage exposes family, cross-border care and controlled partner introduction",
+          "status": "PASS"
+        },
+        {
+          "name": "en Health homepage exposes family, cross-border care and controlled partner introduction",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ],
+      "passed": 13
+    },
+    "mobile-partner": {
+      "failed": 0,
+      "results": [
+        {
+          "locale": "zh",
+          "status": "PASS",
+          "check": "Mobile partner introduction closes menu; workspace remains disabled"
+        },
+        {
+          "locale": "en",
+          "status": "PASS",
+          "check": "Mobile partner introduction closes menu; workspace remains disabled"
+        }
+      ],
+      "passed": 2
+    },
+    "education": {
+      "failed": 0,
+      "results": [
+        {
+          "name": "zh 1440px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh 1024px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh 768px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh 390px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh 320px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh: mobile menu and locale-preserving switch",
+          "status": "PASS"
+        },
+        {
+          "name": "zh: native details, controlled Compass, local consultation, Footer and accessibility checks",
+          "status": "PASS"
+        },
+        {
+          "name": "en 1440px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 1024px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 768px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 390px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en 320px: route, structure, navigation, assets and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "en: mobile menu and locale-preserving switch",
+          "status": "PASS"
+        },
+        {
+          "name": "en: native details, controlled Compass, local consultation, Footer and accessibility checks",
+          "status": "PASS"
+        },
+        {
+          "name": "No-JS route has readable content and no native submission",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ],
+      "passed": 16
+    },
+    "client-language": {
+      "passed": 5,
+      "results": [
+        {
+          "name": "zh Education to Health client navigation language",
+          "status": "PASS"
+        },
+        {
+          "name": "en Education to Health client navigation language",
+          "status": "PASS"
+        },
+        {
+          "name": "Language switch preserves regions anchor",
+          "status": "PASS"
+        },
+        {
+          "name": "zh Health to original questionnaire client navigation language",
+          "status": "PASS"
+        },
+        {
+          "name": "en Health to original questionnaire client navigation language",
+          "status": "PASS"
+        }
+      ],
+      "failed": 0
+    }
+  },
+  "lint": {
+    "existing_warnings": 1,
+    "file": "components/customer-center.tsx",
+    "symbol": "Bell",
+    "errors": 0
+  },
+  "branch": "codex/health-v31-founder-20261101",
+  "captured_at": "2026-11-01T21:30:20.0162922+08:00",
+  "runtime": "Windows frontend-only Node adapter; real Workers validation remains required in Ubuntu CI",
+  "baseline": "259753248ff54b07fd9c52f270e45ae1c877bc09",
+  "pure_tests": {
+    "scope": "Health frozen model, candidate contract, synthetic account and family logic",
+    "failed": 0,
+    "passed": 30
+  },
+  "build": "PASS",
+  "authorization_note": "Synthetic contract checks do not prove real backend authorization, RLS, patient isolation or OS integration."
+}

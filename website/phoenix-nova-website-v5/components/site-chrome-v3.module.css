@@ -16,6 +16,9 @@
 .header :global(.mobile-menu[open] summary){color:#094768}
 .header :global(.mobile-menu nav .mobile-locale){font-size:16px}
 .header a:focus-visible,.header summary:focus-visible,.footer a:focus-visible,.footer summary:focus-visible{outline:3px solid #416f91;outline-offset:4px}
+.partnerLink{font-size:12px;min-height:44px;display:flex;align-items:center;color:var(--brand-deepsea);white-space:nowrap}
+@media(min-width:1181px){.header:has(.partnerLink) :global(.site-header__inner){gap:18px;grid-template-columns:220px 1fr auto}.header:has(.partnerLink) :global(.desktop-nav){gap:16px}.header:has(.partnerLink) :global(.header-actions){gap:14px}}
+@media(max-width:1180px){.partnerLink{display:none}}
 .footer{padding:0;background:var(--surface-ivory);color:var(--brand-ink)}
 .inner{width:min(1280px,calc(100% - 80px));margin:auto}
 .top{display:grid;grid-template-columns:270px 1fr 220px;gap:50px;align-items:center;padding:46px 0 34px;border-bottom:1px solid #d6dfdc}
