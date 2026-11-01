@@ -125,8 +125,11 @@ test("Health landing contains six linked entries, six values, five services and 
     "/en/health/hong-kong-greater-bay-area",
     "/en/health/international-insurance-claims",
   ]) assert.match(english.html, new RegExp(`href=\"${href}\"`), `missing en entry route: ${href}`);
-  assert.equal((html.match(/entryCard/g) ?? []).length, 6, "Health landing must render six public entry cards");
-  assert.equal((english.html.match(/entryCard/g) ?? []).length, 6, "English Health landing must render six public entry cards");
+  // Count rendered cards, not class names repeated inside the RSC script payload.
+  for (const rendered of [html, english.html]) {
+    const markup = rendered.replace(/<script\b[\s\S]*?<\/script>/gi, "");
+    assert.equal((markup.match(/<article\b[^>]*class="[^"]*entryCard[^"]*"[^>]*>/g) ?? []).length, 6, "Health landing must render six public entry cards");
+  }
   for (const label of [
     "深港医疗专家资源",
     "国际化语言服务",
