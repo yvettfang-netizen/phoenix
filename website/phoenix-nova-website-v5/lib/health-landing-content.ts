@@ -2,7 +2,8 @@ export type HealthLocale = "zh" | "en";
 export type HealthCopy = readonly [string, string];
 
 export type HealthEntry = {
-  id: "family" | "medical" | "partner";
+  id: "family" | "foreign" | "returning" | "shenzhen" | "gba" | "insurance";
+  href: HealthCopy;
   label: HealthCopy;
   title: HealthCopy;
   body: HealthCopy;
@@ -28,6 +29,7 @@ export const healthHero = {
 export const healthEntries: readonly HealthEntry[] = [
   {
     id: "family",
+    href: ["health/family", "health/family"],
     label: ["家庭健康规划", "Family health planning"],
     title: ["家庭健康规划", "Family health planning"],
     body: ["从家庭健康事务、成员授权到长期服务进度，先把需要安排的事项放进同一张清晰地图。", "Bring family health arrangements, member permissions and long-term service progress into one clear map."],
@@ -35,20 +37,49 @@ export const healthEntries: readonly HealthEntry[] = [
     cta: ["进入家庭健康规划", "Enter family health planning"],
   },
   {
-    id: "medical",
-    label: ["大湾区跨境医疗服务", "Greater Bay Area cross-border care"],
-    title: ["大湾区跨境医疗服务", "Greater Bay Area cross-border care"],
-    body: ["了解香港及深圳等大湾区城市的就医信息与协调路径，海外及内地家庭均可直接开始沟通。", "Explore care information and coordination pathways across Hong Kong, Shenzhen and other Greater Bay Area cities."],
-    points: [["香港机构信息与协调", "Hong Kong information & coordination"], ["大湾区内地城市安排", "Mainland GBA arrangements"], ["海外客户就医准备", "Overseas care preparation"], ["预约与服务条件核实", "Appointment and scope checks"]],
-    cta: ["了解跨境医疗服务", "Explore cross-border care"],
+    id: "foreign",
+    href: ["health/foreign-patients-china", "health/international-patients-china"],
+    label: ["外国人来中国就医", "International patients in China"],
+    title: ["外国人来中国就医", "International patients in China"],
+    body: ["了解来华就医准备、深圳国际医疗、语言沟通、预约流程与跨境行程协调。", "Explore preparation, international care in Shenzhen, language support, appointments and cross-border travel coordination."],
+    points: [["来华就医准备", "Preparing to seek care in China"], ["深圳国际医疗信息", "International care information in Shenzhen"], ["英语沟通与患者导航", "English communication and navigation"], ["预约及行程协调", "Appointment and travel coordination"]],
+    cta: ["了解来华就医", "Explore care in China"],
   },
   {
-    id: "partner",
-    label: ["医疗服务合作伙伴", "Medical service partners"],
-    title: ["医疗服务合作伙伴", "Medical service partners"],
-    body: ["面向获准合作的保险、医疗协调及专业机构，介绍合作边界与受控工作台状态。", "For authorised insurance, healthcare coordination and professional partners, with clear scope and controlled workspace status."],
-    points: [["香港保险从业机构", "Hong Kong insurance organisations"], ["海外医疗服务机构", "Overseas healthcare services"], ["医疗协调合作机构", "Medical coordination partners"], ["受控工作台预览", "Controlled workspace preview"]],
-    cta: ["了解合作方式", "Explore partnership"],
+    id: "returning",
+    href: ["health/overseas-chinese-returning", "health/overseas-chinese-returning"],
+    label: ["海外华人回国就医", "Overseas Chinese returning for care"],
+    title: ["海外华人回国就医", "Returning to China for care"],
+    body: ["围绕海外病历、资料准备、专科预约、家属协调与后续跟进，梳理回国就医安排。", "Plan care in China around overseas records, preparation, specialist appointments, family coordination and follow-up."],
+    points: [["海外病历及资料准备", "Overseas records and preparation"], ["专科就医安排", "Specialist care arrangements"], ["家属及语言协调", "Family and language coordination"], ["后续跟进", "Continuing follow-up"]],
+    cta: ["了解回国就医", "Explore returning for care"],
+  },
+  {
+    id: "shenzhen",
+    href: ["health/shenzhen-international-medical", "health/shenzhen-international-medical"],
+    label: ["深圳国际化私立医疗", "International private care in Shenzhen"],
+    title: ["深圳国际化私立医疗", "International private care in Shenzhen"],
+    body: ["了解深圳私立医疗机构、国际患者接待、语言服务、病房环境与费用核实方向。", "Explore provider information, international patient reception, language support, environments and cost verification in Shenzhen."],
+    points: [["机构与专科信息", "Provider and specialty information"], ["国际患者接待", "International patient reception"], ["语言服务核实", "Language support checks"], ["费用与房型逐项确认", "Cost and room details confirmed case by case"]],
+    cta: ["了解深圳国际医疗", "Explore Shenzhen care"],
+  },
+  {
+    id: "gba",
+    href: ["health/hong-kong-greater-bay-area", "health/hong-kong-greater-bay-area"],
+    label: ["香港与大湾区跨境医疗", "Hong Kong and Greater Bay Area care"],
+    title: ["香港与大湾区跨境医疗", "Hong Kong and Greater Bay Area care"],
+    body: ["围绕香港居民赴深圳、跨境交通、预约及香港保险与内地医疗衔接，了解可行安排。", "Explore care across Hong Kong and the Greater Bay Area, including travel, appointments and insurance coordination."],
+    points: [["香港居民赴深圳就医", "Hong Kong residents seeking care in Shenzhen"], ["深港医疗资源了解", "Understanding Hong Kong–Shenzhen resources"], ["跨境交通及行程", "Cross-border travel and itineraries"], ["香港保险衔接核实", "Hong Kong insurance coordination checks"]],
+    cta: ["了解大湾区医疗", "Explore Greater Bay Area care"],
+  },
+  {
+    id: "insurance",
+    href: ["health/international-insurance-claims", "health/international-insurance-claims"],
+    label: ["国际医疗保险与理赔协助", "International medical insurance and claims"],
+    title: ["国际医疗保险与理赔协助", "International medical insurance and claims"],
+    body: ["了解预授权、直付条件、理赔资料准备与行政沟通边界，保险决定由保险机构作出。", "Explore pre-authorisation, direct billing conditions, claims preparation and administrative coordination; insurers make coverage decisions."],
+    points: [["保障范围与预授权", "Coverage and pre-authorisation"], ["直付条件核实", "Direct billing checks"], ["理赔资料准备", "Claims document preparation"], ["行政沟通协调", "Administrative coordination"]],
+    cta: ["了解保险与理赔", "Explore insurance and claims"],
   },
 ] as const;
 
@@ -70,7 +101,7 @@ export const healthServices: readonly { image: string; title: HealthCopy; subtit
 export const gbaValues: readonly { title: HealthCopy; body: HealthCopy }[] = [
   { title: ["深港医疗专家资源", "Hong Kong and Shenzhen specialist resources"], body: ["连接香港与内地医疗专业资源，根据实际就医需求，协助了解相应专科、医生及医疗机构的服务安排。具体医生资格、专科和出诊情况以医院实际确认。", "Connect with healthcare resources in Hong Kong and mainland cities, helping you explore relevant specialties, doctors and provider arrangements. Qualifications, specialties and schedules are subject to provider confirmation."] },
   { title: ["国际化语言服务", "International language support"], body: ["部分大湾区私立医疗机构可能提供普通话、粤语及英语沟通支持；医院自有语言能力与凤启另行协调的翻译服务分别确认。", "Some private providers in the Greater Bay Area may offer Mandarin, Cantonese and English support. Provider language capabilities and separately coordinated interpretation are confirmed independently."] },
-  { title: ["更具竞争力的医疗费用", "Potentially competitive medical costs"], body: ["深圳部分私立医疗项目相较香港及英国同类私立服务，可能具备费用竞争力。具体报价须结合专科、检查、治疗方案和病房类别，以医院实际确认。", "Some private care in Shenzhen may offer competitive costs compared with similar private services in Hong Kong or the UK. Estimates depend on specialty, tests, treatment and room category and must be confirmed by the provider."] },
+  { title: ["更具竞争力的医疗费用", "Potentially competitive medical costs"], body: ["先比较相同专科、检查、治疗范围与病房条件的书面报价，再评估费用选择。本页尚无经过核实的跨地区可比价格，不提供节省结论。", "Compare written quotes for equivalent specialties, tests, treatment scope and room conditions before assessing cost options. No verified cross-region comparable prices or savings conclusions are presented here."] },
   { title: ["舒适宽敞的住院环境", "Comfortable inpatient environments"], body: ["部分国际化私立医院可能提供独立病房、家庭陪护空间及更注重私密性的住院环境；房型、设施和护理安排以医院实际确认。", "Some international private hospitals may offer private rooms, family spaces and a greater focus on privacy. Room types, facilities and care arrangements are subject to provider confirmation."] },
   { title: ["更便捷的预约安排", "More convenient appointment planning"], body: ["通过提前沟通、了解医院接诊安排及预约要求，协助客户提高就医准备效率；不得理解为零等待或保证接诊。", "By discussing provider arrangements and requirements early, we help improve preparation efficiency. This does not mean zero waiting or guaranteed acceptance."] },
   { title: ["保险理赔与后续服务", "Insurance claims and follow-up support"], body: ["协助核对保单资料要求、预授权流程、理赔申请和补件事项，提供约定范围内的后续行政协调；保险结果由保险机构确认。", "Help check policy requirements, pre-authorisation, claims and follow-up documents within an agreed administrative scope. Insurers decide coverage and payment."] },

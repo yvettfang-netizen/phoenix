@@ -4,12 +4,12 @@ import { SiteDirectory } from "./site-directory";
 import type { Locale } from "./v5-site";
 import styles from "./site-chrome-v3.module.css";
 
-export function SiteEcosystemContent({ locale, consultationPath, localized = false }: { locale: Locale; consultationPath?: string; localized?: boolean }) {
+export function SiteEcosystemContent({ locale, consultationPath, localized = false, brandLocale }: { locale: Locale; consultationPath?: string; localized?: boolean; brandLocale?: Locale }) {
   const zh = locale === "zh";
   return <div className={styles.inner}>
     <div className={styles.top}>
       <div className={styles.brand}>
-        <BrandMark href={`/${locale}`} label={zh ? (localized ? "凤启环球首页" : "Phoenix Nova 首页") : "Phoenix Nova home"} />
+        <BrandMark href={`/${locale}`} label={zh ? (localized ? "凤启环球首页" : "Phoenix Nova 首页") : "Phoenix Nova home"} locale={brandLocale ?? (localized ? locale : undefined)} />
         <p>{zh && localized ? "每一次启程。" : "For Every Beginning."}</p>
         <span>{zh ? "每一次启程，都值得更好的未来。" : "Every beginning deserves a better future."}</span>
       </div>

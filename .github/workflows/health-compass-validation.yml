@@ -53,6 +53,9 @@ jobs:
             done
             node tests/health-landing-browser.mjs
             HEALTH_EVIDENCE_DIR="$HEALTH_EVIDENCE_DIR/family" node tests/health-family-browser.mjs
+            if [ "$enabled" = 0 ]; then
+              HEALTH_EVIDENCE_DIR=health-evidence/geo node tests/health-geo-browser.mjs
+            fi
             kill "$preview_pid"
             wait "$preview_pid" || true
             trap - EXIT

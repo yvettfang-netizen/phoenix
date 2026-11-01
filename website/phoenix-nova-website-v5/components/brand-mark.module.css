@@ -1,0 +1,7 @@
+/* Founder accepted 2026-11-02: complete official symbol + Chinese typesetting,
+   light surfaces only. No alteration to the raster source or English master. */
+:global(.brand-mark) .chinese:global(.brand-asset-wrap){display:flex;align-items:center;gap:12px;background:transparent}
+.chinese .symbol{width:52px;height:auto;flex:0 0 auto;object-fit:contain}
+.wordmark{display:block;font-family:"Noto Serif CJK SC","SimSun",serif;letter-spacing:.15em;font-size:29px;white-space:nowrap;line-height:1.4;color:#123f48}
+.wordmark small{display:block;font:10px/1.8 Georgia,serif;letter-spacing:.14em;color:#a17d3f}
+@media(max-width:700px){:global(.brand-mark) .chinese:global(.brand-asset-wrap){gap:8px}.chinese .symbol{width:40px}.wordmark{font-size:22px}.wordmark small{font-size:7px}}
