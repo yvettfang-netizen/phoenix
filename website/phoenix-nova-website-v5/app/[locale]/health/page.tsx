@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { HealthLanding } from "@/components/health-landing";
+import { healthGeoMetadata } from "@/lib/health-geo";
 
 type Props = { params: Promise<{ locale: string }> };
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : "Explore healthcare options across Hong Kong, Shenzhen and the Greater Bay Area, with appointment coordination, language support, travel, local arrangements and insurance claims administration.";
   return {
     title, description,
-    alternates: { languages: { "zh-Hans": "/zh/health", en: "/en/health" } },
+    alternates: healthGeoMetadata(locale, {zh:"",en:""}, {zh:title,en:title}, {zh:description,en:description}).alternates,
     openGraph: { title: `Phoenix Nova™ ${title}`, description, type: "website", locale: locale === "zh" ? "zh_CN" : "en_GB", siteName: "Phoenix Nova™", images: [{ url: "/images/health-v31-gba-family.png",  alt: locale === "zh" ? "大湾区家庭医疗协调艺术场景" : "Illustrative Greater Bay Area family care coordination" }] },
     twitter: { card: "summary_large_image", title: `Phoenix Nova™ ${title}`, description, images: ["/images/health-v31-gba-family.png"] },
     robots: { index: false, follow: false, nocache: true },

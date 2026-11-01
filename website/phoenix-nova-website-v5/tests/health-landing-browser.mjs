@@ -11,6 +11,8 @@ import {
   BRAND_FOOTER_URL,
   BRAND_HEADER_SIZE,
   BRAND_HEADER_URL,
+  BRAND_SYMBOL_SIZE,
+  BRAND_SYMBOL_URL,
 } from "./brand-integrity.mjs";
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(resolve(process.env.PLAYWRIGHT_MODULE, "index.mjs")).href : "playwright");
@@ -20,6 +22,7 @@ const IVORY_SURFACE = "rgb(248, 246, 241)";
 const BRAND_ASSETS = {
   header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: IVORY_SURFACE },
   footer: { url: BRAND_FOOTER_URL, ...BRAND_FOOTER_SIZE, wrapperBackground: "transparent" },
+  symbol: { url: BRAND_SYMBOL_URL, ...BRAND_SYMBOL_SIZE, wrapperBackground: "transparent" },
 };
 const FOOTER_SURFACE = IVORY_SURFACE;
 const TRANSPARENT = new Set(["transparent", "rgba(0, 0, 0, 0)"]);
@@ -66,10 +69,19 @@ async function assertLocaleSurface(page, locale, route) {
 }
 
 async function assertHealthSurface(page, locale, route) {
-  assert.equal(await page.locator('section[aria-labelledby="health-entry-title"] article').count(), 3, `${route}: three public entry cards required`);
+  const entries = page.locator('section[aria-labelledby="health-entry-title"] article');
+  assert.equal(await entries.count(), 6, `${route}: six public entry cards required`);
+  const expectedEntryHrefs = locale === "zh"
+    ? ["/zh/health/family", "/zh/health/foreign-patients-china", "/zh/health/overseas-chinese-returning", "/zh/health/shenzhen-international-medical", "/zh/health/hong-kong-greater-bay-area", "/zh/health/international-insurance-claims"]
+    : ["/en/health/family", "/en/health/international-patients-china", "/en/health/overseas-chinese-returning", "/en/health/shenzhen-international-medical", "/en/health/hong-kong-greater-bay-area", "/en/health/international-insurance-claims"];
+  assert.deepEqual(await entries.locator("a").evaluateAll(links => links.map(link => link.getAttribute("href"))), expectedEntryHrefs, `${route}: entry routes must remain independent and locale-specific`);
   assert.ok(await page.locator('[data-testid="health-strengths"] article').count() >= 4, `${route}: core value cards are missing`);
   assert.equal(await page.locator("#why-phoenix article").count(), 6, `${route}: six medical advantage cards required`);
   assert.equal(await page.locator("#services article").count(), 5, `${route}: five coordination service cards required`);
+  assert.equal(await page.locator("#providers").count(), 1, `${route}: provider hub section missing`);
+  assert.equal(await page.locator('#providers a[href$="/health/providers"]').count(), 1, `${route}: provider hub route missing`);
+  assert.equal(await page.locator('#providers a[href$="/health/providers/hyzen-hospital"]').count(), 1, `${route}: Hyzen resource route missing`);
+  assert.ok((await page.locator("#providers").innerText()).match(/pending verification|待逐项核验/i), `${route}: provider verification status missing`);
   assert.equal(await page.locator("#cross-border-process details").count(), 6, `${route}: six cross-border process details required`);
   assert.equal(await page.locator("#partners").count(), 1, `${route}: partner section missing`);
   assert.equal(await page.locator('#partners button:disabled').count(), 1, `${route}: partner workspace must remain controlled`);
@@ -94,6 +106,10 @@ async function inspectBrandImage(locator, route, role, width) {
       height: rect.height,
       left: rect.left,
       right: rect.right,
+      wrapperWidth: wrapper?.getBoundingClientRect().width || 0,
+      wrapperLeft: wrapper?.getBoundingClientRect().left || 0,
+      wrapperRight: wrapper?.getBoundingClientRect().right || 0,
+      brandClass: element.closest(".brand-mark")?.className || "",
       objectFit: style.objectFit,
       wrapperBackground: wrapperStyle?.backgroundColor || "",
       wrapperOverflow: wrapperStyle?.overflow || "",
@@ -103,7 +119,10 @@ async function inspectBrandImage(locator, route, role, width) {
       imageFilter: style.filter,
     };
   });
-  const expected = { ...BRAND_ASSETS[role], wrapperBackground: role === 'header' && /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? 'transparent' : BRAND_ASSETS[role].wrapperBackground };
+  const localizedChinese = /\bbrand-mark--zh\b/.test(details.brandClass);
+  const expected = localizedChinese
+    ? BRAND_ASSETS.symbol
+    : { ...BRAND_ASSETS[role], wrapperBackground: role === 'header' && /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? 'transparent' : BRAND_ASSETS[role].wrapperBackground };
   assert.ok(details.src.includes(expected.url), `${route}: ${role} must use ${expected.url}`);
   assert.ok(!/phoenix-nova-(?:logo-master|mark-official|logo-official|official-logo-system-v1)\.png/i.test(details.src), `${route}: legacy mark/logo is still rendered`);
   assert.equal(details.naturalWidth, expected.width, `${route}: ${role} asset width changed`);
@@ -122,16 +141,34 @@ async function inspectBrandImage(locator, route, role, width) {
   assert.ok(TRANSPARENT.has(details.imageBackground), `${route}: ${role} image must have no background fill`);
   assert.equal(details.imageFilter, "none", `${route}: ${role} official colours must not be filtered`);
   assert.ok(details.left >= -1 && details.right <= width + 1, `${route} ${width}px: ${role} image leaves the viewport`);
+  if (localizedChinese) {
+    const expectedRenderedWidth = width <= 700 ? 40 : 52;
+    assert.ok(Math.abs(details.width - expectedRenderedWidth) < 0.5, `${route} ${width}px: Chinese symbol must render at ${expectedRenderedWidth}px`);
+  }
   return details;
 }
 
 async function assertSharedBrandChrome(page, route, width) {
   // Footer branding is intentionally lazy; make it visible before decoding.
   await page.locator("footer").scrollIntoViewIfNeeded();
-  await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
+  const header = await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
+  const localizedChinese = /\bbrand-mark--zh\b/.test(header.brandClass) || /\bbrand-mark--zh\b/.test(footer.brandClass);
   const expectedFooterWidth = /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? (width <= 700 ? 165 : 220) : (width <= 680 ? 165 : 210);
-  assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand must be ${expectedFooterWidth}px wide`);
+  assert.ok(Math.abs(footer.wrapperWidth - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand wrapper must be ${expectedFooterWidth}px wide`);
+  if (localizedChinese) {
+    const wordmarks = page.locator('.brand-mark--zh [class*="wordmark"]');
+    assert.equal(await wordmarks.count(), 2, `${route}: Chinese Header/Footer wordmarks must both render`);
+    const wordmarkBounds = await wordmarks.evaluateAll(elements => elements.map(element => {
+      const rect = element.getBoundingClientRect();
+      const parent = element.closest(".brand-asset-wrap")?.getBoundingClientRect();
+      return { text: element.textContent || "", left: rect.left, right: rect.right, parentLeft: parent?.left || 0, parentRight: parent?.right || 0 };
+    }));
+    for (const bound of wordmarkBounds) {
+      assert.match(bound.text, /凤启环球/);
+      assert.ok(bound.left >= bound.parentLeft - 1 && bound.right <= bound.parentRight + 1, `${route}: Chinese wordmark is cropped`);
+    }
+  }
   assert.equal(await page.locator("footer.site-footer").evaluate(element => getComputedStyle(element).backgroundColor), FOOTER_SURFACE, `${route}: Footer must use the Phoenix Ivory surface`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} ${width}px horizontal overflow`);
@@ -186,13 +223,16 @@ async function assertCrossBorderProcess(page, route) {
     const services = document.querySelector("#services");
     const crossBorder = document.querySelector("#cross-border-process");
     const why = document.querySelector("#why-phoenix");
+    const providers = document.querySelector("#providers");
     return {
-      servicesBeforeWhy: Boolean(services && why && (services.compareDocumentPosition(why) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      whyBeforeCrossBorder: Boolean(why && crossBorder && (why.compareDocumentPosition(crossBorder) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      whyBeforeServices: Boolean(why && services && (why.compareDocumentPosition(services) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      servicesBeforeProviders: Boolean(services && providers && (services.compareDocumentPosition(providers) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      providersBeforeCrossBorder: Boolean(providers && crossBorder && (providers.compareDocumentPosition(crossBorder) & Node.DOCUMENT_POSITION_FOLLOWING)),
     };
   });
-  assert.equal(order.servicesBeforeWhy, true, `${route}: GBA value section must follow services`);
-  assert.equal(order.whyBeforeCrossBorder, true, `${route}: cross-border process must follow GBA values`);
+  assert.equal(order.whyBeforeServices, true, `${route}: GBA value section must precede services`);
+  assert.equal(order.servicesBeforeProviders, true, `${route}: provider hub must follow services`);
+  assert.equal(order.providersBeforeCrossBorder, true, `${route}: cross-border process must follow provider hub`);
 
   const details = process.locator("details");
   assert.equal(await details.count(), 6, `${route}: cross-border process must expose six native details`);
@@ -407,9 +447,12 @@ try {
     await noJsSource.selectOption({ index: 1 });
     await noScriptPage.locator('footer').scrollIntoViewIfNeeded();
     await noScriptPage.locator('footer img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
-    await noScriptPage.waitForLoadState('networkidle');
+    // Disabled module preloads can keep Chromium's networkidle state pending.
+    // The privacy check below watches navigation and all non-static requests.
     const transmissions = [];
-    const recordRequest = request => transmissions.push(request.url());
+    const recordRequest = request => {
+      if (!['image', 'font', 'stylesheet', 'script'].includes(request.resourceType())) transmissions.push(request.url());
+    };
     noScriptPage.on('request', recordRequest);
     await noJsSource.press('Enter');
     assert.equal(await submit.isDisabled(), true);

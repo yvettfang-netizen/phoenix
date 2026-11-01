@@ -1,0 +1,19 @@
+import { notFound } from "next/navigation";
+import { HealthGeoShell } from "@/components/health-geo-shell";
+import { healthGeoMetadata } from "@/lib/health-geo";
+type Props={params:Promise<{locale:string}>};
+const slugs={zh:"providers/hyzen-hospital",en:"providers/hyzen-hospital"};
+const titles={zh:"深圳禾正医院｜公开资料与核验状态",en:"Shenzhen Hyzen Hospital | Public Information and Verification Status"};
+const descriptions={zh:"逐项区分医院公开资料、现行服务核验和凤启合作状态，不以收录代替合作确认。",en:"Separate public provider information, current service verification and Phoenix partnership status."};
+export async function generateMetadata({params}:Props){const{locale}=await params;return locale==="zh"||locale==="en"?healthGeoMetadata(locale,slugs,titles,descriptions):{};}
+const fields=[
+ ["医院简介","Hospital overview","医院网站搜索索引可见该机构自述，正文读取超时；不据此发布完整简介。","The provider's site appears in search results, but its body could not be retrieved. A complete profile has not been verified."],
+ ["医院性质及资质","Institution type and credentials"],["地理位置","Location"],["专科服务","Specialties"],["医生及合法执业信息","Clinicians and lawful registration"],["香港医生出诊情况","Hong Kong clinician availability"],["英语服务","English-language services"],["国际患者接待","International patient reception"],["住院环境","Inpatient accommodation"],["医疗费用","Medical fees"],["保险合作及理赔支持","Insurance networks and claims support"],["预约方式","Booking arrangements"],
+];
+export default async function Hyzen({params}:Props){const{locale}=await params;if(locale!=="zh"&&locale!=="en")notFound();const zh=locale==="zh";
+return <HealthGeoShell locale={locale} slugs={slugs} title={titles[locale]} description={descriptions[locale]}>
+ <section><h2>{zh?"核验结论":"Verification outcome"}</h2><p>{zh?"本页是公开资料核验记录，不是已确认合作医院介绍。医院网站本次读取超时；不能用搜索摘要证明现行执照、医生资格、排班、设施、价格或赔付条件。未使用历史宣传推断当前服务。":"This is a public-information verification record, not a confirmed partnership profile. The hospital website timed out during retrieval. Search excerpts do not prove current licensing, clinician credentials, schedules, facilities, prices or insurance conditions. Historical promotion is not treated as current availability."}</p><p>{zh?"核查日期：2026年11月2日；已核实字段之外的服务能力均保持待核验。":"Review attempt: 2 November 2026. Service capabilities beyond evidenced fields remain unverified."}</p></section>
+ <section><h2>{zh?"医院资料逐项状态":"Field-by-field provider information"}</h2><table><thead><tr><th>{zh?"资料项目":"Field"}</th><th>{zh?"当前证据及状态":"Evidence and status"}</th></tr></thead><tbody>{fields.map(field=><tr key={field[1]}><th scope="row">{field[zh?0:1]}</th><td>{field[zh?2:3]??(zh?"待医院或主管部门提供现行可核验资料；本页不作肯定陈述。":"Pending current verifiable evidence from the provider or relevant authority. No affirmative claim is made here.")}</td></tr>)}</tbody></table></section>
+ <section><h2>{zh?"网站与资料来源":"Website and evidence sources"}</h2><p><a href="https://www.hyzenhospital.com/">{zh?"医院网站资料入口（本次读取超时）":"Provider website entry (retrieval timed out)"} ↗</a></p><p>{zh?"南山区政府公开页面搜索结果提及该医院监管检查；该记录仅供追溯，不等于现行许可证、全面资质审查或合作证明。":"A Nanshan government search result references a regulatory inspection of this hospital. It is a traceability lead, not a current licence, comprehensive credential review or partnership certificate."}</p><a href="https://www.szns.gov.cn/xxgk/qzfxxgkml/bmdt/content/post_12609685.html">{zh?"南山区政府公开资料线索（正文尚未读取）":"Nanshan government evidence lead (body not retrieved)"} ↗</a></section>
+ <section><h2>{zh?"公开介绍前还需核实什么？":"What must be verified before a public provider profile?"}</h2><p>{zh?"需要现行执业证照、科室及医生范围、出诊安排、语言能力、病房及图片授权、逐项目报价、保险适用条件和官方预约入口；任何凤启合作关系还须有协议及公开授权。":"Current licensing, specialties and clinician scope, schedules, language capability, accommodation and image rights, itemised prices, insurance applicability and official booking channels are required. Any Phoenix partnership additionally requires an agreement and public-use permission."}</p></section>
+</HealthGeoShell>;}

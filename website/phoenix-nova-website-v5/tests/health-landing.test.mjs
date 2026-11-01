@@ -99,7 +99,7 @@ test("Health landing is reachable in both locales with independent metadata and 
   assertLocaleCopy(en.html, "en");
 });
 
-test("Health landing contains three controlled entries, six values, five services and shared brand chrome", async t => {
+test("Health landing contains six linked entries, six values, five services and shared brand chrome", async t => {
   const worker = createV5Worker();
   t.after(() => worker.dispose());
   const { response, html } = await page(worker, "/zh/health");
@@ -107,8 +107,26 @@ test("Health landing contains three controlled entries, six values, five service
   assert.equal(response.status, 200);
   assert.equal(english.response.status, 200);
 
-  for (const label of ["家庭健康规划", "大湾区跨境医疗服务", "医疗服务合作伙伴"]) assert.ok(html.includes(label), label);
-  for (const label of ["Family health planning", "Greater Bay Area cross-border care", "Medical service partners"]) assert.ok(english.html.includes(label), label);
+  for (const label of ["家庭健康规划", "外国人来中国就医", "海外华人回国就医", "深圳国际化私立医疗", "香港与大湾区跨境医疗", "国际医疗保险与理赔协助"]) assert.ok(html.includes(label), label);
+  for (const label of ["Family health planning", "International patients in China", "Overseas Chinese returning for care", "International private care in Shenzhen", "Hong Kong and Greater Bay Area care", "International medical insurance and claims"]) assert.ok(english.html.includes(label), label);
+  for (const href of [
+    "/zh/health/family",
+    "/zh/health/foreign-patients-china",
+    "/zh/health/overseas-chinese-returning",
+    "/zh/health/shenzhen-international-medical",
+    "/zh/health/hong-kong-greater-bay-area",
+    "/zh/health/international-insurance-claims",
+  ]) assert.match(html, new RegExp(`href=\"${href}\"`), `missing zh entry route: ${href}`);
+  for (const href of [
+    "/en/health/family",
+    "/en/health/international-patients-china",
+    "/en/health/overseas-chinese-returning",
+    "/en/health/shenzhen-international-medical",
+    "/en/health/hong-kong-greater-bay-area",
+    "/en/health/international-insurance-claims",
+  ]) assert.match(english.html, new RegExp(`href=\"${href}\"`), `missing en entry route: ${href}`);
+  assert.equal((html.match(/entryCard/g) ?? []).length, 6, "Health landing must render six public entry cards");
+  assert.equal((english.html.match(/entryCard/g) ?? []).length, 6, "English Health landing must render six public entry cards");
   for (const label of [
     "深港医疗专家资源",
     "国际化语言服务",
@@ -151,14 +169,20 @@ test("Health landing contains three controlled entries, six values, five service
   const servicesAt = html.indexOf('id="services"');
   const crossBorderAt = html.indexOf('id="cross-border-process"');
   const whyAt = html.indexOf('id="why-phoenix"');
-  assert.ok(servicesAt >= 0 && whyAt > servicesAt && crossBorderAt > whyAt, "GBA value section and cross-border process must follow the five services");
+  const providersAt = html.indexOf('id="providers"');
+  assert.ok(whyAt >= 0 && whyAt < servicesAt && servicesAt < providersAt && providersAt < crossBorderAt, "GBA values must precede services, provider hub must follow services, and process must follow both");
+  assert.match(html, /href="\/zh\/health\/providers"/);
+  assert.match(html, /href="\/zh\/health\/providers\/hyzen-hospital"/);
+  assert.match(html, /资料待逐项核验.{0,40}非凤启合作声明/s);
   const familyAt = html.indexOf('id="family-planning"');
   const process = html.slice(crossBorderAt, familyAt > crossBorderAt ? familyAt : html.length);
   assert.equal((process.match(/<details\b/gi) ?? []).length, 6, "Health landing must retain six native process details");
   assert.equal((html.match(/<details\b/gi) ?? []).length >= 16, true, "Health landing must retain six process details and the FAQ/consultation details");
 
   assert.match(html, /<header class="site-header[^"]*"/);
-  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-header@2x\.png/);
+  assert.match(html, /\bbrand-mark--zh\b/);
+  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-symbol-transparent\.png/);
+  assert.match(html, /凤启环球/);
   assertBrandMarkup(html, "/zh/health");
   assert.match(html, /<footer class="site-footer[^\"]*"/);
   assert.match(html, /href="\/zh\/health"[^>]*>健康/);
