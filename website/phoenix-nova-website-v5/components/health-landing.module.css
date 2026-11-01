@@ -106,6 +106,14 @@
 .serviceBody > p:not(.serviceEnglish) { min-height: 128px; margin-bottom: 0; color: var(--health-muted); font-size: 12px; line-height: 1.9; }
 .serviceBody a { display: flex; justify-content: space-between; min-height: 43px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--health-line); color: var(--health-deep); font-size: 11px; }
 
+.providerSection { background: #eef2ef; border-block: 1px solid var(--health-line); }
+.providerGrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.providerCard { padding: 28px; border: 1px solid var(--health-line); background: var(--health-ivory); }
+.providerStatus { display: inline-flex; padding: 5px 9px; border: 1px solid #d6c79e; color: var(--health-gold); font-size: 10px; line-height: 1.5; }
+.providerCard h3 { margin: 18px 0 12px; color: var(--health-deep); font-size: 25px; }
+.providerCard > p { max-width: 760px; margin: 0; color: var(--health-muted); font-size: 13px; line-height: 1.95; }
+.providerLinks { display: flex; flex-wrap: wrap; gap: 25px; margin-top: 22px; }
+
 .gbaSection { background: var(--health-moon); border-block: 1px solid var(--health-line); }
 .gbaSubtitle { max-width: 720px; margin: -7px 0 20px; color: var(--health-deep); font-family: var(--serif); font-size: 20px; line-height: 1.7; }
 .gbaValues { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 27px; }
@@ -283,6 +291,8 @@
   .compassPanel,
   .partnerPanel,
   .familyCenterPanel { padding: 24px 19px; }
+  .providerCard { padding: 22px 19px; }
+  .providerLinks { gap: 14px; }
   .regions article,
   .regions article:first-child,
   .regions article:last-child { min-height: 0; padding: 22px 0; border-right: 0; border-bottom: 1px solid var(--health-line); }

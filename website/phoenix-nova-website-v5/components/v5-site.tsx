@@ -206,7 +206,7 @@ function SectionIntro({
   );
 }
 
-export function SiteHeader({ locale, page, inverse = false, appearance = "classic", localized = false }: { locale: Locale; page: PageId | "health" | "health/family" | "identity" | "education"; inverse?: boolean; appearance?: "classic" | "v3"; localized?: boolean }) {
+export function SiteHeader({ locale, page, inverse = false, appearance = "classic", localized = false, localeHref, partnersHref = "#partners", brandLocale }: { locale: Locale; page: PageId | "health" | "health/family" | "identity" | "education"; inverse?: boolean; appearance?: "classic" | "v3"; localized?: boolean; localeHref?: string; partnersHref?: string; brandLocale?: Locale }) {
   const otherLocale: Locale = locale === "zh" ? "en" : "zh";
   const navHref = (item: (typeof primaryNavigation)[number]) => appearance === "v3" && (item.id === "identity" || item.id === "education") ? hrefFor(locale, item.id) : navigationHref(locale, item);
   return (
@@ -217,6 +217,7 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "classi
           inverse={inverse}
           href={`/${locale}`}
           label={pick(locale, localized ? "凤启环球首页" : "Phoenix Nova 首页", "Phoenix Nova home")}
+          locale={brandLocale ?? (localized ? locale : undefined)}
         />
         <nav className="desktop-nav" aria-label={pick(locale, "主导航", "Primary navigation")}>
           {primaryNavigation.map((item) => (
@@ -226,13 +227,13 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "classi
           ))}
         </nav>
         <div className="header-actions">
-          {localized ? <HealthLocaleLink className="locale-switch" href={hrefFor(otherLocale, page)} label={pick(locale, "切换至英文", "Switch to Chinese")}>{locale === "zh" ? "EN" : "中文"}</HealthLocaleLink> : <Link className="locale-switch" href={hrefFor(otherLocale, page)} aria-label={pick(locale, "切换至英文", "Switch to Chinese")}>
+          {localized ? <HealthLocaleLink className="locale-switch" href={localeHref ?? hrefFor(otherLocale, page)} label={pick(locale, "切换至英文", "Switch to Chinese")}>{locale === "zh" ? "EN" : "中文"}</HealthLocaleLink> : <Link className="locale-switch" href={localeHref ?? hrefFor(otherLocale, page)} aria-label={pick(locale, "切换至英文", "Switch to Chinese")}>
             {locale === "zh" ? "EN" : "中文"}
           </Link>}
           <Link className="portal-link" href={hrefFor(locale, "family-center")}>
             {routeLabels["family-center"][locale === "zh" ? 0 : 1]} <Arrow />
           </Link>
-          {localized && <a className={chromeStyles.partnerLink} href="#partners">{pick(locale, "合作伙伴", "Partners")}</a>}
+          {localized && <a className={chromeStyles.partnerLink} href={partnersHref}>{pick(locale, "合作伙伴", "Partners")}</a>}
           <details className="mobile-menu">
             <summary aria-label={pick(locale, "打开导航", "Open navigation")}><span /><span /></summary>
             <nav aria-label={pick(locale, "移动端导航", "Mobile navigation")}>
@@ -244,8 +245,8 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "classi
               <Link href={hrefFor(locale, "family-center")}>
                 <span>08</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
               </Link>
-              {localized && <HealthPartnerSectionLink><span>09</span>{pick(locale, "合作伙伴工作台 · 受控预览", "Partner workspace · Controlled preview")}</HealthPartnerSectionLink>}
-              {localized ? <HealthLocaleLink className="mobile-locale" href={hrefFor(otherLocale, page)}>{locale === "zh" ? "English" : "中文"}</HealthLocaleLink> : <Link className="mobile-locale" href={hrefFor(otherLocale, page)}>{locale === "zh" ? "English" : "中文"}</Link>}
+              {localized && <HealthPartnerSectionLink href={partnersHref}><span>09</span>{pick(locale, "合作伙伴工作台 · 受控预览", "Partner workspace · Controlled preview")}</HealthPartnerSectionLink>}
+              {localized ? <HealthLocaleLink className="mobile-locale" href={localeHref ?? hrefFor(otherLocale, page)}>{locale === "zh" ? "English" : "中文"}</HealthLocaleLink> : <Link className="mobile-locale" href={localeHref ?? hrefFor(otherLocale, page)}>{locale === "zh" ? "English" : "中文"}</Link>}
             </nav>
           </details>
         </div>
@@ -254,13 +255,13 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "classi
   );
 }
 
-export function SiteFooter({ locale, appearance = "classic", consultationPath = "/identity#consultation", localized = false }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; localized?: boolean }) {
-  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} localized={localized} /></footer>;
+export function SiteFooter({ locale, appearance = "classic", consultationPath = "/identity#consultation", localized = false, brandLocale }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; localized?: boolean; brandLocale?: Locale }) {
+  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} localized={localized} brandLocale={brandLocale} /></footer>;
   return (
     <footer className="site-footer">
       <div className="shell site-footer__top">
         <div className="site-footer__brand">
-          <BrandMark href={`/${locale}`} label={pick(locale, "Phoenix Nova 首页", "Phoenix Nova home")} />
+          <BrandMark href={`/${locale}`} label={pick(locale, brandLocale === "zh" ? "凤启环球首页" : "Phoenix Nova 首页", "Phoenix Nova home")} locale={brandLocale} />
           <p>For Every Beginning.</p>
           <span>{pick(locale, "每一次启程，都值得更好的未来。", "Every beginning deserves a better future.")}</span>
         </div>

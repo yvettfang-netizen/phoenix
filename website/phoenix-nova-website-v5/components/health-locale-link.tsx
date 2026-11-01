@@ -24,8 +24,8 @@ export function HealthLocaleLink({ href, className, label, children }: { href: s
   }}>{children}</a>;
 }
 
-export function HealthPartnerSectionLink({ children }: { children: ReactNode }) {
-  return <a href="#partners" onClick={event => {
+export function HealthPartnerSectionLink({ children, href = "#partners" }: { children: ReactNode; href?: string }) {
+  return <a href={href} onClick={event => {
     const menu = event.currentTarget.closest("details");
     if (menu) menu.open = false;
   }}>{children}</a>;

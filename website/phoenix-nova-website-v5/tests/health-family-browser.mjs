@@ -135,26 +135,26 @@ try {
   for (const locale of ["zh", "en"]) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${origin}/${locale}/health`, { waitUntil: "networkidle" });
-    // Founder V3.1 replaces the old three homepage choices with family,
-    // cross-border care and partner introduction. Family questionnaire tests
-    // above stay unchanged; partners do not receive a fake login route.
+    // Founder V3.0 exposes six independent homepage journeys. Family
+    // questionnaire tests above stay unchanged; partners remain a separate
+    // controlled section and do not receive a fake login route.
     const goals = page.locator('section[aria-labelledby="health-entry-title"]');
     assert.equal(await goals.count(), 1);
-    assert.equal(await goals.locator("article").count(), 3, "Exactly three starting cards");
-    assert.equal(await goals.locator(`a[href="/${locale}/health/family"]`).count(), 1);
-    assert.equal(await goals.locator('a[href="#services"]').count(), 1);
-    assert.equal(await goals.locator('a[href="#partners"]').count(), 1, "Partner card links to the controlled introduction");
+    assert.equal(await goals.locator("article").count(), 6, "Exactly six starting cards");
+    const expectedEntryHrefs = locale === "zh"
+      ? ["/zh/health/family", "/zh/health/foreign-patients-china", "/zh/health/overseas-chinese-returning", "/zh/health/shenzhen-international-medical", "/zh/health/hong-kong-greater-bay-area", "/zh/health/international-insurance-claims"]
+      : ["/en/health/family", "/en/health/international-patients-china", "/en/health/overseas-chinese-returning", "/en/health/shenzhen-international-medical", "/en/health/hong-kong-greater-bay-area", "/en/health/international-insurance-claims"];
+    assert.deepEqual(await goals.locator("article a").evaluateAll(links => links.map(link => link.getAttribute("href"))), expectedEntryHrefs, `${locale}: six starting cards must retain their independent routes`);
+    assert.equal(await goals.locator('a[href="#partners"]').count(), 0, "Partner introduction must stay separate from starting cards");
     const goalText = await goals.innerText();
     if (locale === "zh") {
       assert.match(goalText, /家庭健康规划/);
-      assert.match(goalText, /跨境医疗服务/);
-      assert.match(goalText, /医疗服务合作伙伴/);
+      for (const label of ["外国人来中国就医", "海外华人回国就医", "深圳国际化私立医疗", "香港与大湾区跨境医疗", "国际医疗保险与理赔协助"]) assert.match(goalText, new RegExp(label));
     } else {
       assert.match(goalText, /Family health planning/i);
-      assert.match(goalText, /cross-border care/i);
-      assert.match(goalText, /Medical service partners/i);
+      for (const label of ["International patients in China", "Overseas Chinese returning for care", "International private care in Shenzhen", "Hong Kong and Greater Bay Area care", "International medical insurance and claims"]) assert.match(goalText, new RegExp(label, "i"));
     }
-    passed(`${locale} Health homepage exposes family, cross-border care and controlled partner introduction`);
+    passed(`${locale} Health homepage exposes six independent journeys and a separate controlled partner introduction`);
   }
 
   assert.deepEqual(errors, [], "No browser runtime errors");
