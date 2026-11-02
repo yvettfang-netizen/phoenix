@@ -31,7 +31,7 @@ export const healthBrandOrigin = {
     "Phoenix Nova™ is independent of the official APEC organisers, authorisations, designated medical services and sponsorship. This page does not represent hospital partnerships, acceptance, appointments, treatment or outcome guarantees.",
   ] as HealthCopy,
   sourceLabel: [
-    "核验来源：深圳市南山区人民政府 · APEC 2026 Shenzhen",
+    "核验来源：深圳市南山区人民政府 · 2026年APEC深圳专题",
     "Source checked: Nanshan District Government · APEC 2026 Shenzhen",
   ] as HealthCopy,
   sourceHref: "https://www.szns.gov.cn/english/apec2026shenzhen/",
