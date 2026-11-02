@@ -1,0 +1,57 @@
+# Health GEO incremental file manifest
+
+Baseline: `5771c910f8d1bb507eabf0cc6a529f6f28774217`. 53 files, including review screenshots and test evidence.
+
+- `.github/workflows/health-compass-validation.yml`
+- `website/phoenix-nova-website-v5/app/[locale]/health/[topic]/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/health/family/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/health/guides/[slug]/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/health/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/health/providers/hyzen-hospital/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/health/providers/page.tsx`
+- `website/phoenix-nova-website-v5/app/robots.txt/route.ts`
+- `website/phoenix-nova-website-v5/app/sitemap-health.xml/route.ts`
+- `website/phoenix-nova-website-v5/components/brand-mark.module.css`
+- `website/phoenix-nova-website-v5/components/brand-mark.tsx`
+- `website/phoenix-nova-website-v5/components/health-family.tsx`
+- `website/phoenix-nova-website-v5/components/health-geo-shell.tsx`
+- `website/phoenix-nova-website-v5/components/health-geo.module.css`
+- `website/phoenix-nova-website-v5/components/health-landing.module.css`
+- `website/phoenix-nova-website-v5/components/health-landing.tsx`
+- `website/phoenix-nova-website-v5/components/health-locale-link.tsx`
+- `website/phoenix-nova-website-v5/components/site-ecosystem-content.tsx`
+- `website/phoenix-nova-website-v5/components/v5-site.tsx`
+- `website/phoenix-nova-website-v5/docs/HEALTH_GEO_CANONICAL_MAPPING.md`
+- `website/phoenix-nova-website-v5/docs/HEALTH_GEO_CHANGED_FILES.md`
+- `website/phoenix-nova-website-v5/docs/HEALTH_GEO_FOUNDER_REVIEW.md`
+- `website/phoenix-nova-website-v5/docs/HEALTH_GEO_SOURCES.md`
+- `website/phoenix-nova-website-v5/docs/HEALTH_GEO_URLS.md`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/browser-results.json`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/en-1440-guide.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/en-1440-home.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/en-1440-hyzen.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/en-390-guide.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/en-390-home.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/en-390-hyzen.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/integrity.json`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-1440-footer.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-1440-guide.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-1440-header.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-1440-home.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-1440-hyzen.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-390-footer.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-390-guide.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-390-header.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-390-home.png`
+- `website/phoenix-nova-website-v5/docs/previews/health-geo/zh-390-hyzen.png`
+- `website/phoenix-nova-website-v5/lib/health-geo-content.ts`
+- `website/phoenix-nova-website-v5/lib/health-geo.ts`
+- `website/phoenix-nova-website-v5/lib/health-landing-content.ts`
+- `website/phoenix-nova-website-v5/scripts/build-health-geo-evidence.mjs`
+- `website/phoenix-nova-website-v5/tests/brand-integrity.mjs`
+- `website/phoenix-nova-website-v5/tests/health-family-browser.mjs`
+- `website/phoenix-nova-website-v5/tests/health-geo-browser.mjs`
+- `website/phoenix-nova-website-v5/tests/health-geo-content.test.mjs`
+- `website/phoenix-nova-website-v5/tests/health-geo.test.mjs`
+- `website/phoenix-nova-website-v5/tests/health-landing-browser.mjs`
+- `website/phoenix-nova-website-v5/tests/health-landing.test.mjs`

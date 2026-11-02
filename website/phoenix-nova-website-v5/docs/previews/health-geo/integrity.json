@@ -1,0 +1,44 @@
+[
+  {
+    "path": "lib/health-compass.ts",
+    "baselineGitBlob": "3ea99c9211621e832b3a190234a151aecf8d4da7",
+    "currentGitBlob": "3ea99c9211621e832b3a190234a151aecf8d4da7",
+    "sha256": "e29589f470317cd0144f14d80cab4ca9d67d404853715156c284b2787a73224b"
+  },
+  {
+    "path": "lib/health-compass-gate.ts",
+    "baselineGitBlob": "bd06f600e0308f9ca6858679534d07b513a4956d",
+    "currentGitBlob": "bd06f600e0308f9ca6858679534d07b513a4956d",
+    "sha256": "4831e782265854860e6cdc7a8907adb1b6e48b3b29b071c78b4fc4fa26137e39"
+  },
+  {
+    "path": "components/health-compass.tsx",
+    "baselineGitBlob": "9179af02446d5a195d5a30c1e35d005b645b0c0d",
+    "currentGitBlob": "9179af02446d5a195d5a30c1e35d005b645b0c0d",
+    "sha256": "af392913adb3c81057819b630a12f7536ea6a6ed143fb813800c32e209aaa3a4"
+  },
+  {
+    "path": "app/[locale]/compass/health/page.tsx",
+    "baselineGitBlob": "fad6320a2d66c5bb5ec598f64536f9781601b1ba",
+    "currentGitBlob": "fad6320a2d66c5bb5ec598f64536f9781601b1ba",
+    "sha256": "887d2a95ad63fd37831d863fd778369233c706f1f4da03bfd6143ba4855d2809"
+  },
+  {
+    "path": "app/compass/health/page.tsx",
+    "baselineGitBlob": "897debc626744e4f3697ae38b800bae7e4adee52",
+    "currentGitBlob": "897debc626744e4f3697ae38b800bae7e4adee52",
+    "sha256": "54a57628d37dcc27a1885082f054ddb6f5eb4e12b424eebcdc6d1fd7edb9334e"
+  },
+  {
+    "path": "public/brand/official/v3/phoenix-nova-header@2x.png",
+    "baselineGitBlob": "70534b5968dfef32e2a0a0ceb6c4a994520438e0",
+    "currentGitBlob": "70534b5968dfef32e2a0a0ceb6c4a994520438e0",
+    "sha256": "c566aa2813a1d08d02c71230c7e2360ba2c681a056f1a7fdb900c2a40396b4da"
+  },
+  {
+    "path": "public/brand/official/v3/phoenix-nova-symbol-transparent.png",
+    "baselineGitBlob": "9de8d097afdd5d64c4ce7ca448e8166769d7be08",
+    "currentGitBlob": "9de8d097afdd5d64c4ce7ca448e8166769d7be08",
+    "sha256": "eb2c03880227e5c840048d1f13dd030fe6182ed7de6c201a3df2704d5bcff573"
+  }
+]
