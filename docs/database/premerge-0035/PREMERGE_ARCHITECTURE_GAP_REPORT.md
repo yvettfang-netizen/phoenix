@@ -13,3 +13,14 @@
 | Migration authority transfer | Private default branch holds the complete 0035 sequence; public main had no `database/canonical/`. | Proposed branch is a copy, not a new database. The public path becomes the single future Migration authority only after formal approval and merge. Freeze dual writes/parallel Migration heads at that transition. |
 
 No 0032/0033 change is included. Any later correction must be additive and forward-only. The private PR #2–#7 chain is historical engineering evidence, not proof of merge into the public main branch.
+
+## Key integrity edges verified in SQL
+
+| Edge | Constraint |
+|---|---|
+| Client → Family | `crm.clients.family_id → core.families.family_id` (0026). |
+| Client Party → Client/Family and master | `(client_id,family_id) → crm.clients`; exactly one `core.people` or `core.organizations` reference according to party kind (0031). |
+| Partner → master/source | Exactly one Person or Organization reference; referral/channel relationships require `lead_source_id` (0031). Partner is a relationship, not a replacement Client master. |
+| Lead attribution | `lead_id → crm.leads`, `lead_source_id → crm.lead_sources`, optional `partner_relationship_id → crm.partner_relationships` and `campaign_id → crm.campaigns` (0032). |
+| Deal → Client/Family and Lead | `(client_id,family_id) → crm.clients`, optional primary Lead reference (0027). A Deal is commercial intent, not a payment record. |
+| Service Project → Client/Family and Deal | `(client_id,family_id) → crm.clients`; optional `(deal_id,client_id,family_id) → crm.deals` prevents a cross-client Deal attachment (0028). |

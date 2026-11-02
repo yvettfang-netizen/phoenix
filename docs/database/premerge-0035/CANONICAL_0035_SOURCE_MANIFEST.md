@@ -7,6 +7,7 @@
 | Private source | [`yvettfang-netizen/phoenix-canonical-db`](https://github.com/yvettfang-netizen/phoenix-canonical-db), default branch `codex/canonical-private-clean-baseline` |
 | Source commit | [`3af6ba19a96a458dc20cb0f4493bed10aee7028a`](https://github.com/yvettfang-netizen/phoenix-canonical-db/commit/3af6ba19a96a458dc20cb0f4493bed10aee7028a) |
 | Public integration base | [`yvettfang-netizen/phoenix/main@259753248ff54b07fd9c52f270e45ae1c877bc09`](https://github.com/yvettfang-netizen/phoenix/commit/259753248ff54b07fd9c52f270e45ae1c877bc09) |
+| Integration review | [Draft PR #36](https://github.com/yvettfang-netizen/phoenix/pull/36), open and unmerged |
 | Copied path | `database/canonical/migrations/` |
 | Copy verification | `35` source SQL files, `35` target SQL files; per-file SHA-256 equal (`Get-FileHash`, see verification command below) |
 | Historical manifest | Private [`release/02_MIGRATION_MANIFEST.md`](https://github.com/yvettfang-netizen/phoenix-canonical-db/blob/3af6ba19a96a458dc20cb0f4493bed10aee7028a/canonical-db/release/02_MIGRATION_MANIFEST.md) covers only 0001–0017 and is not the 0035 manifest |

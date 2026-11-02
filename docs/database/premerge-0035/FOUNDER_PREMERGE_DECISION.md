@@ -19,7 +19,7 @@
 
 **Founder decision:** ☐ APPROVE integration merge after all gates PASS　☐ RETURN FOR CHANGES　☐ REJECT
 
-**Integration commit SHA:** ____________________  **Draft PR URL:** ____________________
+**Integration commit SHA at signing:** ____________________  **Draft PR:** [phoenix #36](https://github.com/yvettfang-netizen/phoenix/pull/36)
 
 **Founder signature/date:** ____________________
 
