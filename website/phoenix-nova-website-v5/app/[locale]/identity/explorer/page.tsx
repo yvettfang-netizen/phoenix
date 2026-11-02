@@ -16,7 +16,7 @@ function validLocale(value: string): value is "zh" | "en" {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   if (!validLocale(locale)) return {};
-  return cbiMetadata(locale, `/${locale}/identity/explorer`, locale === "zh" ? "精选投资入籍国家检索" : "Selected Citizenship by Investment Explorer", locale === "zh" ? "按国家、运营与法律状态、投资方式、家庭、居住及护照签发状态检索精选投资入籍资料。" : "Review selected citizenship-by-investment records by country, status, investment, family, residence and passport issuance.");
+  return cbiMetadata(locale, `/${locale}/identity/explorer`, locale === "zh" ? "全球投资入籍与护照规划中心" : "Global Citizenship & Passport Planning Center", locale === "zh" ? "按国家、运营与法律状态、投资方式、家庭、居住及护照签发状态检索精选投资入籍资料。" : "Review selected citizenship-by-investment records by country, status, investment, family, residence and passport issuance.");
 }
 
 export default async function CbiExplorerPage({ params }: Props) {
@@ -24,7 +24,7 @@ export default async function CbiExplorerPage({ params }: Props) {
   if (!validLocale(locale)) notFound();
   const preview = process.env.IDENTITY_CBI_REVIEW_PREVIEW === "1";
   const records = normalizeCbiCountries(getVisibleCbiCountries());
-  const title = locale === "zh" ? "精选投资入籍国家检索" : "Selected Citizenship by Investment Explorer";
+  const title = locale === "zh" ? "全球投资入籍与护照规划中心" : "Global Citizenship & Passport Planning Center";
   const description = locale === "zh" ? "按国家及关键投资入籍字段检索精选资料。" : "Review selected records by key citizenship-by-investment fields.";
   return <CbiPageFrame locale={locale} structuredData={cbiStructuredData(locale, `/${locale}/identity/explorer`, title, description)}><CbiExplorer locale={locale} records={records} preview={preview} /></CbiPageFrame>;
 }

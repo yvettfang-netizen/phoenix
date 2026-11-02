@@ -252,7 +252,7 @@ const normaliseRow = (headers: string[], row: unknown[], rowNumber: number): Nor
   const input: Record<string, unknown> = {};
   headers.forEach((header, index) => { input[header] = row[index] ?? null; });
   const output: Record<string, unknown> = { ...input };
-  for (const key of ["official_sources", "travel_access_data"] as const) {
+  for (const key of ["official_sources", "travel_access_data", "planning_details", "field_sources"] as const) {
     if (typeof output[key] === "string") {
       const parsed = parseJsonValue(output[key], key, rowNumber);
       output[key] = parsed.value;

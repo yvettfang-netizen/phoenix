@@ -19,7 +19,7 @@ const compileTs = async (relativePath, replacements = {}) => {
 
 const schemaModule = await compileTs("../lib/cbi-schema.ts");
 const importerModule = await compileTs("../lib/cbi-import.ts", { schemaUrl: schemaModule.moduleUrl });
-const { CBI_ALLOWED_COUNTRY_CODES, CBI_PASSPORT_ISSUANCE_STATUS, validateCountryRecord } = schemaModule.module;
+const { CBI_ALLOWED_COUNTRY_CODES, CBI_PASSPORT_ISSUANCE_STATUS, CBI_RESIDENCE_REQUIREMENT_CATEGORY, validateCountryRecord } = schemaModule.module;
 const { exportCbiErrorReport, previewCbiImport, releaseCbiImport } = importerModule.module;
 
 const bilingual = (en, zh = null) => ({ en, zh });
@@ -76,6 +76,37 @@ const csvEscape = value => {
   return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 };
 
+const part8PlanningDetails = () => ({
+  country_overview: bilingual("Structured country overview", "结构化国家概览"),
+  investment_term: bilingual("Term is separately verified", "期限需单独核验"),
+  eligibility: bilingual("Explicit criteria only", "仅记录明确条件"),
+  travel_restrictions: bilingual("Restrictions require a separate review", "限制须另行核验"),
+  family_categories: ["INDIVIDUAL", "MINOR_CHILDREN"],
+  residence_requirement_category: "LIMITED",
+});
+
+const part8TravelAccessData = () => ({
+  passport_class: "ordinary",
+  visa_free_count: 12,
+  visa_on_arrival_count: null,
+  evisa_count: 4,
+  eta_count: 2,
+  visa_required_count: 3,
+  statistics_date: "2026-11-02",
+  statistics_method: bilingual("Independent method", "独立方法"),
+  source_name: bilingual("Travel source", "旅行来源"),
+  source_url: "https://www.gov.kn/travel",
+  restrictions: bilingual("Restrictions require review", "限制需核验"),
+});
+
+const part8FieldSources = () => ({
+  minimum_investment: source("KN"),
+  eligibility: source("KN"),
+  "planning_details.eligibility": source("KN"),
+  residence_requirement_category: source("KN"),
+  "planning_details.residence_requirement_category": source("KN"),
+});
+
 test("CBI schema locks the four-country allowlist and independent enum values", () => {
   assert.deepEqual(CBI_ALLOWED_COUNTRY_CODES, ["KN", "AR", "VU", "ST"]);
   assert.equal(CBI_PASSPORT_ISSUANCE_STATUS.length, 5);
@@ -119,7 +150,7 @@ test("a review-only record may lack an official source, but the gap is explicit 
 });
 
 test("CSV preview reads real CSV bytes, preserves nulls, hashes the original and starts in IMPORT_REVIEW", async () => {
-  const value = record("ST", "st-cbi", { country_name_zh: "圣多美和普林西比", country_name_en: "São Tomé and Príncipe", official_name: "São Tomé and Príncipe", legal_basis: bilingual("Decree-Law reference", "法令依据") });
+  const value = record("ST", "st-cbi", { country_name_zh: "圣多美和普林西比", country_name_en: "São Tomé and Príncipe", official_name: "São Tomé and Príncipe", legal_basis: bilingual("Decree-Law reference", "法令依据"), planning_details: part8PlanningDetails(), field_sources: { eligibility: source("ST"), residence_requirement_category: source("ST") }, travel_access_data: part8TravelAccessData() });
   const headers = Object.keys(value);
   const csv = `${headers.join(",")}\n${headers.map(key => csvEscape(value[key] === null || value[key] === undefined ? "" : Array.isArray(value[key]) || typeof value[key] === "object" ? JSON.stringify(value[key]) : value[key])).join(",")}\n`;
   const preview = await previewCbiImport({ filename: "cbi.csv", bytes: new TextEncoder().encode(csv) }, { source_version: "source-1" });
@@ -128,12 +159,78 @@ test("CSV preview reads real CSV bytes, preserves nulls, hashes the original and
   assert.equal(preview.records[0].flag_asset, null);
   assert.deepEqual(preview.records[0].programme_name, bilingual("Citizenship by Investment", "投资入籍"));
   assert.deepEqual(preview.records[0].legal_basis, bilingual("Decree-Law reference", "法令依据"));
+  assert.deepEqual(preview.records[0].planning_details, value.planning_details);
+  assert.equal(preview.records[0].travel_access_data.eta_count, 2);
+  assert.equal(preview.records[0].travel_access_data.visa_required_count, 3);
   assert.equal(preview.records[0].official_name, "São Tomé and Príncipe");
   assert.equal(preview.status, "IMPORT_REVIEW");
   assert.equal(preview.audit.approval_status, "IMPORT_REVIEW");
   assert.equal(preview.audit.verification_status, "UNVERIFIED");
   assert.equal(preview.audit.provenance, "UNKNOWN");
   assert.match(preview.file_hash, /^[0-9a-f]{64}$/);
+});
+
+test("Part 8 structured planning, field provenance and residence enum round-trip through CSV and JSON", async () => {
+  assert.deepEqual(CBI_RESIDENCE_REQUIREMENT_CATEGORY, ["NONE", "LIMITED", "REQUIRED", "UNKNOWN"]);
+  const value = record("KN", "kn-part8", {
+    planning_details: part8PlanningDetails(),
+    field_sources: part8FieldSources(),
+    travel_access_data: part8TravelAccessData(),
+  });
+  assert.equal(validateCountryRecord(value).ok, true);
+
+  const headers = Object.keys(value);
+  const csv = `${headers.join(",")}\n${headers.map(key => csvEscape(value[key] === null || value[key] === undefined ? "" : Array.isArray(value[key]) || typeof value[key] === "object" ? JSON.stringify(value[key]) : value[key])).join(",")}\n`;
+  const csvPreview = await previewCbiImport({ filename: "cbi-part8.csv", bytes: new TextEncoder().encode(csv) });
+  assert.equal(csvPreview.issues.filter(error => error.severity === "error").length, 0);
+  assert.deepEqual(csvPreview.records[0].planning_details, value.planning_details);
+  assert.equal(csvPreview.records[0].planning_details.residence_requirement_category, "LIMITED");
+  assert.deepEqual(csvPreview.records[0].field_sources["planning_details.eligibility"], value.field_sources["planning_details.eligibility"]);
+  assert.equal(csvPreview.records[0].travel_access_data.eta_count, 2);
+  assert.equal(csvPreview.records[0].travel_access_data.visa_required_count, 3);
+  assert.deepEqual(csvPreview.records[0].travel_access_data.restrictions, value.travel_access_data.restrictions);
+
+  const jsonValue = { ...value, planning_details: JSON.stringify(value.planning_details), field_sources: JSON.stringify(value.field_sources), travel_access_data: JSON.stringify(value.travel_access_data) };
+  const jsonPreview = await previewCbiImport({ filename: "cbi-part8.json", bytes: JSON.stringify([jsonValue]) });
+  assert.equal(jsonPreview.issues.filter(error => error.severity === "error").length, 0);
+  assert.deepEqual(jsonPreview.records[0].planning_details, value.planning_details);
+  assert.equal(jsonPreview.records[0].travel_access_data.eta_count, 2);
+  assert.equal(jsonPreview.records[0].travel_access_data.visa_required_count, 3);
+});
+
+test("Part 8 rejects guessed or malformed planning fields, field sources and travel counts", () => {
+  const badFamily = validateCountryRecord({ ...record(), planning_details: { ...part8PlanningDetails(), family_categories: ["HOUSEHOLD"] } });
+  assert.ok(badFamily.errors.some(error => error.code === "INVALID_FAMILY_CATEGORY"));
+  const badPlanningKey = validateCountryRecord({ ...record(), planning_details: { ...part8PlanningDetails(), unsupported_field: bilingual("Unsupported", "不支持") } });
+  assert.ok(badPlanningKey.errors.some(error => error.code === "UNKNOWN_PLANNING_FIELD"));
+  const badResidenceCategory = validateCountryRecord({ ...record(), planning_details: { ...part8PlanningDetails(), residence_requirement_category: "PROBABLY_NONE" } });
+  assert.ok(badResidenceCategory.errors.some(error => error.code === "INVALID_RESIDENCE_REQUIREMENT_CATEGORY"));
+  const badFieldKey = validateCountryRecord({ ...record(), field_sources: { "planning_details.unsupported_field": source("KN") } });
+  assert.ok(badFieldKey.errors.some(error => error.code === "UNKNOWN_FIELD_SOURCE_KEY"));
+  const expiredFieldSource = validateCountryRecord({ ...record(), field_sources: { residence_requirement_category: source("KN", "EXPIRED") } });
+  assert.ok(expiredFieldSource.errors.some(error => error.code === "FIELD_SOURCE_NOT_CURRENT_OFFICIAL"));
+  const malformedFieldSource = validateCountryRecord({ ...record(), field_sources: { eligibility: { ...source("KN"), owner: {} } } });
+  assert.ok(malformedFieldSource.errors.some(error => error.code === "INVALID_POLICY_FIELD_TYPE" || error.code === "FIELD_SOURCE_OWNER_REQUIRED"));
+  const emptyScopeFieldSource = validateCountryRecord({ ...record(), field_sources: { eligibility: { ...source("KN"), effective_scope: "   " } } });
+  assert.ok(emptyScopeFieldSource.errors.some(error => error.code === "FIELD_SOURCE_SCOPE_REQUIRED"));
+  const conflictingFieldAliases = validateCountryRecord({ ...record(), field_sources: { eligibility: source("KN"), "planning_details.eligibility": { ...source("KN"), owner: "Another authority" } } });
+  assert.ok(conflictingFieldAliases.errors.some(error => error.code === "CONFLICTING_FIELD_SOURCES"));
+  const badEtaCount = validateCountryRecord({ ...record(), travel_access_data: { ...part8TravelAccessData(), eta_count: 1.5 } });
+  assert.ok(badEtaCount.errors.some(error => error.code === "INVALID_TRAVEL_COUNT"));
+  const badVisaRequiredCount = validateCountryRecord({ ...record(), travel_access_data: { ...part8TravelAccessData(), visa_required_count: -1 } });
+  assert.ok(badVisaRequiredCount.errors.some(error => error.code === "INVALID_TRAVEL_COUNT"));
+});
+
+test("existing JSON and CSV templates remain compatible when optional Part 8 fields are absent", async () => {
+  const unknownCodes = new Set(["UNKNOWN_FIELD", "UNKNOWN_PLANNING_FIELD", "UNKNOWN_FIELD_SOURCE_KEY"]);
+  const jsonTemplate = readFileSync(new URL("../templates/cbi-country-record.template.json", import.meta.url), "utf8");
+  const jsonPreview = await previewCbiImport({ filename: "cbi-country-record.template.json", bytes: jsonTemplate });
+  assert.equal(jsonPreview.issues.some(error => unknownCodes.has(error.code)), false);
+  assert.equal(jsonPreview.audit.records_seen, 1);
+
+  const csvTemplate = readFileSync(new URL("../templates/cbi-country-record.template.csv", import.meta.url), "utf8");
+  const csvPreview = await previewCbiImport({ filename: "cbi-country-record.template.csv", bytes: csvTemplate });
+  assert.equal(csvPreview.issues.some(error => unknownCodes.has(error.code)), false);
 });
 
 test("JSON preview rejects expired/non-current sources without guessing a current conclusion", async () => {
@@ -153,7 +250,7 @@ test("real XLSX preview uses the workbook reader and does not trust formula cell
   const loadedModule = ExcelJS.default ?? ExcelJS;
   const workbook = new loadedModule.Workbook();
   const sheet = workbook.addWorksheet("CBI");
-  const value = record("ST", "st-cbi", { country_name_zh: "圣多美和普林西比", country_name_en: "São Tomé and Príncipe", official_name: "São Tomé and Príncipe", legal_basis: bilingual("Decree-Law reference", "法令依据") });
+  const value = record("ST", "st-cbi", { country_name_zh: "圣多美和普林西比", country_name_en: "São Tomé and Príncipe", official_name: "São Tomé and Príncipe", legal_basis: bilingual("Decree-Law reference", "法令依据"), planning_details: part8PlanningDetails(), field_sources: { eligibility: source("ST"), residence_requirement_category: source("ST") }, travel_access_data: part8TravelAccessData() });
   const headers = Object.keys(value);
   sheet.addRow(headers);
   sheet.addRow(headers.map(key => value[key] === null || value[key] === undefined ? "" : Array.isArray(value[key]) || typeof value[key] === "object" ? JSON.stringify(value[key]) : value[key]));
@@ -163,6 +260,9 @@ test("real XLSX preview uses the workbook reader and does not trust formula cell
   assert.equal(preview.records.length, 1);
   assert.deepEqual(preview.records[0].programme_name, bilingual("Citizenship by Investment", "投资入籍"));
   assert.deepEqual(preview.records[0].legal_basis, bilingual("Decree-Law reference", "法令依据"));
+  assert.deepEqual(preview.records[0].planning_details, value.planning_details);
+  assert.equal(preview.records[0].travel_access_data.eta_count, 2);
+  assert.equal(preview.records[0].travel_access_data.visa_required_count, 3);
   assert.equal(preview.records[0].official_name, "São Tomé and Príncipe");
   assert.equal(preview.issues.filter(error => error.severity === "error").length, 0);
 });

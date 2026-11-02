@@ -4,7 +4,8 @@ import { CbiComparison } from "@/components/cbi-comparison";
 import { CbiPageFrame } from "@/components/cbi-page-frame";
 import { cbiMetadata, cbiStructuredData } from "@/lib/cbi-seo";
 import { normalizeCbiCountries } from "@/components/cbi-types";
-import { getCbiCountry, getVisibleCbiCountries } from "@/lib/cbi-data";
+import { getCbiPreviewCountries, getVisibleCbiCountries } from "@/lib/cbi-data";
+import { comparisonSelection } from "@/lib/cbi-comparison-engine";
 
 type Props = { params: Promise<{ locale: string }>; searchParams: Promise<{ countries?: string | string[] }> };
 export const dynamic = "force-dynamic";
@@ -26,13 +27,7 @@ function querySlugs(value: string | string[] | undefined) {
 }
 
 function recordsFor(slugs: string[], preview: boolean) {
-  if (slugs.length > 4) return [];
-  if (preview) {
-    const candidates = slugs.map((slug) => getCbiCountry(slug)).filter((value): value is NonNullable<typeof value> => value !== undefined);
-    return normalizeCbiCountries(candidates);
-  }
-  const published = normalizeCbiCountries(getVisibleCbiCountries());
-  return published.filter((record) => slugs.includes(record.slug));
+  return normalizeCbiCountries(comparisonSelection(preview ? getCbiPreviewCountries() : getVisibleCbiCountries(), slugs, preview));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

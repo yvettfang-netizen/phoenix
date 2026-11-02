@@ -101,4 +101,3 @@ export function CbiImportPreviewPanel({ locale }: { locale: Locale }) {
     </main>
   );
 }
-

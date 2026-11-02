@@ -1,13 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import ts from "typescript";
-
-async function loadTypescript(path) {
-  const source = readFileSync(new URL(path, import.meta.url), "utf8");
-  const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-  return import("data:text/javascript;base64," + Buffer.from(js).toString("base64"));
-}
+import { loadCbiTypescript as loadTypescript } from "./cbi-test-loader.mjs";
 
 test("only the four Founder-selected countries are reviewed, and no approval is inferred", async () => {
   const data = await loadTypescript("../lib/cbi-data.ts");

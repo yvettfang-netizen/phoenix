@@ -1,4 +1,11 @@
-import type { BilingualText, CountryRecord, PolicyRule } from "@/lib/cbi-schema";
+import { verifiedField, verifiedMinimum } from "@/lib/cbi-comparison-engine";
+import type {
+  BilingualText,
+  CbiFamilyCategory,
+  CbiPlanningDetailField,
+  CountryRecord,
+  PolicyRule,
+} from "@/lib/cbi-schema";
 
 export type CbiLocale = "zh" | "en";
 
@@ -22,7 +29,11 @@ export type CbiPolicyRule = {
   owner: CbiText;
 };
 
+export type CbiPlanningDetailsView = Record<CbiPlanningDetailField, CbiText>;
+
 export type CbiCountry = {
+  /** The canonical record object. The view below is a projection, never a second master. */
+  raw: CountryRecord;
   code: string;
   slug: string;
   flagAsset: string | null;
@@ -78,10 +89,16 @@ export type CbiCountry = {
     eta: number | null;
     evisa: number | null;
     visaRequired: number | null;
+    passportClass: string | null;
+    restrictions: CbiText;
     methodology: CbiText;
     source: CbiText;
+    sourceUrl: string | null;
     date: string | null;
   };
+  planningDetails: CbiPlanningDetailsView;
+  familyCategories: CbiText[];
+  fieldSources: Record<string, CbiPolicyRule>;
   verifiedAmount: number | null;
   updatedAt: string | null;
   faq: CbiFaq[];
@@ -105,6 +122,16 @@ const PASSPORT_LABELS: Record<string, CbiText> = {
   CITIZEN_PASSPORT_AVAILABLE_AFTER_APPROVAL: { zh: "获批并完成条件后可签发公民护照", en: "Citizen passport available after approval" }, ISSUANCE_PENDING: { zh: "签发状态待定", en: "Issuance pending" }, NON_CITIZEN_TRAVEL_DOCUMENT: { zh: "非公民旅行证件", en: "Non-citizen travel document" }, NOT_APPLICABLE: { zh: "不适用", en: "Not applicable" }, UNKNOWN: PENDING,
 };
 const EFFECTIVE_LABELS: Record<string, CbiText> = { CURRENT: { zh: "当前有效", en: "Current" }, EXPIRED: { zh: "已过期", en: "Expired" }, UNKNOWN: PENDING };
+const ALWAYS_GUARDED_FIELDS = new Set<string>([
+  "minimum_investment",
+  "currency",
+  "government_fees",
+  "due_diligence_fees",
+  "family_supplement_fees",
+  "passport_fees",
+  "professional_fees",
+  "third_party_fees",
+]);
 
 function bilingual(value: BilingualText | null | undefined, fallback: CbiText = PENDING): CbiText {
   if (!value) return fallback;
@@ -125,8 +152,20 @@ function enumText(value: string | null | undefined, labels: Record<string, CbiTe
   return labels[value] ?? { zh: value, en: value };
 }
 
-function statusAnswer(value: string | null | undefined, labels: Record<string, CbiText>): CbiText {
-  return !value || value === "UNKNOWN" || value === "NOT_VERIFIED" || value === "LEGAL_UNCERTAIN" ? PENDING : enumText(value, labels);
+function canExpose(record: CountryRecord, field: string): boolean {
+  return !ALWAYS_GUARDED_FIELDS.has(field) && record.content_status !== "PUBLISHED" ? true : verifiedField(record, field);
+}
+
+function visibleText(record: CountryRecord, field: string, value: BilingualText | null | undefined): CbiText {
+  return canExpose(record, field) ? bilingual(value) : PENDING;
+}
+
+function visibleList(record: CountryRecord, field: string, value: readonly BilingualText[] | null | undefined): CbiText[] {
+  return canExpose(record, field) ? list(value) : [];
+}
+
+function visibleEnum(record: CountryRecord, field: string, value: string | null | undefined, labels: Record<string, CbiText>): CbiText {
+  return canExpose(record, field) ? enumText(value, labels) : PENDING;
 }
 
 function list(values: readonly BilingualText[] | null | undefined): CbiText[] {
@@ -145,18 +184,78 @@ function policyRules(values: readonly PolicyRule[]): CbiPolicyRule[] {
   }));
 }
 
+function fieldSourceMap(values: Record<string, PolicyRule> | undefined): Record<string, CbiPolicyRule> {
+  if (!values) return {};
+  return Object.fromEntries(Object.entries(values).map(([key, value]) => {
+    const normalizedKey = key.startsWith("planning_details.") ? key.slice("planning_details.".length) : key;
+    return [normalizedKey, policyRules([value])[0]] as const;
+  }).filter((entry): entry is [string, CbiPolicyRule] => Boolean(entry[1])));
+}
+
+const FAMILY_CATEGORY_LABELS: Record<CbiFamilyCategory, CbiText> = {
+  INDIVIDUAL: { zh: "主申请人", en: "Principal applicant" },
+  COUPLE: { zh: "配偶／伴侣", en: "Spouse / partner" },
+  MINOR_CHILDREN: { zh: "未成年子女", en: "Minor children" },
+  ADULT_CHILDREN: { zh: "成年子女", en: "Adult children" },
+  PARENTS: { zh: "父母", en: "Parents" },
+};
+
+function planningDetails(record: CountryRecord): CbiPlanningDetailsView {
+  const output = {} as CbiPlanningDetailsView;
+  const source = record.planning_details;
+  for (const key of [
+    "country_overview",
+    "nationality_system",
+    "investment_term",
+    "eligibility",
+    "family_supplement_fees",
+    "passport_fees",
+    "professional_fees",
+    "third_party_fees",
+    "principal_applicant",
+    "spouse",
+    "minor_children",
+    "adult_children",
+    "parents",
+    "other_dependants",
+    "age_dependency",
+    "relationship_evidence",
+    "landing_requirement",
+    "biometrics_requirement",
+    "criminal_record_requirement",
+    "due_diligence_requirement",
+    "application_process",
+    "nationality_acquisition",
+    "nationality_approval",
+    "nationality_loss",
+    "processing_time_observed",
+    "policy_updates",
+    "travel_restrictions",
+  ] as CbiPlanningDetailField[]) {
+    output[key] = canExpose(record, key) ? bilingual(source?.[key]) : PENDING;
+  }
+  return output;
+}
+
+function familyCategories(record: CountryRecord): CbiText[] {
+  return canExpose(record, "family_categories") ? record.planning_details?.family_categories?.map((value) => FAMILY_CATEGORY_LABELS[value] ?? policyText(value)) ?? [] : [];
+}
+
 function faqFor(record: CountryRecord): CbiFaq[] {
   const combined = (zh: string, en: string, value: CbiText) => value === PENDING ? PENDING : { zh: `${zh}${value.zh}`, en: `${en}${value.en}` };
+  const legalStatus = visibleEnum(record, "legal_status", record.legal_status, LEGAL_LABELS);
+  const applicationStatus = visibleEnum(record, "application_status", record.application_status, APPLICATION_LABELS);
+  const operationalStatus = visibleEnum(record, "operational_status", record.operational_status, OPERATIONAL_LABELS);
   return [
-    { question: { zh: "是否依法设有 CBI 机制？", en: "Is there a lawful CBI mechanism?" }, answer: statusAnswer(record.legal_status, LEGAL_LABELS) },
-    { question: { zh: "法律依据是什么？", en: "What is the legal basis?" }, answer: bilingual(record.legal_basis) },
-    { question: { zh: "当前是否受理申请？", en: "Are applications currently accepted?" }, answer: record.application_status === "NOT_VERIFIED" || record.operational_status === "UNKNOWN" ? PENDING : combined("申请状态：", "Application status: ", statusAnswer(record.application_status, APPLICATION_LABELS)) },
-    { question: { zh: "有哪些投资方式？", en: "What investment routes are listed?" }, answer: record.investment_options?.length ? { zh: record.investment_options.map((item) => bilingual(item).zh).join("、"), en: record.investment_options.map((item) => bilingual(item).en).join(", ") } : PENDING },
-    { question: { zh: "家庭成员如何处理？", en: "How are family members treated?" }, answer: bilingual(record.family_eligibility) },
-    { question: { zh: "居住要求是什么？", en: "What are the residence requirements?" }, answer: bilingual(record.residence_requirement) },
-    { question: { zh: "尽职调查如何处理？", en: "How is due diligence handled?" }, answer: bilingual(record.due_diligence_fees) },
-    { question: { zh: "国籍及护照流程如何确认？", en: "How are nationality and passport steps confirmed?" }, answer: combined("护照签发状态：", "Passport issuance status: ", statusAnswer(record.passport_issuance_status, PASSPORT_LABELS)) },
-    { question: { zh: "是否允许双重国籍？", en: "Is dual nationality allowed?" }, answer: bilingual(record.dual_nationality_policy) },
+    { question: { zh: "是否依法设有 CBI 机制？", en: "Is there a lawful CBI mechanism?" }, answer: legalStatus },
+    { question: { zh: "法律依据是什么？", en: "What is the legal basis?" }, answer: visibleText(record, "legal_basis", record.legal_basis) },
+    { question: { zh: "当前是否受理申请？", en: "Are applications currently accepted?" }, answer: record.application_status === "NOT_VERIFIED" || record.operational_status === "UNKNOWN" ? PENDING : combined("申请状态：", "Application status: ", applicationStatus === PENDING ? PENDING : operationalStatus === PENDING ? PENDING : applicationStatus) },
+    { question: { zh: "有哪些投资方式？", en: "What investment routes are listed?" }, answer: visibleList(record, "investment_options", record.investment_options).length ? { zh: visibleList(record, "investment_options", record.investment_options).map((item) => item.zh).join("、"), en: visibleList(record, "investment_options", record.investment_options).map((item) => item.en).join(", ") } : PENDING },
+    { question: { zh: "家庭成员如何处理？", en: "How are family members treated?" }, answer: visibleText(record, "family_eligibility", record.family_eligibility) },
+    { question: { zh: "居住要求是什么？", en: "What are the residence requirements?" }, answer: visibleText(record, "residence_requirement", record.residence_requirement) },
+    { question: { zh: "尽职调查如何处理？", en: "How is due diligence handled?" }, answer: visibleText(record, "due_diligence_requirement", record.planning_details?.due_diligence_requirement) },
+    { question: { zh: "国籍及护照流程如何确认？", en: "How are nationality and passport steps confirmed?" }, answer: combined("护照签发状态：", "Passport issuance status: ", visibleEnum(record, "passport_issuance_status", record.passport_issuance_status, PASSPORT_LABELS)) },
+    { question: { zh: "是否允许双重国籍？", en: "Is dual nationality allowed?" }, answer: visibleText(record, "dual_nationality_policy", record.dual_nationality_policy) },
     { question: { zh: "最近有什么变化？", en: "What changed recently?" }, answer: record.last_verified_at ? { zh: `最近核实：${record.last_verified_at}；如需确认变化，请以官方来源当前内容为准。`, en: `Last verified: ${record.last_verified_at}; confirm any change against the current official source.` } : PENDING },
   ];
 }
@@ -168,6 +267,7 @@ export function normalizeCbiCountry(record: CountryRecord): CbiCountry {
   const firstRule = rules[0];
   const travel = record.travel_access_data;
   return {
+    raw: record,
     code: record.country_code,
     slug: record.country_id,
     flagAsset: record.flag_asset,
@@ -184,49 +284,53 @@ export function normalizeCbiCountry(record: CountryRecord): CbiCountry {
     effectiveScope: firstRule?.effectiveScope ?? PENDING,
     effectiveStatus: firstRule?.effectiveStatus ?? PENDING,
     owner: firstRule?.owner ?? PENDING,
-    legalBasis: bilingual(record.legal_basis),
-    programmeType: enumText(record.programme_type, PROGRAMME_LABELS),
-    investmentOptions: list(record.investment_options),
-    minimumInvestment: record.minimum_investment,
-    currency: record.currency,
-    governmentFees: bilingual(record.government_fees),
-    dueDiligenceFees: bilingual(record.due_diligence_fees),
-    familyEligibility: bilingual(record.family_eligibility),
-    residenceRequirement: bilingual(record.residence_requirement),
-    interviewRequirement: bilingual(record.interview_requirement),
-    sourceOfFundsRequirement: bilingual(record.source_of_funds_requirement),
-    processingTime: bilingual(record.processing_time),
-    dualNationalityPolicy: bilingual(record.dual_nationality_policy),
-    passportValidity: bilingual(record.passport_validity),
-    passportRenewal: bilingual(record.passport_renewal),
-    legalStatus: enumText(record.legal_status, LEGAL_LABELS),
-    operationalStatus: enumText(record.operational_status, OPERATIONAL_LABELS),
-    applicationStatus: enumText(record.application_status, APPLICATION_LABELS),
-    passportIssuanceStatus: enumText(record.passport_issuance_status, PASSPORT_LABELS),
-    officialAuthority: bilingual(record.official_authority),
+    legalBasis: visibleText(record, "legal_basis", record.legal_basis),
+    programmeType: visibleEnum(record, "programme_type", record.programme_type, PROGRAMME_LABELS),
+    investmentOptions: visibleList(record, "investment_options", record.investment_options),
+    minimumInvestment: verifiedMinimum(record),
+    currency: canExpose(record, "currency") ? record.currency : null,
+    governmentFees: visibleText(record, "government_fees", record.government_fees),
+    dueDiligenceFees: visibleText(record, "due_diligence_fees", record.due_diligence_fees),
+    familyEligibility: visibleText(record, "family_eligibility", record.family_eligibility),
+    residenceRequirement: visibleText(record, "residence_requirement", record.residence_requirement),
+    interviewRequirement: visibleText(record, "interview_requirement", record.interview_requirement),
+    sourceOfFundsRequirement: visibleText(record, "source_of_funds_requirement", record.source_of_funds_requirement),
+    processingTime: visibleText(record, "processing_time", record.processing_time),
+    dualNationalityPolicy: visibleText(record, "dual_nationality_policy", record.dual_nationality_policy),
+    passportValidity: visibleText(record, "passport_validity", record.passport_validity),
+    passportRenewal: visibleText(record, "passport_renewal", record.passport_renewal),
+    legalStatus: visibleEnum(record, "legal_status", record.legal_status, LEGAL_LABELS),
+    operationalStatus: visibleEnum(record, "operational_status", record.operational_status, OPERATIONAL_LABELS),
+    applicationStatus: visibleEnum(record, "application_status", record.application_status, APPLICATION_LABELS),
+    passportIssuanceStatus: visibleEnum(record, "passport_issuance_status", record.passport_issuance_status, PASSPORT_LABELS),
+    officialAuthority: visibleText(record, "official_authority", record.official_authority),
     officialApplicationUrl: null,
     passportType: PENDING,
     identityRelationships: [],
     acquisitionPaths: [],
     eligibility: PENDING,
-    residencyPrerequisite: bilingual(record.residence_requirement),
-    travelAccessData: PENDING,
+    residencyPrerequisite: visibleText(record, "residence_requirement", record.residence_requirement),
+    travelAccessData: canExpose(record, "travel_access_data") ? bilingual(travel?.source_name) : PENDING,
     nextReviewAt: record.next_review_at,
     contentStatus: record.content_status,
     dataVersion: record.data_version,
     travelPolicy: {
-      visaFree: travel?.visa_free_count ?? null,
-      visaOnArrival: travel?.visa_on_arrival_count ?? null,
-      // An electronic visa is not an electronic travel authorisation.
-      // The current import contract has no separately verified ETA count.
-      eta: null,
-      evisa: travel?.evisa_count ?? null,
-      visaRequired: null,
-      methodology: bilingual(travel?.statistics_method),
-      source: bilingual(travel?.source_name),
-      date: travel?.statistics_date ?? null,
+      visaFree: canExpose(record, "travel_access_data") ? travel?.visa_free_count ?? null : null,
+      visaOnArrival: canExpose(record, "travel_access_data") ? travel?.visa_on_arrival_count ?? null : null,
+      eta: canExpose(record, "travel_access_data") ? travel?.eta_count ?? null : null,
+      evisa: canExpose(record, "travel_access_data") ? travel?.evisa_count ?? null : null,
+      visaRequired: canExpose(record, "travel_access_data") ? travel?.visa_required_count ?? null : null,
+      passportClass: canExpose(record, "travel_access_data") ? travel?.passport_class ?? null : null,
+      restrictions: canExpose(record, "travel_access_data") ? bilingual(travel?.restrictions) : PENDING,
+      methodology: canExpose(record, "travel_access_data") ? bilingual(travel?.statistics_method) : PENDING,
+      source: canExpose(record, "travel_access_data") ? bilingual(travel?.source_name) : PENDING,
+      sourceUrl: canExpose(record, "travel_access_data") ? travel?.source_url ?? null : null,
+      date: canExpose(record, "travel_access_data") ? travel?.statistics_date ?? null : null,
     },
-    verifiedAmount: record.minimum_investment,
+    planningDetails: planningDetails(record),
+    familyCategories: familyCategories(record),
+    fieldSources: fieldSourceMap(record.field_sources),
+    verifiedAmount: verifiedMinimum(record),
     updatedAt: record.last_verified_at,
     faq: faqFor(record),
   };

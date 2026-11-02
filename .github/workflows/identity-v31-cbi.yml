@@ -50,6 +50,7 @@ jobs:
           IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 IDENTITY_V31_PUBLIC_ORIGIN=http://127.0.0.1:44632 node tests/cbi-browser.mjs
           IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 node tests/cbi-import-browser.mjs
           IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 IDENTITY_V31_PUBLIC_ORIGIN=http://127.0.0.1:44632 node tests/cbi-geo-browser.mjs
+          IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 node tests/cbi-part8-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
