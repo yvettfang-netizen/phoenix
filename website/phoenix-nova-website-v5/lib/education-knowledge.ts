@@ -1,3 +1,4 @@
+import { SCHOOL_INSTITUTIONS } from "./education-school-records";
 /**
  * Phoenix Nova Education knowledge contract.
  *
@@ -182,7 +183,8 @@ export type FundingLabel =
   | "other"
   | "unknown";
 export type OperationLabel = "public" | "statutory" | "private" | "university" | "independent" | "unknown";
-export type LegalStatusLabel = "statutory-body" | "company" | "charity" | "registered-school" | "unknown";
+/** Legal/ownership status is separate from funding, operation and curriculum. */
+export type LegalStatusLabel = "statutory-body" | "company" | "charity" | "non-profit" | "registered-school" | "unknown";
 export type CurriculumLabel =
   | "local"
   | "international"
@@ -300,6 +302,41 @@ export interface ProgrammeCycle {
   readonly sources: readonly KnowledgeSource[];
 }
 
+/**
+ * Programme dimensions are optional until each field is verified against an
+ * institution's current official programme source.  These are deliberately
+ * separate from school curriculum labels: a degree, study mode and subject
+ * are programme facts, not inferred from a school or institution name.
+ */
+export type ProgrammeDegree =
+  | "undergraduate"
+  | "associate"
+  | "higher-diploma"
+  | "master"
+  | "doctoral"
+  | "professional"
+  | "unknown";
+
+export type ProgrammeStudyMode = "full-time" | "part-time" | "taught" | "research" | "unknown";
+
+export type ProgrammeSubjectArea =
+  | "business"
+  | "finance"
+  | "accounting"
+  | "economics"
+  | "data-science"
+  | "artificial-intelligence"
+  | "computing"
+  | "engineering"
+  | "education"
+  | "media"
+  | "health"
+  | "law"
+  | "design"
+  | "social-sciences"
+  | "other"
+  | "unknown";
+
 export interface EducationProgramme {
   readonly entityId: string;
   readonly entityType: "programme";
@@ -311,6 +348,10 @@ export interface EducationProgramme {
   readonly classifications: EducationClassifications;
   readonly description: LocalizedText | null;
   readonly officialHomepage: string | null;
+  /** Optional, field-level verified programme facets. */
+  readonly degree?: ProgrammeDegree;
+  readonly mode?: ProgrammeStudyMode;
+  readonly subject?: ProgrammeSubjectArea;
   readonly cycles: readonly ProgrammeCycle[];
   readonly updatedAt: string;
   readonly verification: FieldVerification;
@@ -465,7 +506,7 @@ export const EDUCATION_PROGRAMMES: readonly EducationProgramme[] = [];
 
 export const EDUCATION_KNOWLEDGE_DATASET: EducationKnowledgeDataset = {
   version: EDUCATION_KNOWLEDGE_VERSION,
-  institutions: UGC_FUNDED_INSTITUTIONS,
+  institutions: [...UGC_FUNDED_INSTITUTIONS, ...SCHOOL_INSTITUTIONS],
   programmes: EDUCATION_PROGRAMMES,
   stages: EDUCATION_STAGE_DESCRIPTORS,
   districts: HONG_KONG_18_DISTRICTS,

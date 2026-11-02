@@ -1,0 +1,52 @@
+# Education V2.0 incremental manifest
+
+Against main `2be78cdb6435fc8a569db05531e5afbe4ab7328f`. Includes preserved first batch plus recovery increments.
+
+- `.github/workflows/education-page-validation.yml`
+- `website/phoenix-nova-website-v5/app/[locale]/education/[section]/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/education/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/education/programmes/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/education/schools/page.tsx`
+- `website/phoenix-nova-website-v5/app/[locale]/education/universities/[slug]/page.tsx`
+- `website/phoenix-nova-website-v5/app/robots.txt/route.ts`
+- `website/phoenix-nova-website-v5/app/sitemap-education.xml/route.ts`
+- `website/phoenix-nova-website-v5/app/sitemap-guides.xml/route.ts`
+- `website/phoenix-nova-website-v5/app/sitemap-programmes.xml/route.ts`
+- `website/phoenix-nova-website-v5/app/sitemap-schools.xml/route.ts`
+- `website/phoenix-nova-website-v5/app/sitemap-universities.xml/route.ts`
+- `website/phoenix-nova-website-v5/app/sitemap.xml/route.ts`
+- `website/phoenix-nova-website-v5/components/education-knowledge.module.css`
+- `website/phoenix-nova-website-v5/components/education-landing.module.css`
+- `website/phoenix-nova-website-v5/components/education-landing.tsx`
+- `website/phoenix-nova-website-v5/docs/EDUCATION_V20_ARCHITECTURE.md`
+- `website/phoenix-nova-website-v5/docs/EDUCATION_V20_CHANGED_FILES_20261103.md`
+- `website/phoenix-nova-website-v5/docs/EDUCATION_V20_DATA_AND_GEO_CONTRACT.md`
+- `website/phoenix-nova-website-v5/docs/EDUCATION_V20_DOMAIN_GATE.md`
+- `website/phoenix-nova-website-v5/docs/EDUCATION_V20_PROGRESS.md`
+- `website/phoenix-nova-website-v5/docs/EDUCATION_V20_RECOVERY_AUDIT_20261103.md`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/browser-results.json`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-1440-hku.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-1440-home.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-1440-schools.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-390-hku.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-390-home.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-390-schools.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-1440-hku.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-1440-home.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-1440-schools.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-390-hku.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-390-home.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-390-schools.png`
+- `website/phoenix-nova-website-v5/lib/data/education-schools-official.json`
+- `website/phoenix-nova-website-v5/lib/education-knowledge-search.ts`
+- `website/phoenix-nova-website-v5/lib/education-knowledge.ts`
+- `website/phoenix-nova-website-v5/lib/education-publication.ts`
+- `website/phoenix-nova-website-v5/lib/education-school-records.ts`
+- `website/phoenix-nova-website-v5/lib/education-university-profiles.ts`
+- `website/phoenix-nova-website-v5/scripts/import-education-schools.mjs`
+- `website/phoenix-nova-website-v5/tests/education-knowledge-browser.mjs`
+- `website/phoenix-nova-website-v5/tests/education-knowledge.test.mjs`
+- `website/phoenix-nova-website-v5/tests/education-landing.test.mjs`
+- `website/phoenix-nova-website-v5/tests/education-publication.test.mjs`
+- `website/phoenix-nova-website-v5/tests/education-school-records.test.mjs`
+- `website/phoenix-nova-website-v5/tests/education-v20-search-ui.test.mjs`

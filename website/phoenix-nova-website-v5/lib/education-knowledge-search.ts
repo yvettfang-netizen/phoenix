@@ -13,6 +13,9 @@ import {
   type LegalStatusLabel,
   type Locale,
   type OperationLabel,
+  type ProgrammeDegree,
+  type ProgrammeStudyMode,
+  type ProgrammeSubjectArea,
   type PublicationState,
   type PublicationSurface,
 } from "./education-knowledge";
@@ -39,6 +42,16 @@ export interface EducationKnowledgeFacetFilters {
   readonly legal?: readonly LegalStatusLabel[];
   readonly curriculumLabels?: readonly CurriculumLabel[];
   readonly curricula?: readonly CurriculumLabel[];
+  /** Programme-only dimensions. Kept outside institution facets. */
+  readonly degree?: ProgrammeDegree;
+  readonly degrees?: readonly ProgrammeDegree[];
+  readonly mode?: ProgrammeStudyMode;
+  readonly studyModes?: readonly ProgrammeStudyMode[];
+  readonly subject?: ProgrammeSubjectArea;
+  readonly subjectAreas?: readonly ProgrammeSubjectArea[];
+  /** Exact admission-cycle IDs; a cycle must also be currently visible. */
+  readonly cycle?: string;
+  readonly cycleIds?: readonly string[];
 }
 
 export interface EducationKnowledgeSearchQuery extends EducationKnowledgeFacetFilters {
@@ -143,6 +156,54 @@ const filterValues = (query: EducationKnowledgeSearchQuery, key: keyof Education
   return direct && direct.length > 0 ? direct : nestedValue ?? [];
 };
 
+const asStrings = (value: unknown): readonly string[] => {
+  if (typeof value === "string") return value.trim() ? [value] : [];
+  if (!Array.isArray(value)) return [];
+  return value.filter((candidate): candidate is string => typeof candidate === "string" && candidate.trim().length > 0);
+};
+
+const PROGRAMME_DEGREE_FILTERS: ReadonlySet<string> = new Set([
+  "undergraduate",
+  "associate",
+  "higher-diploma",
+  "master",
+  "doctoral",
+  "professional",
+]);
+const PROGRAMME_MODE_FILTERS: ReadonlySet<string> = new Set(["full-time", "part-time", "taught", "research"]);
+const PROGRAMME_SUBJECT_FILTERS: ReadonlySet<string> = new Set([
+  "business",
+  "finance",
+  "accounting",
+  "economics",
+  "data-science",
+  "artificial-intelligence",
+  "computing",
+  "engineering",
+  "education",
+  "media",
+  "health",
+  "law",
+  "design",
+  "social-sciences",
+  "other",
+]);
+
+/**
+ * Return null for an invalid request rather than silently dropping an
+ * unknown value. This keeps future/unrecognised query parameters from
+ * matching a record by accident and treats `unknown` as non-searchable.
+ */
+const programmeSelection = (
+  singular: unknown,
+  plural: unknown,
+  allowed: ReadonlySet<string>,
+): readonly string[] | null => {
+  const values = unique([...asStrings(singular), ...asStrings(plural)]);
+  if (values.some(value => !allowed.has(value))) return null;
+  return values;
+};
+
 const matchesAny = <T>(selectedValues: readonly T[], recordValues: readonly T[]): boolean =>
   selectedValues.length === 0 || selectedValues.some(value => recordValues.includes(value));
 
@@ -215,6 +276,33 @@ const cycleAllowed = (
 const hasVisibleCycle = (record: EducationProgramme, query: EducationKnowledgeSearchQuery, asOf: string | Date): boolean =>
   record.cycles.length === 0 || record.cycles.some(cycle => cycleAllowed(cycle, query, asOf));
 
+const matchesProgrammeDimensions = (
+  record: EducationProgramme,
+  query: EducationKnowledgeSearchQuery,
+  asOf: string | Date,
+): boolean => {
+  const degrees = programmeSelection(query.degree, query.degrees, PROGRAMME_DEGREE_FILTERS);
+  const modes = programmeSelection(query.mode, query.studyModes, PROGRAMME_MODE_FILTERS);
+  const subjects = programmeSelection(query.subject, query.subjectAreas, PROGRAMME_SUBJECT_FILTERS);
+
+  // An invalid value, including `unknown`, is a real no-match rather than a
+  // request to ignore that filter.
+  if (degrees === null || modes === null || subjects === null) return false;
+
+  if (degrees.length > 0 && (!record.degree || !degrees.includes(record.degree))) return false;
+  if (modes.length > 0 && (!record.mode || !modes.includes(record.mode))) return false;
+  if (subjects.length > 0 && (!record.subject || !subjects.includes(record.subject))) return false;
+
+  // Cycle IDs are exact identifiers. A matching cycle must pass the same
+  // publication/expiry gate as the rest of programme search.
+  const cycleValues = [...asStrings(query.cycle), ...asStrings(query.cycleIds)];
+  if (cycleValues.length > 0) {
+    const requestedCycles = unique(cycleValues);
+    if (!record.cycles.some(cycle => requestedCycles.includes(cycle.cycleId) && cycleAllowed(cycle, query, asOf))) return false;
+  }
+  return true;
+};
+
 export function matchesEducationKnowledgeFilters(
   record: EducationKnowledgeEntity,
   query: EducationKnowledgeSearchQuery = {},
@@ -224,6 +312,7 @@ export function matchesEducationKnowledgeFilters(
   if (kind !== "all" && record.entityType !== kind) return false;
   if (!publicationAllowed(record.publication, query, asOf)) return false;
   if (isProgramme(record) && !hasVisibleCycle(record, query, asOf)) return false;
+  if (isProgramme(record) && !matchesProgrammeDimensions(record, query, asOf)) return false;
   if (!textMatches(record, query.text ?? "")) return false;
 
   const stages = selected(

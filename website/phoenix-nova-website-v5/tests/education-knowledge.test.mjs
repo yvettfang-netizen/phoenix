@@ -16,7 +16,10 @@ const transpile = source => ts.transpileModule(source, {
 }).outputText;
 const knowledgeSource = await readFile(new URL("education-knowledge.ts", sourceRoot), "utf8");
 const searchSource = await readFile(new URL("education-knowledge-search.ts", sourceRoot), "utf8");
-await writeFile(join(work, "education-knowledge.mjs"), transpile(knowledgeSource));
+const schoolSource = await readFile(new URL("education-school-records.ts", sourceRoot), "utf8");
+const schoolData = await readFile(new URL("data/education-schools-official.json", sourceRoot), "utf8");
+await writeFile(join(work, "education-school-records.mjs"), transpile(schoolSource).replace(/import officialSchools from [^;]+;/, `const officialSchools = ${schoolData};`));
+await writeFile(join(work, "education-knowledge.mjs"), transpile(knowledgeSource).replace('"./education-school-records"', '"./education-school-records.mjs"'));
 await writeFile(join(work, "education-knowledge-search.mjs"), transpile(searchSource).replace(
   /from ["']\.\/education-knowledge["']/g,
   'from "./education-knowledge.mjs"',
@@ -200,4 +203,77 @@ test("published programme cycles expire and unpublished records stay gated", () 
   assert.deepEqual(withDraft.items.map(record => record.entityId), ["fixture.programme.draft"]);
   assert.equal(knowledge.isPublicationVisible(fixtureDataset.programmes[1].publication, "2026-06-01", "search"), true);
   assert.equal(knowledge.isProgrammeCycleVisible(fixtureDataset.programmes[1].cycles[0], "2026-06-01", "search"), false);
+});
+
+test("programme degree, mode, subject and cycle filters query optional fields", () => {
+  const dataset = {
+    ...fixtureDataset,
+    programmes: [
+      fixtureProgramme(
+        "fixture.programme.undergraduate-business",
+        { cycleId: "2026-27" },
+        { degree: "undergraduate", mode: "full-time", subject: "business" },
+      ),
+      fixtureProgramme(
+        "fixture.programme.master-engineering",
+        { cycleId: "2027-28", closesOn: "2027-12-01" },
+        { degree: "master", mode: "part-time", subject: "engineering" },
+      ),
+      fixtureProgramme("fixture.programme.no-optional-fields"),
+    ],
+  };
+
+  const combined = search.searchEducationKnowledge(dataset, {
+    entityKind: "programme",
+    surface: "search",
+    asOf: "2026-06-01",
+    degree: "undergraduate",
+    mode: "full-time",
+    subject: "business",
+    cycle: "2026-27",
+  });
+  assert.deepEqual(combined.items.map(record => record.entityId), ["fixture.programme.undergraduate-business"]);
+
+  const pluralAliases = search.searchEducationKnowledge(dataset, {
+    entityKind: "programme",
+    surface: "search",
+    asOf: "2026-06-01",
+    degrees: ["master"],
+    studyModes: ["part-time"],
+    subjectAreas: ["engineering"],
+    cycleIds: ["2027-28"],
+  });
+  assert.deepEqual(pluralAliases.items.map(record => record.entityId), ["fixture.programme.master-engineering"]);
+
+  const missingField = search.searchEducationKnowledge(dataset, {
+    entityKind: "programme",
+    surface: "search",
+    asOf: "2026-06-01",
+    degree: "master",
+  });
+  assert.deepEqual(missingField.items.map(record => record.entityId), ["fixture.programme.master-engineering"]);
+
+  const unknownValue = search.searchEducationKnowledge(dataset, {
+    entityKind: "programme",
+    surface: "search",
+    asOf: "2026-06-01",
+    degree: "unknown",
+  });
+  assert.equal(unknownValue.total, 0, "unknown is not a searchable programme degree");
+
+  const expiredCycle = search.searchEducationKnowledge(dataset, {
+    entityKind: "programme",
+    surface: "search",
+    asOf: "2026-06-01",
+    cycle: "2026-27",
+  });
+  assert.deepEqual(expiredCycle.items.map(record => record.entityId), ["fixture.programme.undergraduate-business"]);
+
+  const nonexistentCycle = search.searchEducationKnowledge(dataset, {
+    entityKind: "programme",
+    surface: "search",
+    asOf: "2026-06-01",
+    cycle: "2099-00",
+  });
+  assert.equal(nonexistentCycle.total, 0, "a cycle ID not present in the dataset cannot match");
 });

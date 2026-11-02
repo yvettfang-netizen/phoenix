@@ -3,7 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader, SiteFooter } from "@/components/v5-site";
 import { EDUCATION_STAGE_DESCRIPTORS, UGC_FUNDED_INSTITUTIONS } from "@/lib/education-knowledge";
-import { educationAlternates } from "@/lib/education-publication";
+import { educationAlternates, safeJsonLd, EDUCATION_PROPOSED_ORIGIN } from "@/lib/education-publication";
+import { educationUniversityProfiles } from "@/lib/education-university-profiles";
 import styles from "@/components/education-knowledge.module.css";
 
 type Props = { params: Promise<{ locale: string; section: string }> };
@@ -29,11 +30,17 @@ export default async function EducationSection({ params }: Props) {
   if (locale !== "zh" && locale !== "en") notFound();
   const stage = stageFor(section); if (!stage || !preparation[section]) notFound();
   const zh = locale === "zh"; const t = (cn: string, en: string) => zh ? cn : en;
+  const url = educationAlternates(locale, section).canonical;
+  const graph = { "@context": "https://schema.org", "@graph": [
+    { "@type": "Organization", "@id": `${EDUCATION_PROPOSED_ORIGIN}/#phoenix-nova`, name: "Phoenix Nova™" },
+    { "@type": "WebPage", "@id": `${url}#page`, url, name: stage.names[locale], inLanguage: zh ? "zh-Hans" : "en", publisher: { "@id": `${EDUCATION_PROPOSED_ORIGIN}/#phoenix-nova` } },
+    { "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: t("凤启教育", "Phoenix Education"), item: educationAlternates(locale).canonical }, { "@type": "ListItem", position: 2, name: stage.names[locale], item: url }] }
+  ] };
   return <div className={styles.page} lang={zh ? "zh-Hans" : "en"}><SiteHeader locale={locale} page="education" appearance="v3" /><main className={styles.wrap}>
     <nav aria-label={t("面包屑", "Breadcrumb")}><Link href={`/${locale}/education`}>{t("凤启教育", "Phoenix Education")}</Link> / {stage.names[locale]}</nav>
     <header><p>{t("教育信息中心 · 候选预览", "Education information centre · Candidate preview")}</p><h1>{stage.names[locale]}</h1><p>{stage.descriptions[locale]}</p></header>
     <section><h2>{t("先了解路径，再核实适用条件。", "Understand the pathway, then verify the conditions.")}</h2>{preparation[section].map((pair, i) => <article key={i}><h3>{t(`规划准备 0${i + 1}`, `Planning step 0${i + 1}`)}</h3><p>{pair[zh ? 0 : 1]}</p></article>)}</section>
-    {section === "hong-kong-universities" && <section><h2>{t("八所教资会资助大学 · 官方入口", "Eight UGC-funded universities · Official entries")}</h2><div className={styles.grid}>{UGC_FUNDED_INSTITUTIONS.map(university => <article key={university.entityId}><h3>{university.names[locale]}</h3><p>{t("教资会资助大学；完整院校档案待审核。", "UGC-funded university; complete profile awaits review.")}</p><a href={university.officialHomepage!} rel="noopener noreferrer">{t("大学官方网站", "Official university website")} ↗</a></article>)}</div></section>}
+    {section === "hong-kong-universities" && <section><h2>{t("八所教资会资助大学 · 官方入口", "Eight UGC-funded universities · Official entries")}</h2><div className={styles.grid}>{UGC_FUNDED_INSTITUTIONS.map(university => <article key={university.entityId}><h3>{university.names[locale]}</h3><Link href={`/${locale}/education/universities/${educationUniversityProfiles.find(profile => profile.entityId === university.entityId)?.slug}`}>{t("查看独立资料页", "View university profile")} ↗</Link><p>{t("教资会资助大学；完整院校档案待审核。", "UGC-funded university; complete profile awaits review.")}</p><a href={university.officialHomepage!} rel="noopener noreferrer">{t("大学官方网站", "Official university website")} ↗</a></article>)}</div></section>}
     <section><h2>{t("官方核实与下一步", "Official verification and next steps")}</h2><p>{t("院校、课程、入学资格、费用和日期应向官方逐项确认。本页不构成录取承诺。", "Verify institutions, curricula, eligibility, fees and dates with official sources. This page does not promise admission.")}</p><ul><li><a href="https://www.edb.gov.hk/en/student-parents/sch-info/sch-search/index.html">{t("教育局学校资料及检索", "Education Bureau school information and search")}</a></li><li><a href="https://www.ugc.edu.hk/eng/ugc/site/fund_inst.html">{t("教资会资助大学名录", "UGC-funded university directory")}</a></li></ul><Link href={`/${locale}/education#education-compass`}>{t("了解教育罗盘 · 暂未开放", "Explore Education Compass · Not open yet")}</Link><p><Link href={`/${locale}/education#consultation`}>{t("独立准备教育咨询", "Prepare an education consultation independently")}</Link></p></section>
-  </main><SiteFooter locale={locale} appearance="v3" consultationPath="/education#consultation" /></div>;
+  </main><SiteFooter locale={locale} appearance="v3" consultationPath="/education#consultation" /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(graph) }} /></div>;
 }

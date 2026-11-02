@@ -56,6 +56,7 @@ jobs:
             sleep 1
           done
           node tests/education-browser.mjs
+          EDUCATION_KNOWLEDGE_EVIDENCE_DIR=education-evidence/knowledge node tests/education-knowledge-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
