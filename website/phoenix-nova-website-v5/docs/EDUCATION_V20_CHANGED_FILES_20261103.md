@@ -31,6 +31,7 @@ Against main `2be78cdb6435fc8a569db05531e5afbe4ab7328f`. Includes preserved firs
 - `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-390-hku.png`
 - `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-390-home.png`
 - `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/en-390-schools.png`
+- `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/original-browser-results.json`
 - `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-1440-hku.png`
 - `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-1440-home.png`
 - `website/phoenix-nova-website-v5/docs/previews/education-v20-recovery/zh-1440-schools.png`
@@ -44,6 +45,7 @@ Against main `2be78cdb6435fc8a569db05531e5afbe4ab7328f`. Includes preserved firs
 - `website/phoenix-nova-website-v5/lib/education-school-records.ts`
 - `website/phoenix-nova-website-v5/lib/education-university-profiles.ts`
 - `website/phoenix-nova-website-v5/scripts/import-education-schools.mjs`
+- `website/phoenix-nova-website-v5/tests/education-browser.mjs`
 - `website/phoenix-nova-website-v5/tests/education-knowledge-browser.mjs`
 - `website/phoenix-nova-website-v5/tests/education-knowledge.test.mjs`
 - `website/phoenix-nova-website-v5/tests/education-landing.test.mjs`

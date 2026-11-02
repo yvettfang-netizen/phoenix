@@ -49,4 +49,6 @@ Founder 提供 `http://edu.phoenixnova.com.cn`，正式 HTTPS/TLS、跳转和部
 
 ## 未完成的实质工作
 
+补充原有 Education 浏览器回归：重新运行 16/16 PASS（中英 320/390/768/1024/1440、咨询不上传、三处评估入口禁用、Footer、无 JavaScript、无运行时错误），结果见 [original-browser-results.json](previews/education-v20-recovery/original-browser-results.json)。测试定位明确区分 Hero、阶段与 Compass，不改变问卷业务。加上知识平台 156 项，共 172 项本地浏览器检查通过。远端曾因临时 PostgreSQL 连接失败导致 Canonical job 失败，后续运行已通过，不能将该故障归咎于学校数据或宣称执行过生产迁移。
+
 逐校课程与费用、非牟利及幼稚园教育计划资格、其他认可院校完整档案、Faculty/Department/Programme/Admission Cycle 真实关系、完整 22 字段及来源治理、专业/申请季检索真实数据、原创问题指南、外部 GEO 验证及受权 OS 交接均未整体完成。PR 保持 WIP；恢复保全和这轮增量通过不等于整个 Education V2.0 完成。
