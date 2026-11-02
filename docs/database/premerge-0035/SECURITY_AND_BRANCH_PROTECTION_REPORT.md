@@ -1,6 +1,22 @@
 # Security and branch protection report
 
-**Gate 2: PASS for the current allowlisted candidate files; HOLD for full repository-history clearance. Gate 4 branch protection: PASS; CODEOWNERS activation and independent review: HOLD.** Audit date: 2026-11-02. No production environment was contacted.
+**Gate 2: PASS within the candidate scan scope; full repository-history clearance HOLD. Gate 4 branch protection and main CODEOWNERS activation: PASS. PR36 independent approval and final acceptance: HOLD.** Updated 2026-11-02. No production environment was contacted.
+
+## Current governance state after PR37 merge
+
+[PR37](https://github.com/yvettfang-netizen/phoenix/pull/37) was merged through the normal protected flow after Founder authorization and [Jimson614's formal APPROVED Review](https://github.com/yvettfang-netizen/phoenix/pull/37#pullrequestreview-5734741382), bound to exact HEAD `6d36f8bb21c0a7df4449078a35d2b728b2f19661`. Its [8/8 CI](https://github.com/yvettfang-netizen/phoenix/actions/runs/41415381028) passed. Main is now [`2be78cdb6435fc8a569db05531e5afbe4ab7328f`](https://github.com/yvettfang-netizen/phoenix/commit/2be78cdb6435fc8a569db05531e5afbe4ab7328f).
+
+| Current gate | Actual evidence | Result |
+|---|---|---|
+| Main CODEOWNERS | [Base-branch file](https://github.com/yvettfang-netizen/phoenix/blob/2be78cdb6435fc8a569db05531e5afbe4ab7328f/.github/CODEOWNERS) present; validation has zero errors; owner/Admin and Jimson614/Write verified | PASS, active |
+| Protection/required checks | Before/after protection JSON is unchanged: five exact app-bound contexts, strict/admin/review/code-owner/last-push/linear/conversation controls, no force push/deletion | PASS, unchanged |
+| Actual independent GitHub approval | Jimson614 approved PR37 only; no PR36 approval is inferred | PR37 PASS; PR36 HOLD |
+| Main database content | PR37 merged only three governance files, not Canonical SQL or a running database | No database integration or deployment claimed |
+| Refreshed PR36 | Existing branch updated against the approved main; 0001–0035 unchanged; resulting exact HEAD must pass CI | Final SHA/CI retained in PR checks and execution evidence |
+
+PR37 approval does not satisfy PR36's own formal Review, the remaining independent role signatures or Founder M0–M5/integration acceptance. The workflow is now on main without path filters. When neither base nor candidate contains Canonical it runs explicitly labelled real fixture tests; a complete candidate is tested from its own tree; deletion/partial-tree fallback is rejected. No skipped test is called PASS.
+
+## Earlier evidence snapshots (historical states, superseded where updated above)
 
 | Check | Evidence | Result |
 |---|---|---|
