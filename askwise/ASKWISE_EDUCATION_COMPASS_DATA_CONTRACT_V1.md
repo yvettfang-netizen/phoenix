@@ -186,6 +186,7 @@ Boundary constraint: 本文件仅定义接口与集成流程，不新增 ASKWISE
 |---|---|---|---|---|
 | `EC_INCOMPLETE_INPUT` | 400 | 缺少必需输入字段 | No | 补齐必填字段 |
 | `EC_INVALID_FORMAT` | 400 | 字段类型或枚举不合法 | No | 修正 payload 格式 |
+| `EC_VERSION_MISMATCH` | 409 | 显式 `integration_version` 不等于冻结的 `v1.0` | No | 改用 `v1.0` 或省略该字段；该校验在 ID 映射和会话创建之前发生 |
 | `EC_IDMAP_MISSING` | 409 | `student_id` 或 `assessment_id` 映射缺失 | No | 在对应映射表补齐后重试 |
 | `EC_SESSION_NOT_FOUND` | 404 | 未找到或无法恢复的 `askwise_session_id` | No | 使用幂等键确认会话状态，或触发新 session |
 | `EC_SESSION_CLOSED` | 409 | 会话已关闭且不可重开 | No | 触发新 assessment_id 或重新评估 |

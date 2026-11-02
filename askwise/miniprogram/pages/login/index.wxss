@@ -1,0 +1,7 @@
+.login-shell {
+  padding-top: 48rpx;
+}
+
+.form-card {
+  margin-top: 22rpx;
+}

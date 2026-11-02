@@ -1,0 +1,8 @@
+.task-question {
+  white-space: normal;
+}
+
+.history-row .value-inline {
+  display: block;
+  margin-top: 8rpx;
+}

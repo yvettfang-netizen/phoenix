@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPilotContext } from "@/lib/db";
 import CardShell from "@/components/ui/card-shell";
+import AoyuCompanion from "@/components/aoyu/aoyu-companion";
 
 export default function TodayPage() {
   const context = getPilotContext();
@@ -18,6 +19,7 @@ export default function TodayPage() {
   return (
     <div className="grid">
       <h1>ASKWISE 13-Day Learning Experiment</h1>
+      <AoyuCompanion state="idle" message="Welcome. Choose a task and try your own first step." />
       <CardShell title={`Today Dashboard (Day ${context.day}/13)`} description="Task-first progress gate">
         <p>
           Day {context.day}/13 | Date: {context.todayDate}

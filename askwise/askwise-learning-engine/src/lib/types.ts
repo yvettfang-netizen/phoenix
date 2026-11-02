@@ -6,6 +6,8 @@ export type ConfidenceLevel =
   | "I don't understand the question";
 
 export type DiagnosisType =
+  | "P1" | "P2" | "P3" | "P4" | "P5"
+  | "K1" | "K2" | "K3" | "K4" | "K5" | "K6" | "K7"
   | "Knowledge Gap"
   | "Recognition Gap"
   | "Strategy Gap"

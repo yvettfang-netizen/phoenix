@@ -1,0 +1,26 @@
+{
+  "description": "Askwise native WeChat mini program pilot",
+  "packOptions": {
+    "ignore": [
+      { "type": "file", "value": "assets/aoyu/poses/guiding.png" },
+      { "type": "file", "value": "assets/aoyu/poses/celebrating.png" },
+      { "type": "file", "value": "assets/aoyu/poses/reflecting.png" },
+      { "type": "file", "value": "assets/aoyu/poses/listening.png" },
+      { "type": "file", "value": "assets/aoyu/poses/thinking.png" },
+      { "type": "file", "value": "assets/aoyu/poses/encouraging.png" }
+    ]
+  },
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "minified": false,
+    "postcss": true,
+    "compileHotReLoad": false
+  },
+  "compileType": "miniprogram",
+  "libVersion": "trial",
+  "appid": "touristappid",
+  "projectname": "askwise-native-miniprogram",
+  "miniprogramRoot": "./"
+}

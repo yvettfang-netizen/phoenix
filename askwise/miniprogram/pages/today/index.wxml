@@ -1,0 +1,46 @@
+<view class="page-shell">
+  <view class="topbar">
+    <view>
+      <text class="eyebrow">ASKWISE / PILOT</text>
+      <text class="page-title">今日学习</text>
+    </view>
+    <button class="ghost-button" size="mini" bindtap="logout">退出</button>
+  </view>
+
+  <view class="companion-strip">
+    <image class="companion" src="{{companionSrc}}" mode="aspectFit" />
+    <view>
+      <text class="state-label">{{day || '今天'}}</text>
+      <text class="muted">先完成一个小任务，再回头看证据。</text>
+    </view>
+  </view>
+
+  <view class="section-head">
+    <text class="section-title">任务列表</text>
+    <button class="secondary-button small-button" bindtap="newTask">新建任务</button>
+  </view>
+
+  <view wx:if="{{state === 'busy'}}" class="card empty-state">正在读取今日任务…</view>
+  <view wx:if="{{error}}" class="error-banner">
+    <text>{{error}}</text>
+    <button class="secondary-button small-button" bindtap="retry">重试</button>
+  </view>
+
+  <view class="card" wx:if="{{state !== 'busy' && !error && tasks.length === 0}}">
+    <view class="empty-state">今天还没有任务。可以从一个具体问题开始。</view>
+  </view>
+
+  <view class="card" wx:if="{{tasks.length > 0}}">
+    <view class="task-row" wx:for="{{tasks}}" wx:key="id" data-id="{{item.id}}" bindtap="openTask">
+      <text class="row-title">{{item.subject || item.topic || '未命名任务'}}</text>
+      <text class="row-meta">{{item.topic || ''}} {{item.status || ''}}</text>
+      <text class="value-inline">{{item.question || ''}}</text>
+    </view>
+  </view>
+
+  <view class="button-row">
+    <button class="ghost-button" bindtap="goEvidence">证据</button>
+    <button class="ghost-button" bindtap="goReflection">复盘</button>
+    <button class="ghost-button" bindtap="goDashboard">仪表盘</button>
+  </view>
+</view>

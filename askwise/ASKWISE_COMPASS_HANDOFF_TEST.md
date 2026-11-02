@@ -1,5 +1,9 @@
 # ASKWISE Compass Handoff Test
 
+## 2026-11-01 continuation
+
+The original 10 mock tests still pass. An additional Pilot integration test now verifies authenticated handoff/writeback, pre-approved anonymous student/assessment fixture mapping, repeated session ID and cross-student denial. API endpoints are /api/pilot/v1/compass/handoff and /api/pilot/v1/compass/writeback/:id. Every response wraps the unchanged Contract payload with environment=mock and diagnosis_source=fixture. Missing private fixture configuration fails closed. This is not real Compass connectivity or a real learning-result writeback; no production DB/Contract change was made. The earlier section below records Phase 0 findings before this wrapper existed.
+
 Date: 2026-11-01
 
 Executed command: `pnpm.cmd run test` in askwise-learning-engine.

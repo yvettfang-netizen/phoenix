@@ -29,6 +29,11 @@ describe("Compass Mock Adapter - Contract V1.1", () => {
     integration_version: "v1.0",
   };
 
+  function expectNoSessionCreated() {
+    expect(__mockAdapterInternals.sessionsById.size).toBe(0);
+    expect(__mockAdapterInternals.sessionsByIdempotency.size).toBe(0);
+  }
+
   it("normal request returns solvable payload and mapping", () => {
     registerIdMappings({
       student_id: baseInput.student_id,
@@ -88,7 +93,7 @@ describe("Compass Mock Adapter - Contract V1.1", () => {
 
     if (result.status === "error") {
       expect(result.error_code).toBe("EC_INCOMPLETE_INPUT");
-      expect(__mockAdapterInternals.sessionsById.size).toBe(0);
+      expectNoSessionCreated();
     } else {
       expect.fail("missing field should fail");
     }
@@ -107,7 +112,7 @@ describe("Compass Mock Adapter - Contract V1.1", () => {
 
     if (result.status === "error") {
       expect(result.error_code).toBe("EC_INVALID_FORMAT");
-      expect(__mockAdapterInternals.sessionsById.size).toBe(0);
+      expectNoSessionCreated();
     } else {
       expect.fail("illegal enum should fail");
     }
@@ -125,8 +130,7 @@ describe("Compass Mock Adapter - Contract V1.1", () => {
     if (result1.status === "error" && result2.status === "error") {
       expect(result1.error_code).toBe("EC_INVALID_FORMAT");
       expect(result2.error_code).toBe("EC_INVALID_FORMAT");
-      expect(__mockAdapterInternals.sessionsById.size).toBe(0);
-      expect(__mockAdapterInternals.sessionsByIdempotency.size).toBe(0);
+      expectNoSessionCreated();
     } else {
       expect.fail("validation failures should not create sessions");
     }
@@ -163,7 +167,7 @@ describe("Compass Mock Adapter - Contract V1.1", () => {
     if (result.status === "error") {
       expect(result.error_code).toBe("EC_IDMAP_MISSING");
       expect(result.missing_mapping_field).toBe("student_id");
-      expect(__mockAdapterInternals.sessionsById.size).toBe(0);
+      expectNoSessionCreated();
     } else {
       expect.fail("missing student mapping should fail");
     }
@@ -179,20 +183,14 @@ describe("Compass Mock Adapter - Contract V1.1", () => {
     if (result.status === "error") {
       expect(result.error_code).toBe("EC_IDMAP_MISSING");
       expect(result.missing_mapping_field).toBe("assessment_id");
-      expect(__mockAdapterInternals.sessionsById.size).toBe(0);
+      expect(__mockAdapterInternals.externalAssessmentMap.size).toBe(0);
+      expectNoSessionCreated();
     } else {
       expect.fail("missing assessment mapping should fail");
     }
   });
 
-  it("version incompatible returns EC_VERSION_MISMATCH", () => {
-    registerIdMappings({
-      student_id: baseInput.student_id,
-      askwise_student_id: "askwise_student_001",
-      assessment_id: baseInput.assessment_id,
-      askwise_experiment_id: "askwise_exp_001",
-    });
-
+  it("version incompatible returns EC_VERSION_MISMATCH before ID mapping", () => {
     const result = startCompassSession({
       ...baseInput,
       integration_version: "v0.9",
@@ -200,7 +198,7 @@ describe("Compass Mock Adapter - Contract V1.1", () => {
 
     if (result.status === "error") {
       expect(result.error_code).toBe("EC_VERSION_MISMATCH");
-      expect(__mockAdapterInternals.sessionsById.size).toBe(0);
+      expectNoSessionCreated();
     } else {
       expect.fail("version mismatch should fail");
     }
@@ -210,6 +208,7 @@ describe("Compass Mock Adapter - Contract V1.1", () => {
     const result = getCompassSession("sess_unknown_0001");
     if (result.status === "error") {
       expect(result.error_code).toBe("EC_SESSION_NOT_FOUND");
+      expectNoSessionCreated();
     } else {
       expect.fail("unknown session should fail");
     }

@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "pages/login/index",
+    "pages/today/index",
+    "pages/task/index",
+    "pages/evidence/index",
+    "pages/reflection/index",
+    "pages/dashboard/index"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#123b3d",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "Askwise Pilot",
+    "backgroundColor": "#f6f3ee",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2"
+}

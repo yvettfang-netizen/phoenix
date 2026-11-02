@@ -1,3 +1,5 @@
+import StructuredAnswer from "./structured-answer";
+
 type AttemptRecord = {
   attempt_number: number;
   student_response: string;
@@ -19,12 +21,9 @@ export default function AttemptHistory({ attempts }: Props) {
           <p>
             Attempt {attempt.attempt_number} · Hint {attempt.hint_level}
           </p>
-          <p>
-            {attempt.student_response.slice(0, 180)}
-            {attempt.student_response.length > 180 ? "…" : ""}
-          </p>
+          <StructuredAnswer value={attempt.student_response} />
           <p className={attempt.is_correct ? "status-good" : "status-bad"}>
-            {attempt.is_correct ? "Correct" : "Needs retry"}
+            {attempt.is_correct ? "Rule-recognized response" : "Needs retry"}
           </p>
         </article>
       ))}

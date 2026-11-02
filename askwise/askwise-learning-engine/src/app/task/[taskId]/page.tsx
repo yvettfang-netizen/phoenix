@@ -1,24 +1,11 @@
+import { createHash, randomUUID } from "node:crypto";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-
-import {
-  addAttempt,
-  buildEvidenceForSession,
-  closeSession,
-  getAttemptsForSession,
-  getEvidenceForTask,
-  getLatestHintLevel,
-  getSessionByTask,
-  getSessionSnapshot,
-  getTaskById,
-  saveDiagnosis,
-  saveHint,
-} from "@/lib/db";
-import { buildProfileFromAttempts } from "@/lib/engine/learning";
-import { diagnose } from "@/lib/engine/diagnosis";
-import { chooseLearningMode } from "@/lib/engine/learning-mode";
-import { buildHint, nextHintLevel } from "@/lib/engine/hint-policy";
-import { SessionLogger, createSessionLogEntry } from "@/lib/engine/session";
+import { retryStructuredTask } from "@/lib/pilot/task-service";
+import { requirePilotStudent } from "@/lib/pilot/request";
+import { performOnce } from "@/lib/pilot/idempotency";
+import { listPhotos, savePhoto } from "@/lib/pilot/uploads";
+import { getEvidenceForTask, getLatestHintLevel, getSessionByTask, getSessionSnapshot, getTaskById } from "@/lib/db";
 import type { Subject } from "@/lib/engine/engine-types";
 import type { Attempt } from "@/lib/types";
 
@@ -28,21 +15,6 @@ import AskwiseButton from "@/components/ui/button";
 import AttemptHistory from "@/components/task-flow/attempt-history";
 
 type FlowState = "initial" | "diagnosis" | "hint-retry" | "solved";
-
-type DiagnosisType = "Knowledge Gap" | "Recognition Gap" | "Strategy Gap" | "Execution Gap" | "Solved";
-
-function mapDiagnosisType(
-  subject: Subject,
-  topic: string,
-  mode: string,
-  diagnosis: ReturnType<typeof diagnose>
-): DiagnosisType {
-  if (diagnosis.errorType === null) return "Solved";
-  if (diagnosis.executionError) return "Execution Gap";
-  if (mode === "Thinking Mode" || diagnosis.errorType === "K4" || diagnosis.errorType === "P4") return "Strategy Gap";
-  if (diagnosis.errorType === "K2" || diagnosis.errorType === "P5") return "Recognition Gap";
-  return mode === "Teaching Mode" || mode === "Recall Mode" ? "Knowledge Gap" : "Knowledge Gap";
-}
 
 function getFlowState(solved: boolean, attempts: Array<unknown>, hasDiagnosis: boolean, hasHint: boolean): FlowState {
   if (solved) return "solved";
@@ -54,6 +26,7 @@ function getFlowState(solved: boolean, attempts: Array<unknown>, hasDiagnosis: b
 
 export default function TaskPage({ params }: { params: { taskId: string } }) {
   const taskId = Number(params.taskId);
+  const requestId = randomUUID();
   const task = getTaskById(taskId) as
     | {
         id: number;
@@ -67,7 +40,14 @@ export default function TaskPage({ params }: { params: { taskId: string } }) {
     return <div className="askwise-card">Task not found.</div>;
   }
 
-  const taskSession = getSessionByTask(task.id);
+  const taskSession = getSessionByTask(task.id) as {
+    id: number;
+    solved: number;
+    hint_count: number;
+    retry_count: number;
+    final_result: string;
+    independent: number;
+  } | undefined;
   if (!taskSession) {
     return <div className="askwise-card">Learning session unavailable.</div>;
   }
@@ -90,6 +70,8 @@ export default function TaskPage({ params }: { params: { taskId: string } }) {
 
   const flowState = getFlowState(solved, attempts, Boolean(latestDiagnosis), Boolean(latestHint));
 
+  const photos = listPhotos(requirePilotStudent()).filter(photo => photo.task_id === taskId);
+
   const companionState =
     flowState === "solved"
       ? "celebrating"
@@ -101,83 +83,30 @@ export default function TaskPage({ params }: { params: { taskId: string } }) {
 
   async function submitAttempt(formData: FormData) {
     "use server";
-
-    const rawAttempt = String(formData.get("studentAttempt") || "").trim();
-    if (!rawAttempt) {
-      revalidatePath(`/task/${taskId}`);
-      return;
-    }
-
-    const currentSession = getSessionByTask(task.id);
-    if (!currentSession) {
-      return;
-    }
-
-    const history = getAttemptsForSession(currentSession.id) as Array<Attempt>;
-    const profile = buildProfileFromAttempts(
-      task.subject,
-      task.topic,
-      history.map((item) => ({ isCorrect: Boolean(item.is_correct) }))
-    );
-    const diagnosis = diagnose(task.subject, task.topic, rawAttempt);
-    const modeDecision = chooseLearningMode(profile, task.subject, task.topic, diagnosis);
-    const currentHint = getLatestHintLevel(currentSession.id);
-    const firstStepMs = Number(formData.get("firstStepMs") || "0");
-    const isCorrect = diagnosis.errorType === null;
-    const firstStepTime = history.length === 0 && firstStepMs > 0 ? Date.now() - firstStepMs : undefined;
-
-    addAttempt(currentSession.id, rawAttempt, currentHint, isCorrect);
-    saveDiagnosis(currentSession.id, mapDiagnosisType(task.subject, task.topic, modeDecision.mode, diagnosis), diagnosis.explanation, 0.8);
-
-    if (!isCorrect) {
-      const nextHint = nextHintLevel(currentHint, false);
-      const hint = buildHint(task.subject, task.topic, nextHint, modeDecision.mode);
-      saveHint(currentSession.id, nextHint, hint, false);
-
-      const logger = new SessionLogger();
-      logger.append(
-        createSessionLogEntry({
-          subject: task.subject,
-          topic: task.topic,
-          studentInput: rawAttempt,
-          diagnosis: diagnosis.explanation,
-          errorType: diagnosis.errorType ?? "UNKNOWN",
-          learningMode: modeDecision.mode,
-          hintLevel: nextHint,
-          firstStepTime,
-          outcome: "incorrect",
-        })
-      );
-      revalidatePath(`/task/${task.id}`);
-      return;
-    }
-
-    const finalResult = currentHint === 0 ? "Solved Independently" : `Solved With Hint ${currentHint}`;
-    closeSession(currentSession.id, finalResult, currentHint === 0);
-    buildEvidenceForSession(currentSession.id, finalResult);
-
-    const logger = new SessionLogger();
-    logger.append(
-      createSessionLogEntry({
-        subject: task.subject,
-        topic: task.topic,
-        studentInput: rawAttempt,
-        diagnosis: diagnosis.explanation,
-        errorType: "OK",
-        learningMode: modeDecision.mode,
-        hintLevel: currentHint,
-        firstStepTime,
-        outcome: "correct",
-      })
-    );
-
-    revalidatePath(`/task/${task.id}`);
+    retryStructuredTask(taskId, { request_id: requestId, answer: {
+      conditions: String(formData.get("conditions") || ""), method: String(formData.get("method") || ""),
+      work: String(formData.get("studentAttempt") || ""), conclusion: String(formData.get("conclusion") || ""),
+    } });
+    revalidatePath(`/task/${taskId}`);
     revalidatePath("/evidence");
+    revalidatePath("/");
+    revalidatePath("/dashboard");
+  }
+
+  async function uploadPhoto(form: FormData) {
+    "use server";
+    getTaskById(taskId);
+    const file = form.get("photo");
+    if (!file || typeof file === "string" || file.size > 5 * 1024 * 1024) throw new Error("INVALID_UPLOAD");
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    performOnce(requirePilotStudent(), "upload:" + taskId, requestId, createHash("sha256").update(bytes).digest("hex"), () => savePhoto(requirePilotStudent(), taskId, bytes));
+    revalidatePath(`/task/${taskId}`);
   }
 
   return (
     <div className="grid">
       <h1>Learning Flow</h1>
+      <p>Rule-based diagnosis for the pilot; not AI semantic grading.</p>
       <CardShell title="Task" description={`Flow State: ${flowState}`}>
         <div className="task-header">
           <p>
@@ -198,6 +127,10 @@ export default function TaskPage({ params }: { params: { taskId: string } }) {
         </div>
       </CardShell>
 
+      <CardShell title="Photo evidence" description="Private attachment, max 5 MB PNG/JPEG/WebP. No automatic OCR grading.">
+        <form action={uploadPhoto}><input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required /><button type="submit">Upload photo</button></form>
+        {photos.map(photo => <p key={photo.id}><a href={`/api/pilot/v1/uploads/${photo.id}`}>Download my photo</a></p>)}
+      </CardShell>
       <AoyuCompanion
         state={companionState}
         message={
@@ -227,6 +160,10 @@ export default function TaskPage({ params }: { params: { taskId: string } }) {
           description={flowState === "initial" ? "First step is diagnostic, not answer-dictating." : "Use one concise retry."}
         >
           <form action={submitAttempt}>
+            <label htmlFor="conditions">Conditions / material signals</label>
+            <textarea id="conditions" name="conditions" rows={2} maxLength={2000} />
+            <label htmlFor="method">Proposed method / principle</label>
+            <textarea id="method" name="method" rows={2} maxLength={2000} />
             <label htmlFor="studentAttempt">
               {flowState === "initial" ? "Initial Attempt" : "Retry Attempt"}
             </label>
@@ -237,6 +174,8 @@ export default function TaskPage({ params }: { params: { taskId: string } }) {
               required
               placeholder="Write your next reasoning step."
             />
+            <label htmlFor="conclusion">Conclusion / uncertainty</label>
+            <textarea id="conclusion" name="conclusion" rows={2} maxLength={2000} />
             <input type="hidden" name="taskId" value={task.id} />
             <input type="hidden" name="firstStepMs" value={Date.now()} />
             <AskwiseButton type="submit" variant="primary">

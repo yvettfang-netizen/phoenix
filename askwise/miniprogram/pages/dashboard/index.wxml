@@ -1,0 +1,36 @@
+<view class="page-shell">
+  <view class="topbar">
+    <view>
+      <text class="eyebrow">ASKWISE / DASHBOARD</text>
+      <text class="page-title">仪表盘</text>
+    </view>
+    <button class="ghost-button" size="mini" bindtap="logout">退出</button>
+  </view>
+
+  <view class="companion-strip">
+    <image class="companion" src="{{companionSrc}}" mode="aspectFit" />
+    <view>
+      <text class="state-label">看见自己的节奏</text>
+      <text class="muted">统计由服务端返回，客户端不做学习语义推断。</text>
+    </view>
+  </view>
+
+  <view wx:if="{{state === 'busy'}}" class="card empty-state">正在读取统计…</view>
+  <view wx:if="{{error}}" class="error-banner">
+    <text>{{error}}</text>
+    <button class="secondary-button small-button" bindtap="retry">重试</button>
+  </view>
+  <view class="card" wx:if="{{stats.length === 0 && state !== 'busy' && !error}}">
+    <view class="empty-state">还没有可显示的统计。</view>
+  </view>
+  <view class="card" wx:if="{{stats.length > 0}}">
+    <view class="stat-row" wx:for="{{stats}}" wx:key="key">
+      <text class="row-title">{{item.key}}</text>
+      <text class="stat-value">{{item.value}}</text>
+    </view>
+  </view>
+  <view class="button-row">
+    <button class="ghost-button" bindtap="goToday">今日</button>
+    <button class="ghost-button" bindtap="goReflection">复盘</button>
+  </view>
+</view>

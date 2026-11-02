@@ -1,5 +1,7 @@
 # ASKWISE Miniprogram Release Readiness
 
+Current continuation status (2026-11-01): see ASKWISE_DAVID_PILOT_READINESS.md and ASKWISE_WECHAT_BUILD_RESULT.md. Authorized client source now exists, anonymous Web auth/isolation and 49 unit tests passed, 14 real HTTP checks passed, and the explicit server-mode Web build passed. Official WeChat build and real David activation remain BLOCKED. The table below is the preserved initial Phase 0 snapshot, not the final state.
+
 Task: ASKWISE-MINIPROGRAM-V1-20261101
 Date: 2026-11-01
 Overall: BLOCKED / NOT DAVID PILOT READY

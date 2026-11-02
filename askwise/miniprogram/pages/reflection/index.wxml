@@ -1,0 +1,59 @@
+<view class="page-shell">
+  <view class="topbar">
+    <view>
+      <text class="eyebrow">ASKWISE / REFLECTION</text>
+      <text class="page-title">复盘</text>
+    </view>
+    <button class="ghost-button" size="mini" bindtap="logout">退出</button>
+  </view>
+
+  <view class="companion-strip">
+    <image class="companion" src="{{companionSrc}}" mode="aspectFit" />
+    <view>
+      <text class="state-label">留下可用的下一步</text>
+      <text class="muted">内容只在提交时发送；失败可手动复用同一 request_id。</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="field-group">
+      <text class="field-label">1. 我这次真正理解了什么？</text>
+      <textarea class="text-area" value="{{q1}}" data-field="q1" bindinput="onInput" placeholder="写下一个具体理解" />
+    </view>
+    <view class="field-group">
+      <text class="field-label">2. 哪一步仍然不确定？</text>
+      <textarea class="text-area" value="{{q2}}" data-field="q2" bindinput="onInput" placeholder="记录疑点或缺口" />
+    </view>
+    <view class="field-group">
+      <text class="field-label">3. 下一次我会怎么做？</text>
+      <textarea class="text-area" value="{{q3}}" data-field="q3" bindinput="onInput" placeholder="写一个可执行动作" />
+    </view>
+    <button class="primary-button" loading="{{busy}}" disabled="{{busy}}" bindtap="submit">提交复盘</button>
+    <view wx:if="{{pendingSubmit}}" class="warning-banner">
+      <text>上次复盘未确认，原始内容和 request_id 已保留。</text>
+      <button class="secondary-button small-button" bindtap="retrySubmit">重试提交</button>
+    </view>
+  </view>
+
+  <view wx:if="{{error}}" class="error-banner">
+    <text>{{error}}</text>
+    <button class="secondary-button small-button" bindtap="loadReflections">重试读取</button>
+  </view>
+
+  <view class="card">
+    <text class="section-title">历史复盘</text>
+    <view wx:if="{{reflections.length === 0}}" class="empty-state">还没有复盘记录。</view>
+    <view class="history-row" wx:for="{{reflections}}" wx:key="id">
+      <text class="row-meta">{{item.created_at || '复盘'}}</text>
+      <text class="value-inline">{{item.q1 || ''}}</text>
+      <text class="value-inline">{{item.q2 || ''}}</text>
+      <text class="value-inline">{{item.q3 || ''}}</text>
+    </view>
+  </view>
+
+  <view class="button-row">
+    <button class="ghost-button" bindtap="goToday">今日</button>
+    <button class="ghost-button" bindtap="goEvidence">证据</button>
+    <button class="ghost-button" bindtap="goDashboard">仪表盘</button>
+  </view>
+</view>

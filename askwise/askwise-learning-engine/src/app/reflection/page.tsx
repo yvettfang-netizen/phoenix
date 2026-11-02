@@ -2,6 +2,7 @@ import { getPilotContext, getReflections, upsertDailyReflection } from "@/lib/db
 import { revalidatePath } from "next/cache";
 import AskwiseButton from "@/components/ui/button";
 import CardShell from "@/components/ui/card-shell";
+import AoyuCompanion from "@/components/aoyu/aoyu-companion";
 
 export default function ReflectionPage() {
   const day = getPilotContext().day;
@@ -25,6 +26,7 @@ export default function ReflectionPage() {
   return (
     <div>
       <h1>Daily Reflection</h1>
+      <AoyuCompanion state="reflecting" message="Reflect on your actual attempt and the hint that helped." />
       <CardShell
         title={`Day ${day} Reflection`}
         description="Capture learning evidence before advancing."

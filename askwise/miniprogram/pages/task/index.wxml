@@ -1,0 +1,140 @@
+<view class="page-shell">
+  <view class="topbar">
+    <view>
+      <text class="eyebrow">ASKWISE / TASK</text>
+      <text class="page-title">学习任务</text>
+    </view>
+    <button class="ghost-button" size="mini" bindtap="logout">退出</button>
+  </view>
+
+  <view class="companion-strip">
+    <image class="companion" src="{{companionSrc}}" mode="aspectFit" />
+    <view>
+      <text class="state-label">{{sessionSolved === 1 ? '已完成' : state === 'busy' ? '处理中' : '一步一步来'}}</text>
+      <text class="muted">结构化记录你的条件、方法、过程和结论。</text>
+    </view>
+  </view>
+
+  <view wx:if="{{!id}}" class="card">
+    <text class="section-title">新建任务</text>
+    <view class="field-group">
+      <text class="field-label">学科</text>
+      <picker mode="selector" range="{{subjectOptions}}" value="{{subjectIndex}}" bindchange="onSubjectChange">
+        <view class="text-input">{{subject || '选择学科'}}</view>
+      </picker>
+    </view>
+    <view class="field-group">
+      <text class="field-label">topic</text>
+      <picker mode="selector" range="{{topicOptions}}" value="{{topicIndex}}" bindchange="onTopicChange">
+        <view class="text-input">{{topic || '选择当前场景'}}</view>
+      </picker>
+      <text class="helper-text">topic 只支持当前两个场景：数学椭圆韦达、政治联系多样性与矛盾特殊性。</text>
+    </view>
+    <view class="field-group">
+      <text class="field-label">问题</text>
+      <textarea class="text-area" value="{{question}}" data-field="question" bindinput="onFieldInput" placeholder="写下你要解决的具体问题" />
+    </view>
+    <text class="field-label">结构化答案</text>
+    <view class="field-group">
+      <input class="text-input" value="{{conditions}}" data-field="conditions" bindinput="onFieldInput" placeholder="条件" />
+    </view>
+    <view class="field-group">
+      <input class="text-input" value="{{method}}" data-field="method" bindinput="onFieldInput" placeholder="方法" />
+    </view>
+    <view class="field-group">
+      <textarea class="text-area" value="{{work}}" data-field="work" bindinput="onFieldInput" placeholder="过程" />
+    </view>
+    <view class="field-group">
+      <input class="text-input" value="{{conclusion}}" data-field="conclusion" bindinput="onFieldInput" placeholder="结论" />
+    </view>
+    <button class="primary-button" loading="{{busy}}" disabled="{{busy}}" bindtap="submitCreate">提交任务</button>
+    <view wx:if="{{pendingCreate}}" class="warning-banner">
+      <text>上次提交未确认，已保留原始 request_id 和 payload。</text>
+      <button class="secondary-button small-button" bindtap="retryCreate">重试提交</button>
+    </view>
+  </view>
+
+  <view wx:if="{{id && task}}" class="card">
+    <text class="row-title">{{task.subject || task.topic || '学习任务'}}</text>
+    <text class="row-meta">{{task.topic || ''}}</text>
+    <text class="task-question">{{task.question || ''}}</text>
+    <view wx:if="{{diagnosis}}" class="hint-card">
+      <text class="label-inline">诊断类型：</text><text>{{diagnosis.type}}</text>
+      <text class="label-inline">原因：</text><text>{{diagnosis.reason}}</text>
+      <text class="label-inline">置信度：</text><text>{{diagnosis.confidence}}</text>
+    </view>
+    <view wx:if="{{latestHint}}" class="hint-card">
+      <text class="label-inline">Hint {{latestHint.hint_level}}：</text>
+      <text>{{latestHint.content}}</text>
+    </view>
+    <view wx:if="{{latestEvidenceText}}" class="hint-card">
+      <text class="label-inline">最新证据：</text>
+      <text>{{latestEvidenceText}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{id && photos.length > 0}}" class="card">
+    <text class="section-title">已保存照片</text>
+    <text wx:if="{{photoLoading}}" class="helper-text">正在认证下载照片…</text>
+    <view class="history-row" wx:for="{{photos}}" wx:key="id" data-photo-id="{{item.id}}" bindtap="openPhoto">
+      <text class="row-title">{{item.contentType || '照片'}}</text>
+      <text class="row-meta">{{item.createdAt}} · {{item.bytes}} bytes</text>
+      <text class="value-inline">{{item.id}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{id}}" class="card">
+    <text class="section-title">提交一次尝试</text>
+    <view class="field-group">
+      <text class="field-label">条件</text>
+      <input class="text-input" value="{{conditions}}" data-field="conditions" bindinput="onFieldInput" placeholder="已知条件与限制" />
+    </view>
+    <view class="field-group">
+      <text class="field-label">方法</text>
+      <input class="text-input" value="{{method}}" data-field="method" bindinput="onFieldInput" placeholder="采用的方法" />
+    </view>
+    <view class="field-group">
+      <text class="field-label">过程</text>
+      <textarea class="text-area" value="{{work}}" data-field="work" bindinput="onFieldInput" placeholder="关键推理或计算过程" />
+    </view>
+    <view class="field-group">
+      <text class="field-label">结论</text>
+      <input class="text-input" value="{{conclusion}}" data-field="conclusion" bindinput="onFieldInput" placeholder="最终结论" />
+    </view>
+    <button class="primary-button" loading="{{busy}}" disabled="{{busy}}" bindtap="submitAttempt">提交尝试</button>
+    <view wx:if="{{pendingAttempt}}" class="warning-banner">
+      <text>尝试尚未确认，手动重试会复用同一个 request_id。</text>
+      <button class="secondary-button small-button" bindtap="retryAttempt">重试尝试</button>
+    </view>
+  </view>
+
+  <view wx:if="{{id}}" class="card">
+    <text class="section-title">照片证据</text>
+    <text class="helper-text">只接受 png、jpeg、webp；上传失败不会自动无限重发。</text>
+    <button class="secondary-button" loading="{{uploading}}" disabled="{{uploading}}" bindtap="onChoosePhoto">选择照片并上传</button>
+    <text wx:if="{{uploadPath}}" class="photo-path">{{uploadPath}}</text>
+    <view wx:if="{{pendingUpload}}" class="warning-banner">
+      <text>照片上传未确认，可手动重试。</text>
+      <button class="secondary-button small-button" bindtap="retryUpload">重试上传</button>
+    </view>
+  </view>
+
+  <view wx:if="{{id}}" class="card">
+    <text class="section-title">历史尝试</text>
+    <view wx:if="{{attempts.length === 0}}" class="empty-state">还没有历史尝试。</view>
+    <view class="history-row" wx:for="{{attempts}}" wx:key="attemptNumber">
+      <text class="row-meta">第 {{item.attemptNumber}} 次 · Hint {{item.hintLevel}} · {{item.isCorrectLabel}} · {{item.timestamp}}</text>
+      <text class="value-inline">{{item.studentResponseText}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{error}}" class="error-banner">
+    <text>{{error}}</text>
+    <button wx:if="{{id}}" class="secondary-button small-button" bindtap="loadTask">重试读取</button>
+  </view>
+
+  <view class="button-row">
+    <button class="ghost-button" bindtap="goToday">今日</button>
+    <button class="ghost-button" bindtap="goEvidence">证据库</button>
+  </view>
+</view>

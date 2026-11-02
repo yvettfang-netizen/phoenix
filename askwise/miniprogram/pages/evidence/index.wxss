@@ -1,0 +1,3 @@
+.evidence-row:active {
+  opacity: 0.72;
+}

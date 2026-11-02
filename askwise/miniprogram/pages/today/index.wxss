@@ -1,0 +1,7 @@
+.task-row {
+  display: block;
+}
+
+.task-row:active {
+  opacity: 0.72;
+}

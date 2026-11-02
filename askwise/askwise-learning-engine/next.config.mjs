@@ -1,9 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  output: process.env.ASKWISE_BUILD_MODE === "server" ? undefined : "standalone",
   experimental: {
     serverActions: {
-      bodySizeLimit: "1mb",
+      bodySizeLimit: "6mb",
     },
   },
 };

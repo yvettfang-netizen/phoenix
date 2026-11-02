@@ -1,0 +1,12 @@
+data/*.db
+data/*.db-shm
+data/*.db-wal
+askwise_session_log.json
+data/
+.next/
+node_modules/
+coverage/
+*.tsbuildinfo
+.env
+.env.*
+backups/

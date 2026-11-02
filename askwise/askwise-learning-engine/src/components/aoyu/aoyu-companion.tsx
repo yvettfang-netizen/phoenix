@@ -1,8 +1,9 @@
 import { AOYU_ASSETS } from "@/config/aoyu";
 
-type AoyuState = "idle" | "listening" | "thinking" | "guiding" | "encouraging" | "celebrating" | "reflecting";
+type AoyuState = "idle" | "listening" | "thinking" | "guiding" | "encouraging" | "celebrating" | "reflecting" | "safe_error";
 
 const AOYU_LABEL: Record<AoyuState, string> = {
+  safe_error: "Aoyu is waiting safely",
   idle: "Aoyu is ready",
   listening: "Aoyu is listening",
   thinking: "Aoyu is checking the reasoning",
@@ -18,7 +19,7 @@ type Props = {
 };
 
 export default function AoyuCompanion({ state, message }: Props) {
-  const imageSrc = AOYU_ASSETS.poses[state] ?? AOYU_ASSETS.expressions.default;
+  const imageSrc = state === "safe_error" ? AOYU_ASSETS.poses.idle : AOYU_ASSETS.poses[state];
 
   return (
     <section className={`aoyu-shell aoyu-${state}`}>

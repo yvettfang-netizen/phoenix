@@ -1,5 +1,6 @@
 import { listLearningEvidence } from "@/lib/db";
 import CardShell from "@/components/ui/card-shell";
+import StructuredAnswer from "@/components/task-flow/structured-answer";
 
 export default function EvidencePage() {
   const evidences = listLearningEvidence() as Array<{
@@ -13,6 +14,8 @@ export default function EvidencePage() {
     hint_level: number;
     hint_count: number;
     retry_count: number;
+    diagnosis: string;
+    initial_attempt: string;
   }>;
 
   return (
@@ -35,7 +38,7 @@ export default function EvidencePage() {
                 <strong>Final:</strong> {item.final_result}
               </p>
               <p className="muted">Diagnosis: {item.diagnosis}</p>
-              <p className="muted">Initial Attempt: {item.initial_attempt || "—"}</p>
+              <strong>Initial Attempt:</strong><StructuredAnswer value={item.initial_attempt} />
             </CardShell>
           ))}
         </div>

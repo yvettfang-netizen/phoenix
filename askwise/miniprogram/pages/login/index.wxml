@@ -1,0 +1,24 @@
+<view class="page-shell login-shell">
+  <view class="hero-card">
+    <image class="companion" src="{{companionSrc}}" mode="aspectFit" />
+    <text class="eyebrow">ASKWISE / PILOT</text>
+    <text class="hero-title">把想法讲清楚。</text>
+    <text class="hero-copy">原生微信小程序客户端，连接你的学习任务、证据和复盘。</text>
+  </view>
+
+  <view class="card form-card">
+    <button class="primary-button" loading="{{busy}}" disabled="{{busy}}" bindtap="onWechatLogin">微信登录</button>
+    <view class="divider"><text>或</text></view>
+    <view class="field-group">
+      <text class="field-label">本地 UAT 账号</text>
+      <input class="text-input" value="{{account}}" data-field="account" bindinput="onInput" placeholder="仅用于匿名本地备用登录" />
+    </view>
+    <view class="field-group">
+      <text class="field-label">密码</text>
+      <input class="text-input" password value="{{password}}" data-field="password" bindinput="onInput" placeholder="不会持久保存" />
+    </view>
+    <button class="secondary-button" loading="{{busy}}" disabled="{{busy}}" bindtap="onLocalLogin">本地 UAT 登录</button>
+    <view wx:if="{{error}}" class="error-banner">{{error}}</view>
+    <text class="helper-text">本地 UAT 登录不会冒充微信登录；客户端不展示假二维码，也不写入密钥。</text>
+  </view>
+</view>

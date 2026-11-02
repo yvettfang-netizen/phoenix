@@ -1,0 +1,43 @@
+<view class="page-shell">
+  <view class="topbar">
+    <view>
+      <text class="eyebrow">ASKWISE / EVIDENCE</text>
+      <text class="page-title">证据库</text>
+    </view>
+    <button class="ghost-button" size="mini" bindtap="logout">退出</button>
+  </view>
+
+  <view class="companion-strip">
+    <image class="companion" src="{{companionSrc}}" mode="aspectFit" />
+    <view>
+      <text class="state-label">证据先于判断</text>
+      <text class="muted">下载由认证请求携带 Bearer token。</text>
+    </view>
+  </view>
+
+  <view wx:if="{{state === 'busy'}}" class="card empty-state">正在读取证据…</view>
+  <view wx:if="{{error}}" class="error-banner">
+    <text>{{error}}</text>
+    <button class="secondary-button small-button" bindtap="retry">重试</button>
+  </view>
+  <view class="card" wx:if="{{items.length === 0 && state !== 'busy' && !error}}">
+    <view class="empty-state">还没有证据记录。</view>
+  </view>
+  <view class="card" wx:if="{{items.length > 0}}">
+    <view class="evidence-row" wx:for="{{items}}" wx:key="id">
+      <text class="row-title">{{item.subject}} · {{item.topic}}</text>
+      <text class="row-meta">Evidence #{{item.id}} · task #{{item.taskId}} · {{item.date}} · {{item.createdAt}}</text>
+      <text class="value-inline">{{item.question}}</text>
+      <view wx:if="{{item.initialAttempt}}" class="hint-card"><text class="label-inline">initial_attempt：</text><text>{{item.initialAttempt}}</text></view>
+      <view wx:if="{{item.diagnosis}}" class="hint-card"><text class="label-inline">diagnosis：</text><text>{{item.diagnosis}}</text></view>
+      <text class="row-meta">hint_level {{item.hintLevel}} · hint_count {{item.hintCount}} · retry_count {{item.retryCount}}</text>
+      <text class="value-inline">final_result：{{item.finalResult}}</text>
+      <text class="value-inline">independence：{{item.independence}}</text>
+      <text class="value-inline">reflection：{{item.reflection}}</text>
+    </view>
+  </view>
+  <view class="button-row">
+    <button class="ghost-button" bindtap="goToday">今日</button>
+    <button class="ghost-button" bindtap="goReflection">复盘</button>
+  </view>
+</view>

@@ -1,0 +1,4 @@
+.history-row .value-inline {
+  display: block;
+  margin-top: 6rpx;
+}
