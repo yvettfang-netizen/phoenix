@@ -6,7 +6,7 @@
 
 1. The exact 35 files `database/canonical/migrations/0001_*.sql` through `0035_*.sql`, if each SHA-256 equals [`CANONICAL_0035_SOURCE_MANIFEST.md`](CANONICAL_0035_SOURCE_MANIFEST.md). No edited Migration is allowlisted.
 2. `database/canonical/README.md`, `database/canonical/.gitattributes` and the seven pre-merge gate documents in `docs/database/premerge-0035/`, after the public-candidate scan. The attributes force LF checkouts for SQL and verification scripts so staged migration bytes remain stable on Windows. These documents may include code paths, hashes, synthetic counts and public links. Private GitHub links resolve only for authorized readers.
-3. A purpose-built verification script and CI workflow if they contain no credentials, real records, server addressing, or private operational topology and pass the same scan.
+3. A purpose-built verification script, CI workflow and `.github/CODEOWNERS` containing only the verified public GitHub login `yvettfang-netizen`, if they contain no credentials, real records, server addressing, or private operational topology and pass the same scan. The CODEOWNERS file is proposed on PR #36; it does not become effective on `main` before an approved merge.
 
 ## Stay in the private repository
 

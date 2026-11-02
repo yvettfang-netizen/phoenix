@@ -1,0 +1,5 @@
+# Verified repository owner login. Reviewer role labels are not GitHub accounts.
+/database/canonical/ @yvettfang-netizen
+/docs/database/premerge-0035/ @yvettfang-netizen
+/.github/workflows/canonical-0035-premerge.yml @yvettfang-netizen
+/.github/CODEOWNERS @yvettfang-netizen

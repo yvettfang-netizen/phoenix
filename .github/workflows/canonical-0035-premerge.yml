@@ -1,10 +1,6 @@
 name: Canonical 0035 pre-merge smoke
 on:
   pull_request:
-    paths:
-      - 'database/canonical/**'
-      - 'docs/database/premerge-0035/**'
-      - '.github/workflows/canonical-0035-premerge.yml'
   workflow_dispatch:
 jobs:
   public-candidate-scan:
@@ -19,7 +15,7 @@ jobs:
         run: |
           set -euo pipefail
           image='ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f'
-          for path in database/canonical docs/database/premerge-0035 .github/workflows/canonical-0035-premerge.yml; do
+          for path in database/canonical docs/database/premerge-0035 .github/workflows/canonical-0035-premerge.yml .github/CODEOWNERS; do
             docker run --rm --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
           done
   isolated-postgres:
