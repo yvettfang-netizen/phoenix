@@ -17,7 +17,7 @@ The pre-addendum PR HEAD `54fd1eb415c5be7d98ffb27b4d30961d69b73c04` passed [GitH
 ## Decision required
 
 1. Review the separate private [0036+ design Draft PR #8](https://github.com/yvettfang-netizen/phoenix-canonical-db/pull/8) for an explicit user/advisor professional-need fact. No 0036 SQL belongs to public PR #36; do not change historical First Touch or 0032/0033.
-2. Main branch protection and five required checks are active. Approve a governance path that places the proposed CODEOWNERS file and unfiltered workflow on `main` without merging PR #36 prematurely. Founder authorized verified account Jimson614's Write invitation and review handoff; invitation acceptance and Write access are now verified, CODEOWNERS validation has zero errors, and both PR36/PR8 request Jimson614. No actual review has been submitted.
+2. Main branch protection and five required checks are active. Independently review the three-file [Governance Bootstrap Draft PR #37](https://github.com/yvettfang-netizen/phoenix/pull/37), then approve its merge separately if its gates pass. It introduces no database files and runs real PG tests against an immutable 0035 fixture until a candidate includes Canonical. PR36 carries identical governance blobs. Main activation remains HOLD until an approved bootstrap merge; no rule is lowered. Jimson's personal engineering review remains PENDING and is excluded from this preparation batch.
 3. Obtain actual Jimson, 玄武, 白虎 and 麒麟 review records; then sign M0–M5 acceptance and this integration decision against the exact final PR SHA and CI run. A Codex reviewer lens is not an independent signature.
 
 **Founder decision:** ☐ APPROVE integration merge after all gates PASS　☐ RETURN FOR CHANGES　☐ REJECT
