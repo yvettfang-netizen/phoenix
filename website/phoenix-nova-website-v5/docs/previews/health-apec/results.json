@@ -1,0 +1,38 @@
+[
+  {
+    "locale": "zh",
+    "width": 390,
+    "status": "PASS",
+    "checks": "origin, disclosure, source, responsive, noindex, preserved anchors, journey to existing consultation"
+  },
+  {
+    "locale": "zh",
+    "width": 768,
+    "status": "PASS",
+    "checks": "origin, disclosure, source, responsive, noindex, preserved anchors, journey to existing consultation"
+  },
+  {
+    "locale": "zh",
+    "width": 1440,
+    "status": "PASS",
+    "checks": "origin, disclosure, source, responsive, noindex, preserved anchors, journey to existing consultation"
+  },
+  {
+    "locale": "en",
+    "width": 390,
+    "status": "PASS",
+    "checks": "origin, disclosure, source, responsive, noindex, preserved anchors, journey to existing consultation"
+  },
+  {
+    "locale": "en",
+    "width": 768,
+    "status": "PASS",
+    "checks": "origin, disclosure, source, responsive, noindex, preserved anchors, journey to existing consultation"
+  },
+  {
+    "locale": "en",
+    "width": 1440,
+    "status": "PASS",
+    "checks": "origin, disclosure, source, responsive, noindex, preserved anchors, journey to existing consultation"
+  }
+]
