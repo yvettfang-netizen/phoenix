@@ -37,3 +37,5 @@ The verified owner login in CODEOWNERS is a GitHub account, not an independent ç
 No source Migration was changed to pass scanning. Any new finding is handled by the process in [`PUBLIC_RELEASE_ALLOWLIST.md`](PUBLIC_RELEASE_ALLOWLIST.md).
 
 The local command/output excerpts and remote protection/read results are preserved in [`GOVERNANCE_ADDENDUM_EVIDENCE.md`](GOVERNANCE_ADDENDUM_EVIDENCE.md). The new PR HEAD and its CI result are linked from the PR once the post-addendum run completes.
+
+A subsequent goal-baseline read on 2026-11-02 found that the source repository was PUBLIC again. Founder explicitly authorized restoring it to Private; the mutation succeeded and REST plus GraphQL confirmed PRIVATE. The current source identity is private, but earlier public exposure and full-history/topology governance remain HOLD. Restoration does not erase prior copies or certify earlier disclosure. The sanitized status is recorded here; detailed operational evidence stays in the private candidate.

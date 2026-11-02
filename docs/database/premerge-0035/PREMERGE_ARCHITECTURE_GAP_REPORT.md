@@ -14,7 +14,7 @@
 
 No 0032/0033 change is included and historical First Touch must not be overwritten. Any later correction must be additive and forward-only. The private PR #2–#7 chain is historical engineering evidence, not proof of merge into the public main branch.
 
-The additive need-event candidate is documented separately in private [Draft PR #8](https://github.com/yvettfang-netizen/phoenix-canonical-db/pull/8). It contains no SQL and does not enter public PR #36.
+The additive need-event candidate is documented separately in private [Draft PR #8](https://github.com/yvettfang-netizen/phoenix-canonical-db/pull/8), alongside synthetic interface preparation. It contains no new executable Migration and does not enter public PR #36. The detailed audit prefers extending the existing immutable Lead event authority before proposing any new fact table.
 
 ## Key integrity edges verified in SQL
 
