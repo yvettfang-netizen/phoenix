@@ -1,6 +1,6 @@
 # PG16/PG17 integration test report
 
-**Gate 4 database tests: PASS locally and in CI; application regression: CONDITIONAL.** Date: 2026-11-02. All database containers used `--network none`, no published port, a random synthetic env file, exact cleanup and no real records.
+**Gate 4 database tests: PASS locally and in CI; application code-level regression: PASS; complete browser regression: NOT RUN.** Date: 2026-11-02. All database containers used `--network none`, no published port, a random synthetic env file, exact cleanup and no real records.
 
 ## Actual commands and outcomes
 
@@ -42,8 +42,8 @@ Each smoke path checks file count against ledger count, checksum-safe repeat, dr
 
 ## Application and CI gate
 
-The public branch changes no application code. [Draft PR #36](https://github.com/yvettfang-netizen/phoenix/pull/36) ran [GitHub Actions 41400200332](https://github.com/yvettfang-netizen/phoenix/actions/runs/41400200332) on commit `98795322614449f8e40fbda86c4366bed8f90ffb`: **success**, seven jobs passed (public-candidate scan; PG16/17 fresh/upgrade; Education client; V5 website). The [pre-merge workflow](../../../.github/workflows/canonical-0035-premerge.yml) has no artifact upload and its job logs are the remote raw output for these checks. Any later report-only commit needs its own run before this status is considered current.
+The public branch changes no application code. [Draft PR #36](https://github.com/yvettfang-netizen/phoenix/pull/36) ran [GitHub Actions 41400628455](https://github.com/yvettfang-netizen/phoenix/actions/runs/41400628455) on commit `c2d755f6480999d00d35d8d4f1122682d78bdc40`: **success**, eight jobs passed (public-candidate scan; PG16/17 fresh/upgrade; Education client; V5 website; Wealth Compass). The [pre-merge workflow](../../../.github/workflows/canonical-0035-premerge.yml) has no artifact upload and its job logs are the remote raw output for these checks. Any later report-only commit needs its own run before this status is considered current.
 
-Local `node tests/run-tests.js` and `node tests/validate-ui-contract.js` passed for the Education Compass client. Local Identity Compass `pnpm check` passed (lint, typecheck, 16 test files / 41 tests). The V5 website's existing CI `typecheck`, `lint` and `npm test` passed on the PR. Standalone Wealth Compass tests and browser-level checks for every Compass are **NOT RUN** in this gate: local npm installs stalled on registry requests and were stopped; no failure of application assertions was observed. The SQL copy does not invoke or change application code, but the requested full four-Compass behavioral regression is therefore **HOLD**, not a claimed PASS.
+Local `node tests/run-tests.js` and `node tests/validate-ui-contract.js` passed for the Education Compass client. Local Identity Compass `pnpm check` passed (lint, typecheck, 16 test files / 41 tests). The V5 website's existing CI `typecheck`, `lint` and `npm test` passed on the PR, including its existing Education, Identity, Health and Family tests. The standalone Wealth Compass CI `lint`, `typecheck` and `npm test` passed. Local website/Wealth npm installs stalled on registry requests and were stopped; the successful remote CI jobs supply the dependency-backed regression evidence. Browser-level checks for every Compass remain **NOT RUN**; this gate does not claim full end-to-end behavior or real application/database integration.
 
 **Limits:** The public smoke upgrade preserves only two synthetic master rows; the private F10 suite provides the broader business and restore coverage on byte-identical source SQL. No test proves an existing Tencent or production database is at 0035. No production operation was attempted.
