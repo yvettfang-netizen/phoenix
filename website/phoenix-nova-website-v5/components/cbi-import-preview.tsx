@@ -46,7 +46,7 @@ export function CbiImportPreviewPanel({ locale }: { locale: Locale }) {
   return (
     <main style={{ width: "100%", maxWidth: 960, boxSizing: "border-box", overflowWrap: "anywhere", margin: "0 auto", padding: "48px 24px", fontFamily: "system-ui, sans-serif" }}>
       <p style={{ letterSpacing: ".12em", fontSize: 12 }}>PHOENIX NOVA™ · INTERNAL CBI IMPORT REVIEW</p>
-      <h1>{copy(locale, "CBI 国家数据导入预览", "CBI country-data import preview")}</h1>
+      <h1 style={{ fontSize: 28, lineHeight: 1.4, margin: "12px 0 20px" }}>{copy(locale, "CBI 国家数据导入预览", "CBI country-data import preview")}</h1>
       <p>{copy(locale, "仅用于本地预览、校验和错误报告导出。此页面不发布数据、不写入数据库，也不会在浏览器中伪造 Founder 权限。", "Local preview, validation and error-report export only. This page does not publish data, write to a database or simulate Founder authority in the browser.")}</p>
       <p><strong>{copy(locale, "四国范围：KN · AR · VU · ST", "Allowlist: KN · AR · VU · ST")}</strong></p>
 
@@ -81,7 +81,7 @@ export function CbiImportPreviewPanel({ locale }: { locale: Locale }) {
               return <tr key={`${record.country_code}-${record.programme_id ?? "country"}`}>
                 <td style={{ padding: 8, whiteSpace: "nowrap" }}>{cell(record.country_id)}</td>
                 <td style={{ padding: 8, whiteSpace: "nowrap" }}>{cell(record.country_code)}</td>
-                <td style={{ padding: 8 }}>{cell(programme)}</td>
+                <td style={{ padding: 8, minWidth: 240, overflowWrap: "normal" }}>{cell(programme)}</td>
                 <td style={{ padding: 8 }}>{cell(record.minimum_investment)}</td>
                 <td style={{ padding: 8 }}>{cell(record.currency)}</td>
                 <td style={{ padding: 8, whiteSpace: "nowrap" }}>{cell(record.legal_status)}</td>
@@ -101,3 +101,4 @@ export function CbiImportPreviewPanel({ locale }: { locale: Locale }) {
     </main>
   );
 }
+
