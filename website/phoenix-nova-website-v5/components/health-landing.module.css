@@ -57,6 +57,22 @@
 .secondary:disabled { cursor: not-allowed; opacity: .68; }
 .micro { margin-top: 17px; color: var(--health-muted); font-size: 10px; line-height: 1.8; }
 
+.brandOrigin { background: var(--health-deep); color: var(--health-ivory); border-block: 1px solid rgba(200,162,74,.48); }
+.brandOriginGrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr); gap: 80px; align-items: center; }
+.brandOriginEyebrow { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; color: var(--health-gold); font-size: 10px; letter-spacing: .16em; line-height: 1.7; }
+.brandOriginEyebrow::after { content: ""; width: 58px; height: 1px; background: var(--health-gold); }
+.brandOrigin h2 { max-width: 800px; margin-bottom: 18px; color: var(--health-ivory); font-size: clamp(29px, 3.4vw, 48px); line-height: 1.35; }
+.brandOriginBody { max-width: 790px; margin: 0; color: #d3dfda; font-size: 14px; line-height: 2; }
+.brandOriginActions { display: flex; flex-wrap: wrap; gap: 13px; margin-top: 27px; }
+.brandOriginActions .primary { border-color: var(--health-gold); background: var(--health-gold); color: var(--health-deep) !important; }
+.brandOriginActions .primary:hover { border-color: #d6b971; background: #d6b971; }
+.brandOriginActions .secondary { border-color: #8caea4; color: var(--health-ivory) !important; }
+.brandOriginActions .secondary:hover { background: rgba(140,174,164,.15); }
+.brandOriginNote { padding: 25px; border-left: 1px solid rgba(200,162,74,.65); background: rgba(247,248,245,.06); }
+.brandOriginNote p { margin: 0; color: #d3dfda; font-size: 12px; line-height: 1.95; }
+.brandOriginNote a { display: block; margin-top: 20px; color: var(--health-gold); font-size: 11px; line-height: 1.8; }
+.brandOriginNote small { display: block; margin-top: 11px; color: #a9c0b8; font-size: 10px; line-height: 1.7; }
+
 .section { padding-block: 72px; }
 .sectionHeading { margin-bottom: 28px; }
 .sectionHeading > p { margin-bottom: 13px; color: var(--health-teal); font-size: 10px; letter-spacing: .15em; }
@@ -72,6 +88,7 @@
 .entryCard .eyebrow { min-height: 27px; margin-bottom: 12px; font-size: 9px; letter-spacing: .1em; }
 .entryCard h3 { margin-bottom: 12px; color: var(--health-deep); font-size: 25px; }
 .entryCard > p:not(.eyebrow) { margin-bottom: 15px; color: var(--health-muted); font-size: 13px; line-height: 1.9; }
+.entryLaunch { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--health-line); color: var(--health-teal) !important; font-size: 11px !important; line-height: 1.75 !important; }
 .entryCard ul { display: grid; gap: 7px; margin: 0 0 20px; padding: 0; list-style: none; color: var(--health-muted); font-size: 12px; line-height: 1.7; }
 .entryCard li::before { content: "◇"; margin-right: 8px; color: var(--health-gold); }
 .entryCard .textLink,
@@ -233,6 +250,7 @@
   .lifeStages { grid-template-columns: repeat(2, 1fr); }
   .lifeStages article:last-child { grid-column: span 2; }
   .compassLayout,
+  .brandOriginGrid,
   .partnerGrid,
   .familyCenterGrid,
   .faqLayout,
@@ -283,11 +301,14 @@
   .lifeStages article:last-child { grid-template-columns: 43% 57%; grid-column: auto; }
   .lifePhoto { min-height: 230px; }
   .compassLayout,
+  .brandOriginGrid,
   .partnerGrid,
   .familyCenterGrid,
   .faqLayout,
   .contact { grid-template-columns: 1fr; gap: 32px; }
   .compassSection { padding-block: 55px; }
+  .brandOriginGrid { gap: 32px; }
+  .brandOriginNote { padding: 20px 0 0; border-top: 1px solid rgba(200,162,74,.65); border-left: 0; background: transparent; }
   .compassPanel,
   .partnerPanel,
   .familyCenterPanel { padding: 24px 19px; }

@@ -7,6 +7,7 @@ import {
   familyStages,
   gbaValues,
   healthEntries,
+  healthBrandOrigin,
   healthFaqs,
   healthHero,
   healthJourney,
@@ -58,6 +59,25 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
         </div>
       </section>
 
+      <section className={styles.brandOrigin} id="brand-origin" aria-labelledby="brand-origin-title">
+        <div className={`${styles.section} ${styles.wrap} ${styles.brandOriginGrid}`}>
+          <div>
+            <p className={styles.brandOriginEyebrow}>{t(healthBrandOrigin.eyebrow)}</p>
+            <h2 id="brand-origin-title">{t(healthBrandOrigin.title)}</h2>
+            <p className={styles.brandOriginBody}>{t(healthBrandOrigin.body)}</p>
+            <div className={styles.brandOriginActions}>
+              <Link className={styles.primary} data-testid="brand-origin-shenzhen" href={`/${locale}/health/shenzhen-international-medical`}>{t(healthBrandOrigin.cta)} <span aria-hidden="true">↗</span></Link>
+              <a className={styles.secondary} href="#consultation">{t(healthBrandOrigin.consultationCta)} <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+          <aside className={styles.brandOriginNote} aria-label={zh ? "APEC 背景说明" : "APEC context note"}>
+            <p>{t(healthBrandOrigin.boundary)}</p>
+            <a href={healthBrandOrigin.sourceHref} target="_blank" rel="noreferrer noopener">{t(healthBrandOrigin.sourceLabel)} ↗</a>
+            <small>{zh ? "事实核验日期：2026年11月2日" : "Fact checked: 2 November 2026"}</small>
+          </aside>
+        </div>
+      </section>
+
       <section className={styles.entrySection} aria-labelledby="health-entry-title">
         <div className={`${styles.section} ${styles.wrap}`}>
           <div className={styles.sectionHeading}><p><span>01</span> / {zh ? "选择您的起点" : "CHOOSE YOUR STARTING POINT"}</p><h2 id="health-entry-title">{t(["从您的需要开始。", "Start with what matters to you."])}</h2></div>
@@ -67,7 +87,8 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
               <h3>{t(entry.title)}</h3>
               <p>{t(entry.body)}</p>
               <ul>{entry.points.map(point => <li key={point[1]}>{t(point)}</li>)}</ul>
-              <Link className={styles.textLink} href={`/${locale}/${t(entry.href)}`}>{t(entry.cta)} <span aria-hidden="true">↗</span></Link>
+              {entry.launchNote && <p className={styles.entryLaunch}>{t(entry.launchNote)}</p>}
+              <Link className={styles.textLink} data-testid={entry.id === "shenzhen" ? "shenzhen-launch-link" : undefined} href={`/${locale}/${t(entry.href)}`}>{t(entry.cta)} <span aria-hidden="true">↗</span></Link>
             </article>)}
           </div>
         </div>

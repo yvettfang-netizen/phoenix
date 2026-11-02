@@ -55,6 +55,7 @@ jobs:
             HEALTH_EVIDENCE_DIR="$HEALTH_EVIDENCE_DIR/family" node tests/health-family-browser.mjs
             if [ "$enabled" = 0 ]; then
               HEALTH_EVIDENCE_DIR=health-evidence/geo node tests/health-geo-browser.mjs
+              HEALTH_EVIDENCE_DIR=health-evidence/apec node tests/health-apec-browser.mjs
             fi
             kill "$preview_pid"
             wait "$preview_pid" || true

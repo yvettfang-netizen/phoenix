@@ -9,7 +9,35 @@ export type HealthEntry = {
   body: HealthCopy;
   points: readonly HealthCopy[];
   cta: HealthCopy;
+  launchNote?: HealthCopy;
 };
+
+/**
+ * A dated city-context note, not an APEC partnership or event listing.
+ * The source and boundary language intentionally travel with the copy so
+ * future edits cannot accidentally turn the context into an endorsement.
+ */
+export const healthBrandOrigin = {
+  version: "1.0.0",
+  verifiedAt: "2026-11-02",
+  eyebrow: ["品牌缘起 · 深圳2026", "APEC 2026 SHENZHEN · BRAND ORIGIN"] as HealthCopy,
+  title: ["以深圳为起点，连接世界与中国医疗资源。", "Shenzhen, Your Gateway to Healthcare in China."] as HealthCopy,
+  body: [
+    "2026年APEC经济领导人会议的举办城市为深圳，会议日期为2026年11月18日至19日。Phoenix Nova™ 以这座面向世界的城市为起点，独立启动深圳 Global Health 首发计划，面向海外国际人士及海外华人华侨，提供非临床医疗资源导航、信息核验与协调支持。",
+    "The 2026 APEC Economic Leaders’ Meeting is scheduled for Shenzhen on 18–19 November 2026. Phoenix Nova™ is independently launching its Shenzhen Global Health initiative from this international city for overseas international residents and overseas Chinese, offering non-clinical healthcare resource navigation, information verification and coordination support.",
+  ] as HealthCopy,
+  boundary: [
+    "Phoenix Nova™ 与APEC会议官方组织、授权、指定医疗服务或赞助无关。此页面不构成医院合作、接诊、预约、治疗或结果保证。",
+    "Phoenix Nova™ is independent of the official APEC organisers, authorisations, designated medical services and sponsorship. This page does not represent hospital partnerships, acceptance, appointments, treatment or outcome guarantees.",
+  ] as HealthCopy,
+  sourceLabel: [
+    "核验来源：深圳市南山区人民政府 · APEC 2026 Shenzhen",
+    "Source checked: Nanshan District Government · APEC 2026 Shenzhen",
+  ] as HealthCopy,
+  sourceHref: "https://www.szns.gov.cn/english/apec2026shenzhen/",
+  cta: ["了解深圳国际医疗服务", "Explore Shenzhen international care"] as HealthCopy,
+  consultationCta: ["准备一次咨询", "Prepare a conversation"] as HealthCopy,
+} as const;
 
 export const healthHero = {
   zh: {
@@ -62,6 +90,7 @@ export const healthEntries: readonly HealthEntry[] = [
     body: ["了解深圳私立医疗机构、国际患者接待、语言服务、病房环境与费用核实方向。", "Explore provider information, international patient reception, language support, environments and cost verification in Shenzhen."],
     points: [["机构与专科信息", "Provider and specialty information"], ["国际患者接待", "International patient reception"], ["语言服务核实", "Language support checks"], ["费用与房型逐项确认", "Cost and room details confirmed case by case"]],
     cta: ["了解深圳国际医疗", "Explore Shenzhen care"],
+    launchNote: ["深圳首发：了解非临床资源导航、语言支持和服务范围；具体机构及可用性须逐项核实。", "Shenzhen first launch: explore non-clinical resource navigation, language support and scope; each provider and availability requires verification."],
   },
   {
     id: "gba",
