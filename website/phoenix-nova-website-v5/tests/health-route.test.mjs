@@ -20,7 +20,7 @@ test("explicit candidate switch enables both locales, safe alias and noindex", a
     const html = await response.text();
     assert.match(html, /data-health-compass/);
     assert.match(html, /noindex/);
-    assert.match(html, /phoenix-nova-symbol-transparent\.png/);
+    assert.match(html, /phoenix-nova-bilingual-b@2x\.png/);
     assertBrandMarkup(html, `/${locale}/compass/health`, { minimum: 1 });
     for (const path of [`/${locale}`, `/${locale}/compass`]) {
       const entry = await (await get(path)).text();
@@ -39,4 +39,3 @@ test("switch can be disabled again without changing existing destinations", asyn
   assert.equal((await get("/zh/compass/health")).status, 404);
   for (const path of ["/zh/services", "/en/compass", "/zh/family-center"]) assert.equal((await get(path)).status, 200);
 });
-
