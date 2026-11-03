@@ -1,0 +1,74 @@
+{
+  "origin": "http://127.0.0.1:4472",
+  "results": [
+    {
+      "name": "zh: 10 unique internal homepage routes return HTTP success",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 1920px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 1440px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 1024px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 768px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 390px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 375px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 320px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en: 10 unique internal homepage routes return HTTP success",
+      "status": "PASS"
+    },
+    {
+      "name": "en 1920px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 1440px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 1024px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 768px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 390px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 375px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 320px: V6 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "No V6 homepage browser runtime errors",
+      "status": "PASS"
+    }
+  ],
+  "pageErrors": []
+}

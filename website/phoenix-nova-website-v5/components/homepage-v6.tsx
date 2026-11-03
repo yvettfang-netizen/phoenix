@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { SiteFooter, SiteHeader, type Locale } from "./v5-site";
+import { HealthCompassEntry } from "./health-compass-entry";
 import styles from "./homepage-v6.module.css";
 
 type Bilingual = readonly [string, string];
@@ -184,6 +185,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
           </div>
         </section>
 
+        <HealthCompassEntry locale={locale} />
         <section className={`${styles.section} ${styles.journeySection}`} aria-labelledby="journey-heading">
           <div className={styles.container}>
             <header className={styles.sectionHeaderCompact}>
