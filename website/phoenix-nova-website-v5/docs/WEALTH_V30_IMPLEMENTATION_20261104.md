@@ -87,6 +87,10 @@ Jimson's additive API/identity/need mapping and Baihu's consent/data review rema
 
 Raw local logs: `outputs/wealth-v30/`. Review screenshots: `docs/evidence/wealth-v30/`.
 
+The Wealth product's existing `npm test` runs its Vitest suite followed by the native frozen-rule regression in `tests/unit/frozen-v1.node-test.mjs`. This avoids mixing Node's test API into Vitest discovery. Website HTTP tests are opt-in: set `WEALTH_TEST_ORIGIN` and `MAIN_TEST_ORIGIN` to the running local adapters before invoking them. Default website unit/Worker test discovery does not assume a separately running localhost server.
+
+The historical Wealth product's full Vitest/Next build was not rerun locally: that child package has no installed dependencies here. The new frozen module is covered by the seven executed native tests and the website TypeScript/build. The unchanged historical placeholder flows are not claimed as newly accepted runtime functionality.
+
 ## Preview
 
 From the website directory after building:

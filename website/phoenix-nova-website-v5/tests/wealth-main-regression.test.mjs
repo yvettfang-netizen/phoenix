@@ -1,8 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { assertBrandSource, assertBrandMarkup } from "./brand-integrity.mjs";
+const integrationTest = process.env.MAIN_TEST_ORIGIN ? test : test.skip;
 const origin = process.env.MAIN_TEST_ORIGIN || "http://127.0.0.1:4480";
-test("existing bilingual home, Education, Identity and Health retain routes and the shared B logo", async () => {
+integrationTest("existing bilingual home, Education, Identity and Health retain routes and the shared B logo", async () => {
   assertBrandSource();
   for (const locale of ["zh", "en"])
     for (const page of ["", "/education", "/identity", "/health"]) {

@@ -6,9 +6,10 @@ import {
   wealthRegions,
   wealthServices,
 } from "../lib/wealth-content.ts";
+const integrationTest = process.env.WEALTH_TEST_ORIGIN ? test : test.skip;
 const local = process.env.WEALTH_TEST_ORIGIN || "http://127.0.0.1:4481",
   canonical = "https://wealth.phoenixnova.com.cn";
-test("all forty bilingual public routes have content, individual canonical/hreflang and noindex", async () => {
+integrationTest("all forty bilingual public routes have content, individual canonical/hreflang and noindex", async () => {
   for (const locale of ["zh", "en"]) {
     const paths = [
       `/${locale}`,
@@ -41,7 +42,7 @@ test("all forty bilingual public routes have content, individual canonical/hrefl
     }
   }
 });
-test("all knowledge routes have valid JSON-LD matching their canonical", async () => {
+integrationTest("all knowledge routes have valid JSON-LD matching their canonical", async () => {
   for (const a of wealthArticles) {
     const path = "/en/knowledge/" + a.slug,
       html = await (await fetch(local + path)).text();
@@ -57,7 +58,7 @@ test("all knowledge routes have valid JSON-LD matching their canonical", async (
     );
   }
 });
-test("unknown locale/slug and data APIs are not exposed", async () => {
+integrationTest("unknown locale/slug and data APIs are not exposed", async () => {
   for (const path of [
     "/fr",
     "/zh/knowledge/not-a-guide",

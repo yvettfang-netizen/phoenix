@@ -1,7 +1,7 @@
-✔ all forty bilingual public routes have content, individual canonical/hreflang and noindex (2068.3736ms)
-✔ all knowledge routes have valid JSON-LD matching their canonical (160.0899ms)
-✔ unknown locale/slug and data APIs are not exposed (52.0543ms)
-✔ existing bilingual home, Education, Identity and Health retain routes and the shared B logo (1309.9791ms)
+✔ all forty bilingual public routes have content, individual canonical/hreflang and noindex (1273.421ms)
+✔ all knowledge routes have valid JSON-LD matching their canonical (138.8244ms)
+✔ unknown locale/slug and data APIs are not exposed (92.7701ms)
+✔ existing bilingual home, Education, Identity and Health retain routes and the shared B logo (915.5616ms)
 ℹ tests 4
 ℹ suites 0
 ℹ pass 4
@@ -9,4 +9,4 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 2886.9165
+ℹ duration_ms 1789.6956
