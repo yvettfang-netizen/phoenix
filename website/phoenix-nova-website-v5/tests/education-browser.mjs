@@ -127,8 +127,8 @@ async function assertCompass(pageRoute) {
   assert.equal(await controlled.count(), 1, `${route}: controlled Education Compass marker missing`);
   assert.match(await controlled.innerText(), /(?:尚未|暂未|未开放|未接通|not open|not connected|unavailable)/i, `${route}: Compass availability copy is not truthful`);
   const start = page.getByRole("button", { name: /开始(?:教育(?:规划)?)?(?:评估|测评)|(?:Start )?Education(?: planning)? assessment/i });
-  assert.equal(await start.count(), 3, `${route}: Hero, pathways and Compass each retain a controlled assessment action`);
-  for (const action of await start.all()) assert.equal(await action.isDisabled(), true, `${route}: every assessment action must remain disabled`);
+  assert.equal(await start.count(), 1, `${route}: the controlled Compass assessment action must be present once`);
+  assert.equal(await start.first().isDisabled(), true, `${route}: the controlled assessment action must remain disabled`);
   assert.equal(await compass.getByRole("button", { name: /开始(?:教育规划)?(?:评估|测评)|Start(?: education planning)? assessment/i }).count(), 1, `${route}: Compass has one assessment action`);
   assert.equal(await page.locator('a[href*="/education/assessment"],a[href*="/education/result"],a[href*="/education/questionnaire"]').count(), 0, `${route}: controlled Compass must not expose questionnaire/result routes`);
 }
