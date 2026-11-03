@@ -19,6 +19,8 @@ Task `PHOENIX-CANONICAL-POSTMERGE-P1-20261103` · 2026-11-03 · Prepared by Code
 
 ## One next action
 
+Use the [C-1–C-4 pre-filled decision sheet](FOUNDER_0036_DECISION_SHEET_V1.0.md) for the current follow-up. It replaces an abstract request for parameters with code-verified entry sources, proposed need-change choices and explicit actor evidence fields. These proposed business choices remain pending until actually decided. Jimson has explicitly authorized Notion records made through Codex to be treated as Jimson's records; that does not fill missing runtime identity-provider facts or Founder approval.
+
 Review the bounded **0036 entry/source and need-assertion decision sheet**, then supply/approve: exact entry registry and publication revision authority; multiple-need/supersession and Consultation/Deal links; authenticated user/advisor evidence and consent/assignment rules; precise grants, privacy/retention and versioned CI manifest. Codex may then prepare the forward candidate under a new explicit implementation gate. Do not treat a generic “continue” as missing identity-provider facts or a signed business contract.
 
 This request already authorizes the post-merge branch, audits, synthetic tests and one Draft PR. It does **not** authorize merging that PR, installing 0036 on an existing database, Tencent changes, a production switch, real ASKWISE imports, sensitive Health storage or Finance operations. Jimson's completed PR #36 review is preserved, not repeated.

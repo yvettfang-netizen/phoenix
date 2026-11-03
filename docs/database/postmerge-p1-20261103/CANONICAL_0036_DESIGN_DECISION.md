@@ -45,6 +45,8 @@ These are **NOT RUN** for 0036; current actual tests exercise unchanged 0035. Do
 
 ## Bounded Founder decisions
 
+The follow-up [pre-filled confirmation sheet](FOUNDER_0036_DECISION_SHEET_V1.0.md) records the actual mainline page paths, the Wealth fragment limitation, the existing CRM SERVICE capability and the concrete remaining C-1–C-4 decisions. It is Jimson-authorized engineering preparation, not a Founder approval or a deployed entry registry.
+
 1. Exact entry/page registry owner, source system, approved reference/version and publication digest authority.
 2. Multiple concurrent needs, correction/supersession ordering, and required Consultation/Deal linkage.
 3. Evidence proving a user's selection or an advisor's confirmation; actor eligibility, assignment/consent and source-qualified replay rules.
