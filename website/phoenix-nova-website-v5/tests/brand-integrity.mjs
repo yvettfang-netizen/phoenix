@@ -43,13 +43,13 @@ export function assertBrandMarkup(html, route, { minimum = 2 } = {}) {
   assert.ok(images.length >= minimum, `${route}: expected at least ${minimum} shared brand images`);
   const header = images.find(image => image.includes(BRAND_HEADER_URL));
   assert.ok(header, `${route}: Header must use ${BRAND_HEADER_URL}`);
-  assert.match(header, /\bwidth=["']632["']/i, `${route}: Header width metadata changed`);
-  assert.match(header, /\bheight=["']784["']/i, `${route}: Header height metadata changed`);
+  assert.match(header, /\bwidth=["']2172["']/i, `${route}: Header width metadata changed`);
+  assert.match(header, /\bheight=["']724["']/i, `${route}: Header height metadata changed`);
   if (minimum >= 2) {
     const footer = images.find(image => image.includes(BRAND_FOOTER_URL));
     assert.ok(footer, `${route}: Footer must use ${BRAND_FOOTER_URL}`);
-    assert.match(footer, /\bwidth=["']632["']/i, `${route}: Footer width metadata changed`);
-    assert.match(footer, /\bheight=["']784["']/i, `${route}: Footer height metadata changed`);
+    assert.match(footer, /\bwidth=["']2172["']/i, `${route}: Footer width metadata changed`);
+    assert.match(footer, /\bheight=["']724["']/i, `${route}: Footer height metadata changed`);
   }
   assert.ok(images.every(image => image.includes(BRAND_HEADER_URL) || image.includes(BRAND_FOOTER_URL)), `${route}: unexpected brand image asset`);
   assert.doesNotMatch(html, legacyBrandImage, `${route}: legacy mark/logo is still rendered`);
