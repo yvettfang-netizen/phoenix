@@ -9,19 +9,20 @@ type BrandMarkProps = {
 };
 
 export function BrandMark({ inverse = false, compact = false, className = "", href = "/", label = "Phoenix Nova 首页" }: BrandMarkProps) {
-  const asset = { src: "/brand/official/v3/phoenix-nova-header@2x.png", width: 1040, height: 320 };
+  const asset = { src: "/brand/official/v3/phoenix-nova-symbol-transparent.png", width: 632, height: 784 };
   return (
     <Link
       href={href}
       aria-label={label}
+      data-testid="brand-mark"
+      data-brand-variant="b"
       className={`brand-mark ${compact ? "brand-mark--compact" : ""} ${inverse ? "brand-mark--inverse" : ""} ${className}`}
     >
-      <span className="brand-asset-wrap">
-        {/* Serve approved raster bytes directly: the image shim emits density
-            srcsets even for unoptimized images. No rescaling proxy for logos. */}
+      <span className="brand-mark__symbol-wrap">
+        {/* B版只复用 Founder 已批准的官方原色图腾 PNG；中文与英文为网页字体排版。 */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          className="brand-asset brand-asset--mark"
+          className="brand-mark__symbol"
           src={asset.src}
           width={asset.width}
           height={asset.height}
@@ -31,6 +32,12 @@ export function BrandMark({ inverse = false, compact = false, className = "", hr
           alt=""
         />
       </span>
+      <span className="brand-mark__divider" aria-hidden="true" />
+      <span className="brand-mark__wordmark" aria-hidden="true">
+        <span className="brand-cn">鳳啟環球</span>
+        <span className="brand-en">Phoenix Nova™</span>
+      </span>
     </Link>
   );
 }
+

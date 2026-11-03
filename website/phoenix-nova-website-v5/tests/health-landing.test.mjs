@@ -82,7 +82,7 @@ test("Health landing contains the five services, four regions and shared brand c
   assert.equal((html.match(/<details\b/gi) ?? []).length >= 7, true, "Health landing must retain native service, FAQ and local consultation details");
 
   assert.match(html, /<header class="site-header[^"]*"/);
-  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-header@2x\.png/);
+  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-symbol-transparent\.png/);
   assertBrandMarkup(html, "/zh/health");
   assert.match(html, /<footer class="site-footer">/);
   assert.match(html, /href="\/zh\/health"[^>]*>健康/);
@@ -156,3 +156,4 @@ test("Main site, Compass, Health and Family share the canonical brand rendering"
     }
   }
 });
+

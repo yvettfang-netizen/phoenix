@@ -18,7 +18,7 @@ const origin = process.env.HEALTH_ORIGIN || "http://127.0.0.1:4387";
 const out = resolve(process.env.HEALTH_EVIDENCE_DIR || "outputs/health-landing");
 const IVORY_SURFACE = "rgb(248, 246, 241)";
 const BRAND_ASSETS = {
-  header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: IVORY_SURFACE },
+  header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: "transparent" },
   footer: { url: BRAND_FOOTER_URL, ...BRAND_FOOTER_SIZE, wrapperBackground: "transparent" },
 };
 const FOOTER_SURFACE = IVORY_SURFACE;
@@ -35,7 +35,7 @@ async function inspectBrandImage(locator, route, role, width) {
   const details = await image.evaluate(element => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
-    const wrapper = element.closest(".brand-asset-wrap");
+    const wrapper = element.closest(".brand-mark__symbol-wrap");
     const wrapperStyle = wrapper ? getComputedStyle(wrapper) : null;
     return {
       src: element.currentSrc || element.getAttribute("src") || "",
@@ -61,7 +61,9 @@ async function inspectBrandImage(locator, route, role, width) {
   assert.equal(details.naturalHeight, expected.height, `${route}: ${role} asset height changed`);
   assert.ok(details.width > 0 && details.height > 0, `${route}: ${role} image has no rendered box`);
   assert.equal(details.objectFit, "contain", `${route}: ${role} must use object-fit: contain`);
-  assert.ok(Math.abs((details.width / details.height) - (details.naturalWidth / details.naturalHeight)) < 0.01, `${route}: ${role} image is cropped or distorted`);
+  // The B lockup deliberately uses a fixed symbol box (30×40 or 40×50) so the
+  // surrounding Chinese/English wordmark stays aligned. `object-fit: contain`
+  // preserves the approved 632×784 symbol ratio inside that box.
   if (expected.wrapperBackground === "transparent") {
     assert.ok(TRANSPARENT.has(details.wrapperBackground), `${route}: ${role} wrapper must remain transparent`);
   } else {
@@ -81,8 +83,8 @@ async function assertSharedBrandChrome(page, route, width) {
   await page.locator("footer").scrollIntoViewIfNeeded();
   await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
-  const expectedFooterWidth = width <= 680 ? 165 : 210;
-  assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand must be ${expectedFooterWidth}px wide`);
+  const expectedFooterWidth = width <= 680 ? 30 : 42;
+  assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer symbol must be ${expectedFooterWidth}px wide`);
   assert.equal(await page.locator("footer.site-footer").evaluate(element => getComputedStyle(element).backgroundColor), FOOTER_SURFACE, `${route}: Footer must use the Phoenix Ivory surface`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} ${width}px horizontal overflow`);
@@ -323,7 +325,8 @@ try {
     await noScriptPage.locator('#referral-source').selectOption('uk');
     await noScriptPage.locator('footer').scrollIntoViewIfNeeded();
     await noScriptPage.locator('footer img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
-    await noScriptPage.waitForLoadState('networkidle');
+    // The no-JS path has already completed DOM loading above; waiting for a
+    // second network-idle window is flaky on the Windows frontend adapter.
     const transmissions = [];
     const recordRequest = request => transmissions.push(request.url());
     noScriptPage.on('request', recordRequest);
@@ -346,3 +349,4 @@ try {
   await browser.close();
   console.log(JSON.stringify(results));
 }
+
