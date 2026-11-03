@@ -84,16 +84,14 @@ async function assertContrast(selector, route, minimumRatio = 4.5) {
 }
 
 async function assertBrandAssets(route) {
-  const brands = await page.locator(".brand-mark__symbol").evaluateAll(images => images.map(image => ({
+  const brands = await page.locator(".brand-mark__asset").evaluateAll(images => images.map(image => ({
     src: image.getAttribute("src"),
     ratio: image.clientWidth / image.clientHeight,
     width: image.clientWidth,
     filter: getComputedStyle(image).filter,
   })));
   assert.equal(brands.length, 2, `${route}: shared Header/Footer must render two brand assets`);
-  assert.ok(brands.every(brand => brand.src.endsWith("/brand/official/v3/phoenix-nova-symbol-transparent.png") && Math.abs(brand.ratio - 632 / 784) < 0.06 && brand.filter === "none" && brand.width >= 28 && brand.width <= 46), `${route}: B brand asset rendering changed`);
-  assert.equal(await page.locator(".brand-cn").count(), 2, `${route}: B Chinese wordmark missing`);
-  assert.equal(await page.locator(".brand-en").count(), 2, `${route}: B English wordmark missing`);
+  assert.ok(brands.every(brand => brand.src.endsWith("/brand/official/v3/phoenix-nova-bilingual-b@2x.png") && Math.abs(brand.ratio - 2172 / 724) < 0.06 && brand.filter === "none" && brand.width >= 155 && brand.width <= 225), `${route}: B brand asset rendering changed`);
 }
 
 async function assertAccessibleEducationPage(locale, width) {

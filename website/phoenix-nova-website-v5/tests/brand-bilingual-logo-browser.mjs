@@ -33,30 +33,24 @@ try {
         const marks = page.locator(".brand-mark");
         assert.equal(await marks.count(), 2, `${route}: header and footer must share BrandMark`);
         const details = await marks.evaluateAll(elements => elements.map(element => {
-          const symbol = element.querySelector(".brand-mark__symbol");
-          const divider = element.querySelector(".brand-mark__divider");
+          const asset = element.querySelector(".brand-mark__asset");
           const rect = element.getBoundingClientRect();
-          const symbolRect = symbol?.getBoundingClientRect();
+          const assetRect = asset?.getBoundingClientRect();
           return {
             variant: element.getAttribute("data-brand-variant"),
             text: element.textContent?.replace(/\s+/g, " ").trim(),
             width: rect.width,
             height: rect.height,
-            symbolSrc: symbol?.getAttribute("src"),
-            symbolWidth: symbolRect?.width,
-            symbolHeight: symbolRect?.height,
-            dividerHeight: divider?.getBoundingClientRect().height,
-            symbolFilter: symbol ? getComputedStyle(symbol).filter : "",
+            assetSrc: asset?.getAttribute("src"),
+            assetWidth: assetRect?.width,
+            assetHeight: assetRect?.height,
+            assetFilter: asset ? getComputedStyle(asset).filter : "",
           };
         }));
         assert.ok(details.every(detail => detail.variant === "b"), `${route}: all shared marks must be B variant`);
-        assert.ok(details.every(detail => detail.text?.includes("鳳啟環球") && detail.text?.includes("Phoenix Nova™")), `${route}: B bilingual wordmark text missing`);
-        assert.ok(details.every(detail => detail.symbolSrc?.endsWith("/brand/official/v3/phoenix-nova-symbol-transparent.png")), `${route}: B must use the approved symbol asset`);
-        assert.ok(details.every(detail => detail.symbolFilter === "none"), `${route}: official symbol must not be filtered`);
-        assert.ok(details.every(detail => width <= 680 ? detail.symbolWidth >= 28 && detail.symbolWidth <= 34 && detail.symbolHeight >= 36 && detail.symbolHeight <= 42 : detail.symbolWidth >= 38 && detail.symbolWidth <= 46 && detail.symbolHeight >= 48 && detail.symbolHeight <= 54), `${route} @ ${width}px: symbol size outside B specification`);
-        assert.ok(details.every(detail => width <= 680 ? detail.dividerHeight >= 34 && detail.dividerHeight <= 38 : detail.dividerHeight >= 42 && detail.dividerHeight <= 48), `${route} @ ${width}px: divider size outside B specification`);
-        assert.equal(await page.locator(".brand-mark__wordmark").count(), 2, `${route}: wordmark block missing`);
-        assert.equal(await page.locator(".brand-mark__wordmark").locator(".brand-en").evaluateAll(nodes => nodes.some(node => node.textContent?.includes("For Every Beginning."))), false, `${route}: slogan must not be embedded in B logo`);
+        assert.ok(details.every(detail => detail.assetSrc?.endsWith("/brand/official/v3/phoenix-nova-bilingual-b@2x.png")), `${route}: B must use the Founder-provided composite asset`);
+        assert.ok(details.every(detail => detail.assetFilter === "none"), `${route}: official composite asset must not be filtered`);
+        assert.ok(details.every(detail => width <= 680 ? detail.assetWidth >= 155 && detail.assetWidth <= 170 && detail.assetHeight >= 51 && detail.assetHeight <= 58 : detail.assetWidth >= 215 && detail.assetWidth <= 225 && detail.assetHeight >= 71 && detail.assetHeight <= 76), `${route} @ ${width}px: composite logo size outside B specification`);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `${route} @ ${width}px: horizontal overflow`);
         if (width === 1440 || width === 390) await page.screenshot({ path: resolve(out, `${locale}${path.replaceAll("/", "-") || "-home"}-${width}.png`), fullPage: true });
         passed(`${route} @ ${width}px: B logo, shared Header/Footer and responsive bounds`);

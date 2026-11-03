@@ -35,7 +35,7 @@ async function inspectBrandImage(locator, route, role, width) {
   const details = await image.evaluate(element => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
-    const wrapper = element.closest(".brand-mark__symbol-wrap");
+    const wrapper = element.closest(".brand-mark__asset-wrap");
     const wrapperStyle = wrapper ? getComputedStyle(wrapper) : null;
     return {
       src: element.currentSrc || element.getAttribute("src") || "",
@@ -61,9 +61,8 @@ async function inspectBrandImage(locator, route, role, width) {
   assert.equal(details.naturalHeight, expected.height, `${route}: ${role} asset height changed`);
   assert.ok(details.width > 0 && details.height > 0, `${route}: ${role} image has no rendered box`);
   assert.equal(details.objectFit, "contain", `${route}: ${role} must use object-fit: contain`);
-  // The B lockup deliberately uses a fixed symbol box (30×40 or 40×50) so the
-  // surrounding Chinese/English wordmark stays aligned. `object-fit: contain`
-  // preserves the approved 632×784 symbol ratio inside that box.
+  // The Founder-approved B lockup is a single transparent composite PNG.
+  // `object-fit: contain` preserves the uploaded 2172×724 aspect ratio.
   if (expected.wrapperBackground === "transparent") {
     assert.ok(TRANSPARENT.has(details.wrapperBackground), `${route}: ${role} wrapper must remain transparent`);
   } else {
@@ -83,8 +82,8 @@ async function assertSharedBrandChrome(page, route, width) {
   await page.locator("footer").scrollIntoViewIfNeeded();
   await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
-  const expectedFooterWidth = width <= 680 ? 30 : 42;
-  assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer symbol must be ${expectedFooterWidth}px wide`);
+  const expectedFooterWidth = width <= 680 ? 165 : 220;
+  assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer composite Logo must be ${expectedFooterWidth}px wide`);
   assert.equal(await page.locator("footer.site-footer").evaluate(element => getComputedStyle(element).backgroundColor), FOOTER_SURFACE, `${route}: Footer must use the Phoenix Ivory surface`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} ${width}px horizontal overflow`);
