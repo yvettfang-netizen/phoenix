@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { V5Site, type Locale } from "@/components/v5-site";
+import { HealthCompassEntry } from "@/components/health-compass-entry";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -14,5 +15,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function LocalizedHome({ params }: Props) {
   const { locale } = await params;
   if (locale !== "zh" && locale !== "en") notFound();
-  return <V5Site locale={locale as Locale} page="home" />;
+  return <><HealthCompassEntry locale={locale} /><V5Site locale={locale as Locale} page="home" /></>;
 }
