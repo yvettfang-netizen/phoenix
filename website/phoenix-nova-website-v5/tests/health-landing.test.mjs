@@ -82,9 +82,9 @@ test("Health landing contains the five services, four regions and shared brand c
   assert.equal((html.match(/<details\b/gi) ?? []).length >= 7, true, "Health landing must retain native service, FAQ and local consultation details");
 
   assert.match(html, /<header class="site-header[^"]*"/);
-  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-header@2x\.png/);
+  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-bilingual-b@2x\.png/);
   assertBrandMarkup(html, "/zh/health");
-  assert.match(html, /<footer class="site-footer">/);
+  assert.match(html, /<footer class="site-footer(?: [^"]*)?">/);
   assert.match(html, /href="\/zh\/health"[^>]*>健康/);
   assert.match(html, /专业连接，安心同行/);
   assert.match(html, /当前为前端候选预览，正式咨询渠道尚未接通/);
