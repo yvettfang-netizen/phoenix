@@ -1,6 +1,6 @@
 # Founder Next Gate Decision
 
-Task `PHOENIX-CANONICAL-POSTMERGE-P1-20261103` · 2026-11-03 · Prepared by Codex for Jimson. **Founder decision/signature: PENDING.** This package does not claim a new independent human review or approval.
+Task `PHOENIX-CANONICAL-POSTMERGE-P1-20261103` · 2026-11-03. **C-1–C-4 POLICY APPROVED / RESPONSIBLE: FOUNDER**. The human explicitly identified the current role as Founder and approved the existing decisions. [Exact approval binding and preserved prior snapshot](FOUNDER_0036_DECISION_SHEET_V1.0.md). Merge approval, independent review and missing runtime facts remain separate; no handwritten signature is invented.
 
 | Deliverable / gate | Current result | Evidence |
 |---|---|---|
@@ -8,7 +8,7 @@ Task `PHOENIX-CANONICAL-POSTMERGE-P1-20261103` · 2026-11-03 · Prepared by Code
 | Post-merge documentation and scan-scope reconciliation | PASS engineering candidate; protected PR review/merge remains pending | README / governance / allowlist / CODEOWNERS changes; no protection changes |
 | Code vs runtime distinction | PASS audit; live integration BLOCKED | [runtime gaps](CANONICAL_0035_RUNTIME_GAP_REPORT.md) |
 | Entry / need / final service and GEO audit | PASS audit; missing new typed fields | [field difference](COMPASS_GEO_CRM_FIELD_DIFF_V1.0.md), [source index](SOURCE_INDEX.json) |
-| Minimal 0036 | ADDITIVE_MIGRATION_REQUIRED; executable SQL HOLD | [design and bounded decisions](CANONICAL_0036_DESIGN_DECISION.md) |
+| Minimal 0036 | ADDITIVE_MIGRATION_REQUIRED; isolated candidate/local PG16/17 PASS; persistent/runtime activation HOLD | [separate Draft PR41](https://github.com/yvettfang-netizen/phoenix/pull/41); no SQL0036 in this documentation PR |
 | ASKWISE / Learning / public academy mapping | PASS draft; real student mapping/import HOLD | [mapping](LEARNING_ASKWISE_ACADEMY_MAPPING_V1.0.md) |
 | Identity / Health / Wealth | PASS bounded audit; domain write/publication/Finance HOLD | [backlog](IDENTITY_HEALTH_SCHEMA_BACKLOG_V1.0.md) |
 | PG16/17 post-merge synthetic acceptance | PASS: actual isolated runs, including restore and historical three-route HTTP | [execution report](V7_CANONICAL_P1_SYNTHETIC_E2E_REPORT.md) |
@@ -21,7 +21,7 @@ Task `PHOENIX-CANONICAL-POSTMERGE-P1-20261103` · 2026-11-03 · Prepared by Code
 
 Use the [C-1–C-4 pre-filled decision sheet](FOUNDER_0036_DECISION_SHEET_V1.0.md) for the current follow-up. It replaces an abstract request for parameters with code-verified entry sources, proposed need-change choices and explicit actor evidence fields. These proposed business choices remain pending until actually decided. Jimson has explicitly authorized Notion records made through Codex to be treated as Jimson's records; that does not fill missing runtime identity-provider facts or Founder approval.
 
-Review the bounded **0036 entry/source and need-assertion decision sheet**, then supply/approve: exact entry registry and publication revision authority; multiple-need/supersession and Consultation/Deal links; authenticated user/advisor evidence and consent/assignment rules; precise grants, privacy/retention and versioned CI manifest. Codex may then prepare the forward candidate under a new explicit implementation gate. Do not treat a generic “continue” as missing identity-provider facts or a signed business contract.
+Founder has approved the bounded policies and isolated candidate engineering. The unique next runtime action is to supply and verify the actual versioned source/publication inventory, identity-provider/route configuration, separated protected references and applicable classification/retention evidence in the private facts form. Synthetic references do not supply those facts. PR41 remains Draft pending its own exact-head checks and normal independent review; no deployment or merge is authorized.
 
 This request already authorizes the post-merge branch, audits, synthetic tests and one Draft PR. It does **not** authorize merging that PR, installing 0036 on an existing database, Tencent changes, a production switch, real ASKWISE imports, sensitive Health storage or Finance operations. Jimson's completed PR #36 review is preserved, not repeated.
 

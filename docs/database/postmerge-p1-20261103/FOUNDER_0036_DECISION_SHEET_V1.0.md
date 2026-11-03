@@ -1,5 +1,15 @@
 # 0036 入口、需求与可信操作者确认表 V1.0
 
+## 当前状态追加：Founder 已批准 C-1～C-4
+
+Founder 在本会话明确指示：“当前操作角色为founder，批准既有C-1～C-4决策，责任人为founder”。四项政策决策及责任归属已确认，不再是 PENDING。批准绑定本文批准前固定版本 `04084adc589b2f38cb300906e1de39152b9331f9`，SHA-256 `f100e6156eb24912b0cb6cbca102ecdfb2a3d3537f06bb8ef4e1a6e8860f9b6c`。本条由 Founder 本人授权、Codex 记录；不伪造手写签名或 GitHub Review。
+
+独立 [0036 Draft PR #41](https://github.com/yvettfang-netizen/phoenix/pull/41) 已交付来源/需求合成候选；PG16/17 Fresh、Upgrade、权限负例、恢复及历史三路由兼容已实测。该 SQL 不放入本 PR39。真实 source_system、入口/GEO发布配置、issuer/audience/JWKS、受保护密钥引用、启用路由和适用保留条款尚未提供，继续 EVIDENCE HOLD；不能由政策批准推导实际值。常设库、腾讯、生产、真实数据与合并仍未获批准。
+
+## 以下为批准前确认表快照
+
+下文的建议/PENDING 描述保留为历史上下文；当前政策与责任状态以上述追加及 PR41 批准记录为准，实际资料空缺仍保持 HOLD。既有 Jimson 数据库工程职责不变。
+
 日期：2026-11-03。记录归属：Jimson；由 Jimson 本人授权 Codex 操作。**工程事实已核对；业务选项为预填建议，Founder 决定仍为 PENDING。** 当前声明仅确认 Notion 回写授权与工程准备，不自动构成数据库权限、业务合同签署或 Migration 开工批准。
 
 本表承接 [0036 设计](CANONICAL_0036_DESIGN_DECISION.md)。不重复审查 PR #36，不修改0001–0035，不创建第二套主数据。精确源码锚点见 [入口与权限来源清单](CANONICAL_0036_VERIFIED_SOURCES.json)。源码存在、内容已批准发布、真实入口已部署、真实请求已获授权，是四项不同事实。
