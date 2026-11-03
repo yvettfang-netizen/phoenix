@@ -22,7 +22,7 @@ jobs:
           for required in .github/CODEOWNERS .github/CANONICAL_GOVERNANCE_BOOTSTRAP.md .github/workflows/canonical-0035-premerge.yml; do
             test -f "$required" || { echo "FAIL missing governance file: $required"; exit 1; }
           done
-          for path in database/canonical docs/database/premerge-0035 .github/workflows/canonical-0035-premerge.yml .github/CODEOWNERS .github/CANONICAL_GOVERNANCE_BOOTSTRAP.md; do
+          for path in database/canonical docs/database/premerge-0035 docs/database/postmerge-p1-20261103 .github/workflows/canonical-0035-premerge.yml .github/CODEOWNERS .github/CANONICAL_GOVERNANCE_BOOTSTRAP.md; do
             if [ ! -e "$path" ]; then echo "NOT_PRESENT in candidate scan scope: $path"; continue; fi
             docker run --rm --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
           done

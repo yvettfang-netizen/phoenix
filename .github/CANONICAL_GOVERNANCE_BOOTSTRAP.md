@@ -1,6 +1,8 @@
 # Canonical governance bootstrap candidate
 
-Status: **DRAFT / MERGE HOLD**. Task `PHOENIX-CANONICAL-PR36-NON-JIMSON-CLOSEOUT-20261102`.
+Current status (2026-11-03): **PR #37 MERGED / PR #36 MERGED**. CODEOWNERS is present on main. The sole future engineering authority is `database/canonical/`; see the [post-merge authority record](../docs/database/postmerge-p1-20261103/CANONICAL_POSTMERGE_AUTHORITY_RECORD_V1.0.md). Neither code merge authorizes a runtime rollout. The following bootstrap explanation is preserved as the historical pre-merge procedure, not the current PR status.
+
+Historical task: `PHOENIX-CANONICAL-PR36-NON-JIMSON-CLOSEOUT-20261102`.
 
 This PR contains only CODEOWNERS, the required-check workflow and this governance explanation. It contains no Canonical Migration, database authority, app change or rollout. The existing Canonical integration remains [Draft PR #36](https://github.com/yvettfang-netizen/phoenix/pull/36). Neither PR is authorized to merge by this document.
 

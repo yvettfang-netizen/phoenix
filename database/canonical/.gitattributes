@@ -1,3 +1,4 @@
 migrations/*.sql text eol=lf
 verification/*.sh text eol=lf
 verification/*.ps1 text eol=lf
+verification/postmerge/*.ps1 text eol=lf
