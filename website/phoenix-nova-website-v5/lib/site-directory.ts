@@ -7,7 +7,7 @@ export const directoryGroups: readonly { title: Label; items: readonly Directory
     { label: ["凤启罗盘 Phoenix Compass", "Phoenix Compass"], path: "/compass" },
     { label: ["Education｜教育规划", "Education"], path: "/education" },
     { label: ["Identity｜全球身份规划", "Identity"], path: "/identity" },
-    { label: ["Wealth｜财富保障", "Wealth"], path: "/compass#wealth" },
+    { label: ["财富规划", "Wealth planning"], path: "/wealth" },
     { label: ["Health｜健康与医疗", "Health"], path: "/health" },
   ] },
   { title: ["教育与学习平台", "Education & learning"], items: [

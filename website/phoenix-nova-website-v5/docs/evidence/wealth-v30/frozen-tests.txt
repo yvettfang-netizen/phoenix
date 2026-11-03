@@ -1,0 +1,15 @@
+✔ exposes frozen versions, exact six dimensions and 14 questions (4.9415ms)
+✔ matches the three frozen Persona Pack score fixtures (390.0627ms)
+✔ keeps SKIP out of the numerator and denominator (0.7269ms)
+✔ validates unknown options, exclusive values, limits and red-line text (4.8718ms)
+✔ fails closed for invalid and unknown answer records, and does not accept source metadata (2.9257ms)
+✔ only raises mixed-business risk for explicit mixing language (1.344ms)
+✔ sorts tied gaps with a hard-risk dimension first (0.8222ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1997.5788

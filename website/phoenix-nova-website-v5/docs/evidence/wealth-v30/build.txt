@@ -1,0 +1,88 @@
+
+  vinext build  (Vite 8.0.13)
+
+[1/5] analyze client references...
+[2K
+transforming...✓ 238 modules transformed.
+rendering chunks...
+[PLUGIN_TIMINGS] Your build spent significant time in plugins. Here is a breakdown:
+  - rsc:virtual-client-package (39%)
+  - vinext:react-canary (14%)
+  - vinext:optimize-imports (6%)
+  - rsc:rsc-css-export-transform (5%)
+  - vinext:mdx (5%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+
+✓ built in 7.28s
+[2/5] analyze server references...
+[2K
+transforming...✓ 251 modules transformed.
+rendering chunks...
+[PLUGIN_TIMINGS] Your build spent significant time in plugins. Here is a breakdown:
+  - vinext:config (25%)
+  - vinext:optimize-imports (22%)
+  - vite-plugin-commonjs (10%)
+  - vinext:react-canary (9%)
+  - rsc:virtual-client-package (5%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+
+✓ built in 3.41s
+[3/5] build rsc environment...
+[2K
+transforming...✓ 244 modules transformed.
+rendering chunks...
+computing gzip size...
+[PLUGIN_TIMINGS] Your build spent significant time in plugins. Here is a breakdown:
+  - rsc:virtual-client-package (24%)
+  - vinext:optimize-imports (12%)
+  - vinext:react-canary (9%)
+  - vinext:rsc-client-reference-loaders (8%)
+  - rsc:use-client (7%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+
+✓ built in 6.63s
+[4/5] build client environment...
+[2K
+transforming...✓ 2058 modules transformed.
+rendering chunks...
+computing gzip size...
+[PLUGIN_TIMINGS] Your build spent significant time in plugins. Here is a breakdown:
+  - rsc:virtual-client-package (22%)
+  - vinext:react-canary (14%)
+  - rsc:use-server (5%)
+  - rsc:use-client (5%)
+  - vite-plugin-commonjs (5%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+
+✓ built in 7.12s
+[5/5] build ssr environment...
+[2K
+transforming...✓ 257 modules transformed.
+rendering chunks...
+computing gzip size...
+✓ built in 3.03s
+[0m
+  Route (app)
+  ┌ ? /
+  ├ ƒ /:locale
+  ├ ƒ /:locale/:page
+  ├ ƒ /:locale/account
+  ├ ƒ /:locale/compass/health
+  ├ ƒ /:locale/education
+  ├ ƒ /:locale/family-center
+  ├ ƒ /:locale/health
+  ├ ƒ /:locale/health/family
+  ├ ƒ /:locale/identity
+  ├ ƒ /:locale/wealth
+  ├ ƒ /:locale/wealth/:section/:slug
+  ├ ƒ /:locale/wealth/assessment
+  ├ ƒ /:locale/wealth/knowledge
+  ├ λ /api/customer-auth/:action
+  └ ƒ /compass/health
+
+  λ API  ƒ Dynamic  ? Unknown
+
+  ? Some routes could not be classified. vinext currently uses static analysis
+    and cannot detect dynamic API usage (headers(), cookies(), etc.) at build time.
+    Automatic classification will be improved in a future release.
+  Build complete. Run `vinext start` to start the production server.
