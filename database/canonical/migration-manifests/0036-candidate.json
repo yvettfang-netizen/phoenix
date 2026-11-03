@@ -1,0 +1,31 @@
+{
+  "status": "ISOLATED_CANDIDATE_NOT_MERGE_OR_RUNTIME_APPROVAL",
+  "baseline_commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+  "baseline_migrations": 35,
+  "total_migrations": 36,
+  "tables": 93,
+  "policies": 83,
+  "approval_source_sha256": "f100e6156eb24912b0cb6cbca102ecdfb2a3d3537f06bb8ef4e1a6e8860f9b6c",
+  "migration": {
+    "sha256": "0a0c3d91ccf5e8ba2a6dc4446646d1f9907410c9618754d89be770281c2527f1",
+    "filename": "0036_crm_acquisition_provenance_and_need_facts.sql"
+  },
+  "verification": [
+    {
+      "path": "verification/v0036/acceptance.sh",
+      "sha256": "ccbcf1c3cfdc16c17798ad3910e6e3e7fe0b06b4a030e552c4070d3fabd4ca62"
+    },
+    {
+      "path": "verification/v0036/smoke.ps1",
+      "sha256": "45666117c97b31d7903714f61dc8e51e244b7c72e988133955773e59874b8a9e"
+    },
+    {
+      "path": "verification/v0036/restore.sh",
+      "sha256": "cfc674f4c2a3a52062bf4074716a6e5884b9093a1a126aef1feeeb8171c19d92"
+    },
+    {
+      "path": "verification/v0036/verify.ps1",
+      "sha256": "5522ed5e31cba3efc65625301bb7d2123238d94e71d299a02ea3ff88280da6d0"
+    }
+  ]
+}
