@@ -2,7 +2,7 @@
 
 Date:2026-11-03. **ADDITIVE_MIGRATION_REQUIRED / LOCAL CANDIDATE**. Founder policy approval is recorded separately; it does not stand in for independent review or merge approval.
 
-Candidate:`0036_crm_acquisition_provenance_and_need_facts.sql`. SHA-256:`0a0c3d91ccf5e8ba2a6dc4446646d1f9907410c9618754d89be770281c2527f1`. Versioned exact inventory:[0036-candidate.json](../../../database/canonical/migration-manifests/0036-candidate.json). Baseline main:`9355d28667ee9cf4761b4abcdaf959f0ad154820`; all35 frozen digests and original0035 verifier bytes remain unchanged. Expected disposable catalog:36 ledger entries,93 tables,83 policies. No source/retention policy, identity or business row is seeded by Migration.
+Candidate:`0036_crm_acquisition_provenance_and_need_facts.sql`. SHA-256:`2c977cb44e3ec01f7ad00d4c0d8f32c5e2cd8e8fd2fed796340a919dfd0b7719`. Versioned exact inventory:[0036-candidate.json](../../../database/canonical/migration-manifests/0036-candidate.json). Baseline main:`9355d28667ee9cf4761b4abcdaf959f0ad154820`; all35 frozen digests and original0035 verifier bytes remain unchanged. Expected disposable catalog:36 ledger entries,93 tables,83 policies. No source/retention policy, identity or business row is seeded by Migration. [Follow-up audit and new permanent counterexamples](PR41_FOLLOWUP_AUDIT.md) distinguish the original coverage gaps from this corrected candidate; Codex self-review is not an independent signature.
 
 | Actually executed isolated validation | PG16 | PG17 |
 |---|---|---|
@@ -15,6 +15,8 @@ Candidate:`0036_crm_acquisition_provenance_and_need_facts.sql`. SHA-256:`0a0c3d9
 | Missing, expired, revoked or wrong-LOGIN source contract refused | PASS | PASS |
 | Cross-family, SERVICE human-forgery, wrong advisor scope, withdrawn Consent and premature partner attribution refused | PASS | PASS |
 | Append-only correction/retraction, terminal/fork guards and immutable entry/history | PASS | PASS |
+| Future/infinite policy refusal, revoked partner or expired contact during coordinated lock waits, denial audit and no orphan rows | PASS | PASS |
+| Unique complete verification list; duplicate/omitted helper and digest drift counterexamples | PASS | PASS |
 | Dedicated backup export; damaged digest refused before restore; fresh-cluster restore and full0036 API regression with regenerated LOGIN passwords | PASS | PASS |
 | Full existing private F10 acceptance and its fresh-cluster restore against final0036 digest | PASS | PASS |
 | Historical application: one test covering three approved read routes and cross-family403 | PASS | PASS |

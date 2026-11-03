@@ -150,3 +150,4 @@ test "$(boot -c "SELECT count(*)=0 FROM pg_proc p JOIN pg_namespace n ON n.oid=p
 test "$(boot -c "SELECT relrowsecurity AND relforcerowsecurity FROM pg_class WHERE oid='crm.acquisition_contract_revisions'::regclass")" = t
 echo 'PASS 0036 no PUBLIC execute; registry FORCE RLS; real separate LOGIN credentials and single-use tickets'
 echo 'PASS 0036 full synthetic acquisition/need contract regression'
+CANONICAL_FIXTURE_BASE="$base" bash "$(dirname "$0")/boundary-regression.sh"

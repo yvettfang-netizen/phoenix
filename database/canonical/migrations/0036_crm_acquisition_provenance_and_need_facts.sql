@@ -82,7 +82,8 @@ BEGIN
       AND p_manifest ?& ARRAY['entry_ref','entry_revision','manifest_ref','manifest_sha256']
       AND length(btrim(p_approval_ref)) BETWEEN 1 AND 500 AND p_approval_sha256 ~ '^[0-9a-f]{64}$'
       AND length(btrim(p_retention_ref)) BETWEEN 1 AND 500 AND p_retention_sha256 ~ '^[0-9a-f]{64}$'
-      AND p_valid_from IS NOT NULL AND p_valid_until>p_valid_from
+      AND p_valid_from IS NOT NULL AND isfinite(p_valid_from) AND isfinite(p_valid_until)
+      AND p_valid_until>p_valid_from
       AND (p_advisor_resource_kind IS NULL OR p_advisor_resource_kind IN ('EDUCATION_APPLICATION','IDENTITY_CASE'))
       AND EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=p_app_login AND r.rolcanlogin
         AND NOT(r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls))
@@ -133,7 +134,8 @@ LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm AS $fn$
     JOIN pg_roles r ON r.rolname=c.allowed_app_login
     WHERE c.contract_id=p_id AND c.allowed_app_login=session_user AND r.rolcanlogin
       AND NOT(r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls)
-      AND (p_retract OR (c.revoked_at IS NULL AND c.valid_from<=clock_timestamp()
+      AND c.valid_from<=clock_timestamp()
+      AND (p_retract OR (c.revoked_at IS NULL
         AND c.valid_until>clock_timestamp() AND s.status='ACTIVE')));
 $fn$;
 
@@ -164,18 +166,38 @@ WHERE source_event_ref IS NOT NULL;
 
 CREATE FUNCTION crm.validate_acquisition_attribution() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,crm,auth AS $fn$
-DECLARE c crm.acquisition_contract_revisions%ROWTYPE;
+DECLARE c crm.acquisition_contract_revisions%ROWTYPE; l crm.leads%ROWTYPE;
 BEGIN
   IF NEW.acquisition_contract_id IS NULL THEN RETURN NEW; END IF;
   SELECT * INTO c FROM crm.acquisition_contract_revisions WHERE contract_id=NEW.acquisition_contract_id;
-  IF (FOUND AND crm.is_crm_service() AND crm.acquisition_contract_usable(c.contract_id)
+  SELECT * INTO l FROM crm.leads WHERE lead_id=NEW.lead_id;
+  IF (c.contract_id IS NOT NULL AND l.lead_id IS NOT NULL
+    AND crm.is_crm_service() AND crm.acquisition_contract_usable(c.contract_id)
     AND NEW.lead_source_id=c.lead_source_id AND NEW.source_system=c.source_system
     AND NEW.entry_ref=c.entry_ref AND NEW.entry_revision=c.entry_revision AND NEW.entry_manifest_sha256=c.manifest_sha256
     AND NEW.content_source_system IS NOT DISTINCT FROM c.geo_source_system
     AND NEW.content_ref IS NOT DISTINCT FROM c.geo_ref AND NEW.content_revision IS NOT DISTINCT FROM c.geo_revision
     AND NEW.content_sha256 IS NOT DISTINCT FROM c.geo_sha256 AND NEW.recorded_by_login=session_user
     AND NEW.created_by_principal_id=auth.current_principal_id()) IS NOT TRUE THEN
+    PERFORM audit.record_write_decision('ATTRIBUTION','CRM_LEAD',NEW.lead_id,false,'ACQUISITION_ATTRIBUTION_CONTRACT_OR_RECORDER_DENIED');
     RAISE EXCEPTION 'ACQUISITION_ATTRIBUTION_CONTRACT_OR_RECORDER_DENIED';
+  END IF;
+  -- Last write-boundary check: guards also cover waits on a Lead/unique/FK lock.
+  -- Historical conversion does not require its old contact still be a member;
+  -- creation of a new Lead does require current contact membership/assignee.
+  IF (((l.family_id IS NULL AND auth.current_family_id() IS NULL) OR l.family_id=auth.current_family_id())
+    AND (NEW.attribution_kind<>'FIRST_TOUCH' OR (l.lead_source_id=c.lead_source_id
+      AND (l.contact_person_id IS NULL OR EXISTS(SELECT 1 FROM core.family_memberships m
+        WHERE m.person_id=l.contact_person_id AND m.family_id=l.family_id AND m.valid_from<=clock_timestamp()
+          AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp())))
+      AND (l.assigned_principal_id IS NULL OR EXISTS(SELECT 1 FROM auth.principals p
+        WHERE p.principal_id=l.assigned_principal_id AND p.status='ACTIVE'))))
+    AND (NEW.partner_relationship_id IS NULL OR EXISTS(SELECT 1 FROM crm.partner_relationships p
+      WHERE p.partner_relationship_id=NEW.partner_relationship_id AND p.lead_source_id=c.lead_source_id
+        AND p.status='ACTIVE' AND p.valid_from<=clock_timestamp()
+        AND (p.valid_until IS NULL OR p.valid_until>clock_timestamp())))) IS NOT TRUE THEN
+    PERFORM audit.record_write_decision('ATTRIBUTION','CRM_LEAD',NEW.lead_id,false,'ACQUISITION_SCOPE_CHANGED_AT_WRITE');
+    RAISE EXCEPTION 'ACQUISITION_SCOPE_CHANGED_AT_WRITE';
   END IF;
   RETURN NEW;
 END
@@ -207,6 +229,16 @@ BEGIN
   END IF;
   h:=encode(sha256(convert_to(jsonb_build_array(p_id,p_contract,p_contact,p_family,p_assignee,p_legacy_compass)::text,'UTF8')),'hex');
   PERFORM pg_advisory_xact_lock(3636,hashtext(c.source_system||':FIRST_TOUCH:'||p_source_event_ref));
+  -- Eligibility may expire while the idempotency lock is held elsewhere.
+  IF (crm.is_crm_service() AND crm.acquisition_contract_usable(p_contract)
+    AND ((p_family IS NULL AND auth.current_family_id() IS NULL) OR p_family=auth.current_family_id())
+    AND (p_contact IS NULL OR EXISTS(SELECT 1 FROM core.family_memberships m
+      WHERE m.person_id=p_contact AND m.family_id=p_family AND m.valid_from<=clock_timestamp()
+        AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp())))
+    AND (p_assignee IS NULL OR EXISTS(SELECT 1 FROM auth.principals p
+      WHERE p.principal_id=p_assignee AND p.status='ACTIVE'))) IS NOT TRUE THEN
+    PERFORM audit.record_write_decision('CREATE','CRM_LEAD',p_id,false,'ACQUISITION_SCOPE_CHANGED_WHILE_WAITING'); RETURN NULL;
+  END IF;
   SELECT * INTO previous FROM crm.lead_attributions WHERE source_system=c.source_system
     AND attribution_kind='FIRST_TOUCH' AND source_event_ref=p_source_event_ref;
   IF FOUND THEN
@@ -253,6 +285,14 @@ BEGIN
   END IF;
   h:=encode(sha256(convert_to(jsonb_build_array(p_id,p_lead,p_contract,p_partner,p_legacy_compass)::text,'UTF8')),'hex');
   PERFORM pg_advisory_xact_lock(3636,hashtext(c.source_system||':CONVERSION_TOUCH:'||p_source_event_ref));
+  IF (crm.is_crm_service() AND crm.acquisition_contract_usable(p_contract)
+    AND ((l.family_id IS NULL AND auth.current_family_id() IS NULL) OR l.family_id=auth.current_family_id())
+    AND (p_partner IS NULL OR EXISTS(SELECT 1 FROM crm.partner_relationships p
+      WHERE p.partner_relationship_id=p_partner AND p.lead_source_id=c.lead_source_id
+        AND p.status='ACTIVE' AND p.valid_from<=clock_timestamp()
+        AND (p.valid_until IS NULL OR p.valid_until>clock_timestamp())))) IS NOT TRUE THEN
+    PERFORM audit.record_write_decision('ATTRIBUTION','CRM_LEAD',p_lead,false,'ACQUISITION_CONVERSION_CHANGED_WHILE_WAITING'); RETURN NULL;
+  END IF;
   SELECT * INTO previous FROM crm.lead_attributions WHERE source_system=c.source_system
     AND attribution_kind='CONVERSION_TOUCH' AND source_event_ref=p_source_event_ref;
   IF FOUND THEN

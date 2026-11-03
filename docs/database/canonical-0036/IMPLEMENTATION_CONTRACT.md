@@ -34,3 +34,5 @@ All source/contract rows are absent after Migration. The actual source-system/en
 The unsigned backup digest detects corruption, not malicious substitution of both dump and manifest. Production backup signing, destinations, encryption, retention and RPO/RTO remain under their separate decision gate. No actual keys, server topology, raw operational logs or backups belong in this public candidate.
 
 The original0035 verifier remains unchanged. The new versioned inventory permits exactly35 frozen files plus this0036, with exact runner hashes and catalog expectations36/93/83. Existing five required check contexts and normal independent review remain in place. Candidate CI is not human merge approval.
+
+Follow-up clarification: source validity must have finite start/end, and a future start never authorizes a retraction. Current source/context and applicable contact/assignee/partner eligibility are rechecked after serialization waits and at the attribution write boundary. This selects no live duration or retention policy. See the [follow-up audit](PR41_FOLLOWUP_AUDIT.md) and permanent concurrency/inventory regressions.

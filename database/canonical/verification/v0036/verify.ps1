@@ -14,8 +14,9 @@ for($i=0;$i -lt 35;$i++) {
 $manifest=Get-Content (Join-Path $root 'migration-manifests/0036-candidate.json') -Raw | ConvertFrom-Json
 if($manifest.baseline_migrations -ne 35 -or $manifest.total_migrations -ne 36 -or $manifest.tables -ne 93 -or $manifest.policies -ne 83 -or $manifest.approval_source_sha256 -ne 'f100e6156eb24912b0cb6cbca102ecdfb2a3d3537f06bb8ef4e1a6e8860f9b6c') { throw '0036_MANIFEST_CONTRACT_DRIFT' }
 if($files[35].Name -ne $manifest.migration.filename -or (Get-FileHash $files[35].FullName).Hash.ToLowerInvariant() -ne $manifest.migration.sha256) { throw '0036_CANDIDATE_DIGEST_DRIFT' }
-$required=@('verification/v0036/acceptance.sh','verification/v0036/smoke.ps1','verification/v0036/restore.sh','verification/v0036/verify.ps1')
-if(@($manifest.verification).Count -ne $required.Count) { throw '0036_VERIFICATION_INVENTORY_DRIFT' }
+$required=@('verification/v0036/acceptance.sh','verification/v0036/smoke.ps1','verification/v0036/restore.sh','verification/v0036/verify.ps1','verification/v0036/boundary-regression.sh','verification/v0036/inventory-regression.ps1')
+$paths=@($manifest.verification | ForEach-Object {$_.path})
+if($paths.Count -ne $required.Count -or @($paths | Sort-Object -Unique).Count -ne $required.Count) { throw '0036_VERIFICATION_INVENTORY_DRIFT' }
 foreach($entry in $manifest.verification) {
     if($entry.path -notin $required -or (Get-FileHash (Join-Path $root $entry.path)).Hash.ToLowerInvariant() -ne $entry.sha256) { throw '0036_VERIFICATION_DIGEST_DRIFT' }
 }

@@ -4,6 +4,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
+& (Join-Path $PSScriptRoot 'inventory-regression.ps1') -CanonicalRoot $root
+if(-not $?) { throw '0036_INVENTORY_NEGATIVE_REGRESSION_FAILED' }
 $image = if ($Version -eq '16') {
   'postgres:16@sha256:ca0bd484cb98bf4b24eb1010e73fb3fcbd6714d240fbc1a10eea5b7dbecb641d'
 } else {

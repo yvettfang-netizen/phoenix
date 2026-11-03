@@ -7,17 +7,17 @@
   "policies": 83,
   "approval_source_sha256": "f100e6156eb24912b0cb6cbca102ecdfb2a3d3537f06bb8ef4e1a6e8860f9b6c",
   "migration": {
-    "sha256": "0a0c3d91ccf5e8ba2a6dc4446646d1f9907410c9618754d89be770281c2527f1",
+    "sha256": "2c977cb44e3ec01f7ad00d4c0d8f32c5e2cd8e8fd2fed796340a919dfd0b7719",
     "filename": "0036_crm_acquisition_provenance_and_need_facts.sql"
   },
   "verification": [
     {
       "path": "verification/v0036/acceptance.sh",
-      "sha256": "ccbcf1c3cfdc16c17798ad3910e6e3e7fe0b06b4a030e552c4070d3fabd4ca62"
+      "sha256": "f256de8962510c8636d4f8dfdb34ae7f54ab999499318facde8d62b79c78e440"
     },
     {
       "path": "verification/v0036/smoke.ps1",
-      "sha256": "45666117c97b31d7903714f61dc8e51e244b7c72e988133955773e59874b8a9e"
+      "sha256": "22bee719df17d1f554bf5bd305878fb2563d52fb934f074a1473c1ee9564d5bb"
     },
     {
       "path": "verification/v0036/restore.sh",
@@ -25,7 +25,15 @@
     },
     {
       "path": "verification/v0036/verify.ps1",
-      "sha256": "5522ed5e31cba3efc65625301bb7d2123238d94e71d299a02ea3ff88280da6d0"
+      "sha256": "7f1294c2fc1a048dec83f3871a832cfb4f56e557b469cadb05b7862125eecc07"
+    },
+    {
+      "path": "verification/v0036/boundary-regression.sh",
+      "sha256": "1f16a58448d51136a3633667f535826b8067c79ce6a6421c70b556a1e9c7eab7"
+    },
+    {
+      "path": "verification/v0036/inventory-regression.ps1",
+      "sha256": "d4a239a4d85f5609a6e287a57f29042bafb6b6c4490219524c15efd3eefedf7c"
     }
   ]
 }
