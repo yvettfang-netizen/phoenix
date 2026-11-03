@@ -18,7 +18,7 @@ const origin = process.env.HEALTH_ORIGIN || "http://127.0.0.1:4387";
 const out = resolve(process.env.HEALTH_EVIDENCE_DIR || "outputs/health-landing");
 const IVORY_SURFACE = "rgb(248, 246, 241)";
 const BRAND_ASSETS = {
-  header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: IVORY_SURFACE },
+  header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: "transparent" },
   footer: { url: BRAND_FOOTER_URL, ...BRAND_FOOTER_SIZE, wrapperBackground: "transparent" },
 };
 const FOOTER_SURFACE = IVORY_SURFACE;
@@ -81,7 +81,7 @@ async function assertSharedBrandChrome(page, route, width) {
   await page.locator("footer").scrollIntoViewIfNeeded();
   await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
-  const expectedFooterWidth = width <= 680 ? 165 : 210;
+  const expectedFooterWidth = width <= 700 ? 165 : 220;
   assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand must be ${expectedFooterWidth}px wide`);
   assert.equal(await page.locator("footer.site-footer").evaluate(element => getComputedStyle(element).backgroundColor), FOOTER_SURFACE, `${route}: Footer must use the Phoenix Ivory surface`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
@@ -97,8 +97,8 @@ async function assertCompassHeader(page, route, width) {
 function expectedPrimaryHrefs(locale) {
   return [
     `/${locale}`,
-    `/${locale}/compass#education`,
-    `/${locale}/compass#identity`,
+    `/${locale}/education`,
+    `/${locale}/identity`,
     `/${locale}/compass#wealth`,
     `/${locale}/health`,
     `/${locale}/about`,
@@ -121,7 +121,7 @@ async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
   const hrefs = await links.evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute("href")));
   assert.deepEqual(hrefs.slice(0, expected.length), expected, `${locale}: primary navigation hrefs changed`);
   if (mobile) {
-    assert.equal(hrefs[7], `/${locale}/family-center`, `${locale}: mobile Family Center href changed`);
+    assert.equal(hrefs[7], `/${locale}/account`, `${locale}: mobile Family Center must use the controlled account entry`);
     assert.equal(hrefs[8], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
     await page.locator(".mobile-menu summary").click();
   }

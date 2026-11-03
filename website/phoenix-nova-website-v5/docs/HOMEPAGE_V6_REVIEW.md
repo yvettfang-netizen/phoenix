@@ -48,7 +48,7 @@ Main Insights has no released articles with verified publication dates, sources 
 
 ## Wealth release dependency
 
-Do not promote `https://wealth.phoenixnova.com.cn/{zh,en}` until DNS, certificate and both locale pages are verified. Proposed release checks: resolve the approved hostname; bind the existing Wealth application to that host; validate TLS hostname and chain; test both locale responses, canonical/hreflang, assessment gates and all return links. Then replace the shared fallback through one route contract. No DNS or deployment mutation performed here.
+On 2026-11-04 the local resolver reported `DNS name does not exist` for `wealth.phoenixnova.com.cn`; both HTTPS locale probes returned curl error 6 (could not resolve host). TLS and application responses therefore cannot yet be verified. Keep the fallback. Proposed release checks: resolve the approved hostname; bind the existing Wealth application to that host; validate TLS hostname and chain; test both locale responses, canonical/hreflang, assessment gates and all return links. Then replace the shared fallback through one route contract. No DNS or deployment mutation performed here.
 
 ## SEO and data boundaries
 
@@ -61,3 +61,18 @@ No migrations, database connections, new customer/family records, assessment cha
 ## Acceptance evidence
 
 Build, TypeScript, lint and browser evidence are recorded after execution in the delivery record. Local preview uses the existing frontend-only Node adapter because Windows workerd startup has limitations. It contains no database bindings and blocks API writes; it is not evidence of a production backend deployment.
+
+Final implementation validation:
+
+- Vinext build: PASS.
+- TypeScript: PASS.
+- Repository ESLint: zero errors; one existing unused `Bell` warning in `customer-center.tsx`.
+- Brand integrity: PASS; source hash verified unchanged.
+- Homepage browser: 17 PASS (two locales × seven widths, internal-route groups, no runtime errors).
+- Education browser: 16 PASS.
+- Identity browser: 22 PASS.
+- Health landing browser, default-off gate: 42 PASS after aligning navigation assertions with the approved direct domain routes and `/account` authentication entry. Questions and assessment rules unchanged.
+- Homepage metadata and JSON-LD checked through SSR; robots disallows `/`, sitemap remains empty.
+- Windows native Worker suite attempted; workerd access violation `0xc0000005` prevents runtime startup. Do not label that suite PASS. Ubuntu CI validates the real Worker and both Health gate states.
+
+Full and section screenshots plus JSON browser evidence are in `docs/previews/homepage-v6/`. Seven-width working captures remain in ignored `outputs/homepage-v6-browser/`. The final local preview is `http://127.0.0.1:4473/{zh,en}`. This is a review build; no main merge or hosted deployment is included.
