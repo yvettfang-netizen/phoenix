@@ -114,7 +114,10 @@ async function assessmentShell(page, locale, width) {
     locale + ": locale switch route",
   );
   if (width === 390) {
-    await page.locator("header .locale-switch").click();
+    await Promise.all([
+      page.waitForURL(origin + "/" + (locale === "zh" ? "en" : "zh") + "/compass"),
+      page.locator("header .locale-switch").click(),
+    ]);
     await loaded(page);
     assert.equal(new URL(page.url()).pathname, "/" + (locale === "zh" ? "en" : "zh") + "/compass");
   }
