@@ -143,7 +143,7 @@ async function assertSharedBrandChrome(page, route, width) {
   await page.locator("footer").scrollIntoViewIfNeeded();
   const header = await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
-  const expectedFooterWidth = /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? (width <= 700 ? 165 : 220) : (width <= 680 ? 165 : 210);
+  const expectedFooterWidth = /^\/(?:zh|en)$/.test(route.split(' ')[0]) ? 150 : width <= 700 ? 165 : 220;
   assert.ok(Math.abs(footer.wrapperWidth - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand wrapper must be ${expectedFooterWidth}px wide`);
   assert.equal(await page.locator("footer.site-footer").evaluate(element => getComputedStyle(element).backgroundColor), FOOTER_SURFACE, `${route}: Footer must use the Phoenix Ivory surface`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
