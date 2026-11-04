@@ -19,8 +19,7 @@ try{
     assert.equal(await page.locator('html').getAttribute('lang'),locale==='zh'?'zh-Hans':'en');
     await page.locator('footer').scrollIntoViewIfNeeded();
     const brands=page.locator('header .brand-mark img,footer .brand-mark img');assert.equal(await brands.count(),2);
-    for(const brand of await brands.all()){assert.equal(await brand.getAttribute('src'),locale==='zh'?'/brand/official/v3/phoenix-nova-symbol-transparent.png':'/brand/official/v3/phoenix-nova-header@2x.png');await brand.evaluate(i=>i.decode());const ratio=await brand.evaluate(i=>{const r=i.getBoundingClientRect();return Math.abs(r.width/r.height-i.naturalWidth/i.naturalHeight)});assert.ok(ratio<.01);}
-    if(locale==='zh'){assert.equal(await page.locator('header .brand-mark--zh,footer .brand-mark--zh').count(),2);assert.ok((await page.locator('header .brand-mark').innerText()).includes('凤启环球'));}
+    for(const brand of await brands.all()){assert.equal(await brand.getAttribute('src'),'/brand/official/v3/phoenix-nova-bilingual-b@2x.png');await brand.evaluate(i=>i.decode());const ratio=await brand.evaluate(i=>{const r=i.getBoundingClientRect();return Math.abs(r.width/r.height-i.naturalWidth/i.naturalHeight)});assert.ok(ratio<.01);}
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${path} ${width}px overflow`);
     assert.ok((await page.locator('meta[name="robots"]').getAttribute('content')).includes('noindex'));
     assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://health.phoenixnova.com.cn'+path);
