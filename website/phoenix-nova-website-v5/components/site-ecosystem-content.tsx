@@ -2,9 +2,21 @@ import { BrandMark } from "./brand-mark";
 import { SiteDirectory } from "./site-directory";
 import type { Locale } from "./v5-site";
 import styles from "./site-chrome-v3.module.css";
+import Link from "next/link";
+import { localizedHref } from "@/lib/locale-navigation";
+import { healthPreviewEnabled } from "@/lib/health-compass-gate";
 
-export function SiteEcosystemContent({ locale, consultationPath }: { locale: Locale; consultationPath?: string }) {
+export function SiteEcosystemContent({ locale, consultationPath, compact = false }: { locale: Locale; consultationPath?: string; compact?: boolean }) {
   const zh = locale === "zh";
+  if (compact) return <div className={styles.compactFooter} data-compact-footer>
+    <div className={styles.compactPromise}><div><strong>{zh ? "每一次启程，都值得更好的未来。" : "Every Beginning Deserves a Better Future."}</strong><span>{zh ? "连接世界资源，陪伴家庭成长。" : "Connecting Global Resources. Growing with Families."}</span></div><Link href={localizedHref(locale, "/about")}>{zh ? "了解我们的故事 →" : "Our Story →"}</Link></div>
+    <div className={styles.compactLinks}><BrandMark href={localizedHref(locale, "")} label={zh ? "凤启环球首页" : "Phoenix Nova home"} /><nav aria-label={zh ? "页脚导航" : "Footer navigation"}>
+      {[["专业服务", "Services", "/compass"], ["教育生态", "Learning", "/education#academy"], ["家庭中心", "Family Center", "/account"], ["凤启洞察", "Insights", "/insights"], ["关于凤启", "About", "/about"]].map(([cn,en,path]) => <Link key={path} href={localizedHref(locale,path)}>{zh ? cn : en}</Link>)}
+      <a href="https://fengqi-research-institute.yvettfang.chatgpt.site">{zh ? "数字凤启 · 进入仙兽图" : "Digital Phoenix"}</a>
+      {healthPreviewEnabled() && <Link href={localizedHref(locale,"/compass/health")} data-testid="health-entry">{zh ? "健康评估预览" : "Health assessment preview"}</Link>}
+    </nav></div>
+    <div className={styles.compactCopyright}><span>© 2026 Phoenix Nova™</span><details><summary>{zh ? "公司与服务声明" : "Company & service notice"}</summary><p>{zh ? "凤启环球信息科技（深圳）有限公司。公开信息不构成录取、身份、医疗、法律或收益保证。" : "Phoenix Nova™. Public information does not guarantee admission, immigration, medical, legal or financial outcomes."}</p></details><Link href={localizedHref(locale === "zh" ? "en" : "zh", "")}>{zh ? "EN" : "中文"}</Link></div>
+  </div>;
   return <div className={styles.inner}>
     <div className={styles.top}>
       <div className={styles.brand}>

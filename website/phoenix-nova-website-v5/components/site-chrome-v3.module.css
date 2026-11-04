@@ -17,6 +17,15 @@
 .header :global(.mobile-menu nav .mobile-locale){font-size:16px}
 .header a:focus-visible,.header summary:focus-visible,.footer a:focus-visible,.footer summary:focus-visible{outline:3px solid #416f91;outline-offset:4px}
 .footer{padding:0;background:var(--surface-ivory);color:var(--brand-ink)}
+.compactFooter{background:#f8f6f1;color:#081f2c;font-size:12px}
+.compactPromise{min-height:40px;padding:5px max(40px,calc((100% - 1360px)/2));display:flex;align-items:center;justify-content:space-between;gap:18px;background:#003b46;color:#f8f6f1}
+.compactPromise>div{display:flex;align-items:center;gap:24px}.compactPromise strong{font:18px/1.4 var(--serif);font-weight:400}.compactPromise span{font-size:11px;color:#d5e1de}.compactPromise>a{color:#e5bc76;white-space:nowrap}
+.compactLinks{min-height:60px;width:calc(100% - 80px);max-width:1360px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:30px}
+.compactLinks :global(.brand-asset-wrap){width:150px}.compactLinks nav{display:flex;align-items:center;flex-wrap:wrap;gap:24px}.compactLinks nav a{line-height:1.4;padding-block:12px}
+.compactCopyright{display:flex;align-items:center;justify-content:space-between;gap:16px;border-top:1px solid #dce3dd;margin:0 40px;font-size:10px;min-height:22px;color:#52666a}
+.compactCopyright details{position:relative}.compactCopyright summary{cursor:pointer}.compactCopyright details p{position:absolute;right:0;bottom:20px;width:min(330px,80vw);background:#f8f6f1;border:1px solid #d7dfda;padding:14px;z-index:10;line-height:1.7}
+@media(min-width:1181px){.header :global(.site-header__inner){min-height:60px!important;grid-template-columns:165px 1fr auto!important}.header :global(.brand-mark--compact .brand-asset-wrap){width:165px}.header :global(.desktop-nav a){padding:18px 0}.header :global(.desktop-nav a)::after{bottom:10px}.header :global(.portal-link){min-height:34px}}
+@media(max-width:700px){.compactPromise{padding:16px 20px;align-items:flex-start}.compactPromise>div{display:block}.compactPromise strong{font-size:17px}.compactPromise span{display:block;margin-top:5px;line-height:1.6}.compactPromise>a{font-size:11px}.compactLinks{width:calc(100% - 40px);display:block;padding:12px 0}.compactLinks :global(.brand-asset-wrap){width:150px}.compactLinks nav{gap:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));margin-top:8px}.compactLinks nav a{padding:12px 0;min-height:44px}.compactCopyright{margin-inline:20px;min-height:34px;flex-wrap:wrap}.header :global(.brand-mark--compact .brand-asset-wrap){width:150px!important}}
 .inner{width:min(1280px,calc(100% - 80px));margin:auto}
 .top{display:grid;grid-template-columns:270px 1fr 220px;gap:50px;align-items:center;padding:46px 0 34px;border-bottom:1px solid #d6dfdc}
 .brand :global(.brand-asset-wrap){width:220px}

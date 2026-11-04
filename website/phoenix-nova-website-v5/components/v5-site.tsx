@@ -8,6 +8,7 @@ import { healthPreviewEnabled } from "@/lib/health-compass-gate";
 import { PatternMedallion } from "./pattern-medallion";
 import { SiteEcosystemContent } from "./site-ecosystem-content";
 import chromeStyles from "./site-chrome-v3.module.css";
+import { localizedHref } from "@/lib/locale-navigation";
 
 export const pageIds = [
   "compass",
@@ -36,7 +37,7 @@ const routeLabels = {
   insights: ["资讯洞察", "Insights"],
   oriental: ["凤启东方", "Phoenix Oriental"],
   about: ["关于我们", "About Us"],
-  "family-center": ["家庭中心", "Family Center"],
+  "family-center": ["家庭中心", "My Family Center"],
   admissions: ["升学申请", "Admissions"],
   application: ["申请登记", "Application intake"],
 } as const;
@@ -162,7 +163,7 @@ function pick(locale: Locale, zh: string, en: string) {
 }
 
 function hrefFor(locale: Locale, page: PageId | "health" | "health/family" | "identity" | "education") {
-  return page === "home" ? `/${locale}` : `/${locale}/${page}`;
+  return localizedHref(locale, page === "home" ? "" : `/${page}`);
 }
 
 function navigationHref(locale: Locale, item: (typeof primaryNavigation)[number]) {
@@ -251,8 +252,8 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3" }:
   );
 }
 
-export function SiteFooter({ locale, appearance = "v3", consultationPath = "/identity#consultation" }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string }) {
-  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} /></footer>;
+export function SiteFooter({ locale, appearance = "v3", consultationPath = "/identity#consultation", compact = false }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; compact?: boolean }) {
+  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} compact={compact} /></footer>;
   return (
     <footer className="site-footer">
       <div className="shell site-footer__top">
