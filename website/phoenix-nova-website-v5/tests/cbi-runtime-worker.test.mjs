@@ -13,6 +13,12 @@ test("actual Worker denies import/publication/rollback before parsing, despite f
   const mf = createV5Worker({ IDENTITY_CBI_IMPORT_REVIEW: "1", IDENTITY_CBI_REVIEW_PREVIEW: "1" });
   try {
     const db = await mf.getD1Database("DB");
+    // Initialize Workers/D1 platform services before the baseline. D1 creates
+    // its own _cf_METADATA lazily; do not exclude any tables from the assertion.
+    await db.prepare("SELECT 1").all();
+    const warmup = await mf.dispatchFetch("https://identity-test.example/robots.txt");
+    assert.equal(warmup.status, 200);
+    await warmup.text();
     const before = await db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
     for (const path of ["/zh/identity/import-review", "/en/identity/import-review/", "/zh/identity/%69mport-review", "/zh/identity/%2569mport-review", "/zh/identity/import-review/nested", "/zh/identity/%ZZ", "/api/identity/cbi/import", "/api/identity/cbi/import%2Fnested", "/api/identity/cbi/%2569mport/nested", "/api/identity/cbi/publish/version", "/api/identity/cbi/rollback/version"]) {
       for (const method of ["GET", "HEAD", "POST", "PUT", "DELETE", "OPTIONS"]) {
