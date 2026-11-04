@@ -141,7 +141,8 @@ async function inspectBrandImage(locator, route, role, width, wrapperBackground 
 async function assertSharedBrandChrome(page, route, width) {
   // Footer branding is intentionally lazy; make it visible before decoding.
   await page.locator("footer").scrollIntoViewIfNeeded();
-  const header = await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
+  const headerBackground = /^\/(?:zh|en)\/compass$/.test(route) ? IVORY_SURFACE : BRAND_ASSETS.header.wrapperBackground;
+  const header = await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width, headerBackground);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
   const expectedFooterWidth = /^\/(?:zh|en)$/.test(route.split(' ')[0]) ? 150 : width <= 700 ? 165 : 220;
   assert.ok(Math.abs(footer.wrapperWidth - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand wrapper must be ${expectedFooterWidth}px wide`);
