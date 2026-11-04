@@ -28,7 +28,7 @@ const browser = await chromium.launch({ headless: true, ...(process.env.HEALTH_B
 const results = [];
 const passed = name => results.push({ name, status: "PASS" });
 
-async function inspectBrandImage(locator, route, role, width) {
+async function inspectBrandImage(locator, route, role, width, wrapperBackground = BRAND_ASSETS[role].wrapperBackground) {
   assert.equal(await locator.count(), 1, `${route} ${role} must render one brand image`);
   const image = locator.first();
   await image.evaluate(element => element.decode());
@@ -62,10 +62,10 @@ async function inspectBrandImage(locator, route, role, width) {
   assert.ok(details.width > 0 && details.height > 0, `${route}: ${role} image has no rendered box`);
   assert.equal(details.objectFit, "contain", `${route}: ${role} must use object-fit: contain`);
   assert.ok(Math.abs((details.width / details.height) - (details.naturalWidth / details.naturalHeight)) < 0.01, `${route}: ${role} image is cropped or distorted`);
-  if (expected.wrapperBackground === "transparent") {
+  if (wrapperBackground === "transparent") {
     assert.ok(TRANSPARENT.has(details.wrapperBackground), `${route}: ${role} wrapper must remain transparent`);
   } else {
-    assert.equal(details.wrapperBackground, expected.wrapperBackground, `${route}: ${role} wrapper must use the Phoenix Ivory surface`);
+    assert.equal(details.wrapperBackground, wrapperBackground, `${route}: ${role} wrapper must use the Phoenix Ivory surface`);
   }
   assert.ok(!["hidden", "clip"].includes(details.wrapperOverflow), `${route}: ${role} wrapper must not crop its image`);
   assert.equal(details.wrapperBorder, "0px", `${route}: ${role} wrapper must not frame its image`);
@@ -89,7 +89,8 @@ async function assertSharedBrandChrome(page, route, width) {
 }
 
 async function assertCompassHeader(page, route, width) {
-  await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
+  // The existing questionnaire uses the approved ivory carrier on its dark header.
+  await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width, IVORY_SURFACE);
   assert.equal(await page.locator("footer .brand-mark img").count(), 0, `${route}: questionnaire must not invent a second footer brand image`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
 }
@@ -323,11 +324,12 @@ try {
     await noScriptPage.locator('#referral-source').selectOption('uk');
     await noScriptPage.locator('footer').scrollIntoViewIfNeeded();
     await noScriptPage.locator('footer img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
-    await noScriptPage.waitForLoadState('networkidle');
+    // Observe the form itself; unrelated lazy resources need not become idle.
     const transmissions = [];
     const recordRequest = request => transmissions.push(request.url());
     noScriptPage.on('request', recordRequest);
     await noScriptPage.locator('#referral-source').press('Enter');
+    await noScriptPage.waitForTimeout(200);
     assert.equal(await submit.isDisabled(), true);
     assert.deepEqual(transmissions, [], 'No-JS form must not transmit fields through a native GET');
     noScriptPage.off('request', recordRequest);
