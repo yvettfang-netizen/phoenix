@@ -1,0 +1,176 @@
+{
+  "results": [
+    {
+      "name": "zh responsive 320px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "zh responsive 375px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "zh responsive 390px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "zh responsive 768px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "zh responsive 1024px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "zh responsive 1440px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "zh consultation fields stay independent, local and resettable",
+      "status": "PASS"
+    },
+    {
+      "name": "zh FAQ, mobile menu and locale-preserving route",
+      "status": "PASS"
+    },
+    {
+      "name": "en responsive 320px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "en responsive 375px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "en responsive 390px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "en responsive 768px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "en responsive 1024px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "en responsive 1440px, metadata and controlled entry",
+      "status": "PASS"
+    },
+    {
+      "name": "en consultation fields stay independent, local and resettable",
+      "status": "PASS"
+    },
+    {
+      "name": "en FAQ, mobile menu and locale-preserving route",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh 390px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/compass 390px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/health 390px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/health/family 390px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh 768px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/compass 768px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/health 768px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/health/family 768px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh 1440px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/compass 1440px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/health 1440px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/zh/health/family 1440px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en 390px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/compass 390px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/health 390px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/health/family 390px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en 768px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/compass 768px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/health 768px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/health/family 768px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en 1440px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/compass 1440px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/health 1440px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "/en/health/family 1440px shared Header/Footer brand integrity and no overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "Landing → original questionnaire, consent, back/edit, skip, no invented results or transmission",
+      "status": "PASS"
+    },
+    {
+      "name": "No-JS consultation remains disabled without URL or network transmission",
+      "status": "PASS"
+    },
+    {
+      "name": "No browser runtime errors",
+      "status": "PASS"
+    }
+  ]
+}

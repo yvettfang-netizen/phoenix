@@ -1,0 +1,188 @@
+{
+  "origin": "http://127.0.0.1:4479",
+  "results": [
+    {
+      "name": "zh 1440px: Compass card descriptions remain within two computed lines",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 1440px: V6.3 eight-block geometry and six-section main structure",
+      "status": "PASS"
+    },
+    {
+      "name": "zh: 9 unique internal homepage routes return HTTP success",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 1440px: V6.3 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 390px: V6.3 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh 320px: V6.3 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "en 1440px: Compass card descriptions remain within two computed lines",
+      "status": "PASS"
+    },
+    {
+      "name": "en 1440px: V6.3 eight-block geometry and six-section main structure",
+      "status": "PASS"
+    },
+    {
+      "name": "English homepage main copy contains no Chinese characters outside Logo/trademark",
+      "status": "PASS"
+    },
+    {
+      "name": "en: 9 unique internal homepage routes return HTTP success",
+      "status": "PASS"
+    },
+    {
+      "name": "en 1440px: V6.3 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "English homepage main copy contains no Chinese characters outside Logo/trademark",
+      "status": "PASS"
+    },
+    {
+      "name": "en 390px: V6.3 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "English homepage main copy contains no Chinese characters outside Logo/trademark",
+      "status": "PASS"
+    },
+    {
+      "name": "en 320px: V6.3 homepage structure, navigation, logo, links, language and overflow",
+      "status": "PASS"
+    },
+    {
+      "name": "zh/education → /en/education: language toggle preserves route",
+      "status": "PASS"
+    },
+    {
+      "name": "zh/identity → /en/identity: language toggle preserves route",
+      "status": "PASS"
+    },
+    {
+      "name": "zh/health → /en/health: language toggle preserves route",
+      "status": "PASS"
+    },
+    {
+      "name": "en/education → /zh/education: language toggle preserves route",
+      "status": "PASS"
+    },
+    {
+      "name": "en/identity → /zh/identity: language toggle preserves route",
+      "status": "PASS"
+    },
+    {
+      "name": "en/health → /zh/health: language toggle preserves route",
+      "status": "PASS"
+    },
+    {
+      "name": "No V6.3 homepage browser runtime errors",
+      "status": "PASS"
+    }
+  ],
+  "geometryEvidence": [
+    {
+      "locale": "zh",
+      "width": 1440,
+      "compassText": [
+        {
+          "text": "从香港到全球，为下一代理清教育成长路径。",
+          "lineCount": 2,
+          "lineHeight": 18.2,
+          "height": 36.375
+        },
+        {
+          "text": "了解香港身份、全球居留及家庭长期生活安排。",
+          "lineCount": 2,
+          "lineHeight": 18.2,
+          "height": 36.375
+        },
+        {
+          "text": "家庭保障与代际传承。受控预览。",
+          "lineCount": 1,
+          "lineHeight": 18.2,
+          "height": 18.1875
+        },
+        {
+          "text": "连接大湾区医疗资源与家庭健康协调。",
+          "lineCount": 1,
+          "lineHeight": 18.2,
+          "height": 18.1875
+        }
+      ]
+    },
+    {
+      "locale": "zh",
+      "width": 1440,
+      "totalHeight": 1088,
+      "blocks": {
+        "header": 60,
+        "hero": 250,
+        "compass": 172.375,
+        "journey": 97.6875,
+        "connections": 102.296875,
+        "family": 125,
+        "ecosystem": 158.9375,
+        "footer": 122
+      },
+      "failures": []
+    },
+    {
+      "locale": "en",
+      "width": 1440,
+      "compassText": [
+        {
+          "text": "Connecting families with clear education pathways in Hong Kong and beyond.",
+          "lineCount": 2,
+          "lineHeight": 18.2,
+          "height": 36.375
+        },
+        {
+          "text": "Plan Hong Kong and global residency options with confidence.",
+          "lineCount": 2,
+          "lineHeight": 18.2,
+          "height": 36.375
+        },
+        {
+          "text": "Family protection and legacy. Controlled preview.",
+          "lineCount": 2,
+          "lineHeight": 18.2,
+          "height": 36.375
+        },
+        {
+          "text": "Find coordinated healthcare support across the Greater Bay Area.",
+          "lineCount": 2,
+          "lineHeight": 18.2,
+          "height": 36.375
+        }
+      ]
+    },
+    {
+      "locale": "en",
+      "width": 1440,
+      "totalHeight": 1105,
+      "blocks": {
+        "header": 60,
+        "hero": 250,
+        "compass": 172.375,
+        "journey": 97.6875,
+        "connections": 119.09375,
+        "family": 125,
+        "ecosystem": 158.9375,
+        "footer": 122
+      },
+      "failures": []
+    }
+  ],
+  "pageErrors": []
+}
