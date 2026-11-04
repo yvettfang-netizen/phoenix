@@ -110,12 +110,18 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 
 .site-header--inverse .site-header__inner { border-color: var(--line-light); }
 
-.brand-mark { display:inline-flex; align-items:center; width:max-content; min-height:60px; color:var(--navy); flex:0 0 auto; }
-.brand-mark__asset-wrap { display:grid; place-items:center; width:220px; height:auto; flex:0 0 auto; overflow:visible; background:transparent; }
-.brand-mark__asset { display:block; width:220px; height:auto; object-fit:contain; object-position:center; background:transparent; border:0; filter:none; mask:none; }
-.brand-mark--inverse { padding:5px 10px; background:rgba(247,243,233,.96); color:var(--navy); }
-.brand-mark--compact { min-height:56px; }
-.brand-mark--compact .brand-mark__asset-wrap,.brand-mark--compact .brand-mark__asset { width:220px; }
+.brand-mark { display: inline-flex; align-items: center; gap: 11px; width: max-content; }
+.brand-asset-wrap { display:block; width:220px; aspect-ratio:3 / 1; flex:0 0 auto; overflow:visible; background:transparent; border:0; box-shadow:none; mask:none; }
+.brand-asset { display:block; width:100%; height:100%; object-fit:contain; background:transparent; border:0; filter:none; mask:none; }
+.brand-lockup { display: flex; align-items: center; gap: 10px; }
+.brand-cn { font-family: var(--serif); font-size: 22px; line-height: 1; letter-spacing: 0.08em; }
+.brand-en { padding-left: 10px; border-left: 1px solid currentColor; font-family: var(--serif); font-size: 9px; line-height: 1.4; letter-spacing: 0.17em; }
+.brand-mark--compact .brand-asset-wrap { width:220px; aspect-ratio:3 / 1; background:var(--surface-ivory); }
+.brand-mark__asset-wrap { display:block; width:220px; aspect-ratio:3 / 1; flex:0 0 auto; overflow:visible; background:transparent; border:0; box-shadow:none; mask:none; }
+.brand-mark__asset { display:block; width:100%; height:100%; object-fit:contain; background:transparent; border:0; filter:none; mask:none; }
+.brand-mark--compact .brand-mark__asset-wrap { width:220px; aspect-ratio:3 / 1; background:var(--surface-ivory); }
+.brand-mark--compact .brand-cn { font-size: 19px; }
+.brand-mark--compact .brand-en { font-size: 8px; }
 
 .desktop-nav { display: flex; align-items: center; justify-content: center; gap: clamp(11px, 1.25vw, 21px); }
 .desktop-nav a { position: relative; padding: 38px 0 35px; font-size: 13px; letter-spacing: 0.035em; opacity: 0.7; white-space: nowrap; }
@@ -526,6 +532,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 1240px) {
   .shell { width:min(calc(100% - 56px), 1180px); }
   .site-header__inner { grid-template-columns:200px 1fr 175px; }
+  .brand-mark--compact .brand-asset-wrap { width:200px; }
   .desktop-nav { gap:14px; }
   .desktop-nav a { font-size:11px; }
   .portal-link { gap:10px; padding-inline:10px; font-size:10px; }
@@ -599,10 +606,12 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 680px) {
   .shell { width:calc(100% - 36px); }
   .site-header__inner { min-height:96px; }
-  .brand-mark { min-height:44px; }
-  .brand-mark__asset-wrap,.brand-mark--compact .brand-mark__asset-wrap { width:165px; height:auto; }
-  .brand-mark__asset,.brand-mark--compact .brand-mark__asset { width:165px; }
-  .brand-mark--inverse { padding:4px 7px; }
+  .brand-asset-wrap { width:165px; }
+  .brand-mark--compact .brand-asset-wrap { width:180px; }
+  .brand-mark__asset-wrap { width:165px; }
+  .brand-mark--compact .brand-mark__asset-wrap { width:180px; }
+  .brand-cn,.brand-mark--compact .brand-cn { font-size:17px; }
+  .brand-en,.brand-mark--compact .brand-en { padding-left:7px; font-size:6px; letter-spacing:.12em; }
   .locale-switch { font-size:10px; }
   .mobile-menu summary { width:38px; height:38px; }
   .candidate-tag { font-size:8px; }
@@ -722,4 +731,3 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior:auto !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
 }
-
