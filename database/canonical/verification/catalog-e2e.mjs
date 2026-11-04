@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { randomBytes, createHash } from 'node:crypto';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, realpathSync, lstatSync } from 'node:fs';
+import { readdirSync, mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, realpathSync, lstatSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -94,7 +94,9 @@ try {
   assert(!existsSync(devVars),'Existing .dev.vars preserved: refusing to read/overwrite it');
   const db=await cluster('fresh');
   command(['exec',db.id,'mkdir','-p','/opt/canonical-migrations','/opt/verification']);
-  command(['cp',`${path.join(root,'database/canonical/migrations')}/.`,`${db.id}:/opt/canonical-migrations`]);
+  for(const file of readdirSync(path.join(root,'database/canonical/migrations')).filter(n=>/^00(?:0[1-9]|[12][0-9]|3[0-5])_.*\.sql$/.test(n))){
+    command(['cp',path.join(root,'database/canonical/migrations',file),db.id+':/opt/canonical-migrations/'+file]);
+  }
   command(['cp',path.join(root,'database/canonical/verification/migrate.sh'),`${db.id}:/opt/verification/migrate.sh`]);
   const migrated=command(['exec',db.id,'bash','/opt/verification/migrate.sh']);
   assert.match(migrated,/PASS ledger=35 files=35 expected=35/);

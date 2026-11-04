@@ -196,7 +196,7 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
         invariant(deps.familyProjection, 404, 'ROUTE_NOT_FOUND', '接口不存在')
         invariant(method === 'GET', 405, 'METHOD_NOT_ALLOWED', '请求方式不受支持')
         exactQuery(url)
-        const match = url.pathname.match(/^\/v1\/canonical\/projections\/(family|students)(?:\/([a-f0-9-]{36}))?$/)
+        const match = url.pathname.match(/^\/v1\/canonical\/projections\/(family|students)(?:\/([a-f0-9-]{36}|stu_[a-f0-9]{32}))?$/)
         invariant(match && !(match[1] === 'family' && match[2]), 404, 'ROUTE_NOT_FOUND', '接口不存在')
         invariant(!['x-family-id','x-principal-id','x-role','x-channel','x-source-system'].some(h => request.headers[h]),
           403, 'FAMILY_SCOPE_REQUIRED', '家庭资料访问未授权')

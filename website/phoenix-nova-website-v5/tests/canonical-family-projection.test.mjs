@@ -18,6 +18,22 @@ test('projection BFF stays off by default/production and rejects client identity
   }
   for(const resource of ['FAMILY','family/forged','students/not-a-uuid','../family'])assert.equal((await handleFamilyProjection(request(),env,'development',resource)).status,404);
 });
+
+test('audited v2 BFF accepts only typed public IDs and refuses legacy v1 UUID DTO fallback',async t=>{
+  let legacy=false;
+  const id='01910000-0000-7000-8000-000000000003',student='stu_'+id.replaceAll('-',''),family='fam_'+id.replaceAll('-','');
+  const server=createServer((req,res)=>{
+    res.setHeader('content-type','application/json');
+    const isFamily=req.url.endsWith('/family'),isSingle=req.url.includes('/stu_');
+    const item={studentRef:legacy?id:student,displayName:'Synthetic'};
+    res.end(JSON.stringify(isFamily?{schemaVersion:legacy?'family-summary.v1':'family-summary.v2',family:{familyRef:legacy?id:family,displayName:'Synthetic'}}
+      :isSingle?{schemaVersion:'student-summary.v2',item}:{schemaVersion:'student-summary.v2',items:[item]}));
+  });await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));
+  const env={CANONICAL_FAMILY_PROJECTION_ENABLED:'true',CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED:'true',CANONICAL_FAMILY_API_ORIGIN:`http://127.0.0.1:${server.address().port}`};
+  for(const path of ['family','students','students/'+student])assert.equal((await handleFamilyProjection(request(),env,'development',path)).status,200);
+  for(const path of ['students/'+id,'students/per_'+id.replaceAll('-',''),'family/'+family])assert.equal((await handleFamilyProjection(request(),env,'development',path)).status,404);
+  legacy=true;for(const path of ['family','students','students/'+student])assert.equal((await handleFamilyProjection(request(),env,'development',path)).status,503);
+});
 test('projection BFF enforces exact typed DTOs, bounded response bytes and no redirect/cookie or role forwarding',async t=>{
   let state='family',sinkCalls=0;
   const sink=createServer((_req,res)=>{sinkCalls++;res.end();});await new Promise(r=>sink.listen(0,'127.0.0.1',r));

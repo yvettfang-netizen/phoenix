@@ -10,9 +10,12 @@ export async function handleFamilyProjection(request: Request, env: ProjectionEn
   const denied = () => reply(403, { error: { code: "FAMILY_SCOPE_REQUIRED" } });
   const unavailable = () => reply(503, { error: { code: "FAMILY_PROJECTION_UNAVAILABLE" } });
   if (request.method !== "GET") return reply(405, { error: { code: "METHOD_NOT_ALLOWED" } });
-  const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-7[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
-  const match = resource.match(/^(family|students)(?:\/([a-f0-9-]{36}))?$/);
-  if (!match || (match[1] === "family" && match[2]) || (match[2] && !uuid.test(match[2]))) return reply(404, { error: { code: "NOT_FOUND" } });
+  const audited = env.CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED === "true";
+  const familyId = audited ? /^fam_[a-f0-9]{32}$/ : /^[a-f0-9]{8}-[a-f0-9]{4}-7[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
+  const studentId = audited ? /^stu_[a-f0-9]{32}$/ : familyId;
+  const schemaVersion = audited ? "v2" : "v1";
+  const match = resource.match(/^(family|students)(?:\/([a-f0-9-]{36}|stu_[a-f0-9]{32}))?$/);
+  if (!match || (match[1] === "family" && match[2]) || (match[2] && !studentId.test(match[2]))) return reply(404, { error: { code: "NOT_FOUND" } });
   const url = new URL(request.url);
   if (!["127.0.0.1", "localhost"].includes(url.hostname) || url.search ||
       (request.headers.get("origin") && request.headers.get("origin") !== url.origin) || request.headers.get("sec-fetch-site") === "cross-site" ||
@@ -48,13 +51,13 @@ export async function handleFamilyProjection(request: Request, env: ProjectionEn
     const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
     const data = JSON.parse(text);
     const validName = (x: unknown) => typeof x === "string" && x.length > 0 && x.length <= 200;
-    const student = (x: Record<string, unknown>) => x && Object.keys(x).sort().join(",") === "displayName,studentRef" && typeof x.studentRef === "string" && uuid.test(x.studentRef) && validName(x.displayName);
+    const student = (x: Record<string, unknown>) => x && Object.keys(x).sort().join(",") === "displayName,studentRef" && typeof x.studentRef === "string" && studentId.test(x.studentRef) && validName(x.displayName);
     if (resource === "family") {
-      if (Object.keys(data).sort().join(",") !== "family,schemaVersion" || data.schemaVersion !== "family-summary.v1" ||
-          !data.family || Object.keys(data.family).sort().join(",") !== "displayName,familyRef" || typeof data.family.familyRef !== "string" || !uuid.test(data.family.familyRef) || !validName(data.family.displayName)) return unavailable();
+      if (Object.keys(data).sort().join(",") !== "family,schemaVersion" || data.schemaVersion !== `family-summary.${schemaVersion}` ||
+          !data.family || Object.keys(data.family).sort().join(",") !== "displayName,familyRef" || typeof data.family.familyRef !== "string" || !familyId.test(data.family.familyRef) || !validName(data.family.displayName)) return unavailable();
     } else if (match[2]) {
-      if (Object.keys(data).sort().join(",") !== "item,schemaVersion" || data.schemaVersion !== "student-summary.v1" || !student(data.item) || data.item.studentRef !== match[2]) return unavailable();
-    } else if (Object.keys(data).sort().join(",") !== "items,schemaVersion" || data.schemaVersion !== "student-summary.v1" ||
+      if (Object.keys(data).sort().join(",") !== "item,schemaVersion" || data.schemaVersion !== `student-summary.${schemaVersion}` || !student(data.item) || data.item.studentRef !== match[2]) return unavailable();
+    } else if (Object.keys(data).sort().join(",") !== "items,schemaVersion" || data.schemaVersion !== `student-summary.${schemaVersion}` ||
         !Array.isArray(data.items) || data.items.length > 100 || !data.items.every(student) || new Set(data.items.map((x: { studentRef: string }) => x.studentRef)).size !== data.items.length) return unavailable();
     return reply(200, data);
   } catch { return unavailable(); }
