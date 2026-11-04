@@ -1,11 +1,9 @@
 "use client";
 
-import type { CountryRecord } from "@/lib/cbi-schema";
-import { buildComparisonReport } from "@/lib/cbi-comparison-engine";
+import type { buildComparisonReport } from "@/lib/cbi-comparison-engine";
 import styles from "./cbi-explorer.module.css";
 
-export function CbiComparisonReport({ records, locale, preview }: { records: CountryRecord[]; locale: "zh" | "en"; preview: boolean }) {
-  const report = buildComparisonReport(records, locale, preview);
+export function CbiComparisonReport({ report, locale, preview }: { report: ReturnType<typeof buildComparisonReport>; locale: "zh" | "en"; preview: boolean }) {
   const zh = locale === "zh";
   function download() {
     const url = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: "application/json;charset=utf-8" }));

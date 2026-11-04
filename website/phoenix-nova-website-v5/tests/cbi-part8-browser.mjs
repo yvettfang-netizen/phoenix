@@ -14,6 +14,11 @@ try {
   const page = await browser.newPage();
   const errors = []; page.on("pageerror", error => errors.push(error.message));
   const writes = []; page.on("request", request => { if (request.method() !== "GET") writes.push(request.url()); });
+  const external = [];
+  page.on("request", request => {
+    const url = new URL(request.url());
+    if (["http:", "https:"].includes(url.protocol) && url.origin !== new URL(origin).origin) external.push(request.url());
+  });
   for (const locale of ["zh", "en"]) {
     for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: 900 });
@@ -52,6 +57,11 @@ try {
     assert.equal(report.countries.length, 2);
     assert.equal(report.status, "INTERNAL_REVIEW_NOT_FOR_PUBLICATION");
     assert.ok(report.gaps.length > 0);
+    assert.doesNotMatch(JSON.stringify(report), /"owner"|"imported_by"|"file_hash"|"source_file"|"approved_by"/);
+    for (const country of report.official_sources) for (const source of [...country.sources, ...country.field_sources]) {
+      assert.equal(new URL(source.official_url).search, "");
+      assert.equal(new URL(source.official_url).hash, "");
+    }
     assert.ok(report.rows.some(row => row.key === "tax"));
     assert.equal(report.rows.find(row => row.key === "minimum_investment").values.every(value => value === (locale === "zh" ? "待核实" : "Pending verification")), true);
     assert.match(report.notice, locale === "zh" ? /不构成法律、税务、投资或移民申请意见/ : /not legal, tax, investment or immigration/);
@@ -62,5 +72,6 @@ try {
   await page.goto(`${origin}/zh/identity/explorer/compare?countries=argentina,vanuatu,unknown`, { waitUntil: "networkidle" });
   assert.equal(await page.locator("[data-cbi-report]").count(), 0, "invalid requested country must not be silently dropped");
   assert.deepEqual(errors, []); assert.deepEqual(writes, []);
+  assert.deepEqual(external, [], "Comparison and report download must not call external tracking or asset hosts");
   console.log("PASS Part 8 bilingual interaction, download and privacy checks");
 } finally { await writeFile(resolve(out, "browser-results.json"), JSON.stringify({ origin, results }, null, 2)); await browser.close(); }

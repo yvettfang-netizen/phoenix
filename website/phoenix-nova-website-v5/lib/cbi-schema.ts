@@ -406,6 +406,7 @@ export const validateCountryRecord = (value: unknown): SchemaValidation => {
   if (!isOneOf(value.passport_issuance_status, CBI_PASSPORT_ISSUANCE_STATUS)) errors.push(issue("INVALID_PASSPORT_ISSUANCE_STATUS", "passport_issuance_status", "Unknown passport_issuance_status."));
   if (!isOneOf(value.content_status, CBI_CONTENT_STATUS)) errors.push(issue("INVALID_CONTENT_STATUS", "content_status", "Unknown content_status."));
   if (value.content_status === "PUBLISHED") errors.push(issue("PUBLISHED_NOT_ALLOWED_IN_IMPORT", "content_status", "Imported rows must enter IMPORT_REVIEW; publication is a server approval transition."));
+  if (value.content_status === "WITHDRAWN") errors.push(issue("IMPORT_REVIEW_REQUIRED", "content_status", "New imports must enter IMPORT_REVIEW; withdrawal requires an audited server transition."));
 
   if (value.flag_asset !== null && value.flag_asset !== undefined && typeof value.flag_asset !== "string") errors.push(issue("INVALID_FLAG_ASSET", "flag_asset", "flag_asset must be a string or null."));
   if (value.programme_id !== null && value.programme_id !== undefined && typeof value.programme_id !== "string") errors.push(issue("INVALID_PROGRAMME_ID", "programme_id", "programme_id must be a string or null."));

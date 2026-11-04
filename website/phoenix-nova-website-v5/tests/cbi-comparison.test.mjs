@@ -67,3 +67,24 @@ test("published detail and FAQ cannot bypass field verification; preview charges
     if(status==="PUBLISHED") { assert.match(view.familyEligibility.en,/Pending verification/); assert.match(view.faq[4].answer.en,/Pending verification/); }
   }
 });
+
+test("report uses a public source allowlist and strips URL tracking and audit identities", () => {
+  const a = record(), b = record(1);
+  const marker = "private-reviewer@example.invalid";
+  for (const country of [a,b]) {
+    country.official_sources[0].owner = marker;
+    country.official_sources[0].official_url += "?token=secret-tracking#private";
+  }
+  const report = engine.buildComparisonReport([a,b], "en", false, today);
+  assert.ok(report.countries.every(country => country.programme === "Pending verification"), "Programme names need field-specific evidence too");
+  const output = JSON.stringify(report);
+  assert.doesNotMatch(output, /private-reviewer|secret-tracking|effective_scope|"owner"/);
+  for (const country of report.official_sources) {
+    assert.ok(country.sources.length);
+    for (const source of country.sources) {
+      assert.deepEqual(Object.keys(source).sort(), ["source_type","source","official_url","verified_at","effective_status"].sort());
+      assert.equal(new URL(source.official_url).search, "");
+      assert.equal(new URL(source.official_url).hash, "");
+    }
+  }
+});

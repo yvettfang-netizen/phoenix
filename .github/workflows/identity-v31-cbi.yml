@@ -23,6 +23,10 @@ jobs:
           cache: npm
           cache-dependency-path: website/phoenix-nova-website-v5/package-lock.json
       - run: npm ci
+      - name: Full dependency audit (including development dependencies)
+        run: |
+          mkdir -p outputs/identity-v31
+          npm audit --audit-level=moderate --json | tee outputs/identity-v31/dependency-audit.json
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build

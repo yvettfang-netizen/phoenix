@@ -125,11 +125,20 @@ export function buildComparisonReport(records: readonly CountryRecord[], locale:
   return {
     title: "Phoenix Nova™ Global Identity Comparison Report", locale,
     status: review ? "INTERNAL_REVIEW_NOT_FOR_PUBLICATION" : "VERIFIED_PUBLIC_INFORMATION",
-    countries: selected.map(record => ({ country_id: record.country_id, country_name_zh: record.country_name_zh, country_name_en: record.country_name_en, programme: record.programme_name?.[locale] ?? pending(locale), data_version: record.data_version, verified_at: record.last_verified_at, next_review_at: record.next_review_at })),
+    countries: selected.map(record => ({ country_id: record.country_id, country_name_zh: record.country_name_zh, country_name_en: record.country_name_en, programme: comparisonField(record, "programme_name", locale, today), data_version: record.data_version, verified_at: record.last_verified_at, next_review_at: record.next_review_at })),
     rows: comparisonRows(selected, locale, today),
     risks: text("政策可能变化；法律、受理、国籍批准与护照签发互不替代。暂停及未开放项目仅展示真实状态，不作为可办理建议。", "Policies may change. Law, intake, nationality approval and passport issuance are separate. Suspended or pre-launch status is information, not an application recommendation.", locale),
     gaps: selected.flatMap(record => comparisonRows([record], locale, today).filter(row => row.values[0] === pending(locale)).map(row => ({ country_id: record.country_id, field: row.key, status: "NOT_VERIFIED" }))),
-    official_sources: selected.map(record => ({ country_id: record.country_id, sources: record.official_sources.filter(source => currentSource(record, source, today)), field_sources: Object.entries(record.field_sources ?? {}).filter(([, source]) => currentSource(record, source, today)).map(([field, source]) => ({ field, ...source })) })),
+    official_sources: selected.map(record => ({ country_id: record.country_id, sources: record.official_sources.filter(source => currentSource(record, source, today)).map(reportSource), field_sources: Object.entries(record.field_sources ?? {}).filter(([, source]) => currentSource(record, source, today)).map(([field, source]) => ({ field, ...reportSource(source) })) })),
     notice: COMPARISON_NOTICE[locale],
   };
+}
+
+// Explicit public DTO: never serialize reviewer identities or future audit fields.
+function reportSource(source: PolicyRule) {
+  const url = new URL(source.official_url!);
+  url.search = "";
+  url.hash = "";
+  return { source_type: source.source_type, source: source.source, official_url: url.href,
+    verified_at: source.verified_at, effective_status: source.effective_status };
 }

@@ -1,3 +1,5 @@
+> Historical baseline (2026-11-02). Current remediation and remaining HOLD gates: [2026-11-04 readiness](production-readiness-20261104.md). The import route now always returns 404; the old import flag cannot reopen it. Canonical 0035 is now present through main, but no website adapter/runtime approval is established. Dependency findings below describe the old lockfile, not the remediated audit.
+
 # Identity V3.1 Dependency Security Audit
 
 **Status:** `HOLD / NOT_SECURITY_PASS`

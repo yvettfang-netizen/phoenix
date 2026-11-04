@@ -59,3 +59,11 @@ test("electronic visa counts do not become ETA counts and missing translations s
   assert.match(view.familyEligibility.zh, /待核实/);
   assert.doesNotMatch(view.familyEligibility.zh, /Synthetic/);
 });
+
+test("new imports cannot request withdrawal or publication transitions", async () => {
+  const { validateCountryRecord } = await loadTypescript("../lib/cbi-schema.ts");
+  const { cbiCountries } = await loadTypescript("../lib/cbi-data.ts");
+  for (const content_status of ["WITHDRAWN", "PUBLISHED", "ACTIVE"]) {
+    assert.equal(validateCountryRecord({ ...cbiCountries[0], content_status }).ok, false);
+  }
+});
