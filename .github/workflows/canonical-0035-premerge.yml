@@ -1,0 +1,177 @@
+name: Canonical 0035 pre-merge smoke
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: canonical-0035-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  public-candidate-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Scan present allowlisted candidates and mandatory governance files
+        shell: bash
+        run: |
+          set -euo pipefail
+          image='ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f'
+          for required in .github/CODEOWNERS .github/CANONICAL_GOVERNANCE_BOOTSTRAP.md .github/workflows/canonical-0035-premerge.yml; do
+            test -f "$required" || { echo "FAIL missing governance file: $required"; exit 1; }
+          done
+          for path in database/canonical docs/database/premerge-0035 .github/workflows/canonical-0035-premerge.yml .github/CODEOWNERS .github/CANONICAL_GOVERNANCE_BOOTSTRAP.md; do
+            if [ ! -e "$path" ]; then echo "NOT_PRESENT in candidate scan scope: $path"; continue; fi
+            docker run --rm --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
+          done
+  isolated-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['16','17']
+        mode: ['fresh','upgrade']
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Base SHA may predate two commits; the source guards require its object.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fetch immutable public 0035 verification reference
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: yvettfang-netizen/phoenix
+          ref: 6951a9f275ec96098fd0e559804324ed68f93634
+          path: .canonical-reference
+          sparse-checkout: |
+            database/canonical
+            docs/database/premerge-0035
+          persist-credentials: false
+      - name: Resolve truthful test source and verify immutable inventory
+        id: source
+        shell: pwsh
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Select-Source([bool]$baseHas,[bool]$headAny,[bool]$headComplete) {
+            if ($headAny -and -not $headComplete) { throw 'PARTIAL_CANONICAL_TREE_REFUSED' }
+            if ($baseHas -and -not $headAny) { throw 'CANONICAL_REMOVAL_FALLBACK_REFUSED' }
+            if ($headComplete) { return 'CANDIDATE_TREE' }
+            return 'PINNED_0035_REHEARSAL'
+          }
+          if ((Select-Source $false $false $false) -ne 'PINNED_0035_REHEARSAL' -or
+              (Select-Source $false $true $true) -ne 'CANDIDATE_TREE' -or
+              (Select-Source $true $true $true) -ne 'CANDIDATE_TREE') { throw 'SOURCE_SELECTION_REGRESSION' }
+          foreach ($probe in @(@($true,$false,$false),@($false,$true,$false))) {
+            $denied = $false
+            try { $null = Select-Source $probe[0] $probe[1] $probe[2] } catch { $denied = $true }
+            if (-not $denied) { throw 'MISSING_OR_PARTIAL_TREE_NOT_REJECTED' }
+          }
+          Write-Output 'PASS source-selection guards: bootstrap, candidate, deletion and partial-tree cases'
+          $baseSha = $env:BASE_SHA
+          if ($baseSha -notmatch '^[0-9a-f]{40}$') { throw 'TRUSTED_PR_BASE_REQUIRED' }
+          & git cat-file -e "${baseSha}^{commit}"
+          if ($LASTEXITCODE -ne 0) { throw 'PR_BASE_UNAVAILABLE' }
+          & git cat-file -e "${baseSha}:database/canonical" 2>$null
+          $baseHas = $LASTEXITCODE -eq 0
+          $headRoot = Join-Path $env:GITHUB_WORKSPACE 'database/canonical'
+          $headAny = Test-Path -LiteralPath $headRoot
+          $headComplete = (Test-Path (Join-Path $headRoot 'migrations')) -and
+            (Test-Path (Join-Path $headRoot 'verification/smoke.ps1')) -and
+            (Test-Path (Join-Path $headRoot 'verification/migrate.sh'))
+          $mode = Select-Source $baseHas $headAny $headComplete
+          $reference = Join-Path $env:GITHUB_WORKSPACE '.canonical-reference'
+          $referenceCommit = (& git -C $reference rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $referenceCommit -ne '6951a9f275ec96098fd0e559804324ed68f93634') { throw 'REFERENCE_COMMIT_DRIFT' }
+          $referenceRoot = Join-Path $reference 'database/canonical'
+          $selectedRoot = if ($mode -eq 'CANDIDATE_TREE') { $headRoot } else { $referenceRoot }
+          $expected = @{}
+          foreach ($line in (Get-Content (Join-Path $reference 'docs/database/premerge-0035/CANONICAL_0035_SOURCE_MANIFEST.md'))) {
+            if ($line -match '^\| ([0-9]{4}) \| `([0-9a-f]{64})` \|$') { $expected[$Matches[1]] = $Matches[2] }
+          }
+          $files = @(Get-ChildItem (Join-Path $selectedRoot 'migrations') -File -Filter '*.sql' | Sort-Object Name)
+          $referenceFiles = @(Get-ChildItem (Join-Path $referenceRoot 'migrations') -File -Filter '*.sql' | Sort-Object Name)
+          if ($expected.Count -ne 35 -or $files.Count -ne 35 -or $referenceFiles.Count -ne 35) { throw 'INVENTORY_NOT_35' }
+          for ($index=0; $index -lt 35; $index++) {
+            $file = $files[$index]
+            $number = '{0:D4}' -f ($index+1)
+            $digest = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($file.Name -ne $referenceFiles[$index].Name -or -not $file.Name.StartsWith("${number}_") -or
+                $digest -ne $expected[$number]) { throw "MIGRATION_BYTES_OR_NAME_DRIFT: $number" }
+          }
+          foreach ($harness in @('verification/smoke.ps1','verification/migrate.sh')) {
+            if ((Get-FileHash (Join-Path $selectedRoot $harness)).Hash -ne (Get-FileHash (Join-Path $referenceRoot $harness)).Hash) {
+              throw 'UNREVIEWED_VERIFICATION_HARNESS'
+            }
+          }
+          $testedCommit = if ($mode -eq 'CANDIDATE_TREE') { (& git rev-parse HEAD).Trim() } else { $referenceCommit }
+          Write-Output "SOURCE_MODE=$mode TESTED_COMMIT=$testedCommit MIGRATIONS_MATCHED=35 BASE_HAS_CANONICAL=$baseHas"
+          "root=$selectedRoot" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          @("## Canonical verification source", "- Source mode: $mode", "- Tested commit: $testedCommit", '- Immutable Migration digests matched: 35/35',
+            '- PINNED_0035_REHEARSAL is a real test of the reference fixture, not a database import or a claim that main includes Canonical.') |
+            Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+      - name: Execute real disposable PostgreSQL tests
+        shell: pwsh
+        env:
+          CANONICAL_ROOT: ${{ steps.source.outputs.root }}
+          PG_MAJOR: ${{ matrix.version }}
+          TEST_MODE: ${{ matrix.mode }}
+        run: |
+          & (Join-Path $env:CANONICAL_ROOT 'verification/smoke.ps1') -Version $env:PG_MAJOR -Mode $env:TEST_MODE
+  website-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: website/phoenix-nova-website-v5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.13.0
+          cache: npm
+          cache-dependency-path: website/phoenix-nova-website-v5/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+  education-client-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: Phoenix Compass/education compass
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.0.0
+      - run: node tests/run-tests.js
+      - run: node tests/validate-ui-contract.js
+  wealth-compass-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: Phoenix Compass/Wealth Compass
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24.0.0
+          cache: npm
+          cache-dependency-path: Phoenix Compass/Wealth Compass/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test

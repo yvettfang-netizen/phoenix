@@ -40,6 +40,8 @@ No reviewer's name, approval date or decision is invented. Repository documents 
 
 The existing rendered Health landing test keeps its six-card and bilingual checks, with the changed cost title replacing the retired comparative title. New positive assertions require quotation dates and inclusions/exclusions; negative assertions prohibit the retired comparative statements. A pure content-policy test adds the same medical-claim boundary without requiring a Worker runtime. Existing model, route, family, auth and browser tests remain in place.
 
+The first remediation CI completed with ten successful checks, including Health, and four Canonical jobs blocked before database execution by `PR_BASE_UNAVAILABLE`. The Canonical workflow from main `9355d28667ee9cf4761b4abcdaf959f0ad154820` is now included with only its isolated-PostgreSQL candidate checkout changed from depth 2 to full history. Its source-selection guards, pinned reference, 35 migration digests, harness checks and all four actual PostgreSQL scenarios are unchanged. This makes the PR base object available for validation; it does not approve or execute a production migration. The updated commit must pass a fresh CI run.
+
 Original Compass regression and Health flag ON/OFF, landing/family, Education/Identity regressions remain required. After #34 integration, also run GEO and APEC, zh/en × 390/768/1440, preserve existing wider browser coverage, and verify actual noindex/canonical/hreflang/sitemap behavior. An unsupported local Worker runtime must be reported as a failure/limitation, not skipped or represented as PASS; remote Ubuntu CI must run the real Worker suite.
 
 ## Safe handoff
