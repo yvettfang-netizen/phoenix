@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, sep, extname } from "node:path";
 import { fileURLToPath } from "node:url";
-register("./wealth-preview-loader.mjs", import.meta.url);
+register("./frontend-preview-loader.mjs", import.meta.url);
 const { default: worker } = await import("../dist/server/index.js");
 const root = fileURLToPath(new URL("../dist/client", import.meta.url)),
   port = Number(process.env.WEALTH_PREVIEW_PORT || 4481),
