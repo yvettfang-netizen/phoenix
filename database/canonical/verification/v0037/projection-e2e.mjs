@@ -7,15 +7,18 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {runReadAuditRegression} from './read-audit-regression.mjs';
+import {reviewConfigProbe,reviewRuntimeProbes} from './review-regression.mjs';
 import {createRequire} from 'node:module';
 const publicFamily=n=>'fam_'+id(n).replaceAll('-','');
 const publicStudent=n=>'stu_'+id(n).replaceAll('-','');
 const version=process.argv[2]; assert(['16','17'].includes(version));
+const originalReview=process.argv.includes('--review-original');
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../../..');
 const serverRoot=path.join(root,'Phoenix Compass/education compass/server');
 const website=path.join(root,'website/phoenix-nova-website-v5');
 const require=createRequire(path.join(serverRoot,'package.json'));
-const {Pool}=require('pg');
+const Pg=require('pg');
+const {Pool}=Pg;
 const {loadFamilyProjection}=require('./dist/services/canonical-family-projection.js');
 const {createAppServer}=require('./dist/http/app.js');
 const {chromium}=createRequire(path.join(website,'package.json'))(process.env.PLAYWRIGHT_MODULE||'playwright');
@@ -64,8 +67,13 @@ async function adapter(db,suffix){
   const a=path.join(work,suffix+'-app.json'),b=path.join(work,suffix+'-binder.json'),identity=path.join(work,suffix+'-identity.json');
   save(a,JSON.stringify(connection(db,'projection_app',appPassword)));save(b,JSON.stringify(connection(db,'projection_binder',binderPassword)));
   save(identity,JSON.stringify({issuer,audience,jwk}));
-  return loadFamilyProjection({NODE_ENV:'test',CANONICAL_FAMILY_PROJECTION_ENABLED:'true',CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED:'true',
+  // Keep a real binder backend alive deterministically despite local Docker latency.
+  // Only the test pool's idle window changes; connections, SQL and LOGINs are real.
+  const previous=Pg.Pool;
+  Pg.Pool=class extends Pool {constructor(options){super({...options,idleTimeoutMillis:options.application_name==='synthetic_family_projection_binder'?60000:options.idleTimeoutMillis});}};
+  try { return await loadFamilyProjection({NODE_ENV:'test',CANONICAL_FAMILY_PROJECTION_ENABLED:'true',CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED:'true',
     CANONICAL_FAMILY_APP_CONFIG_FILE:a,CANONICAL_FAMILY_BINDER_CONFIG_FILE:b,CANONICAL_FAMILY_IDENTITY_CONFIG_FILE:identity},event=>events.push(event));
+  } finally {Pg.Pool=previous;}
 }
 async function serve(value,port=0){const legacy=new Proxy({},{get(){throw Error('Legacy auth/store must not be read')}});
   const s=createAppServer({auth:legacy,profiles:legacy,assessments:legacy,orders:legacy,reports:legacy,familyProjection:value,logger:{error(){}}});
@@ -174,6 +182,7 @@ async function faultTests(db,call){
 
 try{
   protect(work);assert(!existsSync(devVars),'Existing preview configuration must be preserved');
+  await reviewConfigProbe({loadFamilyProjection,work,save,original:originalReview});
   const db=await cluster('fresh');
   docker(['exec',db.id,'mkdir','-p','/opt/canonical-migrations','/opt/verification']);
   docker(['cp',path.join(root,'database/canonical/migrations')+'/.',`${db.id}:/opt/canonical-migrations`]);
@@ -206,6 +215,7 @@ try{
   const call=(resource='family',subject='usr_parent_a',family=familyKey('a'),extra={})=>fetch(`${origin}/v1/canonical/projections/${resource}`,{
     headers:{authorization:'Bearer '+jwt(subject,family)},...extra});
   const get=async(...args)=>{const r=await call(...args);assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');return r.json();};
+  await reviewRuntimeProbes({db,sql,call,original:originalReview});
   assert.deepEqual(await get(),{schemaVersion:'family-summary.v2',family:{familyRef:publicFamily(100),displayName:'Synthetic Family A'}});
   assert.deepEqual(await get('students'),{schemaVersion:'student-summary.v2',items:[{studentRef:publicStudent(3),displayName:'Synthetic Student A'}]});
   assert.deepEqual((await get('students','usr_student_a')).items,[{studentRef:publicStudent(3),displayName:'Synthetic Student A'}]);
@@ -283,6 +293,7 @@ try{
   sql(restored,`ALTER ROLE projection_app PASSWORD '${appPassword}';ALTER ROLE projection_binder PASSWORD '${binderPassword}';`);
   await runReadAuditRegression({db:restored,sql,connection,Pool,appPassword,binderPassword,id,issuer,familyKey,randomUUID,docker});
   await close(api);api=undefined;await projection.close();projection=await adapter(restored,'restored');api=await serve(projection,apiPort);
+  await reviewRuntimeProbes({db:restored,sql,call,original:originalReview});
   assert.equal((await call()).status,200);assert.equal((await call('students/'+publicStudent(4))).status,404);
   await faultTests(restored,call);
   await refresh('usr_parent_b',familyKey('b'));await page.locator('[data-family-name]').filter({hasText:'Synthetic Family B'}).waitFor();

@@ -30,7 +30,9 @@ SECURITY DEFINER固定search_path，表/函数限定schema，pg_temp最后；own
 
 新模式顺序：校验受保护配置和运行角色 → SET专用角色 → clear → 独立binder解析签票 → 同一read后端兑换/nonce核验 → 短普通BEGIN → 受控投影及严格envelope/DTO核验 → COMMIT → clear/空上下文检查/RESET/DISCARD → 才能发HTTP正文。正常拒绝也先COMMIT审计；审计、COMMIT、DTO或清理失败均无业务正文并销毁不安全连接。事务不是READ ONLY，但运行角色无任何业务写权限。
 
-每次审计读取事务显式SET LOCAL statement_timeout=2s，避免DISCARD ALL清除startup GUC后失去约束；客户端query_timeout=3000ms不依赖数据库会话GUC。永久测试在新库/恢复库用断言trigger核验连续请求在池清理后仍为2s，验证后清除测试注入。
+每次审计读取事务显式SET LOCAL statement_timeout=2s，将该事务上限固定为2s；客户端query_timeout=3000ms不依赖数据库会话GUC。复审实测：本配置的startup statement_timeout/reset_val为2000ms，DISCARD ALL后同一binder后端仍为2s；旧文档“清除startup GUC后失去约束”的解释已纠正，未重现该超时漏洞。永久测试在新库/恢复库核验相同binder PID的reset值及读取事务上限，验证后清除注入。[DISCARD](https://www.postgresql.org/docs/16/sql-discard.html)包含RESET ALL；[RESET](https://www.postgresql.org/docs/16/sql-reset.html)恢复相应默认值。
+
+配置读取统一返回不含路径/原文片段的503错误，拒绝null/数组等非对象根；实际启动入口原先只记录error.name，复审没有观察到真实凭据泄漏。运行角色检查覆盖LOGIN及专用role的数据库CREATE（建Schema能力）和全部非临时Schema CREATE，并对binder执行相同永久DDL检查；允许正常的临时表能力，但不能遮蔽限定schema的受控函数。
 
 内部复用0017 audit.record_write_decision，固定action=READ及resource/reason白名单；不向运行角色授予通用audit执行/INSERT权限。family/single一次决定，列表一次LIST决定及每个实际返回学生一条ALLOW；超限或映射异常不写成功学生项。nonce、principal、actor、family从受保护上下文读取，attempt由旧helper生成；未知/无权学生不把外家庭UUID写进当前家庭事件。
 

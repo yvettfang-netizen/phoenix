@@ -39,13 +39,15 @@ async function guardAuditedRole(client: PoolClient): Promise<void> {
     AND EXISTS(SELECT FROM pg_roles target WHERE target.rolname=$1 AND NOT(target.rolsuper OR target.rolcreaterole OR target.rolcreatedb OR target.rolreplication OR target.rolbypassrls OR target.rolcanlogin OR target.rolinherit))
     AND NOT EXISTS(SELECT FROM pg_auth_members m WHERE m.member=r.oid AND m.roleid<>$1::regrole)
     AND NOT EXISTS(SELECT FROM pg_auth_members m WHERE m.member=$1::regrole)
+    AND NOT has_database_privilege(session_user,current_database(),'CREATE')
+    AND NOT has_database_privilege($1,current_database(),'CREATE')
     AND NOT EXISTS(SELECT FROM pg_roles other WHERE other.rolname IN ('phoenix_canonical_reader','phoenix_canonical_app','phoenix_canonical_context_binder','phoenix_canonical_migrator')
       AND (pg_has_role(session_user,other.oid,'MEMBER') OR pg_has_role($1,other.oid,'MEMBER')))
     AND NOT EXISTS(SELECT FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace
       WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%'
         AND t.relkind IN ('r','p','v','m','f') AND (has_table_privilege(session_user,t.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
           OR has_table_privilege($1,t.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')))
-    AND NOT EXISTS(SELECT FROM pg_namespace n WHERE n.nspname IN ('auth','core','integration','audit','public') AND (has_schema_privilege(session_user,n.oid,'CREATE') OR has_schema_privilege($1,n.oid,'CREATE')))
+    AND NOT EXISTS(SELECT FROM pg_namespace n WHERE n.nspname !~ '^pg_(temp|toast_temp)_[0-9]+$' AND (has_schema_privilege(session_user,n.oid,'CREATE') OR has_schema_privilege($1,n.oid,'CREATE')))
     AND NOT EXISTS(SELECT FROM pg_class s WHERE s.relkind='S' AND s.relnamespace='audit'::regnamespace AND (has_sequence_privilege(session_user,s.oid,'USAGE,UPDATE') OR has_sequence_privilege($1,s.oid,'USAGE,UPDATE')))
     AND NOT EXISTS(SELECT FROM pg_proc f JOIN pg_namespace n ON n.oid=f.pronamespace
       WHERE n.nspname IN ('auth','audit','core','integration') AND f.proname IN ('issue_context_ticket','issue_application_family_context_ticket','record_access_event','record_write_decision','read_projection_summary','lookup_projection_public_id')
@@ -56,6 +58,7 @@ async function guardAuditedRole(client: PoolClient): Promise<void> {
 }
 
 async function protectedJson(file: string): Promise<Record<string, unknown>> {
+  try {
   if (!isAbsolute(file)) throw unavailable()
   const info = await lstat(file)
   if (!info.isFile() || info.isSymbolicLink() || info.size > 16000 || (process.platform !== 'win32' && (info.mode & 0o077) !== 0)) throw unavailable()
@@ -65,7 +68,13 @@ async function protectedJson(file: string): Promise<Record<string, unknown>> {
       env: { ...process.env, FAMILY_CHECK_FILE: file }, stdio: 'ignore', windowsHide: true, timeout: 5000
     }) } catch { throw unavailable() }
   }
-  return JSON.parse(await readFile(file, 'utf8')) as Record<string, unknown>
+  const parsed: unknown = JSON.parse(await readFile(file, 'utf8'))
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw unavailable()
+  return parsed as Record<string, unknown>
+  } catch {
+    // File-system and JSON parser errors can carry paths or configuration excerpts.
+    throw unavailable()
+  }
 }
 function connection(value: Record<string, unknown>): PoolConfig {
   if (Object.keys(value).sort().join(',') !== 'database,host,password,port,user' || value.host !== '127.0.0.1' ||
@@ -76,6 +85,8 @@ function connection(value: Record<string, unknown>): PoolConfig {
 }
 async function guardRole(client: PoolClient, binder: boolean): Promise<void> {
   const r = await client.query(`SELECT NOT (rolsuper OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolinherit)
+    AND NOT has_database_privilege(session_user,current_database(),'CREATE')
+    AND NOT EXISTS(SELECT FROM pg_namespace n WHERE n.nspname !~ '^pg_(temp|toast_temp)_[0-9]+$' AND has_schema_privilege(session_user,n.oid,'CREATE'))
     AND NOT EXISTS (SELECT FROM pg_auth_members m WHERE m.member=r.oid
       AND ($1::boolean OR m.roleid<>'phoenix_canonical_reader'::regrole))
     AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
@@ -133,7 +144,7 @@ export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
         if (trace.rows[0]?.allowed !== true) throw denied()
         if (audited) {
           await app.query('BEGIN')
-          // DISCARD ALL resets startup GUCs; reapply the statement bound for every transaction.
+          // Pin the transaction bound; DISCARD ALL restores reset defaults (including this connection's startup value).
           await app.query("SET LOCAL statement_timeout='2s'")
           const query = operation === 'family' ? 'SELECT core.read_family_summary() AS result'
             : operation === 'students' ? 'SELECT core.list_student_summaries() AS result' : 'SELECT core.read_student_summary($1) AS result'
