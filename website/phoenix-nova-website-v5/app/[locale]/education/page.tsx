@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { EducationLanding } from "@/components/education-landing";
+import { env } from "cloudflare:workers";
+import { catalogPreviewEnabled } from "@/lib/canonical-learning-catalog";
 
 type Props = { params: Promise<{ locale: string }> };
 export const dynamic = "force-dynamic";
@@ -14,5 +16,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function EducationPage({ params }: Props) {
   const { locale } = await params;
   if (locale !== "zh" && locale !== "en") notFound();
-  return <EducationLanding locale={locale} />;
+  return <EducationLanding locale={locale} catalogPreviewEnabled={catalogPreviewEnabled(env as unknown as Record<string, unknown>, process.env.NODE_ENV)} />;
 }

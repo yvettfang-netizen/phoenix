@@ -14,6 +14,7 @@ import { EducationCompassService } from '../services/education-compass-service'
 import { FeishuSyncService } from '../integrations/feishu/sync-service'
 import { routeAgentRequest } from './agent-routes'
 import { InMemoryRateLimiter, RateLimiter } from './rate-limiter'
+import { LearningCatalog } from '../services/canonical-learning-catalog'
 
 export interface AppDependencies {
   auth: AuthService
@@ -30,6 +31,7 @@ export interface AppDependencies {
   feishu?: FeishuSyncService
   rateLimiter?: RateLimiter
   readiness?: () => Promise<void>
+  learningCatalog?: LearningCatalog
   logger?: { error(message: string, context?: Record<string, unknown>): void }
 }
 
@@ -187,6 +189,14 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
     try {
       const url = new URL(request.url ?? '/', 'http://localhost')
       route = url.pathname
+      if (url.pathname === '/v1/learning/catalog') {
+        invariant(deps.learningCatalog, 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        invariant(method === 'GET', 405, 'METHOD_NOT_ALLOWED', '请求方式不受支持')
+        exactQuery(url)
+        deps.learningCatalog.authorize(request.headers.authorization)
+        invariant(await rateLimiter.consume('canonical-catalog', 120, 60_000), 429, 'RATE_LIMITED', '请求过于频繁')
+        return json(response, 200, await deps.learningCatalog.list())
+      }
       if (method === 'GET' && url.pathname === '/health') {
         exactQuery(url)
         try {
