@@ -61,7 +61,21 @@ Build: PASS. TypeScript: PASS. ESLint: zero errors, one existing unused `Bell` w
 
 Frozen preview `http://127.0.0.1:4479`: homepage 22 PASS; Education 16 PASS; Identity 22 PASS; homepage runtime errors 0. The first Health run exposed a stale brand assertion: the original questionnaire deliberately uses an ivory carrier on its dark Header, rather than the transparent wrapper used by light page headers. The regression now asserts that exact ivory carrier, unchanged image bytes, original colours, aspect ratio, no border and no filter. Its no-JS check observes the disabled form directly instead of waiting for unrelated lazy network requests to become idle. No questionnaire or service logic changed.
 
+Local Health enabled-state regression after that test correction: 43 PASS, 0 FAIL, including consent, back/edit, skipped questions, no invented results, no answer transmission and no browser runtime errors. Its JSON is retained as `health-on-browser-results.json`; default-off and enabled-state CI results are linked below.
+
 Exact final heights, all block measurements, locale switches, internal link statuses, overflow checks and screenshots are recorded in `docs/previews/homepage-v63/`. The browser test rejects a 1440px homepage outside 1000–1150px and checks each specified block range and two-line Compass descriptions.
+
+The runtime changes are concentrated in `homepage-v6.tsx`, `homepage-v6.module.css`, the shared compact Footer in `site-ecosystem-content.tsx` / `site-chrome-v3.module.css`, `v5-site.tsx`, and `lib/locale-navigation.ts`. `docs/previews/homepage-v63/changed-files.txt` lists the PR's files against its approved main baseline before this final evidence-only commit.
+
+GitHub evidence for code/test commit `b226db0211e9af67c2724b4a8190306cd0ae954c`:
+
+- [Website checks](https://github.com/yvettfang-netizen/phoenix/actions/runs/41792176532): PASS.
+- [Education](https://github.com/yvettfang-netizen/phoenix/actions/runs/41792176503): PASS.
+- [Identity](https://github.com/yvettfang-netizen/phoenix/actions/runs/41792176831): PASS.
+- [Health Compass](https://github.com/yvettfang-netizen/phoenix/actions/runs/41792176564): PASS, including original questionnaire browser tests and Health/family landing regressions in both switch states.
+- [Canonical smoke](https://github.com/yvettfang-netizen/phoenix/actions/runs/41792176524): 7 jobs PASS, PostgreSQL 17 fresh-container job FAIL before migration execution (`127.0.0.1:5432 connection refused`). PostgreSQL 16 fresh/upgrade and 17 upgrade PASS. GitHub returned 403 when asked to retry this run. No database files changed for this task; the failure is retained, not reported as a passing migration test.
+
+The evidence-only follow-up commit adds results and this record; the runtime source tested above is unchanged.
 
 Build, TypeScript, lint and route/brand-unit results are rerun for this increment. Local browser verification uses the existing frontend-only adapter, with no database binding. It does not prove production authentication or Worker compatibility; Ubuntu CI covers those runtime suites. Pending business candidate PRs #33/#34/#35/#38 and Logo PR #40 remain separate, as documented in the V6 dependency audit.
 
