@@ -150,6 +150,12 @@ async function migrationChecks(db){
 async function faultTests(db,call){
   // Fault injection is confined to this labelled disposable test cluster and removed before backup.
   assert.equal(docker(['inspect','--format','{{index .Config.Labels "canonical.projection.test"}}',db.id]),nonce);
+  sql(db,`CREATE FUNCTION audit.synthetic_timeout_guard() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+    IF current_setting('statement_timeout')<>'2s' THEN RAISE EXCEPTION 'TRANSACTION_TIMEOUT_NOT_REAPPLIED'; END IF; RETURN NEW; END $$;
+    CREATE TRIGGER synthetic_timeout_guard BEFORE INSERT ON audit.access_events FOR EACH ROW EXECUTE FUNCTION audit.synthetic_timeout_guard();`);
+  assert.equal((await call()).status,200);assert.equal((await call()).status,200);
+  sql(db,'DROP TRIGGER synthetic_timeout_guard ON audit.access_events; DROP FUNCTION audit.synthetic_timeout_guard()');
+  console.log('PASS per-request 2s statement timeout remains enforced across DISCARD ALL pool reuse; persistent client timeout also bounds queries');
   sql(db,`CREATE FUNCTION audit.synthetic_projection_fault() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'SYNTHETIC_AUDIT_FAILURE'; END $$;
     CREATE TRIGGER synthetic_projection_insert_fault BEFORE INSERT ON audit.access_events FOR EACH ROW EXECUTE FUNCTION audit.synthetic_projection_fault();`);
   let failed=await call();assert.equal(failed.status,503);assert(!JSON.stringify(await failed.json()).includes('Synthetic Family'));

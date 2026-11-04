@@ -72,7 +72,7 @@ function connection(value: Record<string, unknown>): PoolConfig {
       value.database !== 'phoenix_canonical_dev' || !Number.isInteger(value.port) || Number(value.port) < 1 || Number(value.port) > 65535 ||
       typeof value.user !== 'string' || !/^[a-z][a-z0-9_]{0,62}$/.test(value.user) ||
       typeof value.password !== 'string' || value.password.length < 32) throw unavailable()
-  return { ...value, max: 1, connectionTimeoutMillis: 1500, statement_timeout: 2000, idleTimeoutMillis: 2000 } as PoolConfig
+  return { ...value, max: 1, connectionTimeoutMillis: 1500, query_timeout: 3000, statement_timeout: 2000, idleTimeoutMillis: 2000 } as PoolConfig
 }
 async function guardRole(client: PoolClient, binder: boolean): Promise<void> {
   const r = await client.query(`SELECT NOT (rolsuper OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolinherit)
@@ -133,6 +133,8 @@ export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
         if (trace.rows[0]?.allowed !== true) throw denied()
         if (audited) {
           await app.query('BEGIN')
+          // DISCARD ALL resets startup GUCs; reapply the statement bound for every transaction.
+          await app.query("SET LOCAL statement_timeout='2s'")
           const query = operation === 'family' ? 'SELECT core.read_family_summary() AS result'
             : operation === 'students' ? 'SELECT core.list_student_summaries() AS result' : 'SELECT core.read_student_summary($1) AS result'
           const response = await app.query(query, operation === 'student' ? [studentRef] : [])

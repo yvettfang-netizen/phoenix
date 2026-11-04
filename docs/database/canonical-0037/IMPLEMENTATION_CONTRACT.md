@@ -30,6 +30,8 @@ SECURITY DEFINER固定search_path，表/函数限定schema，pg_temp最后；own
 
 新模式顺序：校验受保护配置和运行角色 → SET专用角色 → clear → 独立binder解析签票 → 同一read后端兑换/nonce核验 → 短普通BEGIN → 受控投影及严格envelope/DTO核验 → COMMIT → clear/空上下文检查/RESET/DISCARD → 才能发HTTP正文。正常拒绝也先COMMIT审计；审计、COMMIT、DTO或清理失败均无业务正文并销毁不安全连接。事务不是READ ONLY，但运行角色无任何业务写权限。
 
+每次审计读取事务显式SET LOCAL statement_timeout=2s，避免DISCARD ALL清除startup GUC后失去约束；客户端query_timeout=3000ms不依赖数据库会话GUC。永久测试在新库/恢复库用断言trigger核验连续请求在池清理后仍为2s，验证后清除测试注入。
+
 内部复用0017 audit.record_write_decision，固定action=READ及resource/reason白名单；不向运行角色授予通用audit执行/INSERT权限。family/single一次决定，列表一次LIST决定及每个实际返回学生一条ALLOW；超限或映射异常不写成功学生项。nonce、principal、actor、family从受保护上下文读取，attempt由旧helper生成；未知/无权学生不把外家庭UUID写进当前家庭事件。
 
 DB行仍可回滚；PHOENIX_AUDIT服务端LOG保留尝试，通过attempt/nonce对账识别LOG_ONLY。ALLOW是决策尝试而非客户交付证明；不能保证日志配置/采集故障或崩溃时绝不丢失。不宣称中途撤权可取消已读取响应，当前仅验证下一请求重新解析时拒绝。
