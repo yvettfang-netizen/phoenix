@@ -36,10 +36,12 @@ const personas = {
   },
 };
 
+// Frozen score(): report sufficiency and manualReviewRequired are independent.
+// P02 is complete (READY) and still requires human review for its five risks.
 const expected = {
-  persona1: { readiness: ["79", "79", "76", "70", "88", "38"], risks: 1, report: "READY", actions: 3 },
-  persona2: { readiness: ["54", "61", "29", "0", "15", "50"], risks: 5, report: "NEEDS_MORE_INFO", actions: 0 },
-  persona3: { readiness: ["100", "100", "100", "100", "73", "100"], risks: 0, report: "READY", actions: 1 },
+  persona1: { readiness: ["79", "79", "76", "70", "88", "38"], risks: 1, report: "READY", actions: 3, manualReview: true },
+  persona2: { readiness: ["54", "61", "29", "0", "15", "50"], risks: 5, report: "READY", actions: 3, manualReview: true },
+  persona3: { readiness: ["100", "100", "100", "100", "73", "100"], risks: 0, report: "READY", actions: 1, manualReview: false },
 };
 
 const results = [];
@@ -165,6 +167,7 @@ async function result(page) {
     risks: await page.locator('[data-testid="wealth-result"] ul li').count(),
     report: /结果已整理|results are ready/i.test(resultText) ? "READY" : "NEEDS_MORE_INFO",
     actions: await page.locator('[data-testid="wealth-result"] ol li').count(),
+    manualReview: /需要人工复核|Human review is needed/.test(resultText),
   };
 }
 
@@ -175,7 +178,7 @@ async function personaFlow(page, locale, name, answers) {
   const actual = await result(page);
   assert.deepEqual(actual.codes, ["D1", "D2", "D3", "D4", "D5", "D6"]);
   assert.deepEqual(
-    { readiness: actual.readiness, risks: actual.risks, report: actual.report, actions: actual.actions },
+    { readiness: actual.readiness, risks: actual.risks, report: actual.report, actions: actual.actions, manualReview: actual.manualReview },
     expected[name],
     locale + " " + name + ": frozen fixture drift",
   );
