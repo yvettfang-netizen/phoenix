@@ -9,6 +9,7 @@ const browser=await chromium.launch({headless:true,...(process.env.EDUCATION_BRO
 const results=[];
 try {
  const page=await browser.newPage();
+ const pageErrors=[]; page.on('pageerror',error=>pageErrors.push(error.message));
  for(const locale of ['zh','en']) {
   for(const width of [320,390,768,1440]) {
    await page.setViewportSize({width,height:900});
@@ -34,6 +35,12 @@ try {
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    assert.equal(await page.locator('h1').count(),1);
    results.push({locale,width,check:'homepage regression',status:'PASS'});
+   assert.equal((await page.goto(`${origin}/${locale}/account`,{waitUntil:'networkidle'})).status(),200);
+   assert.match(await page.locator('.account-message').innerText(),/not enabled|unavailable|尚未启用|暂时无法连接/i);
+   assert.equal(await page.locator('main form').count(),0,'disabled auth cannot expose a working sign-in form');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+   assert.match(await page.locator('meta[name="robots"]').getAttribute('content'),/noindex/);
+   results.push({locale,width,check:'account defaults stay unavailable and noindex',status:'PASS'});
   }
   const payload='"><script>globalThis.__educationXss=1</script>';
   const route=`${origin}/${locale}/education/schools?q=${encodeURIComponent(payload)}&page=Infinity&next=https://evil.example`;
@@ -56,6 +63,7 @@ try {
   assert.equal(response.status(),200); assert.match(response.headers()['x-robots-tag'],/noindex/);
   assert.equal((await response.text()).includes('<loc>'),false);
  }
+ assert.deepEqual(pageErrors,[],'no unhandled browser runtime errors');
  results.push({check:'robots and all sitemap collections remain closed',status:'PASS'});
 } finally {
  await browser.close(); await writeFile(`${out}/readiness-results.json`,JSON.stringify({results},null,2)); console.log({passed:results.length});
