@@ -3,6 +3,7 @@ import { SiteHeader, SiteFooter } from "./v5-site";
 import { HealthConsultation } from "./health-consultation";
 import { dimensions, text } from "@/lib/health-compass";
 import { healthPreviewEnabled } from "@/lib/health-compass-gate";
+import { healthBrandOrigin } from "@/lib/health-landing-content";
 import shared from "./health-landing.module.css";
 import styles from "./health-family.module.css";
 
@@ -41,6 +42,24 @@ export function HealthFamily({ locale }: { locale: "zh" | "en" }) {
           <div className={styles.actions}>{assessment("family-hero-assessment", true)}<a className={shared.secondary} href="#family-assessment">{t("了解 Health Compass", "Learn about Health Compass")} ↗</a></div>
         </div>
         <div className={styles.visual}><div className={styles.visualPhoto} role="img" aria-label={t("笔记本与眼镜的规划场景示意", "Illustrative notebook and glasses for planning")} /><div className={styles.visualNote}><span>{t("清晰 · 协调 · 持续", "CLARITY · COORDINATION · CONTINUITY")}</span><p>{t("看清安排，\n让关心有处安放。", "Make room for care.\nGive the next step a place.")}</p><small>{t("场景示意图，不代表客户或合作关系", "Illustrative stock image, no client or partner affiliation")}</small></div></div>
+      </section>
+      <section className={shared.brandOrigin} id="family-brand-origin" data-testid="family-brand-origin" aria-labelledby="family-brand-origin-title">
+        <div className={`${shared.section} ${shared.wrap} ${shared.brandOriginGrid}`}>
+          <div>
+            <p className={shared.brandOriginEyebrow}>{text(healthBrandOrigin.eyebrow, locale)}</p>
+            <h2 id="family-brand-origin-title">{text(healthBrandOrigin.title, locale)}</h2>
+            <p className={shared.brandOriginBody}>{text(healthBrandOrigin.body, locale)}</p>
+            <div className={shared.brandOriginActions}>
+              <Link className={shared.primary} href={`/${locale}/health/shenzhen-international-medical`}>{text(healthBrandOrigin.cta, locale)} ↗</Link>
+              <a className={shared.secondary} href="#family-consultation">{text(healthBrandOrigin.consultationCta, locale)} ↗</a>
+            </div>
+          </div>
+          <aside className={shared.brandOriginNote} aria-label={t("APEC 背景说明", "APEC context note")}>
+            <p>{text(healthBrandOrigin.boundary, locale)}</p>
+            <a href={healthBrandOrigin.sourceHref} target="_blank" rel="noreferrer noopener">{text(healthBrandOrigin.sourceLabel, locale)} ↗</a>
+            <small>{t("事实核验日期：2026年11月2日", "Fact checked: 2 November 2026")}</small>
+          </aside>
+        </div>
       </section>
       <section className={styles.directionsSection}><div className={`${shared.wrap} ${shared.section}`}>
         <div className={shared.sectionHeading}><p>{t("01 / 六个规划方向", "01 / SIX PLANNING DIRECTIONS")}</p><h2>{t("健康规划，不止于一次就医", "Health planning goes beyond a single medical visit")}</h2></div>

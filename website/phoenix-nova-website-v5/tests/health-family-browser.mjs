@@ -56,6 +56,14 @@ try {
       assert.ok(brand.x + brand.width <= actions.x + 1, `${locale}/${width} header overlap`);
 
       const bodyText = await page.locator("body").innerText();
+      const origin = page.getByTestId("family-brand-origin");
+      assert.equal(await origin.count(), 1, `${locale}/${width}: APEC origin context missing`);
+      const originText = await origin.innerText();
+      assert.match(originText, /APEC|深圳2026/);
+      assert.match(originText, /2026/);
+      assert.match(originText, locale === "zh" ? /无关|不.*官方/ : /not affiliated|independent/i);
+      assert.ok(await origin.locator('a[href="https://www.szns.gov.cn/english/apec2026shenzhen/"]').count());
+      assert.equal(await origin.locator("img,form,input").count(), 0, `${locale}/${width}: APEC origin must not collect data`);
       for (const dimension of dimensions) {
         const title = dimension.title[locale === "zh" ? 0 : 1];
         assert.ok(bodyText.includes(title), `${locale}/${width}: missing ${title}`);
