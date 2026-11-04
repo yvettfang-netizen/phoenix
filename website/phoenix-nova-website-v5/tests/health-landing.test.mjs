@@ -189,8 +189,7 @@ test("Health landing contains six linked entries, six values, five services and 
   assert.equal((html.match(/<details\b/gi) ?? []).length >= 16, true, "Health landing must retain six process details and the FAQ/consultation details");
 
   assert.match(html, /<header class="site-header[^"]*"/);
-  assert.match(html, /\bbrand-mark--zh\b/);
-  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-symbol-transparent\.png/);
+  assert.match(html, /\/brand\/official\/v3\/phoenix-nova-bilingual-b@2x\.png/);
   assert.match(html, /凤启环球/);
   assertBrandMarkup(html, "/zh/health");
   assert.match(html, /<footer class="site-footer[^\"]*"/);
