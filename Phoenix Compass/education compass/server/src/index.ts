@@ -29,9 +29,11 @@ import { AccountService } from './services/account-service'
 import { ExportService } from './services/export-service'
 import { PostgresStore } from './store/postgres-store'
 import { Store } from './store/store'
+import { loadLearningCatalog } from './services/canonical-learning-catalog'
 
 async function main(): Promise<void> {
   const config = loadConfig()
+  const learningCatalog = await loadLearningCatalog()
   const sourceCatalog = await loadSourceCatalog(config.sourceCatalogMode, config.sourceCatalogPath)
   const store: Store = config.databaseUrl ? new PostgresStore(config.databaseUrl) : new InMemoryStore()
   const authProvider = config.wechatAppId && config.wechatAppSecret
@@ -112,6 +114,7 @@ async function main(): Promise<void> {
     : undefined
   const server = createAppServer({
     auth, profiles, assessments, orders, reports, education, accounts, exports, feishu,
+    learningCatalog,
     ...(payments ? { payments } : {}),
     // `/health` is a readiness check in the deployed API contract. Keep it
     // read-only, but verify that the authoritative store can still answer so a
@@ -167,7 +170,7 @@ async function main(): Promise<void> {
     clearInterval(refundSweepTimer)
     clearInterval(feishuSyncTimer)
     server.close(() => {
-      void store.close?.().finally(() => process.exit(0))
+      void Promise.all([store.close?.(), learningCatalog?.close()]).finally(() => process.exit(0))
     })
   }
   process.once('SIGINT', shutdown)
