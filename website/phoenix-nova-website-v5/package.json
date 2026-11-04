@@ -61,5 +61,11 @@
     "wrangler": "4.157.0"
   },
   "type": "module",
-  "displayName": "Phoenix Nova website V5"
+  "displayName": "Phoenix Nova website V5",
+  "overrides": {
+    "satori": {
+      "fflate": "0.7.5"
+    }
+  },
+  "packageManager": "npm@10.9.2"
 }
