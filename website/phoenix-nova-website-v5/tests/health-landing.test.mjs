@@ -112,7 +112,7 @@ test("Health landing contains three controlled entries, six values, five service
   for (const label of [
     "深港医疗专家资源",
     "国际化语言服务",
-    "更具竞争力的医疗费用",
+    "费用范围与报价核实",
     "舒适宽敞的住院环境",
     "更便捷的预约安排",
     "保险理赔与后续服务",
@@ -123,11 +123,17 @@ test("Health landing contains three controlled entries, six values, five service
   for (const label of [
     /(?:Hong Kong|Shenzhen).{0,60}(?:specialist|medical) (?:expertise|resources)/i,
     /international language (?:services|support)/i,
-    /(?:more )?potentially competitive medical costs/i,
+    /cost scope and quotation checks/i,
     /comfortable(?: and spacious)?(?: inpatient)? environments/i,
     /more (?:efficient|convenient) appointment (?:arrangements|planning|coordination)/i,
     /insurance claims and (?:continuing|follow-up) (?:support|services)/i,
   ]) assert.match(englishStrengthText, label);
+  assert.match(html, /报价日期、包含及不包含的项目/);
+  assert.match(englishStrengthText, /dated written estimate with inclusions and exclusions/i);
+  assert.match(html, /本页不作跨地区价格比较或节省承诺/);
+  assert.match(englishStrengthText, /no cross-region price comparisons or savings promises/i);
+  assert.doesNotMatch(html, /更具竞争力的医疗费用|相较香港及英国同类私立服务|可能具备费用竞争力/);
+  assert.doesNotMatch(englishStrengthText, /potentially competitive medical costs|may offer competitive costs|compared with similar private services/i);
   for (const label of [
     "医疗机构与预约协调",
     "医疗翻译与患者导航",
