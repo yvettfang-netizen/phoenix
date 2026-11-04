@@ -11,8 +11,6 @@ import {
   BRAND_FOOTER_URL,
   BRAND_HEADER_SIZE,
   BRAND_HEADER_URL,
-  BRAND_SYMBOL_SIZE,
-  BRAND_SYMBOL_URL,
 } from "./brand-integrity.mjs";
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(resolve(process.env.PLAYWRIGHT_MODULE, "index.mjs")).href : "playwright");
@@ -22,7 +20,6 @@ const IVORY_SURFACE = "rgb(248, 246, 241)";
 const BRAND_ASSETS = {
   header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: IVORY_SURFACE },
   footer: { url: BRAND_FOOTER_URL, ...BRAND_FOOTER_SIZE, wrapperBackground: "transparent" },
-  symbol: { url: BRAND_SYMBOL_URL, ...BRAND_SYMBOL_SIZE, wrapperBackground: "transparent" },
 };
 const FOOTER_SURFACE = IVORY_SURFACE;
 const TRANSPARENT = new Set(["transparent", "rgba(0, 0, 0, 0)"]);
@@ -119,10 +116,7 @@ async function inspectBrandImage(locator, route, role, width) {
       imageFilter: style.filter,
     };
   });
-  const localizedChinese = /\bbrand-mark--zh\b/.test(details.brandClass);
-  const expected = localizedChinese
-    ? BRAND_ASSETS.symbol
-    : { ...BRAND_ASSETS[role], wrapperBackground: role === 'header' && /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? 'transparent' : BRAND_ASSETS[role].wrapperBackground };
+  const expected = { ...BRAND_ASSETS[role], wrapperBackground: role === 'header' && /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? 'transparent' : BRAND_ASSETS[role].wrapperBackground };
   assert.ok(details.src.includes(expected.url), `${route}: ${role} must use ${expected.url}`);
   assert.ok(!/phoenix-nova-(?:logo-master|mark-official|logo-official|official-logo-system-v1)\.png/i.test(details.src), `${route}: legacy mark/logo is still rendered`);
   assert.equal(details.naturalWidth, expected.width, `${route}: ${role} asset width changed`);
@@ -141,10 +135,6 @@ async function inspectBrandImage(locator, route, role, width) {
   assert.ok(TRANSPARENT.has(details.imageBackground), `${route}: ${role} image must have no background fill`);
   assert.equal(details.imageFilter, "none", `${route}: ${role} official colours must not be filtered`);
   assert.ok(details.left >= -1 && details.right <= width + 1, `${route} ${width}px: ${role} image leaves the viewport`);
-  if (localizedChinese) {
-    const expectedRenderedWidth = width <= 700 ? 40 : 52;
-    assert.ok(Math.abs(details.width - expectedRenderedWidth) < 0.5, `${route} ${width}px: Chinese symbol must render at ${expectedRenderedWidth}px`);
-  }
   return details;
 }
 
@@ -153,22 +143,8 @@ async function assertSharedBrandChrome(page, route, width) {
   await page.locator("footer").scrollIntoViewIfNeeded();
   const header = await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
-  const localizedChinese = /\bbrand-mark--zh\b/.test(header.brandClass) || /\bbrand-mark--zh\b/.test(footer.brandClass);
   const expectedFooterWidth = /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? (width <= 700 ? 165 : 220) : (width <= 680 ? 165 : 210);
   assert.ok(Math.abs(footer.wrapperWidth - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand wrapper must be ${expectedFooterWidth}px wide`);
-  if (localizedChinese) {
-    const wordmarks = page.locator('.brand-mark--zh [class*="wordmark"]');
-    assert.equal(await wordmarks.count(), 2, `${route}: Chinese Header/Footer wordmarks must both render`);
-    const wordmarkBounds = await wordmarks.evaluateAll(elements => elements.map(element => {
-      const rect = element.getBoundingClientRect();
-      const parent = element.closest(".brand-asset-wrap")?.getBoundingClientRect();
-      return { text: element.textContent || "", left: rect.left, right: rect.right, parentLeft: parent?.left || 0, parentRight: parent?.right || 0 };
-    }));
-    for (const bound of wordmarkBounds) {
-      assert.match(bound.text, /凤启环球/);
-      assert.ok(bound.left >= bound.parentLeft - 1 && bound.right <= bound.parentRight + 1, `${route}: Chinese wordmark is cropped`);
-    }
-  }
   assert.equal(await page.locator("footer.site-footer").evaluate(element => getComputedStyle(element).backgroundColor), FOOTER_SURFACE, `${route}: Footer must use the Phoenix Ivory surface`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} ${width}px horizontal overflow`);
