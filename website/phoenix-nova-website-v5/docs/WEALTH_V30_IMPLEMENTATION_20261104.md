@@ -109,4 +109,4 @@ Built-in imagegen generated `public/images/wealth-v3/family-harbour.png`; no fal
 
 ## Founder review boundary
 
-Review the complete bilingual page, service/knowledge content, English translations and browser-only assessment. Merge, public indexing, production traffic, live-data intake and database migration remain unapproved. Domain work is paused at the user's later instruction; the previously prepared plan is retained separately.
+Review the complete bilingual page, service/knowledge content, English translations and browser-only assessment. Merge, public indexing, production traffic, live-data intake and database migration remain unapproved. Part 19's read-only live check resumed after the Founder reported domain configuration complete; HTTPS currently fails hostname validation and the selected Sites project has no custom-domain binding. See the [domain verification record](WEALTH_V30_DOMAIN_PLAN_20261104.md). No DNS or production changes were made.
