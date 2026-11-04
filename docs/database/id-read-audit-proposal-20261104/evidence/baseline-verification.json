@@ -1,0 +1,1126 @@
+{
+  "recordedAt": "2026-11-04T08:37:12.790Z",
+  "scope": "Source metadata and synthetic implementation code only. No database, SSH, credentials or real records.",
+  "authority": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+  "base": "97e47f2287483aeda63948c849ea5eed07f0153b",
+  "archive": "7b0e42362e1a639c286835840133596a2e39861f",
+  "commands": [
+    {
+      "command": [
+        "git",
+        "status",
+        "--short"
+      ],
+      "exitCode": 0,
+      "stdout": "?? docs/database/id-read-audit-proposal-20261104/\n"
+    },
+    {
+      "command": [
+        "git",
+        "branch",
+        "--show-current"
+      ],
+      "exitCode": 0,
+      "stdout": "codex/id-read-audit-proposal-20261104\n"
+    },
+    {
+      "command": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exitCode": 0,
+      "stdout": "97e47f2287483aeda63948c849ea5eed07f0153b\n"
+    },
+    {
+      "command": [
+        "git",
+        "ls-remote",
+        "origin",
+        "refs/heads/main"
+      ],
+      "exitCode": 0,
+      "stdout": "9355d28667ee9cf4761b4abcdaf959f0ad154820\trefs/heads/main\n"
+    },
+    {
+      "command": [
+        "git",
+        "ls-remote",
+        "canonical-private",
+        "refs/heads/codex/pr36-non-jimson-closeout-20261102"
+      ],
+      "exitCode": 0,
+      "stdout": "7b0e42362e1a639c286835840133596a2e39861f\trefs/heads/codex/pr36-non-jimson-closeout-20261102\n"
+    },
+    {
+      "command": [
+        "gh",
+        "repo",
+        "view",
+        "yvettfang-netizen/phoenix-canonical-db",
+        "--json",
+        "nameWithOwner,isPrivate"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"isPrivate\":true,\"nameWithOwner\":\"yvettfang-netizen/phoenix-canonical-db\"}\n"
+    },
+    {
+      "command": [
+        "gh",
+        "pr",
+        "view",
+        "41",
+        "--repo",
+        "yvettfang-netizen/phoenix",
+        "--json",
+        "number,url,state,isDraft,headRefOid,headRefName,baseRefName"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"baseRefName\":\"main\",\"headRefName\":\"codex/canonical-0036-acquisition-contract-20261103\",\"headRefOid\":\"3de5c99fcc1974ca542db587fcb01494ffe3dc58\",\"isDraft\":true,\"number\":41,\"state\":\"OPEN\",\"url\":\"https://github.com/yvettfang-netizen/phoenix/pull/41\"}\n"
+    },
+    {
+      "command": [
+        "gh",
+        "pr",
+        "view",
+        "45",
+        "--repo",
+        "yvettfang-netizen/phoenix",
+        "--json",
+        "number,url,state,isDraft,headRefOid,headRefName,baseRefName"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"baseRefName\":\"main\",\"headRefName\":\"codex/p0-learning-catalog-20261104\",\"headRefOid\":\"307ab74350eb5e9d745fe37c55e0a8033ed1dff0\",\"isDraft\":true,\"number\":45,\"state\":\"OPEN\",\"url\":\"https://github.com/yvettfang-netizen/phoenix/pull/45\"}\n"
+    },
+    {
+      "command": [
+        "gh",
+        "pr",
+        "view",
+        "46",
+        "--repo",
+        "yvettfang-netizen/phoenix",
+        "--json",
+        "number,url,state,isDraft,headRefOid,headRefName,baseRefName"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"baseRefName\":\"codex/p0-learning-catalog-20261104\",\"headRefName\":\"codex/family-student-projection-20261104\",\"headRefOid\":\"97e47f2287483aeda63948c849ea5eed07f0153b\",\"isDraft\":true,\"number\":46,\"state\":\"OPEN\",\"url\":\"https://github.com/yvettfang-netizen/phoenix/pull/46\"}\n"
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0001_foundation.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "eea8d1deece72afdc3832d075fcfb42b71b4c1fe4fdccc8900104a0e0ca78a2d",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0002_education_identity_skeleton.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "bef7d9a902e8ad34491b7455987d7791667dcb8a5ab31945cf609a6aa97e4e7f",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0003_core_consent_access.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "7dc0c5060237fae9069915ba8a1ecc39323cf74ab8ea0d49dd832ef9d8330618",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0004_casework_education_identity.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "aec2be38c6ad363f5594d65016b8a2dfcb79fe76e77a225271379bb991a443e9",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0005_documents_submissions.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "7bd581d16bb8c21278bd5bc013496779fe08f509d84bf74b652e5ce3b21cdbec",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0006_access_decision_api.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "2a3d6cd19febd62b7128c9ad4a2d7c94abdb9a4e11d499f36f4050eb2c2ed9d8",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0007_security_boundary_fixes.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "49ec737393a4a4bc5f1e287add369db4f04fbde1c021521e8b4cf781f966ff93",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0008_expiry_and_ephemeral_cleanup.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "51215c0b4d76e242c28197187bf1e017362700128ddd562e2da5d64980a8588d",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0009_application_write_api.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "2a48d016c0b2dd952d56a15853c8092895df057e6a0d69f5ab391803ca0747c2",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0010_reader_ledger_usage.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "eb05a55b813695ef7c6252ffc00569a0d97920008773fc07b6d0f6109959825a",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0011_verified_capacity_official_facts_manifest_confirmation.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "acc638a3d308b9a9c601238843b1f5dea75a4f376cfb4e77a48cd3afb8f1caa8",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0012_service_principal_and_context.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "385206d698db33cd6a26b7ea48ab5362f2fa2e4256ec96740c336429ad54afa8",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0013_management_write_api.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "fcbeeea5b8fc35c0993b7b7b9dbe956fd0c6edc4a6142e49cb329fad41a320cb",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0014_rollback_resistant_write_audit.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "92328ac4bf51b54980da63e96681220437ac20e4557fc008ab51431793ba4209",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0015_contract_gap_controls.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "a639f9f10c5130c780f008832bcf9e4852badd00fcec618379e94d4e7c82d683",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0016_assignment_scope_integrity.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "7b10af1992e548e065c68d947b47bb073cdc88c52e4312b9aa9ccbe1bfa962e4",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0017_external_identity_request_trace.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "c701f74897ca13d503c8c165fd2182d77a06583afa832760dc80f8dd9524aab6",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0018_advisor_session_scope_and_binder_hardening.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "063f8ba5b57de24208579369ce75424526737953319544d0174c5a31e3f5d74b",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0019_education_master_and_records.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "425b72e7c62916da9c8c22624dc3d2beca547a0b8b96297a68604ecf574cec94",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0020_education_service_read_hardening.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "20435da63432175396bf118d6b6b3b5c9865e7b8b8ba8343f0da84f273d1eedd",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0021_operations_entitlement_reference.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "adb8ec15e956c726e5717f9b19aebaae9d37ba4acece6a960729a204aa746d09",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0022_learning_core.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "4df4b55cc9b2830c357d676906a77a9fa7ac981bbe4673c156285aa40fba2f5f",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0023_application_family_context_resolver.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "e5587c58895495097dea033f25cecfce67661eb0a6aede15821bdf115633f720",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0024_family_mapping_management_api.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "992a9623e933b84f8e58db937450b0bb440e9aaf234ed204b72b7497e44c605f",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0025_family_mapping_lock_hardening.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "fbedd76cb36b6938c9a051ab3606146b9c097f529dee41a7d5cc1f12ee876aea",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0026_enterprise_core_organization_client.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "aad3a52829404e1259d89a9751471af7d0f1322af710d498bb2498c5be7119d5",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0027_crm_lead_deal_foundation.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "81976bd7835a7ada6ab8d0e335ac751d3fd98432a53b0dc4d343c750456e78cc",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0028_service_project_task_delivery.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "b8ec5d270d34da8f24423771b362d1dd6d3aa6c6f3d78cbd61b12968ebf6e8a2",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0029_service_party_milestone_delivery_api.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "898079125502bd5406e64fe50744ea04fe846f519e26d00bd30fe4bbe695fb33",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0030_m0_organization_identity_governance.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "c0559ba97ad9edeaa8cb6559b9d382030e27ef4c9a109e97ab7ea99c43eb2d2e",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0031_m1_client_partner_relationships.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "a58d07ffd116a5890c46f6ca13c97034632b0905522ebdf1f464301746043936",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0032_m2_lead_acquisition_management.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "714ee075bde36d52545e6ae38afc61b3de2509b6f749f0ed31ba29805931047e",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0033_m3_consultation_deal_management.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "f4f08da18a5e4a39eaeeb13c3f1130fd83521fc2583d5394647fb886763a0320",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0034_m4_service_project_governance.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "fa879f5088f12a1797dc9264e9b2e52c2b5ed75d7151bb2d088b0788df9a1895",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "9355d28667ee9cf4761b4abcdaf959f0ad154820:database/canonical/migrations/0035_m5_service_delivery_governance.sql"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "c25d5efb3ddecdd11b1fa45793061b992e8bcaee278e3e1e359f7ca6b510c631",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "7b0e42362e1a639c286835840133596a2e39861f:canonical-db/phase2-gate/PRODUCTION_DATABASE_FOUNDER_DECISION_REGISTER_V1.0.md"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "ed1d5838ef54e45c1b99f2f18c4bf75fa88ceb10b792d003a247d7097e53d3a0",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "7b0e42362e1a639c286835840133596a2e39861f:canonical-db/phase2-gate/CANONICAL_BUSINESS_CONTRACT_V1.0_EFFECTIVE.md"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "f89a1bbe3cff78ed96e8e6620fce7d41837ae4d30de0b9fd91929f2f6bcf4c93",
+      "note": "Private decision bytes are hashed, not republished."
+    },
+    {
+      "command": [
+        "git",
+        "show",
+        "7b0e42362e1a639c286835840133596a2e39861f:canonical-db/phase2-gate/FOUNDER_DECISION_FAMILY_MAPPING_MANAGEMENT_API_V1.0.md"
+      ],
+      "exitCode": 0,
+      "stdoutSha256": "41dc44d03dd9ba6cdd6b5812d0b050e07445ac5db129f2693d304b29f9501475",
+      "note": "Private decision bytes are hashed, not republished."
+    }
+  ],
+  "checks": [
+    {
+      "name": "Remote main matches inspected authority",
+      "status": "PASS",
+      "details": {
+        "actual": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+        "expected": "9355d28667ee9cf4761b4abcdaf959f0ad154820"
+      }
+    },
+    {
+      "name": "Private archive remains the inspected version",
+      "status": "PASS",
+      "details": {
+        "actual": "7b0e42362e1a639c286835840133596a2e39861f",
+        "expected": "7b0e42362e1a639c286835840133596a2e39861f"
+      }
+    },
+    {
+      "name": "Decision source private",
+      "status": "PASS",
+      "details": {
+        "isPrivate": true,
+        "nameWithOwner": "yvettfang-netizen/phoenix-canonical-db"
+      }
+    },
+    {
+      "name": "PR41 inspected snapshot",
+      "status": "PASS",
+      "details": {
+        "baseRefName": "main",
+        "headRefName": "codex/canonical-0036-acquisition-contract-20261103",
+        "headRefOid": "3de5c99fcc1974ca542db587fcb01494ffe3dc58",
+        "isDraft": true,
+        "number": 41,
+        "state": "OPEN",
+        "url": "https://github.com/yvettfang-netizen/phoenix/pull/41"
+      }
+    },
+    {
+      "name": "PR45 inspected snapshot",
+      "status": "PASS",
+      "details": {
+        "baseRefName": "main",
+        "headRefName": "codex/p0-learning-catalog-20261104",
+        "headRefOid": "307ab74350eb5e9d745fe37c55e0a8033ed1dff0",
+        "isDraft": true,
+        "number": 45,
+        "state": "OPEN",
+        "url": "https://github.com/yvettfang-netizen/phoenix/pull/45"
+      }
+    },
+    {
+      "name": "PR46 inspected snapshot",
+      "status": "PASS",
+      "details": {
+        "baseRefName": "codex/p0-learning-catalog-20261104",
+        "headRefName": "codex/family-student-projection-20261104",
+        "headRefOid": "97e47f2287483aeda63948c849ea5eed07f0153b",
+        "isDraft": true,
+        "number": 46,
+        "state": "OPEN",
+        "url": "https://github.com/yvettfang-netizen/phoenix/pull/46"
+      }
+    },
+    {
+      "name": "No new numbered migration written",
+      "status": "PASS",
+      "details": [
+        "0001_foundation.sql",
+        "0002_education_identity_skeleton.sql",
+        "0003_core_consent_access.sql",
+        "0004_casework_education_identity.sql",
+        "0005_documents_submissions.sql",
+        "0006_access_decision_api.sql",
+        "0007_security_boundary_fixes.sql",
+        "0008_expiry_and_ephemeral_cleanup.sql",
+        "0009_application_write_api.sql",
+        "0010_reader_ledger_usage.sql",
+        "0011_verified_capacity_official_facts_manifest_confirmation.sql",
+        "0012_service_principal_and_context.sql",
+        "0013_management_write_api.sql",
+        "0014_rollback_resistant_write_audit.sql",
+        "0015_contract_gap_controls.sql",
+        "0016_assignment_scope_integrity.sql",
+        "0017_external_identity_request_trace.sql",
+        "0018_advisor_session_scope_and_binder_hardening.sql",
+        "0019_education_master_and_records.sql",
+        "0020_education_service_read_hardening.sql",
+        "0021_operations_entitlement_reference.sql",
+        "0022_learning_core.sql",
+        "0023_application_family_context_resolver.sql",
+        "0024_family_mapping_management_api.sql",
+        "0025_family_mapping_lock_hardening.sql",
+        "0026_enterprise_core_organization_client.sql",
+        "0027_crm_lead_deal_foundation.sql",
+        "0028_service_project_task_delivery.sql",
+        "0029_service_party_milestone_delivery_api.sql",
+        "0030_m0_organization_identity_governance.sql",
+        "0031_m1_client_partner_relationships.sql",
+        "0032_m2_lead_acquisition_management.sql",
+        "0033_m3_consultation_deal_management.sql",
+        "0034_m4_service_project_governance.sql",
+        "0035_m5_service_delivery_governance.sql"
+      ]
+    },
+    {
+      "name": "Migration 0001 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0001_foundation.sql",
+        "actual": "eea8d1deece72afdc3832d075fcfb42b71b4c1fe4fdccc8900104a0e0ca78a2d",
+        "manifest": "eea8d1deece72afdc3832d075fcfb42b71b4c1fe4fdccc8900104a0e0ca78a2d",
+        "mainBlob": "eea8d1deece72afdc3832d075fcfb42b71b4c1fe4fdccc8900104a0e0ca78a2d"
+      }
+    },
+    {
+      "name": "Migration 0002 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0002_education_identity_skeleton.sql",
+        "actual": "bef7d9a902e8ad34491b7455987d7791667dcb8a5ab31945cf609a6aa97e4e7f",
+        "manifest": "bef7d9a902e8ad34491b7455987d7791667dcb8a5ab31945cf609a6aa97e4e7f",
+        "mainBlob": "bef7d9a902e8ad34491b7455987d7791667dcb8a5ab31945cf609a6aa97e4e7f"
+      }
+    },
+    {
+      "name": "Migration 0003 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0003_core_consent_access.sql",
+        "actual": "7dc0c5060237fae9069915ba8a1ecc39323cf74ab8ea0d49dd832ef9d8330618",
+        "manifest": "7dc0c5060237fae9069915ba8a1ecc39323cf74ab8ea0d49dd832ef9d8330618",
+        "mainBlob": "7dc0c5060237fae9069915ba8a1ecc39323cf74ab8ea0d49dd832ef9d8330618"
+      }
+    },
+    {
+      "name": "Migration 0004 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0004_casework_education_identity.sql",
+        "actual": "aec2be38c6ad363f5594d65016b8a2dfcb79fe76e77a225271379bb991a443e9",
+        "manifest": "aec2be38c6ad363f5594d65016b8a2dfcb79fe76e77a225271379bb991a443e9",
+        "mainBlob": "aec2be38c6ad363f5594d65016b8a2dfcb79fe76e77a225271379bb991a443e9"
+      }
+    },
+    {
+      "name": "Migration 0005 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0005_documents_submissions.sql",
+        "actual": "7bd581d16bb8c21278bd5bc013496779fe08f509d84bf74b652e5ce3b21cdbec",
+        "manifest": "7bd581d16bb8c21278bd5bc013496779fe08f509d84bf74b652e5ce3b21cdbec",
+        "mainBlob": "7bd581d16bb8c21278bd5bc013496779fe08f509d84bf74b652e5ce3b21cdbec"
+      }
+    },
+    {
+      "name": "Migration 0006 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0006_access_decision_api.sql",
+        "actual": "2a3d6cd19febd62b7128c9ad4a2d7c94abdb9a4e11d499f36f4050eb2c2ed9d8",
+        "manifest": "2a3d6cd19febd62b7128c9ad4a2d7c94abdb9a4e11d499f36f4050eb2c2ed9d8",
+        "mainBlob": "2a3d6cd19febd62b7128c9ad4a2d7c94abdb9a4e11d499f36f4050eb2c2ed9d8"
+      }
+    },
+    {
+      "name": "Migration 0007 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0007_security_boundary_fixes.sql",
+        "actual": "49ec737393a4a4bc5f1e287add369db4f04fbde1c021521e8b4cf781f966ff93",
+        "manifest": "49ec737393a4a4bc5f1e287add369db4f04fbde1c021521e8b4cf781f966ff93",
+        "mainBlob": "49ec737393a4a4bc5f1e287add369db4f04fbde1c021521e8b4cf781f966ff93"
+      }
+    },
+    {
+      "name": "Migration 0008 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0008_expiry_and_ephemeral_cleanup.sql",
+        "actual": "51215c0b4d76e242c28197187bf1e017362700128ddd562e2da5d64980a8588d",
+        "manifest": "51215c0b4d76e242c28197187bf1e017362700128ddd562e2da5d64980a8588d",
+        "mainBlob": "51215c0b4d76e242c28197187bf1e017362700128ddd562e2da5d64980a8588d"
+      }
+    },
+    {
+      "name": "Migration 0009 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0009_application_write_api.sql",
+        "actual": "2a48d016c0b2dd952d56a15853c8092895df057e6a0d69f5ab391803ca0747c2",
+        "manifest": "2a48d016c0b2dd952d56a15853c8092895df057e6a0d69f5ab391803ca0747c2",
+        "mainBlob": "2a48d016c0b2dd952d56a15853c8092895df057e6a0d69f5ab391803ca0747c2"
+      }
+    },
+    {
+      "name": "Migration 0010 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0010_reader_ledger_usage.sql",
+        "actual": "eb05a55b813695ef7c6252ffc00569a0d97920008773fc07b6d0f6109959825a",
+        "manifest": "eb05a55b813695ef7c6252ffc00569a0d97920008773fc07b6d0f6109959825a",
+        "mainBlob": "eb05a55b813695ef7c6252ffc00569a0d97920008773fc07b6d0f6109959825a"
+      }
+    },
+    {
+      "name": "Migration 0011 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0011_verified_capacity_official_facts_manifest_confirmation.sql",
+        "actual": "acc638a3d308b9a9c601238843b1f5dea75a4f376cfb4e77a48cd3afb8f1caa8",
+        "manifest": "acc638a3d308b9a9c601238843b1f5dea75a4f376cfb4e77a48cd3afb8f1caa8",
+        "mainBlob": "acc638a3d308b9a9c601238843b1f5dea75a4f376cfb4e77a48cd3afb8f1caa8"
+      }
+    },
+    {
+      "name": "Migration 0012 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0012_service_principal_and_context.sql",
+        "actual": "385206d698db33cd6a26b7ea48ab5362f2fa2e4256ec96740c336429ad54afa8",
+        "manifest": "385206d698db33cd6a26b7ea48ab5362f2fa2e4256ec96740c336429ad54afa8",
+        "mainBlob": "385206d698db33cd6a26b7ea48ab5362f2fa2e4256ec96740c336429ad54afa8"
+      }
+    },
+    {
+      "name": "Migration 0013 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0013_management_write_api.sql",
+        "actual": "fcbeeea5b8fc35c0993b7b7b9dbe956fd0c6edc4a6142e49cb329fad41a320cb",
+        "manifest": "fcbeeea5b8fc35c0993b7b7b9dbe956fd0c6edc4a6142e49cb329fad41a320cb",
+        "mainBlob": "fcbeeea5b8fc35c0993b7b7b9dbe956fd0c6edc4a6142e49cb329fad41a320cb"
+      }
+    },
+    {
+      "name": "Migration 0014 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0014_rollback_resistant_write_audit.sql",
+        "actual": "92328ac4bf51b54980da63e96681220437ac20e4557fc008ab51431793ba4209",
+        "manifest": "92328ac4bf51b54980da63e96681220437ac20e4557fc008ab51431793ba4209",
+        "mainBlob": "92328ac4bf51b54980da63e96681220437ac20e4557fc008ab51431793ba4209"
+      }
+    },
+    {
+      "name": "Migration 0015 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0015_contract_gap_controls.sql",
+        "actual": "a639f9f10c5130c780f008832bcf9e4852badd00fcec618379e94d4e7c82d683",
+        "manifest": "a639f9f10c5130c780f008832bcf9e4852badd00fcec618379e94d4e7c82d683",
+        "mainBlob": "a639f9f10c5130c780f008832bcf9e4852badd00fcec618379e94d4e7c82d683"
+      }
+    },
+    {
+      "name": "Migration 0016 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0016_assignment_scope_integrity.sql",
+        "actual": "7b10af1992e548e065c68d947b47bb073cdc88c52e4312b9aa9ccbe1bfa962e4",
+        "manifest": "7b10af1992e548e065c68d947b47bb073cdc88c52e4312b9aa9ccbe1bfa962e4",
+        "mainBlob": "7b10af1992e548e065c68d947b47bb073cdc88c52e4312b9aa9ccbe1bfa962e4"
+      }
+    },
+    {
+      "name": "Migration 0017 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0017_external_identity_request_trace.sql",
+        "actual": "c701f74897ca13d503c8c165fd2182d77a06583afa832760dc80f8dd9524aab6",
+        "manifest": "c701f74897ca13d503c8c165fd2182d77a06583afa832760dc80f8dd9524aab6",
+        "mainBlob": "c701f74897ca13d503c8c165fd2182d77a06583afa832760dc80f8dd9524aab6"
+      }
+    },
+    {
+      "name": "Migration 0018 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0018_advisor_session_scope_and_binder_hardening.sql",
+        "actual": "063f8ba5b57de24208579369ce75424526737953319544d0174c5a31e3f5d74b",
+        "manifest": "063f8ba5b57de24208579369ce75424526737953319544d0174c5a31e3f5d74b",
+        "mainBlob": "063f8ba5b57de24208579369ce75424526737953319544d0174c5a31e3f5d74b"
+      }
+    },
+    {
+      "name": "Migration 0019 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0019_education_master_and_records.sql",
+        "actual": "425b72e7c62916da9c8c22624dc3d2beca547a0b8b96297a68604ecf574cec94",
+        "manifest": "425b72e7c62916da9c8c22624dc3d2beca547a0b8b96297a68604ecf574cec94",
+        "mainBlob": "425b72e7c62916da9c8c22624dc3d2beca547a0b8b96297a68604ecf574cec94"
+      }
+    },
+    {
+      "name": "Migration 0020 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0020_education_service_read_hardening.sql",
+        "actual": "20435da63432175396bf118d6b6b3b5c9865e7b8b8ba8343f0da84f273d1eedd",
+        "manifest": "20435da63432175396bf118d6b6b3b5c9865e7b8b8ba8343f0da84f273d1eedd",
+        "mainBlob": "20435da63432175396bf118d6b6b3b5c9865e7b8b8ba8343f0da84f273d1eedd"
+      }
+    },
+    {
+      "name": "Migration 0021 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0021_operations_entitlement_reference.sql",
+        "actual": "adb8ec15e956c726e5717f9b19aebaae9d37ba4acece6a960729a204aa746d09",
+        "manifest": "adb8ec15e956c726e5717f9b19aebaae9d37ba4acece6a960729a204aa746d09",
+        "mainBlob": "adb8ec15e956c726e5717f9b19aebaae9d37ba4acece6a960729a204aa746d09"
+      }
+    },
+    {
+      "name": "Migration 0022 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0022_learning_core.sql",
+        "actual": "4df4b55cc9b2830c357d676906a77a9fa7ac981bbe4673c156285aa40fba2f5f",
+        "manifest": "4df4b55cc9b2830c357d676906a77a9fa7ac981bbe4673c156285aa40fba2f5f",
+        "mainBlob": "4df4b55cc9b2830c357d676906a77a9fa7ac981bbe4673c156285aa40fba2f5f"
+      }
+    },
+    {
+      "name": "Migration 0023 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0023_application_family_context_resolver.sql",
+        "actual": "e5587c58895495097dea033f25cecfce67661eb0a6aede15821bdf115633f720",
+        "manifest": "e5587c58895495097dea033f25cecfce67661eb0a6aede15821bdf115633f720",
+        "mainBlob": "e5587c58895495097dea033f25cecfce67661eb0a6aede15821bdf115633f720"
+      }
+    },
+    {
+      "name": "Migration 0024 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0024_family_mapping_management_api.sql",
+        "actual": "992a9623e933b84f8e58db937450b0bb440e9aaf234ed204b72b7497e44c605f",
+        "manifest": "992a9623e933b84f8e58db937450b0bb440e9aaf234ed204b72b7497e44c605f",
+        "mainBlob": "992a9623e933b84f8e58db937450b0bb440e9aaf234ed204b72b7497e44c605f"
+      }
+    },
+    {
+      "name": "Migration 0025 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0025_family_mapping_lock_hardening.sql",
+        "actual": "fbedd76cb36b6938c9a051ab3606146b9c097f529dee41a7d5cc1f12ee876aea",
+        "manifest": "fbedd76cb36b6938c9a051ab3606146b9c097f529dee41a7d5cc1f12ee876aea",
+        "mainBlob": "fbedd76cb36b6938c9a051ab3606146b9c097f529dee41a7d5cc1f12ee876aea"
+      }
+    },
+    {
+      "name": "Migration 0026 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0026_enterprise_core_organization_client.sql",
+        "actual": "aad3a52829404e1259d89a9751471af7d0f1322af710d498bb2498c5be7119d5",
+        "manifest": "aad3a52829404e1259d89a9751471af7d0f1322af710d498bb2498c5be7119d5",
+        "mainBlob": "aad3a52829404e1259d89a9751471af7d0f1322af710d498bb2498c5be7119d5"
+      }
+    },
+    {
+      "name": "Migration 0027 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0027_crm_lead_deal_foundation.sql",
+        "actual": "81976bd7835a7ada6ab8d0e335ac751d3fd98432a53b0dc4d343c750456e78cc",
+        "manifest": "81976bd7835a7ada6ab8d0e335ac751d3fd98432a53b0dc4d343c750456e78cc",
+        "mainBlob": "81976bd7835a7ada6ab8d0e335ac751d3fd98432a53b0dc4d343c750456e78cc"
+      }
+    },
+    {
+      "name": "Migration 0028 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0028_service_project_task_delivery.sql",
+        "actual": "b8ec5d270d34da8f24423771b362d1dd6d3aa6c6f3d78cbd61b12968ebf6e8a2",
+        "manifest": "b8ec5d270d34da8f24423771b362d1dd6d3aa6c6f3d78cbd61b12968ebf6e8a2",
+        "mainBlob": "b8ec5d270d34da8f24423771b362d1dd6d3aa6c6f3d78cbd61b12968ebf6e8a2"
+      }
+    },
+    {
+      "name": "Migration 0029 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0029_service_party_milestone_delivery_api.sql",
+        "actual": "898079125502bd5406e64fe50744ea04fe846f519e26d00bd30fe4bbe695fb33",
+        "manifest": "898079125502bd5406e64fe50744ea04fe846f519e26d00bd30fe4bbe695fb33",
+        "mainBlob": "898079125502bd5406e64fe50744ea04fe846f519e26d00bd30fe4bbe695fb33"
+      }
+    },
+    {
+      "name": "Migration 0030 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0030_m0_organization_identity_governance.sql",
+        "actual": "c0559ba97ad9edeaa8cb6559b9d382030e27ef4c9a109e97ab7ea99c43eb2d2e",
+        "manifest": "c0559ba97ad9edeaa8cb6559b9d382030e27ef4c9a109e97ab7ea99c43eb2d2e",
+        "mainBlob": "c0559ba97ad9edeaa8cb6559b9d382030e27ef4c9a109e97ab7ea99c43eb2d2e"
+      }
+    },
+    {
+      "name": "Migration 0031 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0031_m1_client_partner_relationships.sql",
+        "actual": "a58d07ffd116a5890c46f6ca13c97034632b0905522ebdf1f464301746043936",
+        "manifest": "a58d07ffd116a5890c46f6ca13c97034632b0905522ebdf1f464301746043936",
+        "mainBlob": "a58d07ffd116a5890c46f6ca13c97034632b0905522ebdf1f464301746043936"
+      }
+    },
+    {
+      "name": "Migration 0032 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0032_m2_lead_acquisition_management.sql",
+        "actual": "714ee075bde36d52545e6ae38afc61b3de2509b6f749f0ed31ba29805931047e",
+        "manifest": "714ee075bde36d52545e6ae38afc61b3de2509b6f749f0ed31ba29805931047e",
+        "mainBlob": "714ee075bde36d52545e6ae38afc61b3de2509b6f749f0ed31ba29805931047e"
+      }
+    },
+    {
+      "name": "Migration 0033 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0033_m3_consultation_deal_management.sql",
+        "actual": "f4f08da18a5e4a39eaeeb13c3f1130fd83521fc2583d5394647fb886763a0320",
+        "manifest": "f4f08da18a5e4a39eaeeb13c3f1130fd83521fc2583d5394647fb886763a0320",
+        "mainBlob": "f4f08da18a5e4a39eaeeb13c3f1130fd83521fc2583d5394647fb886763a0320"
+      }
+    },
+    {
+      "name": "Migration 0034 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0034_m4_service_project_governance.sql",
+        "actual": "fa879f5088f12a1797dc9264e9b2e52c2b5ed75d7151bb2d088b0788df9a1895",
+        "manifest": "fa879f5088f12a1797dc9264e9b2e52c2b5ed75d7151bb2d088b0788df9a1895",
+        "mainBlob": "fa879f5088f12a1797dc9264e9b2e52c2b5ed75d7151bb2d088b0788df9a1895"
+      }
+    },
+    {
+      "name": "Migration 0035 unchanged",
+      "status": "PASS",
+      "details": {
+        "file": "0035_m5_service_delivery_governance.sql",
+        "actual": "c25d5efb3ddecdd11b1fa45793061b992e8bcaee278e3e1e359f7ca6b510c631",
+        "manifest": "c25d5efb3ddecdd11b1fa45793061b992e8bcaee278e3e1e359f7ca6b510c631",
+        "mainBlob": "c25d5efb3ddecdd11b1fa45793061b992e8bcaee278e3e1e359f7ca6b510c631"
+      }
+    },
+    {
+      "name": "Approved decision original bytes: canonical-db/phase2-gate/PRODUCTION_DATABASE_FOUNDER_DECISION_REGISTER_V1.0.md",
+      "status": "PASS",
+      "details": {
+        "actual": "ed1d5838ef54e45c1b99f2f18c4bf75fa88ceb10b792d003a247d7097e53d3a0",
+        "expected": "ed1d5838ef54e45c1b99f2f18c4bf75fa88ceb10b792d003a247d7097e53d3a0"
+      }
+    },
+    {
+      "name": "Approved decision original bytes: canonical-db/phase2-gate/CANONICAL_BUSINESS_CONTRACT_V1.0_EFFECTIVE.md",
+      "status": "PASS",
+      "details": {
+        "actual": "f89a1bbe3cff78ed96e8e6620fce7d41837ae4d30de0b9fd91929f2f6bcf4c93",
+        "expected": "f89a1bbe3cff78ed96e8e6620fce7d41837ae4d30de0b9fd91929f2f6bcf4c93"
+      }
+    },
+    {
+      "name": "Approved decision original bytes: canonical-db/phase2-gate/FOUNDER_DECISION_FAMILY_MAPPING_MANAGEMENT_API_V1.0.md",
+      "status": "PASS",
+      "details": {
+        "actual": "41dc44d03dd9ba6cdd6b5812d0b050e07445ac5db129f2693d304b29f9501475",
+        "expected": "41dc44d03dd9ba6cdd6b5812d0b050e07445ac5db129f2693d304b29f9501475"
+      }
+    },
+    {
+      "name": "Document LF: README.md",
+      "status": "PASS",
+      "details": {
+        "sha256": "6a08e2b378521b5c433d205ce453213c278b33f03e461e0916c93754a6892036"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\ID_DECISION_TRACEABILITY.md",
+      "status": "PASS",
+      "details": {
+        "from": "README.md",
+        "link": "ID_DECISION_TRACEABILITY.md"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\FORWARD_MIGRATION_PROPOSAL.md",
+      "status": "PASS",
+      "details": {
+        "from": "README.md",
+        "link": "FORWARD_MIGRATION_PROPOSAL.md"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\REAL_IDENTITY_GAP_AUDIT.md",
+      "status": "PASS",
+      "details": {
+        "from": "README.md",
+        "link": "REAL_IDENTITY_GAP_AUDIT.md"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\ACCEPTANCE_PLAN.md",
+      "status": "PASS",
+      "details": {
+        "from": "README.md",
+        "link": "ACCEPTANCE_PLAN.md"
+      }
+    },
+    {
+      "name": "Document LF: ID_DECISION_TRACEABILITY.md",
+      "status": "PASS",
+      "details": {
+        "sha256": "2cd79c5e48625a5b4378f67b73e4726290e3ae1915035f45567013622ee48591"
+      }
+    },
+    {
+      "name": "Local source link: database\\canonical\\migrations\\0003_core_consent_access.sql",
+      "status": "PASS",
+      "details": {
+        "from": "ID_DECISION_TRACEABILITY.md",
+        "link": "../../../database/canonical/migrations/0003_core_consent_access.sql"
+      }
+    },
+    {
+      "name": "Local source link: database\\canonical\\migrations\\0009_application_write_api.sql",
+      "status": "PASS",
+      "details": {
+        "from": "ID_DECISION_TRACEABILITY.md",
+        "link": "../../../database/canonical/migrations/0009_application_write_api.sql"
+      }
+    },
+    {
+      "name": "Local source link: database\\canonical\\migrations\\0013_management_write_api.sql",
+      "status": "PASS",
+      "details": {
+        "from": "ID_DECISION_TRACEABILITY.md",
+        "link": "../../../database/canonical/migrations/0013_management_write_api.sql"
+      }
+    },
+    {
+      "name": "Local source link: database\\canonical\\migrations\\0030_m0_organization_identity_governance.sql",
+      "status": "PASS",
+      "details": {
+        "from": "ID_DECISION_TRACEABILITY.md",
+        "link": "../../../database/canonical/migrations/0030_m0_organization_identity_governance.sql"
+      }
+    },
+    {
+      "name": "Document LF: FORWARD_MIGRATION_PROPOSAL.md",
+      "status": "PASS",
+      "details": {
+        "sha256": "d9b4ee47cc54af473fc255d7d7f862f57f9bd084db4ab39bb5dff42ab6c0c505"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\ID_DECISION_TRACEABILITY.md",
+      "status": "PASS",
+      "details": {
+        "from": "FORWARD_MIGRATION_PROPOSAL.md",
+        "link": "ID_DECISION_TRACEABILITY.md"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\REAL_IDENTITY_GAP_AUDIT.md",
+      "status": "PASS",
+      "details": {
+        "from": "FORWARD_MIGRATION_PROPOSAL.md",
+        "link": "REAL_IDENTITY_GAP_AUDIT.md"
+      }
+    },
+    {
+      "name": "Document LF: REAL_IDENTITY_GAP_AUDIT.md",
+      "status": "PASS",
+      "details": {
+        "sha256": "cfd54a2c4414c01f2d1f18a347dcd81d2b5ffc6eb9449c8cbd353e43354f8d70"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\ID_DECISION_TRACEABILITY.md",
+      "status": "PASS",
+      "details": {
+        "from": "REAL_IDENTITY_GAP_AUDIT.md",
+        "link": "ID_DECISION_TRACEABILITY.md"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\FORWARD_MIGRATION_PROPOSAL.md",
+      "status": "PASS",
+      "details": {
+        "from": "REAL_IDENTITY_GAP_AUDIT.md",
+        "link": "FORWARD_MIGRATION_PROPOSAL.md"
+      }
+    },
+    {
+      "name": "Local source link: docs\\database\\id-read-audit-proposal-20261104\\FORWARD_MIGRATION_PROPOSAL.md",
+      "status": "PASS",
+      "details": {
+        "from": "REAL_IDENTITY_GAP_AUDIT.md",
+        "link": "FORWARD_MIGRATION_PROPOSAL.md"
+      }
+    },
+    {
+      "name": "Document LF: ACCEPTANCE_PLAN.md",
+      "status": "PASS",
+      "details": {
+        "sha256": "0debd77044580cbaf7a220885ab9c48c9be332f3543a87f31731a2fe2cae3b3a"
+      }
+    },
+    {
+      "name": "Known preview gaps are source facts",
+      "status": "PASS",
+      "details": {
+        "roleSourceSha256": "6a6a9df484d1e672b9c51bcab912732c9fe959fb2e5990eb13aea0054cc48a0d",
+        "identitySourceSha256": "389647a91623d0eea20f7b8ea7a0b4a45cc98a375be8bc17851418f848e41c28",
+        "limitation": "No public-ID translation or controlled persistent DB read audit in PR46; verifier is synthetic-only."
+      }
+    }
+  ],
+  "newSqlImplementation": "NOT RUN",
+  "newPg16Pg17Acceptance": "NOT RUN",
+  "realIdentityActivation": "HOLD",
+  "summary": {
+    "passed": 64,
+    "total": 64,
+    "status": "PASS"
+  }
+}
