@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import {spawn,spawnSync} from 'node:child_process';
 import {randomBytes,randomUUID,generateKeyPairSync,sign,createHash} from 'node:crypto';
-import {mkdtempSync,writeFileSync,readFileSync,existsSync,rmSync,realpathSync,lstatSync} from 'node:fs';
+import {readdirSync,mkdtempSync,writeFileSync,readFileSync,existsSync,rmSync,realpathSync,lstatSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -119,7 +119,9 @@ try{
   protect(work);assert(!existsSync(devVars),'Existing preview configuration must be preserved');
   const db=await cluster('fresh');
   docker(['exec',db.id,'mkdir','-p','/opt/canonical-migrations','/opt/verification']);
-  docker(['cp',path.join(root,'database/canonical/migrations')+'/.',`${db.id}:/opt/canonical-migrations`]);
+  for(const file of readdirSync(path.join(root,'database/canonical/migrations')).filter(n=>/^00(?:0[1-9]|[12][0-9]|3[0-5])_.*\.sql$/.test(n))){
+    docker(['cp',path.join(root,'database/canonical/migrations',file),db.id+':/opt/canonical-migrations/'+file]);
+  }
   docker(['cp',path.join(root,'database/canonical/verification/migrate.sh'),`${db.id}:/opt/verification/migrate.sh`]);
   assert.match(docker(['exec',db.id,'bash','/opt/verification/migrate.sh']),/PASS ledger=35 files=35 expected=35/);
   seed(db);console.log(`PASS PG${version} 0001-0035; synthetic existing principals, managed family mappings and guardian fixtures`);

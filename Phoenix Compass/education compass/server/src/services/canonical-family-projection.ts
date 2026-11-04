@@ -14,6 +14,46 @@ export interface FamilyProjection {
 const unavailable = () => new AppError(503, 'FAMILY_PROJECTION_UNAVAILABLE', '家庭资料暂不可用')
 const denied = () => new AppError(403, 'FAMILY_SCOPE_REQUIRED', '家庭资料访问未授权')
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-7[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
+const publicStudent = /^stu_[a-f0-9]{32}$/
+
+function auditedDto(value: unknown, operation: ProjectionOperation, studentRef?: string): unknown {
+  const v = value as Record<string, unknown>
+  const name = (x: unknown) => typeof x === 'string' && x.length > 0 && x.length <= 200
+  const student = (x: unknown) => { const s = x as Record<string, unknown>; return s && Object.keys(s).sort().join(',') === 'displayName,studentRef' && typeof s.studentRef === 'string' && publicStudent.test(s.studentRef) && name(s.displayName) }
+  if (!v || typeof v !== 'object') throw unavailable()
+  if (operation === 'family') {
+    const f = v.family as Record<string, unknown>
+    if (Object.keys(v).sort().join(',') !== 'family,schemaVersion' || v.schemaVersion !== 'family-summary.v2' || !f ||
+        Object.keys(f).sort().join(',') !== 'displayName,familyRef' || typeof f.familyRef !== 'string' || !/^fam_[a-f0-9]{32}$/.test(f.familyRef) || !name(f.displayName)) throw unavailable()
+  } else if (operation === 'student') {
+    if (Object.keys(v).sort().join(',') !== 'item,schemaVersion' || v.schemaVersion !== 'student-summary.v2' || !student(v.item) || (v.item as Record<string,unknown>).studentRef !== studentRef) throw unavailable()
+  } else if (Object.keys(v).sort().join(',') !== 'items,schemaVersion' || v.schemaVersion !== 'student-summary.v2' || !Array.isArray(v.items) || v.items.length > 100 || !v.items.every(student) ||
+    new Set(v.items.map((x: {studentRef:string}) => x.studentRef)).size !== v.items.length) throw unavailable()
+  return v
+}
+
+async function guardAuditedRole(client: PoolClient): Promise<void> {
+  const role = 'phoenix_canonical_projection_reader'
+  const r = await client.query(`SELECT NOT (rolsuper OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolinherit)
+    AND pg_has_role(session_user,$1,'MEMBER')
+    AND EXISTS(SELECT FROM pg_roles target WHERE target.rolname=$1 AND NOT(target.rolsuper OR target.rolcreaterole OR target.rolcreatedb OR target.rolreplication OR target.rolbypassrls OR target.rolcanlogin OR target.rolinherit))
+    AND NOT EXISTS(SELECT FROM pg_auth_members m WHERE m.member=r.oid AND m.roleid<>$1::regrole)
+    AND NOT EXISTS(SELECT FROM pg_auth_members m WHERE m.member=$1::regrole)
+    AND NOT EXISTS(SELECT FROM pg_roles other WHERE other.rolname IN ('phoenix_canonical_reader','phoenix_canonical_app','phoenix_canonical_context_binder','phoenix_canonical_migrator')
+      AND (pg_has_role(session_user,other.oid,'MEMBER') OR pg_has_role($1,other.oid,'MEMBER')))
+    AND NOT EXISTS(SELECT FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace
+      WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%'
+        AND t.relkind IN ('r','p','v','m','f') AND (has_table_privilege(session_user,t.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+          OR has_table_privilege($1,t.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')))
+    AND NOT EXISTS(SELECT FROM pg_namespace n WHERE n.nspname IN ('auth','core','integration','audit','public') AND (has_schema_privilege(session_user,n.oid,'CREATE') OR has_schema_privilege($1,n.oid,'CREATE')))
+    AND NOT EXISTS(SELECT FROM pg_class s WHERE s.relkind='S' AND s.relnamespace='audit'::regnamespace AND (has_sequence_privilege(session_user,s.oid,'USAGE,UPDATE') OR has_sequence_privilege($1,s.oid,'USAGE,UPDATE')))
+    AND NOT EXISTS(SELECT FROM pg_proc f JOIN pg_namespace n ON n.oid=f.pronamespace
+      WHERE n.nspname IN ('auth','audit','core','integration') AND f.proname IN ('issue_context_ticket','issue_application_family_context_ticket','record_access_event','record_write_decision','read_projection_summary','lookup_projection_public_id')
+        AND (has_function_privilege(session_user,f.oid,'EXECUTE') OR has_function_privilege($1,f.oid,'EXECUTE'))) AS allowed
+    FROM pg_roles r WHERE rolname=session_user`, [role])
+  if (r.rows[0]?.allowed !== true) throw unavailable()
+  await client.query('SET ROLE phoenix_canonical_projection_reader')
+}
 
 async function protectedJson(file: string): Promise<Record<string, unknown>> {
   if (!isAbsolute(file)) throw unavailable()
@@ -56,6 +96,7 @@ async function guardRole(client: PoolClient, binder: boolean): Promise<void> {
 export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
   audit: (event: ProjectionAudit) => void = event => console.info('canonical_family_projection', JSON.stringify(event))): Promise<FamilyProjection | undefined> {
   if (env.CANONICAL_FAMILY_PROJECTION_ENABLED !== 'true') return undefined
+  const audited = env.CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED === 'true'
   if (!['development','test'].includes(env.NODE_ENV ?? 'development') || (env.LISTEN_HOST ?? '127.0.0.1') !== '127.0.0.1') throw unavailable()
   const appConfig = connection(await protectedJson(env.CANONICAL_FAMILY_APP_CONFIG_FILE ?? ''))
   const binderConfig = connection(await protectedJson(env.CANONICAL_FAMILY_BINDER_CONFIG_FILE ?? ''))
@@ -74,9 +115,10 @@ export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
       let result: unknown, error: unknown
       try {
         const identity = verify(authorization)
-        if (!['family','students','student'].includes(operation) || (operation === 'student' && !uuid.test(studentRef ?? ''))) throw denied()
+        if (!['family','students','student'].includes(operation) || (operation === 'student' && !(audited ? publicStudent : uuid).test(studentRef ?? ''))) throw denied()
         app = await appPool.connect()
-        await guardRole(app, false)
+        if (audited) await guardAuditedRole(app)
+        else await guardRole(app, false)
         await app.query('SELECT auth.clear_context()')
         binder = await binderPool.connect()
         await guardRole(binder, true)
@@ -89,6 +131,21 @@ export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
         await app.query('SELECT auth.redeem_context_ticket($1,$2)', [context.ticket_id, context.principal_id])
         const trace = await app.query('SELECT auth.current_request_nonce()=$1::uuid AS allowed', [requestId])
         if (trace.rows[0]?.allowed !== true) throw denied()
+        if (audited) {
+          await app.query('BEGIN')
+          const query = operation === 'family' ? 'SELECT core.read_family_summary() AS result'
+            : operation === 'students' ? 'SELECT core.list_student_summaries() AS result' : 'SELECT core.read_student_summary($1) AS result'
+          const response = await app.query(query, operation === 'student' ? [studentRef] : [])
+          const envelope = response.rows[0]?.result
+          if (!envelope || Object.keys(envelope).sort().join(',') !== 'data,status' || !['ALLOW','NOT_FOUND','DENY','UNAVAILABLE'].includes(envelope.status)) throw unavailable()
+          if (envelope.status === 'ALLOW') result = auditedDto(envelope.data, operation, studentRef)
+          else if (envelope.data !== null) throw unavailable()
+          // Commit denial decisions as well; no HTTP response leaves this method before cleanup.
+          await app.query('COMMIT')
+          if (envelope.status === 'NOT_FOUND') throw new AppError(404, 'PROJECTION_NOT_FOUND', '资料不存在或不可访问')
+          if (envelope.status === 'DENY') throw denied()
+          if (envelope.status === 'UNAVAILABLE') throw unavailable()
+        } else {
         await app.query('SET ROLE phoenix_canonical_reader')
         await app.query('BEGIN READ ONLY')
         const bound = await app.query(`SELECT auth.current_family_id()=$1::uuid AND auth.current_principal_id()=$2::uuid
@@ -118,6 +175,7 @@ export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
           result = operation === 'student' ? { schemaVersion: 'student-summary.v1', item: items[0] } : { schemaVersion: 'student-summary.v1', items }
         }
         await app.query('COMMIT')
+        }
         if (Date.now() >= expires.getTime()) throw denied()
       } catch (caught) {
         error = caught instanceof AppError ? caught : unavailable()
@@ -125,8 +183,10 @@ export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
         if (binder) binder.release(!binderClean)
         if (app) {
           try {
-            await app.query('ROLLBACK'); await app.query('RESET ROLE'); await app.query('SELECT auth.clear_context()')
-            await app.query('SET ROLE phoenix_canonical_reader')
+            await app.query('ROLLBACK'); await app.query('RESET ROLE')
+            if (audited) await app.query('SET ROLE phoenix_canonical_projection_reader')
+            await app.query('SELECT auth.clear_context()')
+            if (!audited) await app.query('SET ROLE phoenix_canonical_reader')
             const clean = await app.query('SELECT auth.current_family_id() IS NULL AND auth.current_principal_id() IS NULL AS clean')
             if (clean.rows[0]?.clean !== true) throw unavailable()
             await app.query('RESET ROLE'); await app.query('DISCARD ALL'); appClean = true

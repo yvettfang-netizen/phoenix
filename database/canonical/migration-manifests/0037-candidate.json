@@ -1,0 +1,10 @@
+{
+  "file": "0037_scoped_public_id_projection_read_audit.sql",
+  "sha256": "29c153177b4177cc279fe2494e2be563bd6250f6564c57fc62e381df1c7decb2",
+  "state": "LOCAL_SYNTHETIC_CANDIDATE",
+  "baseline": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+  "historical_files": 35,
+  "candidate_files": 36,
+  "reserved_unmerged_number": "0036",
+  "proposal": "https://github.com/yvettfang-netizen/phoenix/pull/47"
+}
