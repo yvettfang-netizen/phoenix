@@ -255,8 +255,8 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "classi
   );
 }
 
-export function SiteFooter({ locale, appearance = "classic", consultationPath = "/identity#consultation", localized = false, brandLocale }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; localized?: boolean; brandLocale?: Locale }) {
-  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} localized={localized} brandLocale={brandLocale} /></footer>;
+export function SiteFooter({ locale, appearance = "classic", consultationPath = "/identity#consultation", localized = false, brandLocale, compact = false }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; localized?: boolean; brandLocale?: Locale; compact?: boolean }) {
+  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} localized={localized} brandLocale={brandLocale} compact={compact} /></footer>;
   return (
     <footer className="site-footer">
       <div className="shell site-footer__top">
