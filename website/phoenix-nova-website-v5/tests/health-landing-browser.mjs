@@ -100,7 +100,7 @@ function expectedPrimaryHrefs(locale) {
     `/${locale}`,
     `/${locale}/compass#education`,
     `/${locale}/compass#identity`,
-    `/${locale}/compass#wealth`,
+    `https://wealth.phoenixnova.com.cn/${locale}`,
     `/${locale}/health`,
     `/${locale}/about`,
     `/${locale}/insights`,
