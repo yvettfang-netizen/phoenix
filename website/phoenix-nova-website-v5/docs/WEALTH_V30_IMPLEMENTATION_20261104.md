@@ -2,7 +2,9 @@
 
 Task: `PHOENIX-WEALTH-V30-FULL-PAGE-20261104` · 2026-11-04 Asia/Shanghai.
 
-Status: **LOCAL_DEVELOPMENT PASS / FOUNDER_REVIEW PENDING / NOT RELEASED**.
+Status: **HOLD — DEPENDENCY_HOLD / DOMAIN_HOLD / REVIEW_PENDING / NOT RELEASED**.
+
+The production-readiness remediation and current evidence supersede the historical local checks below: [PR #43 readiness](WEALTH_PR43_READINESS_20261104.md).
 
 ## Source and scope
 
