@@ -18,7 +18,8 @@ const knowledgeSource = await readFile(new URL("education-knowledge.ts", sourceR
 const searchSource = await readFile(new URL("education-knowledge-search.ts", sourceRoot), "utf8");
 const schoolSource = await readFile(new URL("education-school-records.ts", sourceRoot), "utf8");
 const schoolData = await readFile(new URL("data/education-schools-official.json", sourceRoot), "utf8");
-await writeFile(join(work, "education-school-records.mjs"), transpile(schoolSource).replace(/import officialSchools from [^;]+;/, `const officialSchools = ${schoolData};`));
+await writeFile(join(work, "education-external-url.mjs"), transpile(await readFile(new URL("education-external-url.ts", sourceRoot), "utf8")));
+await writeFile(join(work, "education-school-records.mjs"), transpile(schoolSource).replace('"./education-external-url"', '"./education-external-url.mjs"').replace(/import officialSchools from [^;]+;/, `const officialSchools = ${schoolData};`));
 await writeFile(join(work, "education-knowledge.mjs"), transpile(knowledgeSource).replace('"./education-school-records"', '"./education-school-records.mjs"'));
 await writeFile(join(work, "education-knowledge-search.mjs"), transpile(searchSource).replace(
   /from ["']\.\/education-knowledge["']/g,
@@ -276,4 +277,13 @@ test("programme degree, mode, subject and cycle filters query optional fields", 
     cycle: "2099-00",
   });
   assert.equal(nonexistentCycle.total, 0, "a cycle ID not present in the dataset cannot match");
+});
+
+test('non-finite and out-of-range URL pagination values stay bounded', () => {
+ const rows = Array.from({length:25}, (_,i)=>i);
+ for (const page of [Infinity,-Infinity,NaN,-5,0]) {
+  const result=search.paginateEducationKnowledge(rows,page,Infinity);
+  assert.equal(result.page,1); assert.equal(result.pageSize,20); assert.equal(result.items.length,20);
+ }
+ assert.equal(search.paginateEducationKnowledge(rows,999,10).page,3);
 });

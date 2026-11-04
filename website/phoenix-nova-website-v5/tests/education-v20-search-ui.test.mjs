@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 const schools = readFileSync(new URL("../app/[locale]/education/schools/page.tsx", import.meta.url), "utf8");
 const programmes = readFileSync(new URL("../app/[locale]/education/programmes/page.tsx", import.meta.url), "utf8");
+const landing = readFileSync(new URL("../components/education-landing.tsx", import.meta.url), "utf8");
 
 test("school search keeps funding, operation, legal status and curriculum as separate multi-select dimensions", () => {
   for (const name of ["funding", "operation", "legal", "curriculum"]) {
@@ -22,10 +23,9 @@ test("school search keeps funding, operation, legal status and curriculum as sep
   assert.match(schools, /pageHref/);
 });
 
-test("programme search exposes future-safe dimensions while keeping empty unverified data explicit", () => {
-  for (const name of ["degree", "mode", "subject", "cycle"]) assert.match(programmes, new RegExp(`\\\"${name}\\\"`));
-  assert.match(programmes, /searchEducationKnowledge[\s\S]*degree,[\s\S]*mode,[\s\S]*subject,[\s\S]*cycle,/);
-  assert.match(programmes, /No programme records are approved for publication yet/);
+test("unverified programme and application-cycle data stays out of production surfaces", () => {
+  assert.match(programmes, /notFound\(\)/);
+  assert.doesNotMatch(programmes, /searchEducationKnowledge/);
   assert.match(programmes, /robots: \{ index: false, follow: false \}/);
-  assert.match(programmes, /educationAlternates\(locale, "programmes"\)/);
+  assert.doesNotMatch(landing, /education\/programmes/);
 });

@@ -385,10 +385,10 @@ export function paginateEducationKnowledge<T>(
   page = 1,
   pageSize = DEFAULT_EDUCATION_SEARCH_PAGE_SIZE,
 ): EducationKnowledgePage<T> {
-  const safePageSize = Math.min(MAX_EDUCATION_SEARCH_PAGE_SIZE, Math.max(1, Math.floor(pageSize) || DEFAULT_EDUCATION_SEARCH_PAGE_SIZE));
+  const safePageSize = Math.min(MAX_EDUCATION_SEARCH_PAGE_SIZE, Math.max(1, Number.isFinite(pageSize) ? Math.floor(pageSize) || DEFAULT_EDUCATION_SEARCH_PAGE_SIZE : DEFAULT_EDUCATION_SEARCH_PAGE_SIZE));
   const total = records.length;
   const totalPages = Math.max(1, Math.ceil(total / safePageSize));
-  const safePage = Math.min(totalPages, Math.max(1, Math.floor(page) || 1));
+  const safePage = Math.min(totalPages, Math.max(1, Number.isFinite(page) ? Math.floor(page) || 1 : 1));
   const start = (safePage - 1) * safePageSize;
   return {
     items: records.slice(start, start + safePageSize),

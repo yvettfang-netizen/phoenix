@@ -7,6 +7,7 @@
  * legal/non-profit status remain empty rather than inferred.
  */
 
+import { safeEducationWebsite } from "./education-external-url";
 import officialSchools from "./data/education-schools-official.json";
 import type {
   EducationInstitution,
@@ -117,7 +118,7 @@ const toInstitution = (record: OfficialSchoolRecord): EducationSchoolInstitution
   gender: record.gender,
   ageRange: null,
   fees: null,
-  officialHomepage: record.website,
+  officialHomepage: safeEducationWebsite(record.website),
   summary: null,
   updatedAt: record.sourceProvenance.sourceLastModified,
   verification: {
