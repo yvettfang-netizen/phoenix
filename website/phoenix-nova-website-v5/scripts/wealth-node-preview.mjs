@@ -1,22 +1,14 @@
 /** Synthetic Host rehearsal on loopback. No DNS, TLS, API, DB or authentication evidence. */
-import { registerHooks } from "node:module";
+import { register } from "node:module";
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { resolve, sep, extname } from "node:path";
 import { fileURLToPath } from "node:url";
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if (specifier === "cloudflare:workers")
-      return {
-        url: "data:text/javascript,export const env = Object.freeze({});",
-        shortCircuit: true,
-      };
-    return nextResolve(specifier, context);
-  },
-});
+register("./wealth-preview-loader.mjs", import.meta.url);
 const { default: worker } = await import("../dist/server/index.js");
 const root = fileURLToPath(new URL("../dist/client", import.meta.url)),
-  port = Number(process.env.WEALTH_PREVIEW_PORT || 4481);
+  port = Number(process.env.WEALTH_PREVIEW_PORT || 4481),
+  host = process.env.WEALTH_PREVIEW_HOST || "wealth.phoenixnova.com.cn";
 const mime = {
   ".js": "text/javascript",
   ".css": "text/css",
@@ -53,8 +45,8 @@ async function asset(request) {
 const server = createServer(async (req, res) => {
   try {
     const headers = new Headers(req.headers);
-    headers.set("host", "wealth.phoenixnova.com.cn");
-    const request = new Request(`https://wealth.phoenixnova.com.cn${req.url}`, {
+    headers.set("host", host);
+    const request = new Request(`https://${host}${req.url}`, {
       method: req.method,
       headers,
     });

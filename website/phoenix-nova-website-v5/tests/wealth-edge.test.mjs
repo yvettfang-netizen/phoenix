@@ -1,16 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { registerHooks } from "node:module";
-registerHooks({
-  resolve(specifier, context, next) {
-    if (
-      context.parentURL?.includes("/lib/wealth-edge.ts") &&
-      ["./wealth-routing", "./wealth-content"].includes(specifier)
-    )
-      return next(specifier + ".ts", context);
-    return next(specifier, context);
-  },
-});
 const { wealthEdgeRequest, wealthEdgeResponse } = await import(
   "../lib/wealth-edge.ts"
 );

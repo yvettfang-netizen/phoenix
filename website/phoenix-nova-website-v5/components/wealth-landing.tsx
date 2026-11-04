@@ -16,7 +16,7 @@ import {
   Route,
   Handshake,
   LockKeyhole,
-} from "lucide-react";
+} from "./wealth-icons";
 import { SiteHeader, SiteFooter } from "./v5-site";
 import {
   wealthServices,

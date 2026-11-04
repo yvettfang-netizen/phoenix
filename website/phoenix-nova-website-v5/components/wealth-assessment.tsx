@@ -232,8 +232,8 @@ export function WealthAssessment({
           </h2>
           <p>
             {t(
-              "本次为浏览器内的规则评估。答案不会发送至服务器，也不会建立客户、家庭、顾问或转介记录。您可返回修改、暂不回答，或主动保存当前浏览器会话中的进度。",
-              "This assessment runs in your browser using fixed rules. Answers are not sent to a server and do not create client, family, advisor or referral records. Go back, skip questions or explicitly save progress within this browser session.",
+              "本次为浏览器内的规则评估。不在服务器保存、不上传、不构成投资建议，也不会建立客户、家庭、顾问或转介记录。您可返回修改、暂不回答，或主动保存当前浏览器会话中的进度。",
+              "This assessment runs in your browser using fixed rules. Answers are not saved on a server or uploaded. This is not investment advice and does not create client, family, advisor or referral records. Go back, skip questions or explicitly save progress within this browser session.",
             )}
           </p>
           <label className={styles.consent}>
