@@ -18,7 +18,7 @@ const origin = process.env.HEALTH_ORIGIN || "http://127.0.0.1:4387";
 const out = resolve(process.env.HEALTH_EVIDENCE_DIR || "outputs/health-landing");
 const IVORY_SURFACE = "rgb(248, 246, 241)";
 const BRAND_ASSETS = {
-  header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: IVORY_SURFACE },
+  header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: "transparent" },
   footer: { url: BRAND_FOOTER_URL, ...BRAND_FOOTER_SIZE, wrapperBackground: "transparent" },
 };
 const FOOTER_SURFACE = IVORY_SURFACE;
@@ -86,7 +86,7 @@ async function assertHealthSurface(page, locale, route) {
   await assertLocaleSurface(page, locale, route);
 }
 
-async function inspectBrandImage(locator, route, role, width) {
+async function inspectBrandImage(locator, route, role, width, wrapperBackground = BRAND_ASSETS[role].wrapperBackground) {
   assert.equal(await locator.count(), 1, `${route} ${role} must render one brand image`);
   const image = locator.first();
   await image.evaluate(element => element.decode());
@@ -116,7 +116,7 @@ async function inspectBrandImage(locator, route, role, width) {
       imageFilter: style.filter,
     };
   });
-  const expected = { ...BRAND_ASSETS[role], wrapperBackground: role === 'header' && /^\/(?:zh|en)\/health$/.test(route.split(' ')[0]) ? 'transparent' : BRAND_ASSETS[role].wrapperBackground };
+  const expected = { ...BRAND_ASSETS[role], wrapperBackground };
   assert.ok(details.src.includes(expected.url), `${route}: ${role} must use ${expected.url}`);
   assert.ok(!/phoenix-nova-(?:logo-master|mark-official|logo-official|official-logo-system-v1)\.png/i.test(details.src), `${route}: legacy mark/logo is still rendered`);
   assert.equal(details.naturalWidth, expected.width, `${route}: ${role} asset width changed`);
@@ -152,7 +152,7 @@ async function assertSharedBrandChrome(page, route, width) {
 
 async function assertCompassHeader(page, route, width) {
   assert.equal(await page.locator("html").getAttribute("lang"), route.startsWith("/en/") ? "en" : "zh-Hans");
-  await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
+  await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width, IVORY_SURFACE);
   assert.equal(await page.locator("footer .brand-mark img").count(), 0, `${route}: questionnaire must not invent a second footer brand image`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
 }
