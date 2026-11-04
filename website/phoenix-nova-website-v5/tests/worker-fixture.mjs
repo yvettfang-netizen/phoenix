@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
-import { Miniflare } from "miniflare";
+import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 
 // Exercise the built application in its real Workers environment. Direct Node
 // imports cannot resolve cloudflare:workers or provide request-scoped bindings.
@@ -10,7 +10,7 @@ export function createV5Worker(bindings = {}) {
   const files = directory => readdirSync(directory, { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory() ? files(join(directory, entry.name)) : [join(directory, entry.name)]);
   const entry = join(root, "index.js");
-  return new Miniflare({
+  return new Miniflare(convertV4MiniflareOptions({
     modules: [entry, ...files(root).filter(path => path.endsWith(".js") && path !== entry)]
       .map(path => ({ type: "ESModule", path })),
     modulesRoot: root,
@@ -18,5 +18,5 @@ export function createV5Worker(bindings = {}) {
     compatibilityFlags: ["nodejs_compat"],
     d1Databases: ["DB"],
     bindings,
-  });
+  }));
 }
