@@ -111,12 +111,12 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 .site-header--inverse .site-header__inner { border-color: var(--line-light); }
 
 .brand-mark { display: inline-flex; align-items: center; gap: 11px; width: max-content; }
-.brand-asset-wrap { display:block; width:210px; aspect-ratio:1040 / 320; flex:0 0 auto; overflow:visible; background:transparent; border:0; box-shadow:none; mask:none; }
+.brand-asset-wrap { display:block; width:220px; aspect-ratio:3 / 1; flex:0 0 auto; overflow:visible; background:transparent; border:0; box-shadow:none; mask:none; }
 .brand-asset { display:block; width:100%; height:100%; object-fit:contain; background:transparent; border:0; filter:none; mask:none; }
 .brand-lockup { display: flex; align-items: center; gap: 10px; }
 .brand-cn { font-family: var(--serif); font-size: 22px; line-height: 1; letter-spacing: 0.08em; }
 .brand-en { padding-left: 10px; border-left: 1px solid currentColor; font-family: var(--serif); font-size: 9px; line-height: 1.4; letter-spacing: 0.17em; }
-.brand-mark--compact .brand-asset-wrap { width:240px; aspect-ratio:13 / 4; background:var(--surface-ivory); }
+.brand-mark--compact .brand-asset-wrap { width:220px; aspect-ratio:3 / 1; background:var(--surface-ivory); }
 .brand-mark--compact .brand-cn { font-size: 19px; }
 .brand-mark--compact .brand-en { font-size: 8px; }
 

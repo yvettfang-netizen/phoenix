@@ -91,7 +91,7 @@ async function assertBrandAssets(route) {
     filter: getComputedStyle(image).filter,
   })));
   assert.equal(brands.length, 2, `${route}: shared Header/Footer must render two brand assets`);
-  assert.ok(brands.every(brand => brand.src === "/brand/official/v3/phoenix-nova-header@2x.png" && Math.abs(brand.ratio - 1040 / 320) < 0.06 && brand.filter === "none" && brand.width >= 150 && brand.width <= 230), `${route}: approved brand asset rendering changed`);
+  assert.ok(brands.every(brand => brand.src === "/brand/official/v3/phoenix-nova-bilingual-b@2x.png" && Math.abs(brand.ratio - 2172 / 724) < 0.06 && brand.filter === "none" && brand.width >= 150 && brand.width <= 230), `${route}: approved brand asset rendering changed`);
 }
 
 async function assertAccessibleEducationPage(locale, width) {

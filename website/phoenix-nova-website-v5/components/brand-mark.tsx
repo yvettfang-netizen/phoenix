@@ -9,11 +9,12 @@ type BrandMarkProps = {
 };
 
 export function BrandMark({ inverse = false, compact = false, className = "", href = "/", label = "Phoenix Nova 首页" }: BrandMarkProps) {
-  const asset = { src: "/brand/official/v3/phoenix-nova-header@2x.png", width: 1040, height: 320 };
+  const asset = { src: "/brand/official/v3/phoenix-nova-bilingual-b@2x.png", width: 2172, height: 724 };
   return (
     <Link
       href={href}
       aria-label={label}
+      data-testid="brand-mark"
       className={`brand-mark ${compact ? "brand-mark--compact" : ""} ${inverse ? "brand-mark--inverse" : ""} ${className}`}
     >
       <span className="brand-asset-wrap">

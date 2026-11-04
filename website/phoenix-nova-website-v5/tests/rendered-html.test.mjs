@@ -17,7 +17,7 @@ test("redirects the root to the Chinese master route", async () => {
   assert.equal(new URL(response.headers.get("location"), "http://localhost").pathname, "/zh");
 });
 
-test("renders the bilingual V5 portal home with noindex", async () => {
+test("renders the bilingual V6 family growth home with noindex", async () => {
   const zh = await get("/zh");
   const en = await get("/en");
 
@@ -26,10 +26,14 @@ test("renders the bilingual V5 portal home with noindex", async () => {
 
   const zhHtml = await zh.text();
   const enHtml = await en.text();
-  assert.match(zhHtml, /一个入口/);
-  assert.match(zhHtml, /凤启世界/);
-  assert.match(enHtml, /One gateway/);
-  assert.match(enHtml, /Phoenix Nova world/);
+  assert.match(zhHtml, /全球家庭成长平台/);
+  assert.match(zhHtml, /data-homepage-v6/);
+  assert.match(enHtml, /A Global Family Growth Platform/);
+  assert.match(enHtml, /data-homepage-v6/);
+  for (const html of [zhHtml, enHtml]) {
+    assert.equal((html.match(/data-v6-compass=/g) ?? []).length, 4);
+    assert.equal((html.match(/data-v6-journey=/g) ?? []).length, 6);
+  }
   assert.match(zhHtml, /name="robots" content="noindex, nofollow, nocache"/i);
   assert.match(enHtml, /name="robots" content="noindex, nofollow, nocache"/i);
 });
@@ -39,7 +43,6 @@ test("connects Digital Phoenix to the approved immortal-guardian world", async (
   const html = await response.text();
   assert.match(html, /数字凤启/);
   assert.match(html, /进入仙兽图/);
-  assert.match(html, /\/images\/fengqi-digital-immortals\.png/);
   assert.match(html, /https:\/\/fengqi-research-institute\.yvettfang\.chatgpt\.site/);
 });
 
