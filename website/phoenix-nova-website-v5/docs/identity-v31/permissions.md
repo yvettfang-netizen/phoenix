@@ -1,3 +1,5 @@
+> Historical contract inventory. Canonical 0035 is now present in main, but no Country/Programme/Policy import adapter or staff authorization contract is established. Old dependency counts and flag-based route descriptions below describe the original baseline. Current instructions and acceptance gates: [next-production-codex-instructions.md](next-production-codex-instructions.md).
+
 # Identity V3.1 Data Permissions and Publication Matrix
 
 **Status:** `DRAFT / HOLD`
