@@ -236,8 +236,24 @@ async function assertCrossBorderProcess(page, route) {
 
 async function assertConsultationPreparation(page, locale) {
   const context = page.locator("#consultation details");
-  assert.equal(await context.count(), 1, `${locale}: optional conversation context details missing`);
-  await context.locator("summary").click();
+  assert.equal(await context.count(), 2, `${locale}: consultation context and privacy boundary details must both be present`);
+  const optionalContext = context.nth(0);
+  const privacyBoundary = context.nth(1);
+  assert.equal(await optionalContext.locator("summary").count(), 1, `${locale}: optional conversation context summary missing`);
+  assert.match(await optionalContext.locator("summary").innerText(), /补充沟通背景|Additional conversation context/i, `${locale}: first details panel is not the optional conversation context`);
+  assert.equal(await privacyBoundary.locator('input[type="checkbox"]').count(), 1, `${locale}: privacy demo acknowledgement missing`);
+  assert.equal(await privacyBoundary.locator("button").count(), 1, `${locale}: formal submission control missing`);
+  assert.equal(await privacyBoundary.locator("button").isDisabled(), true, `${locale}: formal submission must remain disabled`);
+  await privacyBoundary.locator("summary").click();
+  assert.match(await privacyBoundary.innerText(), /联系与隐私授权边界|Contact and privacy permissions/i, `${locale}: privacy boundary panel missing`);
+  assert.match(await privacyBoundary.innerText(), /不是联系同意|not contact consent/i, `${locale}: privacy demo must not imply contact consent`);
+  assert.equal(await privacyBoundary.locator('input[type="email"], input[type="tel"], input[type="file"], textarea').count(), 0, `${locale}: privacy demo must not expose sensitive fields`);
+  const privacyAcknowledgement = privacyBoundary.locator('input[type="checkbox"]');
+  await privacyAcknowledgement.check();
+  assert.equal(await privacyAcknowledgement.isChecked(), true, `${locale}: privacy demo acknowledgement did not toggle`);
+  assert.equal(await privacyBoundary.locator("button").isDisabled(), true, `${locale}: acknowledgement must not enable formal submission`);
+  await privacyAcknowledgement.uncheck();
+  await optionalContext.locator("summary").click();
   const fieldSpecs = [
     { key: "region", label: /当前所在地区|Current region/i, names: ["client_region", "current_region", "currentregion"] },
     { key: "destination", label: /就医目的地|医疗目的地|Care destination|Destination/i, names: ["care_destination", "destination", "careDestination"] },
@@ -431,7 +447,7 @@ try {
     const noJsService = noScriptPage.locator("#consultation select").first();
     const noJsSource = noScriptPage.getByLabel(/咨询来源渠道|来源渠道|Referral source/i).first();
     assert.equal(await submit.isDisabled(), true, "No native submit before the local handler is attached");
-    await noScriptPage.locator('#consultation details summary').click();
+    await noScriptPage.locator('#consultation details summary').first().click();
     await noJsService.selectOption({ index: 1 });
     await noJsSource.selectOption({ index: 1 });
     await noScriptPage.locator('footer').scrollIntoViewIfNeeded();

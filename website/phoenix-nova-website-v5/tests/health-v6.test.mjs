@@ -60,7 +60,7 @@ test("Health V6 exposes a post-APEC launch plan with explicit boundaries in both
     const text = visibleText(section);
     assert.match(text, /APEC/i);
     assert.match(text, locale === "zh" ? /会后|计划启动|首发/ : /Post-APEC|after APEC|planned|launching/i);
-    assert.match(text, locale === "zh" ? /无关|不构成|独立/ : /independent|not.*(?:partner|official|designated|sponsor)/i);
+    assert.match(text, locale === "zh" ? /与APEC会议官方组织、授权、指定医疗服务或赞助无关/ : /independent of the official APEC organisers, authorisations, designated medical services and sponsorship/i);
     assert.doesNotMatch(text, /倒计时|报名|开幕|活动预告|18.?19|countdown|registration|opening ceremony|event preview/i);
     assert.doesNotMatch(text, /\b(?:is|as|an?)\s+(?:an?\s+)?(?:official\s+APEC\s+(?:partner|project)|APEC[- ]designated\s+medical\s+service|APEC\s+sponsor)\b/i);
     assert.doesNotMatch(text, /(?:是|为|作为).{0,20}APEC.{0,30}(?:官方合作伙伴|官方项目|指定医疗服务|赞助方)/i);
