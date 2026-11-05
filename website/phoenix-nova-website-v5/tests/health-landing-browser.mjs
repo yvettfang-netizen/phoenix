@@ -199,17 +199,29 @@ async function assertCrossBorderProcess(page, route) {
   const order = await page.evaluate(() => {
     const services = document.querySelector("#services");
     const crossBorder = document.querySelector("#cross-border-process");
+    const compass = document.querySelector("#health-compass");
+    const brandOrigin = document.querySelector("#brand-origin");
     const why = document.querySelector("#why-phoenix");
     const providers = document.querySelector("#providers");
+    const insurance = document.querySelector("#insurance-verification");
+    const specialty = document.querySelector("#specialty-planning");
     return {
-      whyBeforeServices: Boolean(why && services && (why.compareDocumentPosition(services) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      servicesBeforeProviders: Boolean(services && providers && (services.compareDocumentPosition(providers) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      providersBeforeCrossBorder: Boolean(providers && crossBorder && (providers.compareDocumentPosition(crossBorder) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      compassBeforeServices: Boolean(compass && services && (compass.compareDocumentPosition(services) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      servicesBeforeBrandOrigin: Boolean(services && brandOrigin && (services.compareDocumentPosition(brandOrigin) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      brandOriginBeforeProviders: Boolean(brandOrigin && providers && (brandOrigin.compareDocumentPosition(providers) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      providersBeforeInsurance: Boolean(providers && insurance && (providers.compareDocumentPosition(insurance) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      insuranceBeforeSpecialty: Boolean(insurance && specialty && (insurance.compareDocumentPosition(specialty) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      specialtyBeforeCrossBorder: Boolean(specialty && crossBorder && (specialty.compareDocumentPosition(crossBorder) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      whyAfterBrandOrigin: Boolean(why && brandOrigin && (brandOrigin.compareDocumentPosition(why) & Node.DOCUMENT_POSITION_FOLLOWING)),
     };
   });
-  assert.equal(order.whyBeforeServices, true, `${route}: GBA value section must precede services`);
-  assert.equal(order.servicesBeforeProviders, true, `${route}: provider hub must follow services`);
-  assert.equal(order.providersBeforeCrossBorder, true, `${route}: cross-border process must follow provider hub`);
+  assert.equal(order.compassBeforeServices, true, `${route}: Health Compass must precede Global Health services`);
+  assert.equal(order.servicesBeforeBrandOrigin, true, `${route}: Post-APEC section must follow Global Health services`);
+  assert.equal(order.brandOriginBeforeProviders, true, `${route}: provider hub must follow Post-APEC section`);
+  assert.equal(order.providersBeforeInsurance, true, `${route}: insurance verification must follow provider hub`);
+  assert.equal(order.insuranceBeforeSpecialty, true, `${route}: specialty planning must follow insurance verification`);
+  assert.equal(order.specialtyBeforeCrossBorder, true, `${route}: cross-border process must follow specialty planning`);
+  assert.equal(order.whyAfterBrandOrigin, true, `${route}: GBA values must remain after Post-APEC section`);
 
   const details = process.locator("details");
   assert.equal(await details.count(), 6, `${route}: cross-border process must expose six native details`);

@@ -24,3 +24,32 @@ test('price comparison guide publishes no numerical savings or unsupported quota
  assert.ok(guide);assert.doesNotMatch(JSON.stringify(guide),/\d+(?:\.\d+)?\s*%|[$£¥]\s*\d/);
  assert.match(guide.directAnswer.en,/compar|quote|price/i);
 });
+
+test('institution registration cites the current 2024 rule rather than the repealed 2020 version',()=>{
+ const source=content.HEALTH_GEO_SOURCES.shenzhenWjwInstitutionRegistration;
+ assert.equal(source.url,'https://wjw.sz.gov.cn/xxgk/zcfggfxwj/mybh_5/content/post_11667974.html');
+ assert.match(source.title.zh,/2024/);assert.match(source.title.en,/2024/);
+ assert.match(source.factScope.zh,/2024年12月1日/);assert.match(source.factScope.en,/1 December 2024/);
+ assert.match(source.caution.zh,/2020.*废止/);assert.match(source.caution.en,/2020.*repealed/i);
+ assert.equal(source.verifiedAt,'2026-11-05');
+ for(const id of ['foreign-patient-shenzhen-preparation','shenzhen-international-private-medical']){
+  const guide=content.getHealthGeoGuide(id);
+  assert.ok(guide.officialSources.some(item=>item.url===source.url),id);
+  assert.ok(guide.officialSources.every(item=>!item.url.includes('post_7391852')),id);
+  assert.equal(guide.verifiedAt,'2026-11-05',id);
+ }
+});
+
+test('GBA coordination assigns clinical decisions to providers and coverage and claims to insurers in both locales',()=>{
+ const guide=content.getHealthGeoGuide('greater-bay-area-cross-border-resources');
+ const boundary=guide.sections.find(section=>section.heading.en==='Coordination boundary');
+ assert.ok(boundary);
+ assert.match(boundary.body.zh,/医疗机构决定[^；。]*接诊[^；。]*转诊/);
+ assert.match(boundary.body.zh,/保险机构决定[^；。]*承保[^；。]*理赔/);
+ assert.match(boundary.body.en,/\bmedical providers decide[^.;]*\bacceptance\b[^.;]*\breferral\b/i);
+ assert.match(boundary.body.en,/\binsurers decide[^.;]*\bcoverage\b[^.;]*\bclaims\b/i);
+ assert.doesNotMatch(boundary.body.en,/providers decide[^.;]*claims/i);
+ assert.ok(guide.officialSources.some(source=>source.id==='hong-kong-insurance-authority-medical-claims-guidance'));
+ assert.equal(guide.verifiedAt,'2026-11-05');
+ assert.equal(guide.publicationStatus,'draft');assert.equal(guide.indexable,false);
+});

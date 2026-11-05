@@ -18,14 +18,11 @@ export type HealthEntry = {
  * future edits cannot accidentally turn the context into an endorsement.
  */
 export const healthBrandOrigin = {
-  version: "1.0.0",
+  version: "6.0.0-candidate",
   verifiedAt: "2026-11-02",
-  eyebrow: ["品牌缘起 · 深圳2026", "APEC 2026 SHENZHEN · BRAND ORIGIN"] as HealthCopy,
-  title: ["以深圳为起点，连接世界与中国医疗资源。", "Shenzhen, Your Gateway to Healthcare in China."] as HealthCopy,
-  body: [
-    "2026年APEC经济领导人会议的举办城市为深圳，会议日期为2026年11月18日至19日。Phoenix Nova™ 以这座面向世界的城市为起点，独立启动深圳 Global Health 首发计划，面向海外国际人士及海外华人华侨，提供非临床医疗资源导航、信息核验与协调支持。",
-    "The 2026 APEC Economic Leaders’ Meeting is scheduled for Shenzhen on 18–19 November 2026. Phoenix Nova™ is independently launching its Shenzhen Global Health initiative from this international city for overseas international residents and overseas Chinese, offering non-clinical healthcare resource navigation, information verification and coordination support.",
-  ] as HealthCopy,
+  eyebrow: ["计划 · APEC会议后启动 · 深圳首发", "PLANNED AFTER APEC · STARTING IN SHENZHEN"] as HealthCopy,
+  title: ["APEC 会议后 · 深圳国际医疗服务启程计划", "Post-APEC | Planned Global Health Launch in Shenzhen"] as HealthCopy,
+  body: ["Phoenix Nova™ 计划于APEC会议后，以深圳作为国际医疗协调的中国首发城市，为海外华人、华侨及国际家庭筹备非临床资源导航、信息核验与跨境协调。服务仍在筹备，正式咨询尚未开放；不表示会议已经结束或首发已经完成。","Phoenix Nova™ plans to begin its China-based international healthcare coordination initiative in Shenzhen after APEC, preparing non-clinical navigation, information checks and coordination for overseas Chinese and international families. Services remain in preparation and formal enquiries are not open. This plan does not claim the meeting has ended or the launch is complete."] as HealthCopy,
   boundary: [
     "Phoenix Nova™ 与APEC会议官方组织、授权、指定医疗服务或赞助无关。此页面不构成医院合作、接诊、预约、治疗或结果保证。",
     "Phoenix Nova™ is independent of the official APEC organisers, authorisations, designated medical services and sponsorship. This page does not represent hospital partnerships, acceptance, appointments, treatment or outcome guarantees.",
@@ -137,12 +134,66 @@ export const gbaValues: readonly { title: HealthCopy; body: HealthCopy }[] = [
 ] as const;
 
 export const healthJourney: readonly { title: HealthCopy; body: HealthCopy }[] = [
-  { title: ["初步咨询与需求整理", "Initial conversation and needs mapping"], body: ["沟通当前所在地区、目的地、时间、语言与陪同需要，先确认协调支持是否适合。", "Discuss current region, destination, timing, language and accompaniment needs to confirm whether coordination fits."] },
-  { title: ["医疗机构信息及资料准备", "Provider information and preparation"], body: ["核实公开机构信息、科室路径与资料要求；患者资料须经单独授权并通过受控渠道处理。", "Verify public provider information, departments and document requirements. Patient information requires separate authorisation and controlled handling."] },
-  { title: ["预约与费用条件确认", "Appointment and fee conditions"], body: ["分别核对机构报价、协调费用、预约条件及取消条款，确认范围后再安排。", "Check provider estimates, coordination fees, appointment conditions and cancellation terms separately before arrangements proceed."] },
-  { title: ["跨境行程与就诊安排", "Cross-border travel and visit arrangements"], body: ["按确认范围协调香港或大湾区城市的行程、预约、翻译与非临床支持。", "Coordinate travel, appointments, interpretation and non-clinical support in Hong Kong or Greater Bay Area cities within the confirmed scope."] },
-  { title: ["在地协调与服务支持", "On-the-ground coordination and support"], body: ["协助患者及同行家人理解现场流程；接诊、检查与治疗判断由医疗机构负责。", "Help patients and accompanying family understand on-site steps. Institutions make acceptance, examination and treatment decisions."] },
-  { title: ["后续跟进与保险理赔行政协助", "Follow-up and claims administration"], body: ["整理后续待办、理赔行政清单与沟通节点；保险公司确认承保和赔付，医疗机构确认复诊安排。", "Organise follow-up tasks, claims administration and communication points. Insurers confirm coverage and payment; providers confirm follow-up care."] },
+  {
+    "title": [
+      "线上咨询及保单初步核实",
+      "Enquiry and preliminary policy checks"
+    ],
+    "body": [
+      "当前仅为本地准备演示。未来核实须基于具体计划、条款版本及官方来源，品牌不代表保障确认。",
+      "Local preparation demo only. Future checks require the specific plan, wording version and official source; a brand does not confirm coverage."
+    ]
+  },
+  {
+    "title": [
+      "患者授权与跨境服务安排",
+      "Patient permissions and cross-border arrangements"
+    ],
+    "body": [
+      "联系同意、服务委托及患者资料授权分别确认。家庭关系不能替代患者授权；真实资料处理尚未开放。",
+      "Contact consent, service instructions and patient-record permissions are separate. Family relationships do not replace patient permission. Real record handling is not open."
+    ]
+  },
+  {
+    "title": [
+      "医疗机构专科评估",
+      "Provider specialist assessment"
+    ],
+    "body": [
+      "患者是否适合评估或治疗，仅由目标医疗机构判断。本页不作诊断、不指定医生，也不保证接诊。",
+      "Only the target provider assesses suitability for evaluation or treatment. This page makes no diagnosis, names no doctor and guarantees no acceptance."
+    ]
+  },
+  {
+    "title": [
+      "诊疗方案、费用及就医安排",
+      "Care plan, costs and visit arrangements"
+    ],
+    "body": [
+      "医疗机构确认方案、报价、预约及出院条件，保险机构核实保障与预授权。不承诺治疗方式、时间或返港安排。",
+      "Providers confirm care plans, estimates, appointments and discharge conditions; insurers verify coverage and authorisation. No treatment, timing or return-to-Hong-Kong promise is made."
+    ]
+  },
+  {
+    "title": [
+      "医疗文件与费用资料整理",
+      "Medical and cost-document organisation"
+    ],
+    "body": [
+      "文件由患者通过已批准的机构渠道处理。公开页面不接收病历、证件或保单，不写入普通CRM备注或家庭时间轴。",
+      "Patients handle documents through approved provider channels. This public page accepts no records, identity documents or policies and writes none into general CRM notes or family timelines."
+    ]
+  },
+  {
+    "title": [
+      "理赔协助与后续服务跟进",
+      "Claims administration and follow-up"
+    ],
+    "body": [
+      "后续行政协调须另行确认授权与范围。保险机构决定理赔，医生确认复诊、恢复及旅行安排。本演示不提交真实申请。",
+      "Follow-up administration requires separate permissions and scope. Insurers decide claims; clinicians confirm follow-up, recovery and travel. This demo submits no real application."
+    ]
+  }
 ] as const;
 
 export const familyStages: readonly { title: HealthCopy; body: HealthCopy; image: string }[] = [
@@ -169,3 +220,36 @@ export const healthFaqs: readonly { question: HealthCopy; answer: HealthCopy }[]
 export function healthText(copy: HealthCopy, locale: HealthLocale) {
   return copy[locale === "zh" ? 0 : 1];
 }
+
+export const healthLaunchValues: readonly { title: HealthCopy; body: HealthCopy }[] = [
+  {
+    "title": [
+      "国际医疗资源连接",
+      "Connecting healthcare resources"
+    ],
+    "body": [
+      "计划从深圳开始逐项核实机构与协作范围，尚未确认的机构不作为合作网络展示。",
+      "Plan to verify each provider and collaboration scope in Shenzhen. Unconfirmed institutions are not presented as a partner network."
+    ]
+  },
+  {
+    "title": [
+      "跨境就医服务筹备",
+      "Preparing cross-border coordination"
+    ],
+    "body": [
+      "筹备联络、语言、预约、生活及理赔行政协调；人员、费用与可用性须另行确认。",
+      "Prepare liaison, language, appointment, local-life and claims administration coordination; personnel, costs and availability require separate confirmation."
+    ]
+  },
+  {
+    "title": [
+      "国际市场逐步拓展",
+      "Gradual international outreach"
+    ],
+    "body": [
+      "拟先了解英国来源客户需求，再评估美国、加拿大和澳大利亚等市场；不代表当地网络已经建立。",
+      "Plan to explore UK-origin client needs first, then assess the US, Canada and Australia. No established local network is implied."
+    ]
+  }
+];
