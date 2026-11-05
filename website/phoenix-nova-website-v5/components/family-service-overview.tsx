@@ -105,10 +105,16 @@ function stageLabel(value: string | null, locale: Locale) {
 
 function progressText(value: string, locale: Locale) {
   const [kind, code] = value.trim().split(/\s+/, 2);
-  if (kind?.toUpperCase() === "STAGE") {
-    return locale === "zh" ? `阶段记录：${stageLabel(code ?? null, locale)}` : `Stage recorded: ${stageLabel(code ?? null, locale)}`;
-  }
-  return locale === "zh" ? `进展记录：${value}` : `Recorded update: ${value}`;
+  const zh = locale === "zh";
+  if (kind === "STAGE") return zh ? `服务阶段更新：${stageLabel(code ?? null, locale)}` : `Service stage updated: ${stageLabel(code ?? null, locale)}`;
+  if (kind === "PROJECT_STATUS" && code && STATUS_LABELS[code]) return zh ? `服务状态更新：${label(code, locale)}` : `Service status updated: ${label(code, locale)}`;
+  if (kind === "TASK_STATUS" && code === "COMPLETED") return zh ? "一项待办已完成" : "A task was completed";
+  if (kind === "TASK_STATUS" || kind === "TASK_CREATE") return zh ? "待办已更新" : "Tasks were updated";
+  if (kind === "MESSAGE") return zh ? "项目沟通已记录" : "Project communication was recorded";
+  if (kind.startsWith("APPLICATION_")) return zh ? "申请记录已更新" : "An application record was updated";
+  if (kind.startsWith("MATERIAL_")) return zh ? "材料记录已更新" : "A material record was updated";
+  if (kind.startsWith("DELIVERABLE_")) return zh ? "交付记录已更新" : "A deliverable record was updated";
+  return zh ? "项目进展已记录" : "A project update was recorded";
 }
 
 function activeProject(project: SummaryProject) {
@@ -237,7 +243,7 @@ export function FamilyServiceOverview({ locale }: { locale: Locale }) {
 
   const current = useMemo(() => projects.filter(activeProject), [projects]);
   const history = useMemo(() => projects.filter(project => !activeProject(project)), [projects]);
-  const next = useMemo(() => current.filter(project => project.customer_todo_count > 0 || project.next_milestone).slice(0, 4), [current]);
+  const next = useMemo(() => current.filter(project => project.status === "ACTIVE" && (project.customer_todo_count > 0 || project.next_milestone)).slice(0, 4), [current]);
   const progress = useMemo(() => current.filter(project => project.latest_progress).slice(0, 4), [current]);
   const compasses = useMemo(() => [...new Set(current.map(project => project.compass))], [current]);
 
@@ -248,9 +254,9 @@ export function FamilyServiceOverview({ locale }: { locale: Locale }) {
     {state === "stale" && <div className="fso-state fso-stale" role="status"><strong>{t("服务资料需要刷新。", "Service information needs a refresh.")}</strong><span>{t("资料已过期或页面离开焦点，请刷新后继续。", "This information is out of date. Refresh to continue.")}</span><button type="button" onClick={() => void load()}>{t("刷新", "Refresh")}</button></div>}
     {state === "empty" && <div className="fso-empty"><Compass size={30} /><h3>{t("目前没有可显示的服务项目", "There are no service projects to show yet")}</h3><p>{t("你可以先了解适合家庭的支持。", "Explore support for your family.")}</p><Link href={`/${locale}/education#consultation`}>{t("探索服务与咨询", "Explore services") }<ArrowRight size={16} /></Link></div>}
     {state === "ready" && <>
-        <section className="fso-priority"><div><span className="fso-section-label">{t("我的下一步", "My next steps")}</span><h3>{next.length ? t("从这些事项开始", "Start with these items") : t("项目正在按记录推进", "Your projects are moving from recorded updates")}</h3></div>{next.length > 0 && <div className="fso-next-list">{next.map(project => <Link key={project.service_project_id} href={hrefFor(locale, project)}><span>{milestoneText(project.next_milestone, locale) ?? t("查看项目待办", "Review project tasks")}</span><small>{project.customer_todo_count} {t("项待办", "to do")}{project.overdue_count ? ` · ${project.overdue_count} ${t("逾期", "overdue")}` : ""}</small><ArrowRight size={15} /></Link>)}</div>}</section>
+        <section className="fso-priority"><div><span className="fso-section-label">{t("我的下一步", "My next steps")}</span><h3>{next.length ? t("从这些事项开始", "Start with these items") : t("暂无下一步事项", "No next steps to show")}</h3></div>{next.length > 0 && <div className="fso-next-list">{next.map(project => <Link key={project.service_project_id} href={hrefFor(locale, project) + (project.customer_todo_count > 0 ? "#tasks" : "")}><span>{project.customer_todo_count > 0 ? t("查看项目待办", "Review project tasks") : milestoneText(project.next_milestone, locale)}</span><small>{project.customer_todo_count} {t("项待办", "to do")}{project.overdue_count ? ` · ${project.overdue_count} ${t("逾期", "overdue")}` : ""}</small><ArrowRight size={15} /></Link>)}</div>}</section>
       <div className="fso-grid">{current.length > 0 && <section className="fso-block fso-services"><div className="fso-block-heading"><h3>{t("我的服务项目", "My service projects")}</h3><span>{current.length}</span></div><div className="fso-cards">{current.map(project => <ProjectCard key={project.service_project_id} locale={locale} project={project} />)}</div></section>}
-        <section className="fso-block"><div className="fso-block-heading"><h3>{t("最新进展", "Latest progress")}</h3></div>{progress.length ? <div className="fso-progress-list">{progress.map(project => <Link key={project.service_project_id} href={hrefFor(locale, project)}><strong>{project.name}</strong><span>{progressText(project.latest_progress as string, locale)}</span><ArrowRight size={15} /></Link>)}</div> : <p className="fso-muted">{t("暂无可显示的客户可见进展。", "No client-visible progress is available yet.")}</p>}</section>
+        <section className="fso-block"><div className="fso-block-heading"><h3>{t("最新进展", "Latest progress")}</h3></div>{progress.length ? <div className="fso-progress-list">{progress.map(project => <Link key={project.service_project_id} href={hrefFor(locale, project)+"#events"}><strong>{project.name}</strong><span>{progressText(project.latest_progress as string, locale)}</span><ArrowRight size={15} /></Link>)}</div> : <p className="fso-muted">{t("暂无可显示的客户可见进展。", "No client-visible progress is available yet.")}</p>}</section>
         <section className="fso-block"><div className="fso-block-heading"><h3>{t("我的家庭 Compass", "My family Compasses")}</h3></div>{compasses.length ? <div className="fso-compass-list">{compasses.map(compass => <div key={compass}><Compass size={18} /><strong>{compassLabel(compass, locale)}</strong><span>{current.filter(project => project.compass === compass).length} {t("个项目", "projects")}</span></div>)}</div> : <p className="fso-muted">{t("暂时没有 Compass 项目。", "No Compass projects yet.")}</p>}</section>
       </div>
       {history.length > 0 && <section className="fso-block fso-history"><div className="fso-block-heading"><h3>{t("历史服务", "Service history")}</h3><span>{history.length}</span></div><div className="fso-cards">{history.map(project => <ProjectCard key={project.service_project_id} locale={locale} project={project} history />)}</div></section>}

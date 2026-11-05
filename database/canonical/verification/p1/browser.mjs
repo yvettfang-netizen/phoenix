@@ -43,7 +43,7 @@ export async function bundleComponents(){
   'import {FamilyCenterV2} from "'+centerPath+'";',
   'import {ServiceWorkbench} from "'+workbenchPath+'";',
   'const root=document.getElementById("root");',
-  'const match=location.pathname.match(new RegExp("^/(en|zh)/my-services/([0-9a-f-]{36})$"));',
+  'const match=location.pathname.match(new RegExp("^/(en|zh)/my-services(?:/([0-9a-f-]{36}))?$"));',
   'const locale=location.pathname.startsWith("/zh")?"zh":"en";',
   'document.documentElement.lang=locale;',
   'root.replaceChildren();',
@@ -126,7 +126,7 @@ async function main(){
  browser=await chromium.launch({headless:true})
  const contexts=[]
  const contextFor=async(alias)=>{
-  const context=await browser.newContext({viewport:{width:1440,height:1100}})
+  const context=await browser.newContext({viewport:{width:1440,height:1100},timezoneId:'Asia/Shanghai'})
   contexts.push(context)
   const cookie=fixture.accounts[alias].cookie.split(';')[0].split('=')
   await context.addCookies([{name:cookie[0],value:cookie.slice(1).join('='),url:uiOrigin,httpOnly:true,sameSite:'Lax'}])
@@ -159,6 +159,13 @@ async function main(){
  await noOverflow(view.page,'client-a-en-390')
  await shot(view.page,'client-a-en-390')
  check('client A English Family Service Overview reads real PG summary', {identity:'client-a',locale:'en'})
+
+ const navigation=view.page.getByRole('navigation',{name:'Family Center navigation'})
+ assert.equal(await navigation.locator('button,a').count(),3)
+ await navigation.getByRole('link',{name:'My Services',exact:true}).click()
+ await view.page.locator('.sw-projects').getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).waitFor()
+ assert.equal(await view.page.locator('.sw-projects').getByText('Synthetic Identity Hong Kong 319',{exact:true}).count(),0)
+ await view.page.goto(uiOrigin+'/en/family-center',{waitUntil:'networkidle'})
 
  const card310=view.page.locator('.fso-card').filter({hasText:'Synthetic HK Masters 310'})
  await card310.getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).click()
