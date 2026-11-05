@@ -17,6 +17,8 @@ test("P1 Family Service Overview uses a strict, no-store authorized summary cont
   assert.match(overview, /validFamilyServiceSummary/);
   assert.match(overview, /schemaVersion: "service-project-summary\.v1"/);
   assert.match(overview, /next_milestone: project\.next_milestone/);
+  assert.match(overview, /STAGE_LABELS/);
+  assert.match(overview, /progressText/);
   assert.match(overview, /new URLSearchParams\(\{ limit: "20" \}\)/);
   assert.match(overview, /query\.set\("cursor", cursor\)/);
   assert.match(overview, /expires - asOf > 60000/);
