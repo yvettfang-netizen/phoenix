@@ -18,3 +18,7 @@
 Founder → Phoenix → Relevant Spirits → Phoenix Synthesis → Founder Gate。此包为玄武工程候选；没有声称独立白虎或凤凰审阅已发生。HANDOFF_REQUIRED: Phoenix（综合及权限范围）、Jimson（Schema/Gateway）、Baihu（敏感数据/披露边界）。
 
 当前可审核具体结果：九份文档、实际源码候选及patch、合成验证记录。真实接通不能通过本包文档批准自动发生，F3未批准不提供任何Canonical执行写接口。
+
+## 执行验收与回滚补充
+
+本轮新增M0–M8门禁，详见[META_ACCEPTANCE_RELEASE_GATE_REGISTER.md](META_ACCEPTANCE_RELEASE_GATE_REGISTER.md)、[四层回滚方案](META_FOUR_LAYER_ROLLBACK_RUNBOOK.md)及[演练记录](META_ROLLBACK_DRILL_REPORT.md)。精确版本和artifact hash见ACCEPTANCE_EVIDENCE_MANIFEST.json。原67版隔离build/typecheck通过、原回归8/17；本轮候选定向12/12与5个组件探针通过，均不能替代完整PG16/17、Staging、独立安全审核或回滚演练。本轮未改应用代码、SQL或生产配置，发布HOLD。

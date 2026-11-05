@@ -48,3 +48,7 @@ P0实际源码已找到，所以不输出META_FRONTEND_SOURCE_NOT_FOUND。缺失
 实际Sites源码候选提交：640451c1ddfc799cf2bf2a304e6c2d1e93b0549a，仅本地独立分支。GitHub Draft PR收录META_SOURCE_CANDIDATE.patch，基于Sites67版a96de29，**不可应用到主仓库旧website/phoenix-digital-world**。SOURCE_PROVENANCE.json保存基线及patch SHA256。
 
 在对应Sites源码的干净独立分支上先运行git apply --check <patch路径>检查，再按既定流程审查应用；本轮没有在Sites发布源分支push，不触发任何站点版本保存或部署。保留既有任务/共修本地工作流，不建新客户/家庭/学生/服务数据库。
+
+## 执行验收与回滚补充
+
+本轮新增M0–M8门禁，详见[META_ACCEPTANCE_RELEASE_GATE_REGISTER.md](META_ACCEPTANCE_RELEASE_GATE_REGISTER.md)、[四层回滚方案](META_FOUR_LAYER_ROLLBACK_RUNBOOK.md)及[演练记录](META_ROLLBACK_DRILL_REPORT.md)。精确版本和artifact hash见ACCEPTANCE_EVIDENCE_MANIFEST.json。原67版隔离build/typecheck通过、原回归8/17；本轮候选定向12/12与5个组件探针通过，均不能替代完整PG16/17、Staging、独立安全审核或回滚演练。本轮未改应用代码、SQL或生产配置，发布HOLD。

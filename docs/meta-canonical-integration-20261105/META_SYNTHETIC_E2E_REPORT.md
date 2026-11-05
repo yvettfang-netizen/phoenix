@@ -45,3 +45,7 @@ Node v24.19.0，Windows。安装官方helper因旧项目脚本依赖bash失败�
 截图证据：[desktop](evidence/nova-desktop.png)、[mobile390](evidence/nova-mobile.png)。截图来自本轮本地合成预览，不是生产截图。
 
 交付范围检查：Canonical目录对刷新main零差异；源码patch reverse apply --check通过；交付Markdown/JSON/patch定向凭据模式扫描0项，未执行完整历史secret/PII扫描。没有生产env文件或密钥写入交付。
+
+## 执行验收与回滚补充
+
+本轮新增M0–M8门禁，详见[META_ACCEPTANCE_RELEASE_GATE_REGISTER.md](META_ACCEPTANCE_RELEASE_GATE_REGISTER.md)、[四层回滚方案](META_FOUR_LAYER_ROLLBACK_RUNBOOK.md)及[演练记录](META_ROLLBACK_DRILL_REPORT.md)。精确版本和artifact hash见ACCEPTANCE_EVIDENCE_MANIFEST.json。原67版隔离build/typecheck通过、原回归8/17；本轮候选定向12/12与5个组件探针通过，均不能替代完整PG16/17、Staging、独立安全审核或回滚演练。本轮未改应用代码、SQL或生产配置，发布HOLD。

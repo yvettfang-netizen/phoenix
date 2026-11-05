@@ -1,0 +1,88 @@
+{
+  "baseline_sha": "a96de29bbfdf32558b202123f15a3ca3c5b2a9a3",
+  "environment": "Windows Node24; detached worktree; shared locked dependencies via junction",
+  "commands": [
+    {
+      "command": "npx vite build",
+      "exit_code": 0
+    },
+    {
+      "command": "npx tsc --noEmit --incremental false",
+      "exit_code": 0
+    },
+    {
+      "command": "node --test tests/meta-work.test.mjs tests/ui-components.test.mjs tests/rendered-html.test.mjs",
+      "exit_code": 1
+    }
+  ],
+  "raw_log_hashes": [
+    {
+      "name": "vite-build.log",
+      "sha256": "31636874f25c51218ec4be48a77966b99f9dd37b93c98f258642b8883de0c588"
+    },
+    {
+      "name": "tsc.log",
+      "sha256": "c1e97067c5f479a44a6f57297a0a8f87a59d181c3c529910f8bf059094bc3abb"
+    },
+    {
+      "name": "node-tests.log",
+      "sha256": "b867591425c5511d20fda0fbdedd0c459834efbcc0cd066de1bf6bf656a09288"
+    }
+  ],
+  "result": {
+    "total": 17,
+    "pass": 8,
+    "fail": 9,
+    "skipped": 0
+  },
+  "source_diff": "none",
+  "sanitized_output": [
+    "*** Received structured exception #0xc0000005: access violation; stack: 7ffd0298929f 7ff749241e5d 7ff749241f23 7ff74921a8ec 7ff74921a8a0 7ff7486ea146 7ff7486ea8c0 7ff7472061fa 7ff748896196 7ff74889db86 7ff7488963a4 7ff74889db86 7ff74889370b 7ff7471f20a7 7ff74a63970f 7ffd160fdda6 7ffd17759c5b",
+    "✖ anonymous, unlisted and cross-origin writes are denied; missing persistence is honestly unavailable (2027.7624ms)",
+    "✖ task ownership cannot be supplied or crossed; Founder has global scope; completion is audited (14.1835ms)",
+    "✖ real local SQLite workflow: evidence → pending → human approval → Zhuji; no automatic or higher promotion (0.4276ms)",
+    "✖ concurrent human reviews produce one decision and one audit, with no false success (0.38ms)",
+    "✖ D:\\CODEX\\PhoenixNova_Worktrees\\meta-sites-baseline-20261105\\tests\\meta-work.test.mjs (11.3561ms)",
+    "✖ home preserves the exact mother asset and exposes eight lazy silk windows without HTML over artwork (525.301ms)",
+    "✖ Wilds uses all eight approved assets around NOVA; no fabricated placeholder image (36.7918ms)",
+    "✖ eight spirit pages retain the frozen names and real task/material/artifact workflow (14.8632ms)",
+    "✖ NOVA, Cultivation and My Phoenix render honest empty states and locked future capabilities (120.9564ms)",
+    "✔ Founder and employee NOVA scopes differ using existing trusted dispatch identity (79.9871ms)",
+    "✔ all nine original workbench access gates still require sign in (350.3668ms)",
+    "✔ knowledge remains gated and preserves the read-only Notion snapshot (229.1259ms)",
+    "✔ legacy navigation routes redirect into one world, and unknown spaces are 404 (56.8593ms)",
+    "✔ emits the catalog's animation and scrolling utilities (260.2276ms)",
+    "✔ forwards progress semantics to the primitive (2341.3585ms)",
+    "✔ emits chart themes for the starter's media dark mode (1843.2477ms)",
+    "✔ renders sidebar skeletons deterministically (724.329ms)",
+    "ℹ tests 17",
+    "ℹ suites 0",
+    "ℹ pass 8",
+    "ℹ fail 9",
+    "ℹ cancelled 0",
+    "ℹ skipped 0",
+    "ℹ todo 0",
+    "ℹ duration_ms 7320.3181",
+    "✖ failing tests:",
+    "✖ anonymous, unlisted and cross-origin writes are denied; missing persistence is honestly unavailable (2027.7624ms)",
+    "  MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.",
+    "    code: 'ERR_RUNTIME_FAILURE',",
+    "✖ task ownership cannot be supplied or crossed; Founder has global scope; completion is audited (14.1835ms)",
+    "  MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.",
+    "    code: 'ERR_RUNTIME_FAILURE',",
+    "✖ real local SQLite workflow: evidence → pending → human approval → Zhuji; no automatic or higher promotion (0.4276ms)",
+    "  MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.",
+    "    code: 'ERR_RUNTIME_FAILURE',",
+    "✖ concurrent human reviews produce one decision and one audit, with no false success (0.38ms)",
+    "  MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.",
+    "    code: 'ERR_RUNTIME_FAILURE',",
+    "✖ D:\\CODEX\\PhoenixNova_Worktrees\\meta-sites-baseline-20261105\\tests\\meta-work.test.mjs (11.3561ms)",
+    "  MiniflareCoreError [ERR_RUNTIME_FAILURE]: The Workers runtime failed to start. There is likely additional logging output above.",
+    "    code: 'ERR_RUNTIME_FAILURE',",
+    "✖ home preserves the exact mother asset and exposes eight lazy silk windows without HTML over artwork (525.301ms)",
+    "✖ Wilds uses all eight approved assets around NOVA; no fabricated placeholder image (36.7918ms)",
+    "✖ eight spirit pages retain the frozen names and real task/material/artifact workflow (14.8632ms)",
+    "✖ NOVA, Cultivation and My Phoenix render honest empty states and locked future capabilities (120.9564ms)",
+    "EXIT_CODE=1"
+  ]
+}
