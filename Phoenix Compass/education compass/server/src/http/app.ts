@@ -14,6 +14,9 @@ import { EducationCompassService } from '../services/education-compass-service'
 import { FeishuSyncService } from '../integrations/feishu/sync-service'
 import { routeAgentRequest } from './agent-routes'
 import { InMemoryRateLimiter, RateLimiter } from './rate-limiter'
+import { LearningCatalog } from '../services/canonical-learning-catalog'
+import { FamilyProjection } from '../services/canonical-family-projection'
+import { randomUUID } from 'node:crypto'
 
 export interface AppDependencies {
   auth: AuthService
@@ -30,6 +33,9 @@ export interface AppDependencies {
   feishu?: FeishuSyncService
   rateLimiter?: RateLimiter
   readiness?: () => Promise<void>
+  learningCatalog?: LearningCatalog
+  familyProjection?: FamilyProjection
+  sessionFamilyProjection?: FamilyProjection
   logger?: { error(message: string, context?: Record<string, unknown>): void }
 }
 
@@ -187,6 +193,30 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
     try {
       const url = new URL(request.url ?? '/', 'http://localhost')
       route = url.pathname
+      if (url.pathname.startsWith('/v1/canonical/projections/') || url.pathname.startsWith('/v1/canonical/session-projections/')) {
+        const sessionMode = url.pathname.startsWith('/v1/canonical/session-projections/')
+        const projection = sessionMode ? deps.sessionFamilyProjection : deps.familyProjection
+        invariant(projection, 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        invariant(method === 'GET', 405, 'METHOD_NOT_ALLOWED', '请求方式不受支持')
+        exactQuery(url)
+        const match = url.pathname.match(/^\/v1\/canonical\/(?:projections|session-projections)\/(family|students)(?:\/([a-f0-9-]{36}|stu_[a-f0-9]{32}))?$/)
+        invariant(match && !(match[1] === 'family' && match[2]), 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        invariant(!['x-family-id','x-principal-id','x-role','x-channel','x-source-system'].some(h => request.headers[h]),
+          403, 'FAMILY_SCOPE_REQUIRED', '家庭资料访问未授权')
+        invariant(await rateLimiter.consume('canonical-family-projection', 120, 60_000), 429, 'RATE_LIMITED', '请求过于频繁')
+        const requestId = randomUUID()
+        response.setHeader('X-Request-ID', requestId)
+        return json(response, 200, await projection.read(request.headers.authorization,
+          match[1] === 'family' ? 'family' : match[2] ? 'student' : 'students', match[2], requestId))
+      }
+      if (url.pathname === '/v1/learning/catalog') {
+        invariant(deps.learningCatalog, 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        invariant(method === 'GET', 405, 'METHOD_NOT_ALLOWED', '请求方式不受支持')
+        exactQuery(url)
+        deps.learningCatalog.authorize(request.headers.authorization)
+        invariant(await rateLimiter.consume('canonical-catalog', 120, 60_000), 429, 'RATE_LIMITED', '请求过于频繁')
+        return json(response, 200, await deps.learningCatalog.list())
+      }
       if (method === 'GET' && url.pathname === '/health') {
         exactQuery(url)
         try {

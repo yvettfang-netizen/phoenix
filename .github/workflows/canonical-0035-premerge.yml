@@ -93,7 +93,26 @@ jobs:
           foreach ($line in (Get-Content (Join-Path $reference 'docs/database/premerge-0035/CANONICAL_0035_SOURCE_MANIFEST.md'))) {
             if ($line -match '^\| ([0-9]{4}) \| `([0-9a-f]{64})` \|$') { $expected[$Matches[1]] = $Matches[2] }
           }
-          $files = @(Get-ChildItem (Join-Path $selectedRoot 'migrations') -File -Filter '*.sql' | Sort-Object Name)
+          $allFiles = @(Get-ChildItem (Join-Path $selectedRoot 'migrations') -File -Filter '*.sql' | Sort-Object Name)
+          $files = @($allFiles | Where-Object { $_.Name -match '^00(0[1-9]|[12][0-9]|3[0-5])_' })
+          $extras = @($allFiles | Where-Object { $_ -notin $files })
+          if ($extras.Count -gt 0) {
+            $combinedPath = Join-Path $selectedRoot 'migration-manifests/combined-0036-0037-candidate.json'
+            if (Test-Path -LiteralPath $combinedPath) {
+              $combined = Get-Content -LiteralPath $combinedPath -Raw | ConvertFrom-Json
+              if ($combined.candidate_files -ne 37 -or $combined.forwards.Count -ne 2 -or $extras.Count -ne 2) { throw 'COMBINED_INVENTORY_NOT_37' }
+              $source36 = Get-Content (Join-Path $selectedRoot 'migration-manifests/0036-candidate.json') -Raw | ConvertFrom-Json
+              $source37 = Get-Content (Join-Path $selectedRoot 'migration-manifests/0037-candidate.json') -Raw | ConvertFrom-Json
+              if ($source36.migration.sha256 -ne '2c977cb44e3ec01f7ad00d4c0d8f32c5e2cd8e8fd2fed796340a919dfd0b7719' -or $source37.sha256 -ne '29c153177b4177cc279fe2494e2be563bd6250f6564c57fc62e381df1c7decb2') { throw 'FORWARD_SOURCE_DRIFT' }
+              for ($i=0; $i -lt 2; $i++) {
+                if ($extras[$i].Name -ne $combined.forwards[$i].file -or (Get-FileHash $extras[$i].FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $combined.forwards[$i].sha256) { throw 'COMBINED_FORWARD_DRIFT' }
+              }
+            } else {
+            $forward = Get-Content (Join-Path $selectedRoot 'migration-manifests/0037-candidate.json') -Raw | ConvertFrom-Json
+            if ($extras.Count -ne 1 -or $extras[0].Name -ne $forward.file -or
+                (Get-FileHash $extras[0].FullName -Algorithm SHA256).Hash.ToLowerInvariant() -ne $forward.sha256) { throw 'UNREVIEWED_FORWARD_INVENTORY' }
+            }
+          }
           $referenceFiles = @(Get-ChildItem (Join-Path $referenceRoot 'migrations') -File -Filter '*.sql' | Sort-Object Name)
           if ($expected.Count -ne 35 -or $files.Count -ne 35 -or $referenceFiles.Count -ne 35) { throw 'INVENTORY_NOT_35' }
           for ($index=0; $index -lt 35; $index++) {
@@ -107,6 +126,14 @@ jobs:
             if ((Get-FileHash (Join-Path $selectedRoot $harness)).Hash -ne (Get-FileHash (Join-Path $referenceRoot $harness)).Hash) {
               throw 'UNREVIEWED_VERIFICATION_HARNESS'
             }
+          }
+          if ($extras.Count -gt 0) {
+            $subset = Join-Path $env:RUNNER_TEMP 'canonical-0035-subset'
+            New-Item -ItemType Directory -Force (Join-Path $subset 'migrations'),(Join-Path $subset 'verification') | Out-Null
+            foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $subset 'migrations') }
+            foreach ($harness in @('verification/smoke.ps1','verification/migrate.sh')) { Copy-Item -LiteralPath (Join-Path $selectedRoot $harness) -Destination (Join-Path $subset $harness) }
+            $selectedRoot = $subset
+            Write-Output 'BASELINE_SCOPE=0001-0035 exact candidate subset; forward0036/0037 require their separate compatibility E2E workflow'
           }
           $testedCommit = if ($mode -eq 'CANDIDATE_TREE') { (& git rev-parse HEAD).Trim() } else { $referenceCommit }
           Write-Output "SOURCE_MODE=$mode TESTED_COMMIT=$testedCommit MIGRATIONS_MATCHED=35 BASE_HAS_CANONICAL=$baseHas"
