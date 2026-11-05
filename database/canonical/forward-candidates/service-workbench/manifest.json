@@ -1,0 +1,8 @@
+{
+  "status": "DEVELOPMENT CANDIDATE; NOT APPROVED OR ACTIVE",
+  "base": "37 byte-exact migrations from PR58 stack; inspected main contains35",
+  "file": "0038_service_project_workbench.sql",
+  "sha256": "922c78b08a3cdd29474d1962fd930082b64a0b4ea6d2b3e8a33c9c617e3d3ad8",
+  "isolatedExpectations": {"ledger":38,"tables":100,"policies":90},
+  "promotion": "Requires independent review and Founder gate; never copy automatically into active migrations or deploy"
+}

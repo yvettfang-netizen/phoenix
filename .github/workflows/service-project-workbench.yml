@@ -1,0 +1,70 @@
+name: Service Project Workbench candidate
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/service-workbench/**'
+      - 'database/canonical/verification/v0038/**'
+      - 'Phoenix Compass/education compass/server/**'
+      - 'website/phoenix-nova-website-v5/**'
+      - 'docs/database/service-project-workbench-v1/**'
+      - '.github/workflows/service-project-workbench.yml'
+permissions:
+  contents: read
+concurrency:
+  group: workbench-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic-workbench:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16', '17']
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Existing immutable migration baseline
+        run: node database/canonical/verification/v0038/verify-source.mjs
+      - name: Backend existing tests and build
+        working-directory: Phoenix Compass/education compass/server
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npm test
+      - name: Website contracts typecheck and changed UI lint
+        working-directory: website/phoenix-nova-website-v5
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/workerd/install.js
+          npm run typecheck
+          node node_modules/eslint/bin/eslint.js components/service-workbench.tsx lib/service-workbench-bff.ts lib/service-workbench-contract.ts 'app/[locale]/my-services' 'app/api/service-workbench'
+          node --import ./tests/register-typescript.mjs --test tests/service-workbench.test.mjs tests/family-center-v2.test.mjs tests/canonical-family-projection.test.mjs tests/canonical-session-projection.test.mjs
+      - name: Pinned browser fixture
+        run: |
+          npm install --prefix "$RUNNER_TEMP/workbench-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          node "$RUNNER_TEMP/workbench-browser/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: PG fresh negative grants drift atomicity and fresh restore
+        run: |
+          export WORKBENCH_EVIDENCE_DIR="$RUNNER_TEMP/workbench-evidence"
+          node database/canonical/verification/v0038/acceptance.mjs '${{ matrix.pg }}'
+      - name: Real browser BFF API PostgreSQL workbench
+        run: |
+          export WORKBENCH_EVIDENCE_DIR="$RUNNER_TEMP/workbench-evidence"
+          export PLAYWRIGHT_MODULE="$RUNNER_TEMP/workbench-browser/node_modules/playwright"
+          node database/canonical/verification/v0038/browser.mjs '${{ matrix.pg }}'
+      - name: Synthetic result artifacts only; no dump or configuration
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: synthetic-workbench-pg${{ matrix.pg }}
+          path: |
+            ${{ runner.temp }}/workbench-evidence/*.json
+            ${{ runner.temp }}/workbench-evidence/*.png
+          if-no-files-found: warn
