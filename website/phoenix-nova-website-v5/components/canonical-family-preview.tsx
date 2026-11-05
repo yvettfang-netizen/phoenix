@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 type Summary = { family: { familyRef: string; displayName: string } };
 type Student = { studentRef: string; displayName: string };
 export function CanonicalFamilyPreview({ locale, sessionMode = false }: { locale: "zh" | "en"; sessionMode?: boolean }) {
+  return <ScopedFamilyPreview key={sessionMode ? "session" : "legacy"} locale={locale} sessionMode={sessionMode} />;
+}
+function ScopedFamilyPreview({ locale, sessionMode }: { locale: "zh" | "en"; sessionMode: boolean }) {
   const [value, setValue] = useState<{ family: Summary["family"]; students: Student[] } | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -11,7 +14,7 @@ export function CanonicalFamilyPreview({ locale, sessionMode = false }: { locale
       const r = await fetch(`/api/canonical/${sessionMode ? "session-projections" : "projections"}/${part}`, { credentials: "same-origin", cache: "no-store", signal: controller.signal });
       if (!r.ok) throw new Error("Unavailable"); return r.json();
     };
-    void Promise.all([get("family"), get("students")]).then(([f,s]) => setValue({ family: f.family, students: s.items }))
+    void Promise.all([get("family"), get("students")]).then(([f,s]) => { if (!controller.signal.aborted) setValue({ family: f.family, students: s.items }); })
       .catch(() => { if (!controller.signal.aborted) { setValue(null); setFailed(true); } });
     return () => controller.abort();
   }, [sessionMode]);

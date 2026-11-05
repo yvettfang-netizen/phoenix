@@ -9,6 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {runReadAuditRegression} from './read-audit-regression.mjs';
 import {reviewConfigProbe,reviewRuntimeProbes} from './review-regression.mjs';
 import {runBrokerSessionRegression} from './broker-session-regression.mjs';
+import {runUiStateReviewRegression} from './ui-state-review-regression.mjs';
 import {createRequire} from 'node:module';
 const publicFamily=n=>'fam_'+id(n).replaceAll('-','');
 const publicStudent=n=>'stu_'+id(n).replaceAll('-','');
@@ -193,6 +194,7 @@ async function sessionBrowserProbe({apiOrigin,tokens,revokeBrowserSession,expect
       let ready=false;for(let n=0;n<100;n++){if(ownVite.exitCode!==null)throw Error('Session preview exited');try{const r=await fetch(target+'/api/canonical/session-projections/family',{signal:AbortSignal.timeout(2000)});if(r.status===403){ready=true;break;}}catch{}await sleep(500);}assert(ready);
     }
     const activeBrowser=browser??(ownBrowser=await chromium.launch({headless:true,channel:process.env.CATALOG_BROWSER_CHANNEL||(process.platform==='win32'&&!existsSync(chromium.executablePath())?'msedge':'chromium')}));
+    await runUiStateReviewRegression({browser:activeBrowser,origin:target,website});
     context=await activeBrowser.newContext();await context.route('**/*',route=>['127.0.0.1','localhost'].includes(new URL(route.request().url()).hostname)?route.continue():route.abort());
     const page=await context.newPage();
     for(const sub of ['usr_parent_a','usr_parent_b','usr_parent_a']){

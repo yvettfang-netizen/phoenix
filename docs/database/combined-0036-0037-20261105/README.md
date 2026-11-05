@@ -33,3 +33,5 @@
 0036原smoke/verify/restore等脚本保持来源字节，针对其独立36文件快照；不将其直接用于组合37文件验收。组合runner复用未改的0036业务/边界测试，并在新建/恢复库使用不同合成fixture base36000/46000。
 
 当前main运行库不升级。F1–F5、真实provider/TLS/JWKS与保护配置、单学生正式映射、实际登录/BFF上线、治理规则和最终审批保持HOLD。详细[应用契约](APPLICATION_BFF_CONTRACT.md)及[执行报告](EXECUTION_REPORT.md)分别记录准备能力和未执行事项。
+
+后续固定PR55/d1dd6e3…的[技术复审与修复报告](PR55_FORMAL_REVIEW.md)记录新增的预览状态反例、最小修复、永久回归及本轮复验；正式GitHub独立Review与真实身份门禁不由该报告替代。
