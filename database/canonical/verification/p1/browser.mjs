@@ -27,7 +27,7 @@ const record={
  status:'FAIL',
  realIdentity:{status:'BLOCKED',reason:'This evidence uses D1 test accounts and synthetic Canonical mappings only.'}
 }
-let fixture,uiServer,browser
+let fixture,uiServer,browser,lastPage
 const check=(name,details={})=>{record.checks.push({name,status:'PASS',...details});console.log('PASS browser '+name)}
 const safeName=value=>value.replace(/[^a-z0-9_-]/gi,'_')
 
@@ -135,6 +135,7 @@ async function main(){
  const pageFor=async(alias,locale='en',width=1440)=>{
   const context=await contextFor(alias)
   const page=await context.newPage()
+  lastPage=page
   await page.setViewportSize({width,height:1100})
   page.setDefaultTimeout(30000)
   await page.goto(uiOrigin+'/'+locale+'/family-center',{waitUntil:'networkidle'})
@@ -178,13 +179,14 @@ async function main(){
  await taskRow.getByText('Synthetic client: upload transcript',{exact:true}).waitFor()
  await taskRow.getByRole('button',{name:'In progress',exact:true}).click()
  await view.page.getByText('Saved. Showing the latest database records.',{exact:true}).waitFor()
- await taskRow.getByRole('button',{name:'Completed',exact:true}).click()
+ await taskRow.getByRole('button',{name:'Complete task',exact:true}).click()
  await view.page.getByText('Saved. Showing the latest database records.',{exact:true}).waitFor()
- await taskRow.getByText('Completed',{exact:false}).waitFor()
+ await taskRow.getByText(/^Completed ·/).waitFor()
  check('client A card enters the real P0 project and completes the authorized task', {project:fixture.project(310)})
  await view.page.goto(uiOrigin+'/en/family-center',{waitUntil:'networkidle'})
  const clientCard=view.page.locator('.fso-card').filter({hasText:'Synthetic HK Masters 310'})
  await clientCard.getByText('No pending tasks',{exact:true}).waitFor()
+ await clientCard.getByText('A task was completed',{exact:true}).waitFor()
  check('Family Service Overview re-fetches the reduced todo count after P0 task completion')
  await view.context.close()
 
@@ -266,6 +268,10 @@ if(path.resolve(process.argv[1]??'')===fileURLToPath(import.meta.url)){
 try{await main()}
 catch(error){
  record.status='FAIL'
+ if(lastPage&&!lastPage.isClosed())try{
+  writeFileSync(path.join(output,'synthetic-browser-failure.txt'),(await lastPage.locator('body').innerText({timeout:2000})).slice(0,12000))
+  await lastPage.screenshot({path:path.join(output,'synthetic-browser-failure.png'),fullPage:true,timeout:5000})
+ }catch{}
  record.error={name:error?.name,message:error?.message,stack:error?.stack}
  record.finished=new Date().toISOString()
  writeFileSync(path.join(output,'p1-browser-pg'+version+'.json'),JSON.stringify(record,null,2)+'\n')

@@ -74,6 +74,11 @@ is the PG16/17 authority. Retained diagnostics and repairs:
   fragment. The next-step link now opens the existing Tasks view directly.
   The mobile screenshot also exposed overlapping legacy navigation labels;
   P1 now shows only Overview, My Services and Account & Security.
+- Run42087284003 reached the authorized task via the real next-step link and
+  received a save confirmation. It exposed the use of the project label
+  “Closed” for the task completion action. The task now has an explicit
+  Complete task action and Completed status; browser acceptance still requires
+  the saved state, refreshed count and recorded completion on the homepage.
 
 The isolated browser harness mounts the actual Family Center and Workbench
 components with link/image adapters, real D1 login cookies and authorized
