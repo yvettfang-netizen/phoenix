@@ -22,7 +22,7 @@ jobs:
           for required in .github/CODEOWNERS .github/CANONICAL_GOVERNANCE_BOOTSTRAP.md .github/workflows/canonical-0035-premerge.yml; do
             test -f "$required" || { echo "FAIL missing governance file: $required"; exit 1; }
           done
-          for path in database/canonical docs/database/premerge-0035 .github/workflows/canonical-0035-premerge.yml .github/CODEOWNERS .github/CANONICAL_GOVERNANCE_BOOTSTRAP.md; do
+          for path in database/canonical docs/database/premerge-0035 docs/database/canonical-0036 .github/workflows/canonical-0035-premerge.yml .github/CODEOWNERS .github/CANONICAL_GOVERNANCE_BOOTSTRAP.md; do
             if [ ! -e "$path" ]; then echo "NOT_PRESENT in candidate scan scope: $path"; continue; fi
             docker run --rm --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
           done
@@ -95,7 +95,7 @@ jobs:
           }
           $files = @(Get-ChildItem (Join-Path $selectedRoot 'migrations') -File -Filter '*.sql' | Sort-Object Name)
           $referenceFiles = @(Get-ChildItem (Join-Path $referenceRoot 'migrations') -File -Filter '*.sql' | Sort-Object Name)
-          if ($expected.Count -ne 35 -or $files.Count -ne 35 -or $referenceFiles.Count -ne 35) { throw 'INVENTORY_NOT_35' }
+          if ($expected.Count -ne 35 -or $files.Count -notin @(35,36) -or $referenceFiles.Count -ne 35) { throw 'UNREVIEWED_MIGRATION_INVENTORY' }
           for ($index=0; $index -lt 35; $index++) {
             $file = $files[$index]
             $number = '{0:D4}' -f ($index+1)
@@ -108,9 +108,14 @@ jobs:
               throw 'UNREVIEWED_VERIFICATION_HARNESS'
             }
           }
+          if ($files.Count -eq 36) {
+            & (Join-Path $selectedRoot 'verification/v0036/verify.ps1') -CanonicalRoot $selectedRoot
+            if (-not $?) { throw '0036_VERSIONED_CANDIDATE_VERIFICATION_FAILED' }
+          }
           $testedCommit = if ($mode -eq 'CANDIDATE_TREE') { (& git rev-parse HEAD).Trim() } else { $referenceCommit }
           Write-Output "SOURCE_MODE=$mode TESTED_COMMIT=$testedCommit MIGRATIONS_MATCHED=35 BASE_HAS_CANONICAL=$baseHas"
           "root=$selectedRoot" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "migration_count=$($files.Count)" | Out-File -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           @("## Canonical verification source", "- Source mode: $mode", "- Tested commit: $testedCommit", '- Immutable Migration digests matched: 35/35',
             '- PINNED_0035_REHEARSAL is a real test of the reference fixture, not a database import or a claim that main includes Canonical.') |
             Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
@@ -120,8 +125,10 @@ jobs:
           CANONICAL_ROOT: ${{ steps.source.outputs.root }}
           PG_MAJOR: ${{ matrix.version }}
           TEST_MODE: ${{ matrix.mode }}
+          MIGRATION_COUNT: ${{ steps.source.outputs.migration_count }}
         run: |
-          & (Join-Path $env:CANONICAL_ROOT 'verification/smoke.ps1') -Version $env:PG_MAJOR -Mode $env:TEST_MODE
+          $script = if ($env:MIGRATION_COUNT -eq '36') { 'verification/v0036/smoke.ps1' } else { 'verification/smoke.ps1' }
+          & (Join-Path $env:CANONICAL_ROOT $script) -Version $env:PG_MAJOR -Mode $env:TEST_MODE
   website-regression:
     runs-on: ubuntu-latest
     timeout-minutes: 30
