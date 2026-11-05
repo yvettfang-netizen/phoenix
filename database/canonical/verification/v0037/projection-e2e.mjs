@@ -11,12 +11,15 @@ import {reviewConfigProbe,reviewRuntimeProbes} from './review-regression.mjs';
 import {runBrokerSessionRegression} from './broker-session-regression.mjs';
 import {runUiStateReviewRegression} from './ui-state-review-regression.mjs';
 import {familyCenterVisualRegression} from './family-center-v2-regression.mjs';
+import {databaseFailureDrills} from './database-failure-drills.mjs';
+import {integritySnapshot,drillRecorder} from './failure-drill-recorder.mjs';
 import {createRequire} from 'node:module';
 const publicFamily=n=>'fam_'+id(n).replaceAll('-','');
 const publicStudent=n=>'stu_'+id(n).replaceAll('-','');
 const version=process.argv[2]; assert(['16','17'].includes(version));
 const originalReview=process.argv.includes('--review-original');
 const familyCenterV2=process.argv.includes('--family-center-v2');
+const failureDrills=process.argv.includes('--failure-drills');
 const familyCenterFlags=familyCenterV2?'FAMILY_CENTER_V2_ENABLED=true\n':'';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../../..');
 const combinedPath=path.join(root,'database/canonical/migration-manifests/combined-0036-0037-candidate.json');
@@ -353,14 +356,21 @@ try{
   assert.equal(await page.evaluate(()=>document.cookie.includes('phoenix_family_preview')),false);
   console.log('PASS actual browser -> BFF -> JWT verification -> binder -> one-use ticket -> dedicated controlled v2 projection; DB change visible and A/B/A isolated');
   await faultTests(db,call);
+  if(failureDrills)await databaseFailureDrills({db,sql,call,docker,nonce,version,directory:process.env.FAMILY_DRILL_EVIDENCE_DIR,Pool,connection,appPassword,binderPassword,issuer,familyKey,jwt});
   const backupPassword=randomBytes(32).toString('hex');
   sql(db,`CREATE ROLE projection_backup LOGIN INHERIT BYPASSRLS PASSWORD '${backupPassword}';GRANT CONNECT ON DATABASE phoenix_canonical_dev TO projection_backup;GRANT pg_read_all_data TO projection_backup;`);
   const pass=path.join(work,'backup.pgpass');save(pass,`127.0.0.1:5432:*:projection_backup:${backupPassword}\n`);
   docker(['cp',pass,`${db.id}:/tmp/projection-backup.pgpass`]);docker(['exec',db.id,'chmod','600','/tmp/projection-backup.pgpass']);
+  const restoreRecord=failureDrills?drillRecorder({directory:process.env.FAMILY_DRILL_EVIDENCE_DIR,pg:version,phase:'logical-restore'}):null;
+  const restoreRow=restoreRecord?.start('R08','Logical backup/fresh-cluster restore subprobe','Dedicated backup login exports synthetic snapshot; original owned cluster stopped; restore into new owned cluster');
+  if(restoreRow){restoreRow.backup_started_at=restoreRow.injected_at;restoreRow.injected_at=null;}
+  const sourceIntegrity=failureDrills?integritySnapshot(db,sql):null;
+  const sourceAuditRows=failureDrills?Number(sql(db,'SELECT count(*) FROM audit.access_events')):null;
   for(const [program,args]of [['pg_dump',['-d','phoenix_canonical_dev','-Fc','-f','/tmp/projection.dump']],['pg_dumpall',['--roles-only','--no-role-passwords','-f','/tmp/projection-roles.sql']]])
     docker(['exec','-e','PGPASSFILE=/tmp/projection-backup.pgpass',db.id,program,'-h','127.0.0.1','-U','projection_backup',...args]);
   const dump=path.join(work,'projection.dump'),roles=path.join(work,'roles.sql');
   docker(['cp',`${db.id}:/tmp/projection.dump`,dump]);docker(['cp',`${db.id}:/tmp/projection-roles.sql`,roles]);const manifest={dump:digest(dump),roles:digest(roles)};
+  if(restoreRow)restoreRow.backup_restore_point={kind:'logical custom archive; not a PITR timestamp',dumpSha256:manifest.dump,rolesSha256:manifest.roles,sourceAuditRows};
   const tampered=path.join(work,'tampered.dump'),bytes=readFileSync(dump);bytes[0]^=1;save(tampered,bytes);assert.throws(()=>integrity(tampered,manifest.dump),/BACKUP_INTEGRITY_REFUSED/);
   sql(db,`UPDATE core.guardian_authorities SET revoked_at=now() WHERE authority_id='${id(700)}';`);
   assert.deepEqual((await get('students')).items,[]);assert.equal((await call('students/'+publicStudent(3))).status,404);
@@ -373,12 +383,15 @@ try{
   assert(events.some(x=>x.decision==='ALLOW')&&events.some(x=>x.decision==='DENY')&&events.some(x=>x.decision==='UNAVAILABLE'));
   assert(events.every(x=>Object.keys(x).sort().join(',')==='decision,operation,requestId'));
   console.log('PASS guardian revocation, mapping revocation and identity disable take effect on next read; denial/error cleanup and audit metadata verified');
+  if(restoreRow)restoreRow.injected_at=new Date().toISOString();
   docker(['stop',db.id]);assert.equal((await call()).status,503);
+  if(restoreRow){restoreRecord.mark(restoreRow,'detected_at');restoreRecord.mark(restoreRow,'contained_at');restoreRecord.mark(restoreRow,'recovery_started_at');}
   const restored=await cluster('restore');integrity(dump,manifest.dump);integrity(roles,manifest.roles);
   sql(restored,readFileSync(roles,'utf8').replace(/^CREATE ROLE phoenix_bootstrap;\r?\n/m,''));docker(['cp',dump,`${restored.id}:/tmp/projection.dump`]);
   docker(['exec','-e','PGPASSFILE=/tmp/canonical-premerge.pgpass',restored.id,'pg_restore','--exit-on-error','--no-owner','-h','127.0.0.1','-U','phoenix_bootstrap','-d','phoenix_canonical_dev','/tmp/projection.dump']);
   assert.equal(sql(restored,'SELECT count(*) FROM canonical_migrations.applied'),String(migrationCount));
   for(const [table,expected]of [['pg_tables',String(tableCount)],['pg_policies','83']])assert.equal(sql(restored,`SELECT count(*) FROM ${table} WHERE schemaname IN ('auth','core','consent','audit','integration','docs','casework','education','identity','operations_ref','learning','crm','service')`),expected);
+  if(restoreRow){assert.deepEqual(integritySnapshot(restored,sql),sourceIntegrity);const restoredAuditRows=Number(sql(restored,'SELECT count(*) FROM audit.access_events'));assert.equal(restoredAuditRows,sourceAuditRows);restoreRecord.mark(restoreRow,'recovered_at');restoreRecord.finish(restoreRow,{actual_result:{logicalRestore:'PASS',ledger:37,tables:93,policies:83,sourceAuditRows,restoredAuditRows,walPitr:'NOT RUN',approvedRpoRtoTargets:null},data_integrity_result:sourceIntegrity,audit_reference:'Protected audit row count matches backup source before new requests; later read/audit replay checked separately',rpo_actual:'HOLD: no approved WAL/PITR recovery point or RPO target',final_status:'HOLD',scope:'Logical fresh-cluster restore passes; full R08 acceptance requires approved RPO/RTO and WAL/PITR evidence'});restoreRecord.save();}
   acquisitionRegression(restored,46000);
   sql(restored,`ALTER ROLE projection_app PASSWORD '${appPassword}';ALTER ROLE projection_binder PASSWORD '${binderPassword}';`);
   await runReadAuditRegression({db:restored,sql,connection,Pool,appPassword,binderPassword,id,issuer,familyKey,randomUUID,docker});
@@ -387,6 +400,7 @@ try{
   await reviewRuntimeProbes({db:restored,sql,call,original:originalReview});
   assert.equal((await call()).status,200);assert.equal((await call('students/'+publicStudent(4))).status,404);
   await faultTests(restored,call);
+  if(failureDrills)await databaseFailureDrills({db:restored,sql,call,docker,nonce,version,directory:process.env.FAMILY_DRILL_EVIDENCE_DIR,Pool,connection,appPassword,binderPassword,issuer,familyKey,jwt});
   await refresh('usr_parent_b',familyKey('b'));await page.locator('[data-family-name]').filter({hasText:'Synthetic Family B'}).waitFor();
   await refresh();await page.locator('[data-student-summary]').filter({hasText:`Synthetic student from Canonical PG${version}`}).waitFor();
   assert.equal(sql(restored,'SELECT count(*) FROM auth.session_contexts'),'0');assert.equal(sql(restored,'SELECT count(*) FROM auth.context_exchange_tickets'),'0');
