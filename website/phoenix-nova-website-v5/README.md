@@ -4,6 +4,9 @@ Existing unified, private-review V5 site for Phoenix Nova™. V4.0 / V4.1 remain
 
 The site uses a Vinext runtime with optional Cloudflare D1 and Drizzle support.
 
+For the separate Tencent Cloud Node target, see
+[`docs/TENCENT_NODE_DEPLOYMENT.md`](docs/TENCENT_NODE_DEPLOYMENT.md).
+
 ## Prerequisites
 
 - Node.js `>=22.13.0`
