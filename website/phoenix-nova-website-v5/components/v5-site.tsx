@@ -9,6 +9,7 @@ import { PatternMedallion } from "./pattern-medallion";
 import { SiteEcosystemContent } from "./site-ecosystem-content";
 import chromeStyles from "./site-chrome-v3.module.css";
 import { localizedHref } from "@/lib/locale-navigation";
+import { WEALTH_ORIGIN } from "@/lib/wealth-routing";
 
 export const pageIds = [
   "compass",
@@ -30,7 +31,7 @@ const routeLabels = {
   home: ["首页", "Home"],
   education: ["教育", "Education"],
   identity: ["身份", "Identity"],
-  finance: ["财富", "Wealth"],
+  wealth: ["财富", "Wealth"],
   compass: ["凤启罗盘", "Compass"],
   lighthouse: ["成长灯塔", "Growth Lighthouse"],
   services: ["专业服务", "Services"],
@@ -60,7 +61,7 @@ const primaryNavigation = [
   { id: "home", kind: "internal", page: "home" },
   { id: "education", kind: "internal", page: "education" },
   { id: "identity", kind: "internal", page: "identity" },
-  { id: "finance", kind: "anchor", hash: "wealth" },
+  { id: "wealth", kind: "anchor", hash: "wealth" },
   { id: "health", kind: "internal", page: "health" },
   { id: "about", kind: "internal", page: "about" },
   { id: "insights", kind: "internal", page: "insights" },
@@ -162,22 +163,22 @@ function pick(locale: Locale, zh: string, en: string) {
   return locale === "zh" ? zh : en;
 }
 
-function hrefFor(locale: Locale, page: PageId | "health" | "health/family" | "identity" | "education") {
+type SitePage = PageId | "health" | "health/family" | "identity" | "education" | "wealth";
+
+function hrefFor(locale: Locale, page: SitePage) {
   return localizedHref(locale, page === "home" ? "" : `/${page}`);
 }
 
 function navigationHref(locale: Locale, item: (typeof primaryNavigation)[number]) {
-  return item.kind === "anchor"
-    ? `/${locale}/compass#${item.hash}`
-    : hrefFor(locale, item.page);
+  return item.id === "wealth" ? `${WEALTH_ORIGIN}/${locale}` : hrefFor(locale, item.page);
 }
 
 function navigationLabel(locale: Locale, item: (typeof primaryNavigation)[number]) {
   return routeLabels[item.id][locale === "zh" ? 0 : 1];
 }
 
-function navigationIsActive(page: PageId | "health" | "health/family" | "identity" | "education", item: (typeof primaryNavigation)[number]) {
-  return ((page === "identity" || page === "education") && item.id === page) || (item.kind === "internal" && (page === item.page || (item.page === "health" && page === "health/family")));
+function navigationIsActive(page: SitePage, item: (typeof primaryNavigation)[number]) {
+  return (page === "wealth" && item.id === "wealth") || ((page === "identity" || page === "education") && item.id === page) || (item.kind === "internal" && (page === item.page || (item.page === "health" && page === "health/family")));
 }
 
 function Arrow() {
@@ -206,16 +207,21 @@ function SectionIntro({
   );
 }
 
-export function SiteHeader({ locale, page, inverse = false, appearance = "v3" }: { locale: Locale; page: PageId | "health" | "health/family" | "identity" | "education"; inverse?: boolean; appearance?: "classic" | "v3" }) {
+export function SiteHeader({ locale, page, inverse = false, appearance = "v3", localePath, mainOrigin }: { locale: Locale; page: SitePage; inverse?: boolean; appearance?: "classic" | "v3"; localePath?: string; mainOrigin?: string }) {
   const otherLocale: Locale = locale === "zh" ? "en" : "zh";
-  const navHref = (item: (typeof primaryNavigation)[number]) => appearance === "v3" && (item.id === "identity" || item.id === "education") ? hrefFor(locale, item.id) : navigationHref(locale, item);
+  const navHref = (item: (typeof primaryNavigation)[number]) => {
+    if (mainOrigin) return item.id === "wealth" ? `/${locale}` : `${mainOrigin}${hrefFor(locale, item.page)}`;
+    return appearance === "v3" && (item.id === "identity" || item.id === "education") ? hrefFor(locale, item.id) : navigationHref(locale, item);
+  };
+  const localeHref = localePath !== undefined ? `/${otherLocale}${localePath}` : hrefFor(otherLocale, page);
+  const portalHref = `${mainOrigin ?? ""}/${locale}/account`;
   return (
     <header className={`site-header ${inverse ? "site-header--inverse" : ""}${appearance === "v3" ? ` ${chromeStyles.header}` : ""}`}>
       <div className="site-header__inner shell">
         <BrandMark
           compact
           inverse={inverse && appearance === "classic"}
-          href={`/${locale}`}
+          href={`${mainOrigin ?? ""}/${locale}`}
           label={pick(locale, "Phoenix Nova 首页", "Phoenix Nova home")}
         />
         <nav className="desktop-nav" aria-label={pick(locale, "主导航", "Primary navigation")}>
@@ -226,10 +232,10 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3" }:
           ))}
         </nav>
         <div className="header-actions">
-          <Link className="locale-switch" href={hrefFor(otherLocale, page)} aria-label={pick(locale, "切换至英文", "Switch to Chinese")}>
+          <Link className="locale-switch" href={localeHref} aria-label={pick(locale, "切换至英文", "Switch to Chinese")}>
             {locale === "zh" ? "EN" : "中文"}
           </Link>
-          <Link className="portal-link" href={`/${locale}/account`}>
+          <Link className="portal-link" href={portalHref}>
             {routeLabels["family-center"][locale === "zh" ? 0 : 1]} <Arrow />
           </Link>
           <details className="mobile-menu">
@@ -240,10 +246,10 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3" }:
                   <span>{String(index + 1).padStart(2, "0")}</span>{navigationLabel(locale, item)}
                 </Link>
               ))}
-              <Link href={`/${locale}/account`}>
+              <Link href={portalHref}>
                 <span>08</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
               </Link>
-              <Link className="mobile-locale" href={hrefFor(otherLocale, page)}>{locale === "zh" ? "English" : "中文"}</Link>
+              <Link className="mobile-locale" href={localeHref}>{locale === "zh" ? "English" : "中文"}</Link>
             </nav>
           </details>
         </div>
@@ -252,8 +258,8 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3" }:
   );
 }
 
-export function SiteFooter({ locale, appearance = "v3", consultationPath = "/identity#consultation", compact = false }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; compact?: boolean }) {
-  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} compact={compact} /></footer>;
+export function SiteFooter({ locale, appearance = "v3", consultationPath = "/identity#consultation", compact = false, mainOrigin }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; compact?: boolean; mainOrigin?: string }) {
+  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} compact={compact} mainOrigin={mainOrigin} /></footer>;
   return (
     <footer className="site-footer">
       <div className="shell site-footer__top">

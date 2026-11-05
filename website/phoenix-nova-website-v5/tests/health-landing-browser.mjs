@@ -16,6 +16,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(resolve(process.env.PLAYWRIGHT_MODULE, "index.mjs")).href : "playwright");
 const origin = process.env.HEALTH_ORIGIN || "http://127.0.0.1:4387";
 const out = resolve(process.env.HEALTH_EVIDENCE_DIR || "outputs/health-landing");
+const WEALTH_ORIGIN = "https://wealth.phoenixnova.com.cn";
 const IVORY_SURFACE = "rgb(248, 246, 241)";
 const BRAND_ASSETS = {
   header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: "transparent" },
@@ -100,7 +101,7 @@ function expectedPrimaryHrefs(locale) {
     `/${locale}`,
     `/${locale}/education`,
     `/${locale}/identity`,
-    `/${locale}/compass#wealth`,
+    `${WEALTH_ORIGIN}/${locale}`,
     `/${locale}/health`,
     `/${locale}/about`,
     `/${locale}/insights`,
