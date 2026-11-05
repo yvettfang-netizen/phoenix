@@ -1,0 +1,716 @@
+From 640451c1ddfc799cf2bf2a304e6c2d1e93b0549a Mon Sep 17 00:00:00 2001
+From: Yvett <yvettfang@gmail.com>
+Date: Thu, 5 Nov 2026 11:31:44 +0800
+Subject: [PATCH] feat(meta): prepare default-off Canonical read projections
+ and frozen identities
+
+---
+ app/founder/beasts/[slug]/page.tsx    |   4 +-
+ app/guardian-system.ts                |  12 +-
+ app/spirit-freeze.ts                  |  20 +-
+ app/world-ui/canonical-projection.tsx |  27 +++
+ app/world-ui/deep-spirit.tsx          |   2 +
+ app/world-ui/nova-workspace.tsx       |   3 +
+ lib/meta-canonical-read.ts            | 278 ++++++++++++++++++++++++++
+ tests/meta-canonical-read.test.mjs    | 158 +++++++++++++++
+ tests/meta-canonical-ui.test.mjs      |  31 +++
+ worker/index.ts                       |   4 +-
+ 10 files changed, 521 insertions(+), 18 deletions(-)
+ create mode 100644 app/world-ui/canonical-projection.tsx
+ create mode 100644 lib/meta-canonical-read.ts
+ create mode 100644 tests/meta-canonical-read.test.mjs
+ create mode 100644 tests/meta-canonical-ui.test.mjs
+
+diff --git a/app/founder/beasts/[slug]/page.tsx b/app/founder/beasts/[slug]/page.tsx
+index 0d7077d..ce8a111 100644
+--- a/app/founder/beasts/[slug]/page.tsx
++++ b/app/founder/beasts/[slug]/page.tsx
+@@ -1,6 +1,8 @@
+ import { notFound, redirect } from "next/navigation";
+ import { requireChatGPTUser } from "@/app/chatgpt-auth";
+ import { spiritIds } from "@/app/spirit-freeze";
++import { headers } from "next/headers";
++import { canAccessSpirit, metaIdentity, type MetaSpiritId } from "@/lib/meta-members";
+ import { DeepSpirit } from "@/app/world-ui/deep-spirit";
+ export const dynamic="force-dynamic";
+-export default async function Workspace({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const id=spiritIds.find(item=>item===slug);if(!id)notFound();await requireChatGPTUser(`/founder/beasts/${slug}`);if(id==="phoenix")redirect("/nova");return <DeepSpirit id={id} authenticated/>;}
++export default async function Workspace({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const id=spiritIds.find(item=>item===slug);if(!id)notFound();await requireChatGPTUser(`/founder/beasts/${slug}`);if(id==="phoenix")redirect("/nova");if(!canAccessSpirit(metaIdentity(new Headers(await headers())),id as MetaSpiritId))notFound();return <DeepSpirit id={id} authenticated/>;}
+diff --git a/app/guardian-system.ts b/app/guardian-system.ts
+index 98e8956..7695915 100644
+--- a/app/guardian-system.ts
++++ b/app/guardian-system.ts
+@@ -42,7 +42,7 @@ const existingAgentLinks: Omit<GuardianRecord, "en" | "workbench" | "role" | "re
+   },
+   {
+     id: "baihu",
+-    no: "03",
++    no: "06",
+     name: "白虎",
+     group: "foundation",
+     visual: "/guardian-baihu.png",
+@@ -51,7 +51,7 @@ const existingAgentLinks: Omit<GuardianRecord, "en" | "workbench" | "role" | "re
+   },
+   {
+     id: "zhuque",
+-    no: "04",
++    no: "03",
+     name: "朱雀",
+     group: "foundation",
+     visual: "/guardian-zhuque-gate1.png",
+@@ -60,7 +60,7 @@ const existingAgentLinks: Omit<GuardianRecord, "en" | "workbench" | "role" | "re
+   },
+   {
+     id: "xuanwu",
+-    no: "05",
++    no: "04",
+     name: "玄武",
+     group: "foundation",
+     visual: "/guardian-xuanwu-gate1.png",
+@@ -69,7 +69,7 @@ const existingAgentLinks: Omit<GuardianRecord, "en" | "workbench" | "role" | "re
+   },
+   {
+     id: "qingluan",
+-    no: "06",
++    no: "05",
+     name: "青鸾",
+     group: "value",
+     visual: "/guardian-qingluan.png",
+@@ -78,7 +78,7 @@ const existingAgentLinks: Omit<GuardianRecord, "en" | "workbench" | "role" | "re
+   },
+   {
+     id: "aoyu",
+-    no: "07",
++    no: "08",
+     name: "鳌鱼",
+     group: "value",
+     visual: "/guardian-aoyu.png",
+@@ -87,7 +87,7 @@ const existingAgentLinks: Omit<GuardianRecord, "en" | "workbench" | "role" | "re
+   },
+   {
+     id: "qilin",
+-    no: "08",
++    no: "07",
+     name: "麒麟",
+     group: "value",
+     visual: "/guardian-qilin.png",
+diff --git a/app/spirit-freeze.ts b/app/spirit-freeze.ts
+index 154ec88..42c010c 100644
+--- a/app/spirit-freeze.ts
++++ b/app/spirit-freeze.ts
+@@ -1,9 +1,9 @@
+ // Presentation contract only. No identity, wallet, consent or operating data is created here.
+ export const founderFreeze = {
+-  date: "2026-09-12",
++  date: "2026-09-20",
+   world: "鸿蒙世界",
+-  terminology: "灵兽｜Spirit",
+-  agentTerminology: "灵兽智能体｜Spirit Agent",
++  terminology: "九灵｜Nine Spirits",
++  agentTerminology: "灵｜Spirit",
+   principle: "一个世界。人在其中前行，灵兽伴人而行，八荒因人而盛。",
+   coreWords: "生 · 守 · 创 · 承 · 鸣 · 思 · 和 · 传",
+   operatingOwner: "Phoenix Meta",
+@@ -15,13 +15,13 @@ export const founderFreeze = {
+ 
+ export const spiritPresentation = {
+   phoenix: { title: "天枢宫", en: "NOVA", ability: "NOVA", word: "枢", skills: ["Direction", "Orchestration", "Decision"], responsibility: "辅助人的战略判断、任务编排与决策闭环", x: 51, y: 43, bx: 51, by: 29, window: null },
+-  qinglong: { title: "经纬殿", en: "DRAGON", ability: "NEXUS", word: "生", skills: ["Organization", "Ecosystem", "Knowledge Replication"], responsibility: "组织成长、生态连接、知识传承与组织复制", x: 91, y: 44, bx: 84, by: 23, window: "/spirit-windows/jingweidian.webp" },
+-  baihu: { title: "守正关", en: "BAIHU", ability: "INTEGRITY", word: "守", skills: ["Evidence", "Boundary", "Integrity"], responsibility: "事实核验、风险边界与合规保护", x: 7, y: 34, bx: 15, by: 49, window: "/spirit-windows/shouzhengguan.webp" },
+-  zhuque: { title: "丹青岛", en: "ZHUQUE", ability: "MUSE", word: "创", skills: ["Brand", "Visual", "Experience"], responsibility: "品牌、视觉、UI 与创造呈现", x: 30, y: 34, bx: 19, by: 19, window: "/spirit-windows/danqingdao.webp" },
+-  xuanwu: { title: "玄机渊", en: "XUANWU", ability: "DEEPCORE", word: "承", skills: ["Engineering", "Data", "Infrastructure"], responsibility: "技术、工程、数据与系统底座", x: 91, y: 94, bx: 88, by: 80, window: "/spirit-windows/xuanjiyuan.webp" },
+-  qingluan: { title: "鸾音谷", en: "QINGLUAN", ability: "ECHO", word: "鸣", skills: ["Content", "Reach", "Connection"], responsibility: "内容、传播与人的连接", x: 79, y: 64, bx: 75, by: 51, window: "/spirit-windows/luanyingu.webp" },
+-  aoyu: { title: "问思洲", en: "AOYU", ability: "ASKWISE", word: "思", skills: ["Question", "Think", "Learn"], responsibility: "学习、思考与学生成长；问思门是洲内学习地标", x: 39, y: 79, bx: 31, by: 88, window: "/spirit-windows/wensizhou.webp" },
+-  qilin: { title: "和序原", en: "QILIN", ability: "HARMONY", word: "和", skills: ["Family Growth", "Planning", "Harmony"], responsibility: "家庭成长、长期规划与陪伴", x: 10, y: 90, bx: 18, by: 76, window: "/spirit-windows/hexuyuan.webp" },
++  qinglong: { title: "经纬殿", en: "DRAGON", ability: "NEXUS", word: "生", skills: ["People", "Organization", "Partnerships"], responsibility: "人员、组织与合作伙伴；不承担公司总战略", x: 91, y: 44, bx: 84, by: 23, window: "/spirit-windows/jingweidian.webp" },
++  baihu: { title: "守正关", en: "BAIHU", ability: "INTEGRITY", word: "守", skills: ["Contract", "Risk", "Compliance", "Boundaries"], responsibility: "合同、风险、合规与边界；不自行批准合同", x: 7, y: 34, bx: 15, by: 49, window: "/spirit-windows/shouzhengguan.webp" },
++  zhuque: { title: "丹青岛", en: "ZHUQUE", ability: "MUSE", word: "创", skills: ["Brand", "Design", "Creative", "Experience", "Cultural Translation"], responsibility: "品牌、设计、创意、体验与文化转译", x: 30, y: 34, bx: 19, by: 19, window: "/spirit-windows/danqingdao.webp" },
++  xuanwu: { title: "玄机渊", en: "XUANWU", ability: "DEEPCORE", word: "承", skills: ["Technology", "Architecture", "Engineering", "Security"], responsibility: "技术、架构、工程与安全；未经授权不执行生产动作", x: 91, y: 94, bx: 88, by: 80, window: "/spirit-windows/xuanjiyuan.webp" },
++  qingluan: { title: "鸾音谷", en: "QINGLUAN", ability: "ECHO", word: "鸣", skills: ["Narrative", "Content", "Communication"], responsibility: "叙事、内容与传播", x: 79, y: 64, bx: 75, by: 51, window: "/spirit-windows/luanyingu.webp" },
++  aoyu: { title: "问思洲", en: "AOYU", ability: "ASKWISE", word: "思", skills: ["Knowledge", "Learning", "Teaching", "Research"], responsibility: "知识、学习、教学与研究；不替代麒麟决定成长方向", x: 39, y: 79, bx: 31, by: 88, window: "/spirit-windows/wensizhou.webp" },
++  qilin: { title: "和序原", en: "QILIN", ability: "HARMONY", word: "和", skills: ["Education", "Student Growth", "Family Growth", "Growth Blueprint"], responsibility: "教育规划、学生成长、家庭成长与成长蓝图", x: 10, y: 90, bx: 18, by: 76, window: "/spirit-windows/hexuyuan.webp" },
+   pixiu: { title: "承泽川", en: "PIXIU", ability: "LEGACY", word: "传", skills: ["Protection", "Wealth", "Legacy"], responsibility: "Insurance / Protection / Wealth / Trust / Family Office / Legacy", x: 69, y: 94, bx: 61, by: 79, window: "/spirit-windows/chengzechuan.webp" },
+ } as const;
+ 
+diff --git a/app/world-ui/canonical-projection.tsx b/app/world-ui/canonical-projection.tsx
+new file mode 100644
+index 0000000..b4df6ec
+--- /dev/null
++++ b/app/world-ui/canonical-projection.tsx
+@@ -0,0 +1,27 @@
++"use client";
++import { useEffect, useState } from "react";
++import type { SpiritId } from "../spirit-freeze";
++import styles from "./world.module.css";
++
++type Item = {id:string;title:string;module:string;spirit:SpiritId;owner_reference:string;status:string;source_reference:string;source_version:string;verified_at:string;permission_scope:string};
++const modules = ["NOW", "DECISIONS", "RISK", "DELIVERY", "OPPORTUNITY"];
++export function CanonicalProjection({spirit}:{spirit?:SpiritId}) {
++  const [items,setItems]=useState<Item[]>([]),[state,setState]=useState("正在核对授权数据来源…");
++  useEffect(()=>{
++    const controller=new AbortController();
++    setItems([]);
++    fetch(`/api/meta/canonical/${spirit?`spirits/${spirit}`:"nova"}`,{cache:"no-store",signal:controller.signal})
++      .then(async response=>{
++        if(!response.ok) {setState(response.status===401?"登录后查看获授权的业务摘要。":response.status===403?"此账户暂无该范围的查看权限。":"业务摘要尚未接通。当前没有可展示的已核验数据。");return;}
++        const data=await response.json();setItems(data.items);setState(data.items.length?"以下为已核对来源的授权摘要；建议与待审批事项保留各自状态。":"此权限范围内暂无可展示的已核验数据。");
++      }).catch(()=>{if(!controller.signal.aborted)setState("业务摘要暂不可用，请稍后重试。");});
++    return ()=>controller.abort();
++  },[spirit]);
++  return <section className={styles.novaSurface} aria-label={spirit?"获授权的专业任务与证据":"NOVA Hall 授权业务摘要"}>
++    <h2>{spirit?"当前任务与授权证据":"此刻的企业事项"}</h2><p className={styles.quietNote} role="status">{state}</p>
++    {(spirit?["TASKS"]:modules).map(module=><div key={module}><h3>{module==="TASKS"?"任务 · 负责人 · 阻塞 · 来源":module}</h3>
++      <ol className={styles.novaList}>{items.filter(item=>spirit||item.module===module).map(item=><li key={item.id}><div><h4>{item.title}</h4><p>{item.status} · {item.owner_reference}</p><details><summary>查看来源与授权范围</summary><p>source_reference: {item.source_reference}</p><p>source_version: {item.source_version}</p><p>verified_at: {item.verified_at}</p><p>permission_scope: {item.permission_scope}</p><p>status: {item.status}</p></details></div></li>)}</ol>
++    </div>)}
++    <p className={styles.quietNote}>任务分配、审批及执行尚未开放。专业建议经凤凰综合后，交由 Founder 决定。</p>
++  </section>;
++}
+diff --git a/app/world-ui/deep-spirit.tsx b/app/world-ui/deep-spirit.tsx
+index 2a29b59..e69a692 100644
+--- a/app/world-ui/deep-spirit.tsx
++++ b/app/world-ui/deep-spirit.tsx
+@@ -5,6 +5,7 @@ import { WorldNav, WorldFooter } from "./chrome";
+ import { TaskWorkspace } from "./task-workspace";
+ import DesignPilot from "../realms/design-pilot";
+ import styles from "./world.module.css";
++import { CanonicalProjection } from "./canonical-projection";
+ const nexusCapabilities = [["组织生长", "把目标、角色与协作方式梳理清楚，让团队形成可持续的工作节奏。"],["生态连接", "整理人与合作关系，在真实材料中发现值得继续的连接。"],["知识传承", "把一次有效实践沉淀为 Playbook，让方法留下来，也让别人用得起来。"]];
+ export function DeepSpirit({id,authenticated=false}:{id:SpiritId;authenticated?:boolean}) {
+   const spirit=spiritPresentation[id];const agent=guardianById[id];
+@@ -14,6 +15,7 @@ export function DeepSpirit({id,authenticated=false}:{id:SpiritId;authenticated?:
+       <div><Link href="/wilds" className={styles.backLink}>← 四海八荒</Link><p className={styles.eyebrow}>{spirit.en} / {spirit.ability}</p><h1>{spirit.title}</h1><p className={styles.introLine}>{full ? <>让一个人的方法，<br/>长成一群人的能力。</> : spirit.responsibility}</p><div className={styles.heroActions}><a href="#start-task" className={styles.quietButton}>带一件事来 →</a>{full && <Link href="/cangjing-ge" className={styles.textLink}>走近已有知识</Link>}</div></div>
+     </section>
+     <section className={styles.deepSection}><div className={styles.sectionTitle}><span>01</span><h2>{agent.name}可以如何帮你</h2><p>SPIRIT ASSISTS</p></div><div className={styles.capabilities}>{(full?nexusCapabilities:spirit.skills.map(skill=>[skill,spirit.responsibility])).map(([title,copy])=><article key={title}><h3>{title}</h3>{full&&<p>{copy}</p>}</article>)}</div></section>
++    <CanonicalProjection spirit={id}/>
+     {authenticated && <div className={styles.deepSection}><a className={styles.quietButton} href={agent.agentUrl} target="_blank" rel="noopener noreferrer">与{agent.name}开始工作 ↗</a></div>}
+     {id === "zhuque" ? <section id="start-task" className={styles.deepSection}><div className={styles.sectionTitle}><span>02</span><h2>从一件真实的事开始</h2></div><DesignPilot /></section> : <TaskWorkspace id={id} authenticated={authenticated}/>}
+     <section className={styles.deepSection}><div className={styles.sectionTitle}><span>04</span><h2>需要时，同行</h2><p>SPIRIT COLLABORATION</p></div><div className={styles.collaborators}><Link href="/nova">凤凰 · 天枢宫 <small>一起判断下一步 ↗</small></Link><Link href="/realms/baihu">白虎 · 守正关 <small>核对事实与边界 ↗</small></Link><Link href="/realms/xuanwu">玄武 · 玄机渊 <small>交给技术与工程 ↗</small></Link></div></section><WorldFooter />
+diff --git a/app/world-ui/nova-workspace.tsx b/app/world-ui/nova-workspace.tsx
+index f1de23e..56aa894 100644
+--- a/app/world-ui/nova-workspace.tsx
++++ b/app/world-ui/nova-workspace.tsx
+@@ -5,6 +5,7 @@ import { api, downloadText } from "./task-workspace";
+ import { PHOENIX_AGENT_URL } from "../guardian-system";
+ import { spiritPresentation, type SpiritId } from "../spirit-freeze";
+ import styles from "./world.module.css";
++import { CanonicalProjection } from "./canonical-projection";
+ type Task={id:string;title:string;detail:string;category:string;spirit:SpiritId;priority:number};
+ export function NovaWorkspace({scope}:{scope:"FOUNDER"|"EMPLOYEE"|null}){
+   const [tasks,setTasks]=useState<Task[]>([]),[tab,setTab]=useState("NOW"),[title,setTitle]=useState(""),[category,setCategory]=useState("NOW"),[priority,setPriority]=useState(1),[message,setMessage]=useState(""),[loading,setLoading]=useState(!!scope),[busy,setBusy]=useState(false);
+@@ -14,7 +15,9 @@ export function NovaWorkspace({scope}:{scope:"FOUNDER"|"EMPLOYEE"|null}){
+   const tabs=founder?[['NOW','NOW'],['CASH','CASH'],['CASES','CASES'],['DELIVERY','DELIVERY'],['RISK','RISK'],['OPPORTUNITY','OPPORTUNITY'],['PEOPLE','PEOPLE'],['SPIRITS','SPIRITS']]:[['NOW','My Day'],['CASES','My Cases'],['DELIVERY','My Deadlines'],['NEXT','My Next Actions'],['SPIRITS','Recommended Spirit']];
+   const visible=tasks.filter(t=>tab==="NOW"||tab==="NEXT"||t.category===tab).slice(0,5);
+   return <>
++    <CanonicalProjection />
+     <section className={styles.novaSurface}>
++      <h2>个人工作记录</h2><p className={styles.quietNote}>以下为个人提交的事项，不代表企业已批准决策或实时经营事实。</p>
+       <div className={styles.scopeTabs} aria-label="关注范围">{tabs.map(([key,label])=><button key={key} aria-pressed={tab===key} onClick={()=>setTab(key)}>{label}</button>)}{!founder&&<Link href="/cultivation" className={styles.quietNote}>My Cultivation ↗</Link>}</div>
+       {loading?<p className={styles.quietNote}>正在拾起你的事项…</p>:visible.length?<><ol className={styles.novaList}>{visible.map((task,index)=><li key={task.id}><span>{String(index+1).padStart(2,'0')}</span><div><h3>{task.title}</h3><p>{spiritPresentation[task.spirit]?.title} · 由你排定优先顺序</p></div><button disabled={busy} onClick={async()=>{setBusy(true);try{await api("tasks/complete",{id:task.id});await refresh();setMessage("这一件，已经收口。");}catch(e){setMessage((e as Error).message);}finally{setBusy(false);}}}>收口 ✓</button><details><summary>展开这一件事</summary><p style={{whiteSpace:"pre-wrap"}}>{task.detail||"还没有补充材料。"}</p><Link className={styles.textLink} href={`/realms/${task.spirit}`}>请灵兽同行 ↗</Link></details></li>)}</ol><p className={styles.quietNote}>此刻只展开前五件；自动判断尚未接通，先按你指定的顺序处理。</p></>:<div className={styles.novaEmpty}><h2>{scope?"留一处空白，给真正重要的事。":"先把心里最重要的一件事，放在这里。"}</h2><p>{scope?"这个范围还没有已记录的事项。从下面带来一件真实工作，再与凤凰一起判断下一步。":"登录后查看属于你的事项。也可以先写下目标，整理为一份工作委托。"}</p></div>}
+       <form onSubmit={async e=>{e.preventDefault();if(!title.trim())return;setBusy(true);try{await api("tasks",{title,detail:"由本人提交，待与凤凰一起判断。",category,spirit:"phoenix",priority});setTitle("");await refresh();setMessage("事项已留下。先从最重要的一件开始。");}catch(error){setMessage((error as Error).message);}finally{setBusy(false);}}}>
+diff --git a/lib/meta-canonical-read.ts b/lib/meta-canonical-read.ts
+new file mode 100644
+index 0000000..9befe82
+--- /dev/null
++++ b/lib/meta-canonical-read.ts
+@@ -0,0 +1,278 @@
++/**
++ * Server-side, read-only bridge for Phoenix Meta's Canonical projection.
++ *
++ * This module deliberately does not know the Canonical schema and does not
++ * contain an identity allow-list. The gateway is the authority for external
++ * identity mapping, agent principal/role/assignment, consent, binder tickets,
++ * PostgreSQL RLS and access audit. The Site only forwards the two dispatch
++ * identity claims over a fresh service-binding request and validates the small
++ * projection DTO returned by that gateway.
++ */
++
++export interface MetaCanonicalGateway {
++  fetch(request: Request): Promise<Response>;
++}
++
++export interface MetaCanonicalReadEnv {
++  META_CANONICAL_READ_ENABLED?: string;
++  META_CORE_GATEWAY?: MetaCanonicalGateway;
++}
++
++// Short alias used by the Worker integration without exposing a second
++// environment contract.
++export type MetaCanonicalEnv = MetaCanonicalReadEnv;
++
++export const CANONICAL_SPIRIT_IDS = [
++  "phoenix",
++  "qinglong",
++  "zhuque",
++  "xuanwu",
++  "qingluan",
++  "baihu",
++  "qilin",
++  "aoyu",
++  "pixiu",
++] as const;
++
++export type CanonicalSpiritId = (typeof CANONICAL_SPIRIT_IDS)[number];
++export type CanonicalModule =
++  | "NOW"
++  | "DECISIONS"
++  | "RISK"
++  | "DELIVERY"
++  | "OPPORTUNITY";
++export type CanonicalItemStatus =
++  | "VERIFIED"
++  | "PENDING"
++  | "BLOCKED"
++  | "DRAFT"
++  | "HISTORICAL";
++
++export interface CanonicalProjectionItem {
++  id: string;
++  title: string;
++  module: CanonicalModule;
++  spirit: CanonicalSpiritId;
++  owner_reference: string;
++  status: CanonicalItemStatus;
++  source_reference: string;
++  source_version: string;
++  verified_at: string;
++  permission_scope: string;
++}
++
++export interface CanonicalProjection {
++  status: "VERIFIED" | "EMPTY";
++  source_version: string;
++  verified_at: string;
++  audit_reference: string;
++  items: CanonicalProjectionItem[];
++}
++
++const ROUTE_PREFIX = "/api/meta/canonical/";
++const HEADER_USER_ID = "oai-authenticated-user-id";
++const HEADER_USER_EMAIL = "oai-authenticated-user-email";
++const RESPONSE_HEADERS = {
++  "Cache-Control": "private, no-store",
++  Pragma: "no-cache",
++  Vary: `${HEADER_USER_ID}, ${HEADER_USER_EMAIL}`,
++};
++
++const MODULES = new Set<CanonicalModule>([
++  "NOW",
++  "DECISIONS",
++  "RISK",
++  "DELIVERY",
++  "OPPORTUNITY",
++]);
++const SPIRITS = new Set<string>(CANONICAL_SPIRIT_IDS);
++const ITEM_STATUSES = new Set<CanonicalItemStatus>([
++  "VERIFIED",
++  "PENDING",
++  "BLOCKED",
++  "DRAFT",
++  "HISTORICAL",
++]);
++const ROOT_KEYS = [
++  "status",
++  "source_version",
++  "verified_at",
++  "audit_reference",
++  "items",
++] as const;
++const ITEM_KEYS = [
++  "id",
++  "title",
++  "module",
++  "spirit",
++  "owner_reference",
++  "status",
++  "source_reference",
++  "source_version",
++  "verified_at",
++  "permission_scope",
++] as const;
++
++function json(data: Record<string, unknown>, status: number, extra?: HeadersInit): Response {
++  const headers = new Headers(RESPONSE_HEADERS);
++  headers.set("Content-Type", "application/json; charset=utf-8");
++  if (extra) {
++    new Headers(extra).forEach((value, key) => headers.set(key, value));
++  }
++  return new Response(JSON.stringify(data), { status, headers });
++}
++
++function errorResponse(status: number, code: string, message: string): Response {
++  return json({ code, message }, status, status === 405 ? { Allow: "GET" } : undefined);
++}
++
++function isRecord(value: unknown): value is Record<string, unknown> {
++  return typeof value === "object" && value !== null && !Array.isArray(value);
++}
++
++function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
++  const actual = Object.keys(value).sort();
++  return actual.length === expected.length && expected.every((key) => actual.includes(key));
++}
++
++function boundedString(value: unknown, max: number): value is string {
++  return typeof value === "string" && value.length > 0 && value.length <= max && value.trim() === value;
++}
++
++function isIsoTimestamp(value: unknown): value is string {
++  if (!boundedString(value, 64)) return false;
++  // Keep the wire contract unambiguous: UTC ISO-8601 timestamps only.
++  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(value)) return false;
++  const parsed = Date.parse(value);
++  return Number.isFinite(parsed) && new Date(parsed).toISOString().slice(0,19) === value.slice(0,19);
++}
++
++function validIdentityClaim(value: string | null, max: number): value is string {
++  return !!value && boundedString(value, max) && !/[\r\n]/.test(value);
++}
++
++function routeIsKnown(pathname: string): boolean {
++  if (pathname === `${ROUTE_PREFIX}nova`) return true;
++  if (!pathname.startsWith(`${ROUTE_PREFIX}spirits/`)) return false;
++  const spirit = pathname.slice(`${ROUTE_PREFIX}spirits/`.length);
++  return SPIRITS.has(spirit);
++}
++
++function validateProjection(value: unknown, expectedSpirit?: CanonicalSpiritId): CanonicalProjection | null {
++  if (!isRecord(value) || !hasExactKeys(value, ROOT_KEYS)) return null;
++  if (value.status !== "VERIFIED" && value.status !== "EMPTY") return null;
++  if (!boundedString(value.source_version, 200)) return null;
++  if (!isIsoTimestamp(value.verified_at)) return null;
++  if (!boundedString(value.audit_reference, 300)) return null;
++  if (!Array.isArray(value.items) || value.items.length > 50) return null;
++  if (value.status === "EMPTY" && value.items.length !== 0) return null;
++
++  const items: CanonicalProjectionItem[] = [];
++  for (const rawItem of value.items) {
++    if (!isRecord(rawItem) || !hasExactKeys(rawItem, ITEM_KEYS)) return null;
++    if (!boundedString(rawItem.id, 300)) return null;
++    if (!boundedString(rawItem.title, 500)) return null;
++    if (typeof rawItem.module !== "string" || !MODULES.has(rawItem.module as CanonicalModule)) return null;
++    if (typeof rawItem.spirit !== "string" || !SPIRITS.has(rawItem.spirit)) return null;
++    if (expectedSpirit && rawItem.spirit !== expectedSpirit) return null;
++    if (!boundedString(rawItem.owner_reference, 300)) return null;
++    if (typeof rawItem.status !== "string" || !ITEM_STATUSES.has(rawItem.status as CanonicalItemStatus)) return null;
++    if (!boundedString(rawItem.source_reference, 500)) return null;
++    if (!boundedString(rawItem.source_version, 200)) return null;
++    if (!isIsoTimestamp(rawItem.verified_at)) return null;
++    if (!boundedString(rawItem.permission_scope, 500)) return null;
++    items.push(rawItem as unknown as CanonicalProjectionItem);
++  }
++
++  return {
++    status: value.status,
++    source_version: value.source_version,
++    verified_at: value.verified_at,
++    audit_reference: value.audit_reference,
++    items,
++  };
++}
++
++async function readGatewayBody(response: Response): Promise<unknown> {
++  if (!response.body) throw new Error("missing body");
++  const reader = response.body.getReader();
++  const chunks: Uint8Array[] = []; let total = 0;
++  try {
++    for (;;) {
++      const {done,value} = await reader.read(); if (done) break;
++      total += value.byteLength;
++      if (total > 128 * 1024) { await reader.cancel(); throw new Error("gateway response too large"); }
++      chunks.push(value);
++    }
++  } finally { reader.releaseLock(); }
++  const bytes = new Uint8Array(total); let offset=0;
++  for (const chunk of chunks) {bytes.set(chunk,offset);offset+=chunk.byteLength;}
++  return JSON.parse(new TextDecoder().decode(bytes)) as unknown;
++}
++
++/**
++ * Handle only the Canonical read projection routes. Every failure is generic
++ * and fail-closed; no gateway response body is ever returned to the browser.
++ */
++export async function handleMetaCanonicalRead(
++  request: Request,
++  env: MetaCanonicalReadEnv,
++): Promise<Response> {
++  const url = new URL(request.url);
++
++  if (request.method !== "GET") {
++    return errorResponse(405, "CANONICAL_READ_METHOD_NOT_ALLOWED", "Canonical projection is read-only.");
++  }
++  if (url.search || url.hash) {
++    return errorResponse(400, "CANONICAL_READ_QUERY_NOT_ALLOWED", "Canonical projection does not accept query parameters.");
++  }
++  if (!routeIsKnown(url.pathname)) {
++    return errorResponse(404, "CANONICAL_READ_NOT_FOUND", "Canonical projection route not found.");
++  }
++
++  const dispatchId = request.headers.get(HEADER_USER_ID);
++  const dispatchEmail = request.headers.get(HEADER_USER_EMAIL);
++  if (!validIdentityClaim(dispatchId, 300) || !validIdentityClaim(dispatchEmail, 320)) {
++    return errorResponse(401, "CANONICAL_IDENTITY_REQUIRED", "Authorized identity is required.");
++  }
++  if (env.META_CANONICAL_READ_ENABLED !== "true") {
++    return errorResponse(503, "CANONICAL_READ_DISABLED", "Canonical projection is not enabled.");
++  }
++  const gateway = env.META_CORE_GATEWAY;
++  if (!gateway || typeof gateway.fetch !== "function") {
++    return errorResponse(503, "CANONICAL_GATEWAY_UNAVAILABLE", "Canonical projection is unavailable.");
++  }
++
++  // Construct a fresh request. This intentionally drops cookies, bearer
++  // tokens, client-provided roles/scopes, origins and every other header.
++  const gatewayHeaders = new Headers({
++    Accept: "application/json",
++    "X-Phoenix-Dispatch-User-Id": dispatchId,
++    "X-Phoenix-Dispatch-User-Email": dispatchEmail,
++    "X-Phoenix-Canonical-Read": "v1",
++  });
++  const controller = new AbortController();
++  const gatewayRequest = new Request(new URL(url.pathname, "https://phoenix-core.internal"), {
++    method: "GET",
++    headers: gatewayHeaders,
++    signal: controller.signal,
++  });
++
++  let timer: ReturnType<typeof setTimeout> | undefined;
++  try {
++    const operation = async (): Promise<Response> => {
++      const response = await gateway.fetch(gatewayRequest);
++      if (response.status === 401 || response.status === 403) return errorResponse(403, "CANONICAL_ACCESS_DENIED", "Canonical access denied.");
++      if (response.status !== 200) return errorResponse(502, "CANONICAL_GATEWAY_ERROR", "Canonical projection is unavailable.");
++      const expectedSpirit = url.pathname.startsWith(ROUTE_PREFIX + "spirits/") ? url.pathname.slice((ROUTE_PREFIX + "spirits/").length) as CanonicalSpiritId : undefined;
++      const projection = validateProjection(await readGatewayBody(response), expectedSpirit);
++      if (!projection) throw new Error("invalid projection");
++      return json(projection as unknown as Record<string, unknown>, 200);
++    };
++    return await Promise.race([operation(), new Promise<Response>((_,reject)=>{
++      timer=setTimeout(()=>{controller.abort();reject(new Error("gateway timeout"));},3000);
++    })]);
++  } catch {
++    return errorResponse(502, "CANONICAL_INVALID_PROJECTION", "Canonical projection is unavailable.");
++  } finally { if(timer)clearTimeout(timer); }
++}
+diff --git a/tests/meta-canonical-read.test.mjs b/tests/meta-canonical-read.test.mjs
+new file mode 100644
+index 0000000..8a7a04b
+--- /dev/null
++++ b/tests/meta-canonical-read.test.mjs
+@@ -0,0 +1,158 @@
++import assert from "node:assert/strict";
++import test from "node:test";
++
++// Node 24's built-in TypeScript stripping is enabled for this isolated test.
++const { handleMetaCanonicalRead } = await import(new URL("../lib/meta-canonical-read.ts", import.meta.url).href);
++
++const identityHeaders = {
++  "oai-authenticated-user-id": "dispatch-user-001",
++  "oai-authenticated-user-email": "founder@example.test",
++};
++const validProjection = {
++  status: "VERIFIED",
++  source_version: "canonical-0035-projection-v1",
++  verified_at: "2026-11-05T08:00:00.000Z",
++  audit_reference: "audit-opaque-001",
++  items: [
++    {
++      id: "projection-001",
++      title: "Review service delivery risk",
++      module: "RISK",
++      spirit: "xuanwu",
++      owner_reference: "owner-opaque-001",
++      status: "VERIFIED",
++      source_reference: "service.project:opaque-001",
++      source_version: "service-v4",
++      verified_at: "2026-11-05T07:59:00.000Z",
++      permission_scope: "org:opaque-001",
++    },
++  ],
++};
++
++function request(path = "nova", { method = "GET", headers = {}, query = "" } = {}) {
++  return new Request(`https://meta.example.test/api/meta/canonical/${path}${query}`, {
++    method,
++    headers: { ...identityHeaders, ...headers },
++  });
++}
++
++function gatewayReturning(body, status = 200, seen = []) {
++  return {
++    seen,
++    fetch: async (request) => {
++      seen.push(request);
++      return new Response(body === undefined ? undefined : JSON.stringify(body), {
++        status,
++        headers: { "Content-Type": "application/json" },
++      });
++    },
++  };
++}
++
++test("default-off, missing identity and writes fail closed", async () => {
++  const gateway = gatewayReturning(validProjection);
++  assert.equal((await handleMetaCanonicalRead(request(), { META_CORE_GATEWAY: gateway })).status, 503);
++  assert.equal((await handleMetaCanonicalRead(request("nova", { headers: { "oai-authenticated-user-id": "" } }), { META_CANONICAL_READ_ENABLED: "true", META_CORE_GATEWAY: gateway })).status, 401);
++  assert.equal((await handleMetaCanonicalRead(request("nova", { method: "POST" }), { META_CANONICAL_READ_ENABLED: "true", META_CORE_GATEWAY: gateway })).status, 405);
++  assert.equal(gateway.seen.length, 0);
++});
++
++test("query, unknown route and absent gateway never reach a backend", async () => {
++  const seen = [];
++  const gateway = gatewayReturning(validProjection, 200, seen);
++  const env = { META_CANONICAL_READ_ENABLED: "true", META_CORE_GATEWAY: gateway };
++  assert.equal((await handleMetaCanonicalRead(request("nova", { query: "?scope=client" }), env)).status, 400);
++  assert.equal((await handleMetaCanonicalRead(request("spirits/legacy", {}), env)).status, 404);
++  assert.equal((await handleMetaCanonicalRead(request(), { META_CANONICAL_READ_ENABLED: "true" })).status, 503);
++  assert.equal(seen.length, 0);
++});
++
++test("gateway receives only dispatch identity and valid projection is returned", async () => {
++  const gateway = gatewayReturning(validProjection);
++  const response = await handleMetaCanonicalRead(
++    request("spirits/xuanwu", {
++      headers: {
++        cookie: "session=secret",
++        authorization: "Bearer secret",
++        "x-client-role": "FOUNDER",
++        "x-client-scope": "all-families",
++      },
++    }),
++    { META_CANONICAL_READ_ENABLED: "true", META_CORE_GATEWAY: gateway },
++  );
++  assert.equal(response.status, 200);
++  assert.deepEqual(await response.json(), validProjection);
++  assert.equal(response.headers.get("cache-control"), "private, no-store");
++  assert.match(response.headers.get("vary"), /oai-authenticated-user-id/);
++  const forwarded = gateway.seen[0];
++  assert.equal(forwarded.headers.get("x-phoenix-dispatch-user-id"), identityHeaders["oai-authenticated-user-id"]);
++  assert.equal(forwarded.headers.get("x-phoenix-dispatch-user-email"), identityHeaders["oai-authenticated-user-email"]);
++  assert.equal(forwarded.headers.get("cookie"), null);
++  assert.equal(forwarded.headers.get("authorization"), null);
++  assert.equal(forwarded.headers.get("x-client-role"), null);
++  assert.equal(new URL(forwarded.url).search, "");
++});
++
++test("gateway 401/403 are generalized and do not leak response bodies", async () => {
++  for (const status of [401, 403]) {
++    const response = await handleMetaCanonicalRead(request(), {
++      META_CANONICAL_READ_ENABLED: "true",
++      META_CORE_GATEWAY: gatewayReturning({ secret: "should not leak" }, status),
++    });
++    assert.equal(response.status, 403);
++    const body = await response.json();
++    assert.equal(body.code, "CANONICAL_ACCESS_DENIED");
++    assert.equal(body.secret, undefined);
++  }
++});
++
++test("malformed projection, extra fields, missing audit and health-shaped responses fail closed", async () => {
++  const cases = [
++    { ...validProjection, audit_reference: "" },
++    { ...validProjection, health: "ok" },
++    { ...validProjection, items: [{ ...validProjection.items[0], sensitive_record: "secret" }] },
++    { ...validProjection, items: [{ ...validProjection.items[0], spirit: "legacy" }] },
++    { ...validProjection, items: [{ ...validProjection.items[0], module: "PEOPLE" }] },
++    { ...validProjection, items: [{ ...validProjection.items[0], status: "APPROVED" }] },
++    { ...validProjection, items: [{ ...validProjection.items[0], verified_at: "not-a-date" }] },
++    { ...validProjection, items: Array.from({ length: 51 }, (_, index) => ({ ...validProjection.items[0], id: `id-${index}` })) },
++    { ...validProjection, status: "EMPTY" },
++  ];
++  for (const body of cases) {
++    const response = await handleMetaCanonicalRead(request(), {
++      META_CANONICAL_READ_ENABLED: "true",
++      META_CORE_GATEWAY: gatewayReturning(body),
++    });
++    assert.equal(response.status, 502);
++  }
++  const mismatchedSpirit = await handleMetaCanonicalRead(request("spirits/xuanwu"), {
++    META_CANONICAL_READ_ENABLED: "true",
++    META_CORE_GATEWAY: gatewayReturning({
++      ...validProjection,
++      items: [{ ...validProjection.items[0], spirit: "qinglong" }],
++    }),
++  });
++  assert.equal(mismatchedSpirit.status, 502);
++});
++
++test("gateway exceptions and non-200 non-auth statuses fail closed", async () => {
++  const throwingGateway = { fetch: async () => { throw new Error("database secret"); } };
++  const failed = await handleMetaCanonicalRead(request(), { META_CANONICAL_READ_ENABLED: "true", META_CORE_GATEWAY: throwingGateway });
++  assert.equal(failed.status, 502);
++  assert.equal((await failed.text()).includes("database secret"), false);
++  const unavailable = await handleMetaCanonicalRead(request(), {
++    META_CANONICAL_READ_ENABLED: "true",
++    META_CORE_GATEWAY: gatewayReturning({ secret: "hidden" }, 500),
++  });
++  assert.equal(unavailable.status, 502);
++  assert.equal((await unavailable.text()).includes("hidden"), false);
++});
++
++
++test("strict calendar, oversized stream and a non-cooperative gateway are rejected",async()=>{
++ const env={META_CANONICAL_READ_ENABLED:'true'};
++ for(const body of [{...validProjection,verified_at:'2026-02-30T00:00:00Z'},{...validProjection,items:[{...validProjection.items[0],title:'x'.repeat(140000)}]}])assert.equal((await handleMetaCanonicalRead(request(),{...env,META_CORE_GATEWAY:gatewayReturning(body)})).status,502);
++ const start=Date.now();
++ assert.equal((await handleMetaCanonicalRead(request(),{...env,META_CORE_GATEWAY:{fetch:()=>new Promise(()=>{})}})).status,502);
++ assert.ok(Date.now()-start<4500);
++});
+diff --git a/tests/meta-canonical-ui.test.mjs b/tests/meta-canonical-ui.test.mjs
+new file mode 100644
+index 0000000..f054b6b
+--- /dev/null
++++ b/tests/meta-canonical-ui.test.mjs
+@@ -0,0 +1,31 @@
++import test from 'node:test';import assert from 'node:assert/strict';import {registerHooks} from 'node:module';
++registerHooks({resolve(specifier,context,next){try{return next(specifier,context)}catch(e){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(specifier+'.ts',context);throw e}}});
++const {guardianSystem}=await import('../app/guardian-system.ts');
++const {spiritPresentation,founderFreeze}=await import('../app/spirit-freeze.ts');
++const {existingMemberRoles,memberSpiritAccess}=await import('../lib/meta-members.ts');
++const {default:worker}=await import('../dist/server/index.js');
++const env={ASSETS:{fetch:async()=>new Response('',{status:404})}};const ctx={waitUntil(){}};
++const founder={'oai-authenticated-user-id':'synthetic-founder','oai-authenticated-user-email':Object.keys(existingMemberRoles).find(email=>existingMemberRoles[email]==='FOUNDER')};
++const limited={'oai-authenticated-user-id':'synthetic-limited','oai-authenticated-user-email':Object.keys(memberSpiritAccess).find(email=>memberSpiritAccess[email].includes('xuanwu')&&!memberSpiritAccess[email].includes('pixiu'))};
++const get=(path,headers={})=>worker.fetch(new Request('http://localhost'+path,{headers:{accept:'text/html',...headers}}),env,ctx);
++test('formal nine identities, unique numbering, domains and spaces match current freeze',()=>{
++ const expected=[['phoenix','01','天枢宫','NOVA'],['qinglong','02','经纬殿','NEXUS'],['zhuque','03','丹青岛','MUSE'],['xuanwu','04','玄机渊','DEEPCORE'],['qingluan','05','鸾音谷','ECHO'],['baihu','06','守正关','INTEGRITY'],['qilin','07','和序原','HARMONY'],['aoyu','08','问思洲','ASKWISE'],['pixiu','09','承泽川','LEGACY']];
++ assert.equal(guardianSystem.length,9);assert.equal(founderFreeze.date,'2026-09-20');
++ for(const [id,no,space,ability]of expected){const item=guardianSystem.find(x=>x.id===id);assert.equal(item.no,no);assert.equal(item.workbench,space);assert.equal(item.role,ability);assert.ok(spiritPresentation[id].responsibility.length>0)}
++ assert.ok(spiritPresentation.qilin.skills.includes('Education'));assert.ok(spiritPresentation.aoyu.skills.includes('Teaching'));assert.ok(spiritPresentation.xuanwu.skills.includes('Security'));
++});
++test('NOVA renders five enterprise headings before personal work and no fabricated records',async()=>{
++ const response=await get('/nova');assert.equal(response.status,200);const html=(await response.text()).replace(/<script[\s\S]*?<\/script>/g,'');
++ let last=-1;for(const item of ['NOW','DECISIONS','RISK','DELIVERY','OPPORTUNITY']){const index=html.indexOf('>'+item+'</h3>');assert.ok(index>last,item);last=index}
++ assert.ok(html.indexOf('个人工作记录')>last);assert.ok(html.includes('不代表企业已批准决策'));assert.ok(html.includes('任务分配、审批及执行尚未开放'));
++});
++test('all spirit routes render for authorized founder and deny anonymous visitors',async()=>{
++ for(const item of guardianSystem.filter(x=>x.id!=='phoenix')){assert.equal((await get('/realms/'+item.id)).status,404);const response=await get('/realms/'+item.id,founder);assert.equal(response.status,200);const html=await response.text();assert.ok(html.includes(item.workbench));assert.ok(html.includes('当前任务与授权证据'))}
++});
++test('legacy and new spirit routes enforce the same limited member scope',async()=>{
++ for(const prefix of ['/realms/','/founder/beasts/']){assert.equal((await get(prefix+'xuanwu',limited)).status,200);assert.equal((await get(prefix+'pixiu',limited)).status,404);assert.equal((await get(prefix+'pixiu',{'oai-authenticated-user-email':'unknown@example.test','oai-authenticated-user-id':'unknown'})).status,404)}
++});
++test('worker routes Canonical reads before legacy D1 and never accepts approval writes',async()=>{
++ const request=(method,headers)=>worker.fetch(new Request('http://localhost/api/meta/canonical/nova',{method,headers}),env,ctx);
++ assert.equal((await request('GET',{})).status,401);const response=await request('GET',founder);assert.equal(response.status,503);assert.equal((await response.json()).code,'CANONICAL_READ_DISABLED');assert.equal((await request('POST',{...founder,'x-founder-approval':'APPROVED'})).status,405);
++});
+diff --git a/worker/index.ts b/worker/index.ts
+index 34e7ca7..3d6c3fd 100644
+--- a/worker/index.ts
++++ b/worker/index.ts
+@@ -2,8 +2,9 @@
+ import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
+ import handler from "vinext/server/app-router-entry";
+ import { handleMetaWork } from "../lib/meta-work-api";
++import { handleMetaCanonicalRead, type MetaCanonicalReadEnv } from "../lib/meta-canonical-read";
+ 
+-interface Env {
++interface Env extends MetaCanonicalReadEnv {
+   ASSETS: Fetcher;
+   DB: D1Database;
+   IMAGES: {
+@@ -29,6 +30,7 @@ interface ExecutionContext {
+ const worker = {
+   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+     const url = new URL(request.url);
++    if (url.pathname.startsWith("/api/meta/canonical/")) return handleMetaCanonicalRead(request, env);
+     if (url.pathname.startsWith("/api/meta/")) return handleMetaWork(request, env.DB);
+ 
+     if (url.pathname === "/_vinext/image") {
