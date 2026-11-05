@@ -227,7 +227,17 @@ async function run(){
  db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(318)+"' AND subject_person_id='"+id(2)+"'")
  db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(314)+"' AND subject_person_id='"+id(2)+"'")
  check('D1 synthetic no-service customer receives a real empty state')
- response=await summary('client-a','?limit=1');data=validateSummary(expectStatus(response,200));assert.ok(data.projects.length<=1)
+ const authorizedIds=validateSummary(expectStatus(await summary('client-a'),200)).projects.map(p=>p.service_project_id).sort()
+ response=await summary('client-a','?limit=1');data=validateSummary(expectStatus(response,200));assert.equal(data.projects.length,1)
+ const pagedIds=data.projects.map(p=>p.service_project_id)
+ let cursor=data.next_cursor
+ for(let page=0;cursor&&page<10;page++){
+  data=validateSummary(expectStatus(await summary('client-a','?limit=1&cursor='+encodeURIComponent(cursor)),200))
+  pagedIds.push(...data.projects.map(p=>p.service_project_id));cursor=data.next_cursor
+ }
+ assert.equal(cursor,null)
+ assert.equal(new Set(pagedIds).size,pagedIds.length)
+ assert.deepEqual(pagedIds.sort(),authorizedIds)
  check('summary limit is bounded and cursor-safe')
 
  response=await call('client-a','projects/'+project(310));let detail=snapshotData(expectStatus(response,200))
@@ -304,6 +314,14 @@ async function run(){
  assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_ATTEMPT')?.count>0)
  assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_GRANTED')?.count>0)
  check('D1 bridge audit records attempts and outcomes')
+ // Stop only this harness's owned Canonical container, after other assertions.
+ // D1 availability alone must never make a failed Canonical read look empty.
+ env.SERVICE_WORKBENCH_API_ORIGIN=rt.origin
+ db.call(['stop',db.container])
+ const canonicalFault=await summary('outsider')
+ assert.equal(canonicalFault.status,503)
+ assert.equal(canonicalFault.data.projects,undefined)
+ check('actual Canonical PostgreSQL outage returns an error without cached or empty project facts')
  record.synthetic.status='PASS'
  record.status='SYNTHETIC_PASS_REAL_IDENTITY_BLOCKED'
  console.log('PASS P1 synthetic D1 -> bridge -> PostgreSQL acceptance on PG'+version)

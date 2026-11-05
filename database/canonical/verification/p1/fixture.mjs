@@ -134,8 +134,16 @@ export async function startP1Fixture({root=process.cwd(),version='16'}={}){
  const emptyWorkbench=createServiceWorkbench({
   app:emptyApp,binder:emptyBinder,objects:emptyStore,mode:'test',
   resolve:async authorization=>{
-   if(authorization!=='Bearer '+emptyToken)throw Error('empty synthetic session required')
-   return{principalId:id(204),actorPersonId:id(4),familyId:id(102),channel:'FAMILY',async assertCurrent(){}}
+   const token=authorization?.match(/^Bearer ([A-Za-z0-9_-]{32,256})$/)?.[1]
+   if(token===emptyToken)return{principalId:id(204),actorPersonId:id(4),familyId:id(102),channel:'FAMILY',async assertCurrent(){}}
+   const session=rt.sessions.get(token)
+   const customerAliases={'client-a':[1,100],'client-b':[2,100],outsider:[3,101]}
+   const scope=session&&customerAliases[session.alias]
+   if(!scope)throw Error('customer synthetic session required')
+   const [person,family]=scope
+   return{principalId:id(200+person),actorPersonId:id(person),familyId:id(family),channel:'FAMILY',async assertCurrent(){
+    if(rt.sessions.get(token)!==session||session.expires<=Date.now())throw Error('synthetic customer session revoked')
+   }}
   }
  })
  const emptyLegacy=new Proxy({},{get(){throw Error('Legacy store/auth must not be used by empty synthetic service')}})
@@ -146,6 +154,9 @@ export async function startP1Fixture({root=process.cwd(),version='16'}={}){
   try{await emptyWorkbench.close()}catch{}
  }}
  mappings.set(accounts['client-empty'].id,{alias:'empty',token:emptyToken,sessionHash:accounts['client-empty'].sessionHash,active:true})
+ // All four independent customer principals share the same gateway and database.
+ // Staff updates continue through the separate inherited P0 staff fixture.
+ env.SERVICE_WORKBENCH_API_ORIGIN=emptyApi.origin
  const call=async(alias,resource,{method='GET',body,query='',headers={}}={})=>{
   const account=accounts[alias];assert.ok(account,'Unknown synthetic account '+alias)
   const requestHeaders=new Headers(headers);requestHeaders.set('cookie',account.cookie)

@@ -150,7 +150,6 @@ BEGIN
     max(m.updated_at) FILTER (WHERE m.page_row=p_limit),
     (array_agg(m.service_project_id ORDER BY m.page_row)
       FILTER (WHERE m.page_row=p_limit))[1]
-  )
   INTO v_rows,v_has_more,v_last_at,v_last_project
   FROM marked m;
 
