@@ -22,6 +22,27 @@ export function workbenchUuid():string {
 }
 const failure=(status=503,code='WORKBENCH_UNAVAILABLE')=>new AppError(status,code,'服务工作台暂不可用，请按提示重试')
 const hash=(x:Buffer|string)=>createHash('sha256').update(x).digest('hex')
+const summaryPageSize=20
+const summaryProject=/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+type SummaryCursor={at:string;project:string}
+function parseSummaryCursor(value:unknown):SummaryCursor|null {
+ if(value===undefined||value===null||value==='')return null
+ if(typeof value!=='string'||value.length>512)throw failure(422,'INVALID_CURSOR')
+ let parsed:unknown
+ try{parsed=JSON.parse(value)}catch{throw failure(422,'INVALID_CURSOR')}
+ if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw failure(422,'INVALID_CURSOR')
+ const cursor=parsed as Record<string,unknown>
+ if(Object.keys(cursor).sort().join(',')!=='at,project'||typeof cursor.at!=='string'||!Number.isFinite(Date.parse(cursor.at))||
+   typeof cursor.project!=='string'||!summaryProject.test(cursor.project))throw failure(422,'INVALID_CURSOR')
+ // Preserve PostgreSQL microsecond precision for the keyset boundary.
+ return {at:cursor.at,project:cursor.project}
+}
+function parseSummaryLimit(value:unknown):number {
+ if(value===undefined||value===null||value==='')return summaryPageSize
+ if(typeof value==='number'&&Number.isInteger(value)&&value>=1&&value<=50)return value
+ if(typeof value==='string'&&/^(?:[1-9]|[1-4][0-9]|50)$/.test(value))return Number(value)
+ throw failure(422,'INVALID_LIMIT')
+}
 export async function privateWorkbenchObjects(directory:string):Promise<WorkbenchObjects> {
  if(!path.isAbsolute(directory))throw failure()
  const info=await lstat(directory);if(!info.isDirectory()||info.isSymbolicLink()||(process.platform!=='win32'&&(info.mode&0o077)!==0))throw failure()
@@ -86,10 +107,14 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
   if(status!=='ALLOW')throw failure(status==='DENY'?403:status==='CONFLICT'?409:status==='INVALID'?422:503,status==='DENY'?'ACCESS_DENIED':status==='CONFLICT'?'REVISION_OR_IDEMPOTENCY_CONFLICT':status==='INVALID'?'INVALID_COMMAND':'WORKBENCH_UNAVAILABLE')
   return result!
  }
- const read=async(authorization:string|undefined,resource:string,project?:string,version?:string)=>run(authorization,async c=>{
+ const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize)=>run(authorization,async c=>{
   const query=resource==='list'?'SELECT service.workbench_list() AS result':resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
+   resource==='summary'?'SELECT service.workbench_summary($1,$2::timestamptz,$3::uuid) AS result':
    resource==='download'?'SELECT service.workbench_download($1,$2) AS result':'SELECT service.workbench_snapshot($1) AS result'
-  return (await c.query(query,resource==='list'||resource==='catalogue'?[]:resource==='download'?[project,version]:[project])).rows[0].result
+  const params:(string|number|null)[]=resource==='list'||resource==='catalogue'?[]:
+   resource==='summary'?[limit,cursor?.at??null,cursor?.project??null]:
+   resource==='download'?[project??null,version??null]:[project??null]
+  return (await c.query(query,params)).rows[0].result
  })
  async function command(authorization:string|undefined,project:string,body:Record<string,unknown>,key:string,upload:boolean){
   if(!/^[A-Za-z0-9_-]{16,100}$/.test(key))throw failure(400,'IDEMPOTENCY_KEY_REQUIRED')
@@ -124,8 +149,17 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
   try{
    if(!['127.0.0.1','::1','::ffff:127.0.0.1'].includes(request.socket.remoteAddress??'')||
     ['x-family-id','x-principal-id','x-role','x-channel','x-source-system'].some(h=>request.headers[h]))throw failure(403,'ACCESS_DENIED')
-   const url=new URL(request.url??'','http://127.0.0.1');if(url.search)throw failure(400,'QUERY_NOT_ALLOWED')
+   const url=new URL(request.url??'','http://127.0.0.1')
    const route=url.pathname.slice('/v1/service-workbench/'.length),method=request.method??'GET'
+   const summaryQuery=route==='summary'&&method==='GET'
+   if(url.search&&!summaryQuery)throw failure(400,'QUERY_NOT_ALLOWED')
+   let summaryLimit=summaryPageSize,summaryCursor:SummaryCursor|null=null
+   if(summaryQuery){
+    const keys=[...url.searchParams.keys()]
+    if(keys.some(k=>k!=='limit'&&k!=='cursor')||new Set(keys).size!==keys.length)throw failure(422,'INVALID_QUERY')
+    summaryLimit=parseSummaryLimit(url.searchParams.get('limit')??undefined)
+    summaryCursor=parseSummaryCursor(url.searchParams.get('cursor')??undefined)
+   }
    let body:Record<string,unknown>={}
    if(method==='POST'){
     const chunks:Buffer[]=[];let size=0
@@ -139,6 +173,12 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
     return json(200,{token:await deps.syntheticLogin(body.account),synthetic:true})
    }
    const authorization=request.headers.authorization,key=String(request.headers['idempotency-key']??'')
+   if(route==='summary'&&(method==='GET'||method==='POST')){
+    if(method==='POST'&&Object.keys(body).some(k=>k!=='limit'&&k!=='cursor'))throw failure(422,'INVALID_QUERY')
+    const cursor=method==='POST'?parseSummaryCursor(body.cursor):summaryCursor
+    const limit=method==='POST'?parseSummaryLimit(body.limit):summaryLimit
+    return json(200,(await read(authorization,'summary',undefined,undefined,cursor,limit)).data)
+   }
    if(method==='GET'&&route==='projects')return json(200,(await read(authorization,'list')).data)
    if(method==='GET'&&route==='catalogue')return json(200,(await read(authorization,'catalogue')).data)
    const parts=route.split('/');if(parts[0]!=='projects'||!uuid.test(parts[1]??''))throw failure(404,'NOT_FOUND')

@@ -1,0 +1,61 @@
+name: Family Service P1 integration
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/service-workbench/**'
+      - 'database/canonical/verification/p1/**'
+      - 'Phoenix Compass/education compass/server/**'
+      - 'website/phoenix-nova-website-v5/**'
+      - 'docs/database/p1-integration-20261106/**'
+      - '.github/workflows/family-service-p1.yml'
+permissions:
+  contents: read
+concurrency:
+  group: family-service-p1-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  synthetic-d1-bff-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16', '17']
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d682002
+        with:
+          node-version: '22.13.0'
+      - name: Verify immutable P0 and P1 candidate manifests
+        run: node database/canonical/verification/p1/verify-source.mjs
+      - name: Backend build for the real PostgreSQL API
+        working-directory: Phoenix Compass/education compass/server
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npm test
+      - name: Website build and bridge contracts
+        working-directory: website/phoenix-nova-website-v5
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/workerd/install.js
+          npm run typecheck
+          npm run build
+          node --import ./tests/register-typescript.mjs --test tests/customer-canonical-bridge.test.mjs tests/family-service-summary.test.mjs tests/family-service-overview.test.mjs
+      - name: Summary candidate contract
+        run: node database/canonical/verification/v0039/summary-contract.test.mjs
+      - name: Synthetic D1 login to BFF to PostgreSQL acceptance
+        env:
+          P1_EVIDENCE_DIR: ${{ runner.temp }}/p1-family-service/pg${{ matrix.pg }}
+        run: node --import website/phoenix-nova-website-v5/tests/register-typescript.mjs database/canonical/verification/p1/acceptance.mjs '${{ matrix.pg }}'
+      - name: Upload P1 synthetic evidence and explicit staging block
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: family-service-p1-pg${{ matrix.pg }}
+          path: ${{ runner.temp }}/p1-family-service/pg${{ matrix.pg }}/**
+          if-no-files-found: warn

@@ -1,0 +1,9 @@
+{
+  "status": "P1 DEVELOPMENT CANDIDATE; NOT APPROVED OR ACTIVE",
+  "dependsOn": "0038_service_project_workbench.sql",
+  "file": "0039_service_project_summary.sql",
+  "sha256": "D360538D8201BB29B980E89CE7CC49C1AE6075D7660352D9CC120D8520082944",
+  "authority": "Existing service.projects, service.workbench_settings, service.tasks, service.project_milestones, service.project_assignments and service.workbench_events only",
+  "sensitiveData": "The projection excludes materials, deliverables, messages, commercial references, patient records, raw questionnaires and document bodies",
+  "activation": "Requires independent security/authorization review and Founder gate; never copy into active migrations automatically"
+}
