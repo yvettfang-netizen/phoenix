@@ -34,7 +34,15 @@ export async function runBrokerSessionRegression({db,sql,id,familyKey,root,work,
     });
   }
   const auth=new AuthService(store,new MockWechatAuthProvider(),secret),events=[];
-  let mode='valid',brokerCalls=0,jwksReads=0;
+  let mode='valid',brokerCalls=0,jwksReads=0,lateRevocation=false,auditRowsBeforeReturn=0;
+  const bridgeAuth={async authenticate(token){
+    // Inject revocation only once the controlled DB read/audit has actually committed.
+    // This tests the delivery boundary, rather than relying on a particular auth-call count.
+    if(mode==='revoke-after-db-read'&&Number(sql(db,'SELECT count(*) FROM audit.access_events'))>auditRowsBeforeReturn){
+      assert.equal(lateRevocation,false);lateRevocation=true;await auth.revokeSession(token);
+    }
+    return auth.authenticate(token);
+  }};
   function assertion(sub){
     const time=Math.floor(Date.now()/1000);
     const claims={iss:profile.issuer,aud:profile.audience,sub:mode==='wrong-subject'?'usr_parent_b':sub,iat:time,nbf:time,exp:time+300,jti:randomUUID()};
@@ -45,7 +53,7 @@ export async function runBrokerSessionRegression({db,sql,id,familyKey,root,work,
   const appFile=path.join(work,`broker-${db.port}-app.json`),binderFile=path.join(work,`broker-${db.port}-binder.json`);
   save(appFile,JSON.stringify(connection(db,'projection_app',appPassword)));
   save(binderFile,JSON.stringify(connection(db,'projection_binder',binderPassword)));
-  const deps={auth,store,verifier:createBrokerVerifier(profile,async uri=>{assert.equal(uri,profile.jwksUri);jwksReads++;return {keys:[jwk]};}),
+  const deps={auth:bridgeAuth,store,verifier:createBrokerVerifier(profile,async uri=>{assert.equal(uri,profile.jwksUri);jwksReads++;return {keys:[jwk]};}),
     async tokenForSubject(sub){brokerCalls++;if(mode==='outage')throw Error('synthetic internal detail');return assertion(sub);}};
   const projection=await loadSessionBoundFamilyProjection({NODE_ENV:'test',CANONICAL_BROKER_SESSION_BRIDGE_ENABLED:'true',
     CANONICAL_FAMILY_PROJECTION_ENABLED:'true',CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED:'true',
@@ -81,7 +89,13 @@ export async function runBrokerSessionRegression({db,sql,id,familyKey,root,work,
     }
     assert.equal(sql(db,'SELECT count(*) FROM audit.access_events'),before);mode='valid';
     // Auth/ownership are consulted every request and again before returning the DTO.
-    await auth.revokeSession(tokens.get('usr_parent_a'));
+    auditRowsBeforeReturn=Number(sql(db,'SELECT count(*) FROM audit.access_events'));mode='revoke-after-db-read';
+    const late=await call();assert.equal(late.status,401);assert.equal(lateRevocation,true);
+    const lateBody=JSON.stringify(await late.json());assert(!lateBody.includes('Synthetic Family')&&!lateBody.includes('family-summary.v2'));
+    const lateNonce=late.headers.get('x-request-id');
+    assert.equal(sql(db,`SELECT count(*) FROM audit.access_events WHERE request_nonce='${lateNonce}' AND action='READ' AND decision='ALLOW'`),'1');
+    assert(events.some(x=>x.requestId===lateNonce&&x.decision==='DENY'));clean();mode='valid';
+    console.log('PASS LATE-1 committed DB READ/ALLOW + session revoked before HTTP return ->401 without DTO, correlated gateway DENY, cleared context/tickets; DB allowance is not delivery proof');
     assert.equal((await call()).status,401);
     assert.equal((await call('family','usr_parent_b')).status,200);
     await store.transaction(tx=>tx.update('families',familyKey('b'),{userId:'usr_different_owner'}));
