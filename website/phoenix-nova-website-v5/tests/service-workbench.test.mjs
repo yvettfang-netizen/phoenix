@@ -31,6 +31,10 @@ test('unknown or sensitive fields fail the response contract rather than becomin
   const ok=await handleServiceWorkbench(request(),env,'development','projects');assert.equal(ok.status,200);assert.equal(ok.headers.get('cache-control'),'private, no-store');
   globalThis.fetch=async()=>Response.json({schemaVersion:'service-project-list.v1',items:[{...item,patientDiagnosis:'must not leak'}]});
   const bad=await handleServiceWorkbench(request(),env,'development','projects');assert.equal(bad.status,503);assert(!(await bad.text()).includes('diagnosis'));
+  for(const field of ['title','status','stage','template']){
+   globalThis.fetch=async()=>Response.json({schemaVersion:'service-project-list.v1',items:[{...item,[field]:{privateClinicalNote:'must not leak through an allowed key'}}]});
+   const nested=await handleServiceWorkbench(request(),env,'development','projects');assert.equal(nested.status,503);assert(!(await nested.text()).includes('privateClinicalNote'));
+  }
  }finally{globalThis.fetch=original;}
 });
 test('untrusted upstream origins and unauthorized redirects are not followed',async()=>{

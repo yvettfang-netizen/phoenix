@@ -31,6 +31,12 @@ jobs:
           node-version: '22.13.0'
       - name: Existing immutable migration baseline
         run: node database/canonical/verification/v0038/verify-source.mjs
+      - name: Scoped new public candidate scan
+        run: |
+          image='ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f'
+          for path in 'database/canonical/forward-candidates/service-workbench' 'database/canonical/verification/v0038' 'docs/database/service-project-workbench-v1' 'Phoenix Compass/education compass/server/src/services/service-workbench.ts' 'website/phoenix-nova-website-v5/lib/service-workbench-bff.ts' 'website/phoenix-nova-website-v5/lib/service-workbench-contract.ts' 'website/phoenix-nova-website-v5/components/service-workbench.tsx' 'website/phoenix-nova-website-v5/components/service-workbench.css' 'website/phoenix-nova-website-v5/tests/service-workbench.test.mjs' 'website/phoenix-nova-website-v5/app/[locale]/my-services' 'website/phoenix-nova-website-v5/app/api/service-workbench' '.github/workflows/service-project-workbench.yml'; do
+            docker run --rm --network none --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
+          done
       - name: Backend existing tests and build
         working-directory: Phoenix Compass/education compass/server
         run: |
