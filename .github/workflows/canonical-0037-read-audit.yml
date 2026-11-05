@@ -64,4 +64,7 @@ jobs:
       - name: Combined 0036 0037 fresh upgrade negative audits opaque-session browser and fresh restore
         run: |
           export PLAYWRIGHT_MODULE="$RUNNER_TEMP/read-audit-browser/node_modules/playwright"
-          node database/canonical/verification/v0037/projection-e2e.mjs '${{ matrix.pg }}' --family-center-v2
+          export FAMILY_DRILL_EVIDENCE_DIR="$RUNNER_TEMP/family-drills-${{ matrix.pg }}"
+          mkdir -p "$FAMILY_DRILL_EVIDENCE_DIR"
+          node database/canonical/verification/v0037/browser-failure-drills.mjs
+          node database/canonical/verification/v0037/projection-e2e.mjs '${{ matrix.pg }}' --family-center-v2 --failure-drills

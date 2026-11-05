@@ -34,6 +34,7 @@ async function ProtectedCenter({locale}:{locale:"zh"|"en"}) {
 }
 export default async function FamilyCenterPage({params}:{params:Promise<{locale:string}>}) {
   const {locale}=await params;if(locale!=="zh"&&locale!=="en")notFound();
+  if((env as unknown as Record<string,unknown>).FAMILY_CENTER_MAINTENANCE_ENABLED==="true")return <main data-family-maintenance style={{maxWidth:700,margin:'10vh auto',padding:24}}><h1>{locale==="zh"?"家庭中心暂时维护":"Family Center temporarily unavailable"}</h1><p>{locale==="zh"?"你的资料不会在此页面显示。请稍后重试或联系顾问。":"No personal records are displayed here. Please retry later or contact an adviser."}</p><nav aria-label={locale==="zh"?"维护期间导航":"Maintenance navigation"}><Link href={`/${locale}`}>{locale==="zh"?"返回首页":"Home"}</Link>{" · "}<Link href={`/${locale}/account`}>{locale==="zh"?"账户与安全":"Account & security"}</Link>{" · "}<Link href={`/${locale}/contact`}>{locale==="zh"?"联系顾问":"Contact an adviser"}</Link></nav></main>;
   if(customerAuthEnabled())return <ProtectedCenter locale={locale}/>;
   if(centerV2Enabled(env as unknown as Record<string,unknown>))return <NewCenter locale={locale}/>;
   return <><div className="account-preview-link"><Link href={`/${locale}/account`}>{locale==="zh"?"账户登录入口":"Account sign-in"}</Link>{locale==="zh"?" · 以下为虚构家庭的界面预览。":" · The following preview uses a fictional family."}</div><V5Site locale={locale} page="family-center"/></>;
