@@ -89,3 +89,59 @@ test("actual Worker applies noindex/no-store/nosniff/referrer policy to both Ide
     }
   } finally { await mf.dispose(); }
 });
+
+const repeatedSlashAliases = [
+  "//api/identity/cbi/import",
+  "/api//identity/cbi/import",
+  "/api/identity//cbi/import",
+  "/api/identity/cbi//import",
+  "/api/identity/cbi/import//nested",
+  "/api//identity/cbi/publish/version",
+  "/api/identity/cbi//rollback/version",
+  "//zh/identity/import-review",
+  "/zh//identity/import-review",
+  "/en/identity//import-review",
+  "/en///identity/import-review/nested",
+  "/api/%2Fidentity/cbi/import",
+  "/api%2F%2Fidentity/cbi/%2569mport/nested",
+  "/zh/%2Fidentity/import-review",
+  "/en//identity/%ZZ",
+  "/api//identity/cbi/%25ZZ",
+];
+
+for (const reviewPreview of ["0", "1"]) {
+  for (const importReview of ["0", "1"]) {
+    test(`actual Worker rejects slash aliases before redirects with review=${reviewPreview}, import=${importReview}`, async () => {
+      const mf = createV5Worker({ IDENTITY_CBI_REVIEW_PREVIEW: reviewPreview, IDENTITY_CBI_IMPORT_REVIEW: importReview });
+      try {
+        const db = await mf.getD1Database("DB");
+        await db.prepare("SELECT 1").all();
+        const warmup = await mf.dispatchFetch("https://identity-test.example/robots.txt");
+        assert.equal(warmup.status, 200);
+        await warmup.text();
+        const before = await db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+        for (const origin of ["https://identity-test.example", "https://wealth.phoenixnova.com.cn"]) {
+          for (const path of repeatedSlashAliases) {
+            for (const method of ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]) {
+              const label = `${method} ${origin}${path}`;
+              const response = await mf.dispatchFetch(origin + path, {
+                method,
+                redirect: "manual",
+                headers: { "content-type": "application/json", authorization: "Bearer forged", "x-role": "FOUNDER", "x-user-id": "forged", "x-forwarded-host": "identity-test.example", "idempotency-key": "retry-same-key" },
+                ...(["GET", "HEAD"].includes(method) ? {} : { body: '{"role":"FOUNDER","content_status":"PUBLISHED",invalid-json' }),
+              });
+              assert.equal(response.status, 404, label);
+              assert.equal(response.headers.get("location"), null, label);
+              assertHeaders(response);
+              assert.equal(response.headers.get("set-cookie"), null, label);
+              assert.equal(response.headers.get("access-control-allow-origin"), null, label);
+              assert.doesNotMatch(await response.text(), /file_hash|approved_by|stack|SQL|password|token/i, label);
+            }
+          }
+        }
+        const after = await db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+        assert.deepEqual(after.results, before.results, "Denied aliases must not initialize import/database tables");
+      } finally { await mf.dispose(); }
+    });
+  }
+}

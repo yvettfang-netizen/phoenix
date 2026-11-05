@@ -42,7 +42,7 @@ Wealth destinations. It now requires the exact locale-specific
 main. The homepage component is unchanged, and the CBI workflow also runs this
 22-check homepage regression.
 
-## Local engineering evidence
+## Local engineering evidence (main integration)
 
 - `npm ci` with npm 10.9.2: passed.
 - Full dependency audit including development/optional dependencies: zero findings at every severity.
@@ -52,6 +52,38 @@ main. The homepage component is unchanged, and the CBI workflow also runs this
 - Identity landing and all five CBI browser scripts passed. Health Landing/Family passed with the flag off and on; Health GEO passed 205 checks and APEC passed six locale/viewport checks.
 - Main homepage: 22 passed. Education landing: 16 passed; knowledge: 148 passed; readiness: 75 passed after the sitemap fix. The strengthened CBI GEO and import-denial browser checks also passed again on the final build.
 - Exact pushed-HEAD Actions results belong in the delivery evidence. Local adapters and disposable Worker tests are not Staging or production evidence.
+
+## P2 repeated-slash follow-up
+
+Review of `77009edad1093ec00ae3eefd05a9b4af18fa7bec` found that paths such as
+`/api//identity/cbi/import` and `/zh//identity/import-review` reached framework
+308 normalization without the Identity noindex/no-store/no-referrer headers.
+The canonical import route remained closed.
+
+Collapse repeated slashes only in the string used by boundary recognition,
+before decoding and after each bounded decoding pass. Preserve the original
+request URL, host routing, Health locale handling, image routing and sitemap
+gate. Invalid encoding still fails closed within the recognized Identity scope.
+
+New real-Worker regressions use `redirect: "manual"` so following a redirect
+cannot hide the failure. They cover 16 repeated/encoded/malformed path cases,
+seven methods (GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS), Identity and Wealth
+hosts, and all four review-preview/import-review flag combinations: 896 requests.
+Every request must return 404 without Location, cookies or permissive CORS;
+Identity noindex/no-store/nosniff/no-referrer headers and non-reflective error
+bodies are asserted. The test database table inventory must remain unchanged.
+
+All four new flag-combination tests first failed against the old build with
+308 instead of 404. After the fix, the full suite passed: 153 passed, zero
+failed, four conditional HTTP tests skipped without their servers. Those four
+tests then passed with the dedicated Wealth/main rehearsal servers, with zero
+skips. Typecheck, build and lint passed (two existing lint warnings); the full
+development/optional dependency audit reports zero findings at every severity.
+
+The Worker entry, dependency files, country records, reviewer allowlists,
+disabled import constant and all publication gates are unchanged. Exact final
+HEAD and six workflow run links are recorded in the updated PR description.
+Human review and runtime gaps below remain EVIDENCE_MISSING; Sites stays HOLD.
 
 ## Release boundary
 

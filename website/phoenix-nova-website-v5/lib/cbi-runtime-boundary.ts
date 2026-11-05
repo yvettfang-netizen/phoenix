@@ -2,10 +2,13 @@
  * Keep denial ahead of routing and body parsing, regardless of environment flags. */
 export const CBI_PRODUCTION_IMPORT_ENABLED = false;
 
+// Normalize only boundary recognition, never the request URL or host routing.
+const boundaryPath = (path: string) => path.replace(/\/{2,}/g, "/");
+
 function decodedPath(pathname: string) {
-  let path = pathname;
+  let path = boundaryPath(pathname);
   for (let depth = 0; depth < 4 && path.includes("%"); depth++) {
-    try { path = decodeURIComponent(path); }
+    try { path = boundaryPath(decodeURIComponent(path)); }
     catch { return { path, invalid: true }; }
   }
   return { path, invalid: path.includes("%") };
