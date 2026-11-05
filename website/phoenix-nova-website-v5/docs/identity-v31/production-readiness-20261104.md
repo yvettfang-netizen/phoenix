@@ -2,6 +2,10 @@
 
 Verdict: HOLD. This is a read-only comparison candidate, not approval to merge, deploy, import real data or enter production Staging.
 
+The [2026-11-05 main-integration record](main-integration-20261105.md) supersedes
+the shared dependency/runtime versions below and records the sitemap collision
+fix. This dated report's human/fact/production HOLD does not become an approval.
+
 ## Scope and verified baseline
 
 - Repository: yvettfang-netizen/phoenix; PR #35; destination branch codex/identity-v31-cbi-review.

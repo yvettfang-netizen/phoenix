@@ -25,7 +25,7 @@ try {
     const overflow = await page.evaluate(() => [...document.querySelectorAll('body *')].filter(el => el.getBoundingClientRect().right > innerWidth + 1).map(el => ({tag:el.tagName,cls:el.className,right:el.getBoundingClientRect().right,text:el.textContent.slice(0,50)})));
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `overflow ${locale} ${width}: ${JSON.stringify(overflow)}`);
     const brands = await page.locator('.brand-asset').evaluateAll(images => images.map(image => ({ src: image.getAttribute("src"), ratio: image.clientWidth / image.clientHeight, width:image.clientWidth, filter: getComputedStyle(image).filter })));
-    assert.equal(brands.length, 2); assert.ok(brands.every(brand => brand.src === "/brand/official/v3/phoenix-nova-header@2x.png" && Math.abs(brand.ratio - 1040/320) < .06 && brand.filter === "none" && brand.width>=150 && brand.width<=230));
+    assert.equal(brands.length, 2); assert.ok(brands.every(brand => brand.src === "/brand/official/v3/phoenix-nova-bilingual-b@2x.png" && Math.abs(brand.ratio - 2172/724) < .06 && brand.filter === "none" && brand.width>=150 && brand.width<=230));
     assert.equal(await page.evaluate(()=>getComputedStyle(document.body).margin),'0px','Shared global stylesheet must load');
     assert.equal(await page.locator('header .is-active[aria-current="page"]').first().textContent(), locale === "zh" ? "身份" : "Identity");
     assert.equal(await page.locator('header .locale-switch').getAttribute("href"), `/${locale === "zh" ? "en" : "zh"}/identity`);

@@ -7,7 +7,7 @@ export const directoryGroups: readonly { title: Label; items: readonly Directory
     { label: ["凤启罗盘 Phoenix Compass", "Phoenix Compass"], path: "/compass" },
     { label: ["Education｜教育规划", "Education"], path: "/education" },
     { label: ["Identity｜全球身份规划", "Identity"], path: "/identity" },
-    { label: ["Wealth｜财富保障", "Wealth"], path: "/compass#wealth" },
+    { label: ["财富规划", "Wealth planning"], path: "/wealth" },
     { label: ["Health｜健康与医疗", "Health"], path: "/health" },
   ] },
   { title: ["教育与学习平台", "Education & learning"], items: [
@@ -19,7 +19,7 @@ export const directoryGroups: readonly { title: Label; items: readonly Directory
   ] },
   { title: ["家庭与会员服务", "Family & membership"], items: [
     { label: ["凤启家序 Family OS", "Family OS"] },
-    { label: ["家庭中心", "Family Center"], path: "/family-center", status: ["受控预览", "Controlled preview"] },
+    { label: ["家庭中心", "Family Center"], path: "/account", status: ["受控账户入口", "Controlled account entry"] },
     { label: ["家庭档案", "Family profile"] },
     { label: ["家庭成长与服务进度", "Growth & service progress"] },
   ] },

@@ -31,7 +31,7 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - name: Actual Workers and pure model tests
-        run: node --test tests/*.test.mjs
+        run: node --import ./tests/register-typescript.mjs --test tests/*.test.mjs
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -51,6 +51,7 @@ jobs:
             sleep 1
           done
           IDENTITY_ORIGIN=http://127.0.0.1:44631 IDENTITY_EVIDENCE_DIR=outputs/identity-v31/regression node tests/identity-browser.mjs
+          V6_ORIGIN=http://127.0.0.1:44631 V6_EVIDENCE_DIR=outputs/identity-v31/homepage node tests/homepage-v6-browser.mjs
           IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 IDENTITY_V31_PUBLIC_ORIGIN=http://127.0.0.1:44632 node tests/cbi-browser.mjs
           IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 node tests/cbi-import-browser.mjs
           IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 IDENTITY_V31_PUBLIC_ORIGIN=http://127.0.0.1:44632 node tests/cbi-geo-browser.mjs

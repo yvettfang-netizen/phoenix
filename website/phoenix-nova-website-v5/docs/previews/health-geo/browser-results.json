@@ -1,0 +1,1511 @@
+{
+  "baseline": "5771c910f8d1bb507eabf0cc6a529f6f28774217",
+  "runtime": "Windows frontend-only Node adapter, not production or real RLS evidence",
+  "suites": {
+    "geo": {
+      "passed": 205,
+      "results": [
+        {
+          "path": "/zh/health",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/foreign-patients-china",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/overseas-chinese-returning",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/shenzhen-international-medical",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/hong-kong-greater-bay-area",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/international-insurance-claims",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreigners-can-seek-care-in-china",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-private-medical",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/overseas-chinese-returning-care",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/greater-bay-area-cross-border-resources",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-medical-services",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/english-care-in-shenzhen",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-medical-insurance-claims-china",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-patient-gba-appointment-travel",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers/hyzen-hospital",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/foreign-patients-china",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/overseas-chinese-returning",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/shenzhen-international-medical",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/hong-kong-greater-bay-area",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/international-insurance-claims",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreigners-can-seek-care-in-china",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-private-medical",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/overseas-chinese-returning-care",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/greater-bay-area-cross-border-resources",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-medical-services",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/english-care-in-shenzhen",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-medical-insurance-claims-china",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-patient-gba-appointment-travel",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers/hyzen-hospital",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/foreign-patients-china",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/overseas-chinese-returning",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/shenzhen-international-medical",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/hong-kong-greater-bay-area",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/international-insurance-claims",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreigners-can-seek-care-in-china",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-private-medical",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/overseas-chinese-returning-care",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/greater-bay-area-cross-border-resources",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-medical-services",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/english-care-in-shenzhen",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-medical-insurance-claims-china",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-patient-gba-appointment-travel",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers/hyzen-hospital",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/foreign-patients-china",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/overseas-chinese-returning",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/shenzhen-international-medical",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/hong-kong-greater-bay-area",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/international-insurance-claims",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreigners-can-seek-care-in-china",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-private-medical",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/overseas-chinese-returning-care",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/greater-bay-area-cross-border-resources",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-medical-services",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/english-care-in-shenzhen",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-medical-insurance-claims-china",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-patient-gba-appointment-travel",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers/hyzen-hospital",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/foreign-patients-china",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/overseas-chinese-returning",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/shenzhen-international-medical",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/hong-kong-greater-bay-area",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/international-insurance-claims",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreigners-can-seek-care-in-china",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-private-medical",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/overseas-chinese-returning-care",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/greater-bay-area-cross-border-resources",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-international-medical-services",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/english-care-in-shenzhen",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-medical-insurance-claims-china",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/guides/international-patient-gba-appointment-travel",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/zh/health/providers/hyzen-hospital",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "check": "zh paired foreign-patient slug switch",
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-patients-china",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/overseas-chinese-returning",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/shenzhen-international-medical",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/hong-kong-greater-bay-area",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-insurance-claims",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreigners-can-seek-care-in-china",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-private-medical",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/overseas-chinese-returning-care",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/greater-bay-area-cross-border-resources",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-medical-services",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/english-care-in-shenzhen",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-medical-insurance-claims-china",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-patient-gba-appointment-travel",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers/hyzen-hospital",
+          "width": 320,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-patients-china",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/overseas-chinese-returning",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/shenzhen-international-medical",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/hong-kong-greater-bay-area",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-insurance-claims",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreigners-can-seek-care-in-china",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-private-medical",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/overseas-chinese-returning-care",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/greater-bay-area-cross-border-resources",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-medical-services",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/english-care-in-shenzhen",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-medical-insurance-claims-china",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-patient-gba-appointment-travel",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers/hyzen-hospital",
+          "width": 390,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-patients-china",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/overseas-chinese-returning",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/shenzhen-international-medical",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/hong-kong-greater-bay-area",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-insurance-claims",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreigners-can-seek-care-in-china",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-private-medical",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/overseas-chinese-returning-care",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/greater-bay-area-cross-border-resources",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-medical-services",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/english-care-in-shenzhen",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-medical-insurance-claims-china",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-patient-gba-appointment-travel",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers/hyzen-hospital",
+          "width": 768,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-patients-china",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/overseas-chinese-returning",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/shenzhen-international-medical",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/hong-kong-greater-bay-area",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-insurance-claims",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreigners-can-seek-care-in-china",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-private-medical",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/overseas-chinese-returning-care",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/greater-bay-area-cross-border-resources",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-medical-services",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/english-care-in-shenzhen",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-medical-insurance-claims-china",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-patient-gba-appointment-travel",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers/hyzen-hospital",
+          "width": 1024,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-patients-china",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/overseas-chinese-returning",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/shenzhen-international-medical",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/hong-kong-greater-bay-area",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/international-insurance-claims",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreigners-can-seek-care-in-china",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/foreign-patient-shenzhen-preparation",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-private-medical",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/overseas-chinese-returning-care",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-resident-shenzhen-care",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/greater-bay-area-cross-border-resources",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-international-medical-services",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/english-care-in-shenzhen",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/hong-kong-doctor-shenzhen-registration",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/shenzhen-hong-kong-private-cost-comparison",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-medical-insurance-claims-china",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/guides/international-patient-gba-appointment-travel",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "path": "/en/health/providers/hyzen-hospital",
+          "width": 1440,
+          "status": "PASS"
+        },
+        {
+          "check": "en paired foreign-patient slug switch",
+          "status": "PASS"
+        },
+        {
+          "check": "zh SSR guide readable without JavaScript",
+          "status": "PASS"
+        },
+        {
+          "check": "en SSR guide readable without JavaScript",
+          "status": "PASS"
+        },
+        {
+          "check": "preview robots and sitemap exclude drafts and private records",
+          "status": "PASS"
+        }
+      ]
+    },
+    "off": {
+      "passed": 44,
+      "results": [
+        {
+          "name": "zh responsive 320px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 375px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 390px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 768px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 1024px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 1440px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh consultation fields stay independent, local and resettable",
+          "status": "PASS"
+        },
+        {
+          "name": "zh FAQ, mobile menu and locale-preserving route",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 320px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 375px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 390px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 768px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 1024px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 1440px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en consultation fields stay independent, local and resettable",
+          "status": "PASS"
+        },
+        {
+          "name": "en FAQ, mobile menu and locale-preserving route",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh client navigation from Education keeps the correct document language",
+          "status": "PASS"
+        },
+        {
+          "name": "en client navigation from Education keeps the correct document language",
+          "status": "PASS"
+        },
+        {
+          "name": "No-JS consultation remains disabled without URL or network transmission",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ]
+    },
+    "on": {
+      "passed": 45,
+      "results": [
+        {
+          "name": "zh responsive 320px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 375px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 390px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 768px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 1024px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh responsive 1440px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "zh consultation fields stay independent, local and resettable",
+          "status": "PASS"
+        },
+        {
+          "name": "zh FAQ, mobile menu and locale-preserving route",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 320px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 375px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 390px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 768px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 1024px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en responsive 1440px, metadata and controlled entry",
+          "status": "PASS"
+        },
+        {
+          "name": "en consultation fields stay independent, local and resettable",
+          "status": "PASS"
+        },
+        {
+          "name": "en FAQ, mobile menu and locale-preserving route",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/compass 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/zh/health/family 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 390px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 768px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/compass 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "/en/health/family 1440px shared Header/Footer brand integrity and no overflow",
+          "status": "PASS"
+        },
+        {
+          "name": "zh client navigation from Education keeps the correct document language",
+          "status": "PASS"
+        },
+        {
+          "name": "en client navigation from Education keeps the correct document language",
+          "status": "PASS"
+        },
+        {
+          "name": "Landing → original questionnaire, consent, back/edit, skip, no invented results or transmission",
+          "status": "PASS"
+        },
+        {
+          "name": "No-JS consultation remains disabled without URL or network transmission",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ]
+    },
+    "familyOff": {
+      "passed": 13,
+      "results": [
+        {
+          "name": "zh family page 390px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family page 768px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family page 1440px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family consultation is a local demo and refresh resets it",
+          "status": "PASS"
+        },
+        {
+          "name": "zh locale switch preserves the Health family route",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 390px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 768px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 1440px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family consultation is a local demo and refresh resets it",
+          "status": "PASS"
+        },
+        {
+          "name": "en locale switch preserves the Health family route",
+          "status": "PASS"
+        },
+        {
+          "name": "zh Health homepage exposes six independent journeys and a separate controlled partner introduction",
+          "status": "PASS"
+        },
+        {
+          "name": "en Health homepage exposes six independent journeys and a separate controlled partner introduction",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ]
+    },
+    "familyOn": {
+      "passed": 13,
+      "results": [
+        {
+          "name": "zh family page 390px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family page 768px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family page 1440px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "zh family consultation is a local demo and refresh resets it",
+          "status": "PASS"
+        },
+        {
+          "name": "zh locale switch preserves the Health family route",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 390px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 768px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family page 1440px: six directions, gate state and responsive header",
+          "status": "PASS"
+        },
+        {
+          "name": "en family consultation is a local demo and refresh resets it",
+          "status": "PASS"
+        },
+        {
+          "name": "en locale switch preserves the Health family route",
+          "status": "PASS"
+        },
+        {
+          "name": "zh Health homepage exposes six independent journeys and a separate controlled partner introduction",
+          "status": "PASS"
+        },
+        {
+          "name": "en Health homepage exposes six independent journeys and a separate controlled partner introduction",
+          "status": "PASS"
+        },
+        {
+          "name": "No browser runtime errors",
+          "status": "PASS"
+        }
+      ]
+    }
+  }
+}

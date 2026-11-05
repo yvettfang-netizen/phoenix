@@ -1,0 +1,27 @@
+{
+  "dns_work": "PAUSED_BY_USER",
+  "real_device_testing": "NOT_RUN",
+  "verified": [
+    "Chinese P01 14-question result matches frozen fixture",
+    "English 14 SKIP answers remain insufficient/null",
+    "C1 unchecked by default",
+    "save/reload requires renewed consent before resume",
+    "clear/restart clears the draft",
+    "keyword search and empty result",
+    "regional planning link and clear filter",
+    "consultation status does not claim sending or booking",
+    "service scope keyboard expansion",
+    "FAQ expansion",
+    "detail-preserving language switch",
+    "no document horizontal overflow at checked widths",
+    "no observed browser console errors"
+  ],
+  "live_crm": "NOT_CONNECTED",
+  "runtime": "frontend-only Node adapter around built Worker; no DB or API",
+  "live_family_os": "NOT_CONNECTED",
+  "viewports": [
+    "1440x1000",
+    "390x844",
+    "320x800"
+  ]
+}

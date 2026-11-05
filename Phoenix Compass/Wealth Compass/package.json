@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && node --test tests/unit/frozen-v1.node-test.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

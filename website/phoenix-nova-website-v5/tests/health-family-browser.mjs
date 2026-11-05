@@ -56,6 +56,14 @@ try {
       assert.ok(brand.x + brand.width <= actions.x + 1, `${locale}/${width} header overlap`);
 
       const bodyText = await page.locator("body").innerText();
+      const origin = page.getByTestId("family-brand-origin");
+      assert.equal(await origin.count(), 1, `${locale}/${width}: APEC origin context missing`);
+      const originText = await origin.innerText();
+      assert.match(originText, /APEC|深圳2026/);
+      assert.match(originText, /2026/);
+      assert.match(originText, locale === "zh" ? /无关|不.*官方/ : /not affiliated|independent/i);
+      assert.ok(await origin.locator('a[href="https://www.szns.gov.cn/english/apec2026shenzhen/"]').count());
+      assert.equal(await origin.locator("img,form,input").count(), 0, `${locale}/${width}: APEC origin must not collect data`);
       for (const dimension of dimensions) {
         const title = dimension.title[locale === "zh" ? 0 : 1];
         assert.ok(bodyText.includes(title), `${locale}/${width}: missing ${title}`);
@@ -107,7 +115,7 @@ try {
     await page.locator('#family-consultation button[type="submit"]').click();
     const status = await page.getByTestId("health-consultation-status").innerText();
     assert.match(status, locale === "zh" ? /尚未发送咨询/ : /No enquiry has been sent/);
-    assert.equal(requests.length, 0, `${locale} family consultation must not send requests`);
+    assert.equal(requests.length, 0, `${locale} family consultation must not send requests: ${JSON.stringify(requests)}`);
     assert.deepEqual(
       await page.evaluate(() => ({
         local: Object.keys(localStorage),
@@ -135,23 +143,26 @@ try {
   for (const locale of ["zh", "en"]) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${origin}/${locale}/health`, { waitUntil: "networkidle" });
-    const goals = page.getByTestId("health-goals");
+    // Founder V3.0 exposes six independent homepage journeys. Family
+    // questionnaire tests above stay unchanged; partners remain a separate
+    // controlled section and do not receive a fake login route.
+    const goals = page.locator('section[aria-labelledby="health-entry-title"]');
     assert.equal(await goals.count(), 1);
-    assert.equal(await goals.locator("a").count(), 3, "Exactly three peer starting choices");
-    assert.equal(await goals.locator(`a[href="/${locale}/health/family"]`).count(), 1);
-    assert.equal(await goals.locator('a[href="#services"]').count(), 1);
-    assert.equal(await goals.locator(`a[href="/${locale}/health/family#integrated-support"]`).count(), 1);
+    assert.equal(await goals.locator("article").count(), 6, "Exactly six starting cards");
+    const expectedEntryHrefs = locale === "zh"
+      ? ["/zh/health/family", "/zh/health/foreign-patients-china", "/zh/health/overseas-chinese-returning", "/zh/health/shenzhen-international-medical", "/zh/health/hong-kong-greater-bay-area", "/zh/health/international-insurance-claims"]
+      : ["/en/health/family", "/en/health/international-patients-china", "/en/health/overseas-chinese-returning", "/en/health/shenzhen-international-medical", "/en/health/hong-kong-greater-bay-area", "/en/health/international-insurance-claims"];
+    assert.deepEqual(await goals.locator("article a").evaluateAll(links => links.map(link => link.getAttribute("href"))), expectedEntryHrefs, `${locale}: six starting cards must retain their independent routes`);
+    assert.equal(await goals.locator('a[href="#partners"]').count(), 0, "Partner introduction must stay separate from starting cards");
     const goalText = await goals.innerText();
     if (locale === "zh") {
       assert.match(goalText, /家庭健康规划/);
-      assert.match(goalText, /国际医疗服务/);
-      assert.match(goalText, /两者兼顾/);
+      for (const label of ["外国人来中国就医", "海外华人回国就医", "深圳国际化私立医疗", "香港与大湾区跨境医疗", "国际医疗保险与理赔协助"]) assert.match(goalText, new RegExp(label));
     } else {
-      assert.match(goalText, /Family health planning/);
-      assert.match(goalText, /International medical services/);
-      assert.match(goalText, /Both, together/);
+      assert.match(goalText, /Family health planning/i);
+      for (const label of ["International patients in China", "Overseas Chinese returning for care", "International private care in Shenzhen", "Hong Kong and Greater Bay Area care", "International medical insurance and claims"]) assert.match(goalText, new RegExp(label, "i"));
     }
-    passed(`${locale} Health homepage exposes family, medical and combined entries`);
+    passed(`${locale} Health homepage exposes six independent journeys and a separate controlled partner introduction`);
   }
 
   assert.deepEqual(errors, [], "No browser runtime errors");

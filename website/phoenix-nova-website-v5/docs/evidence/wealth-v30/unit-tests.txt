@@ -1,0 +1,37 @@
+✔ 14-question Chinese source remains identical to the supplied prototype (6.9462ms)
+✔ all bilingual labels and six directions are complete (1.0896ms)
+✔ context-only, missing and invalid answers never invent results (2.9769ms)
+✔ all 36 arrangement pairs follow the original deterministic rules (1.3079ms)
+✔ missing dimensions stay missing rather than healthy (2.0998ms)
+✔ action cap, validity, selection order and toggling are deterministic (1.478ms)
+✔ export contains chosen generic actions but no raw answers or health score (2.0483ms)
+✔ model and UI contain no persistence, API, analytics or external form calls (1.8736ms)
+✔ Wealth services keep five bounded planning points and unique route slugs (4.7373ms)
+✔ Wealth Compass exposes the frozen six-dimension names (3.1658ms)
+✔ Wealth regions, guides and internal imagery are complete (8.2578ms)
+✔ Wealth copy contains no product price or return promise (2.3659ms)
+✔ Wealth collaboration copy does not imply a default or fake institutional partnership (1.2506ms)
+✔ Shared navigation presents Wealth as 财富 and links to the real route (1.4911ms)
+✔ Wealth assessment imports only the frozen-v1 authority and detail routes fail closed (14.214ms)
+✔ exact Host routing strips injected surface headers on the main site (156.7241ms)
+✔ assessment, CRM, Family OS and internal APIs fail closed without exposing auth cookies (42.0299ms)
+✔ independent sitemap and robots are served with noindex at the edge (6.1864ms)
+✔ Wealth HTML uses hash-based CSP, exact language, no parent-domain cookies or permissive CORS (175.1974ms)
+✔ main-site responses retain their existing headers and session behavior (1.1568ms)
+✔ constants keep the dedicated host and unverified main origin explicit (5.2852ms)
+✔ public path mapping is stable for compass, knowledge, services and regions (1.7474ms)
+✔ host matching is exact and does not trust a spoofed hostname (8.1952ms)
+✔ http is upgraded and client query/fragment input never leaks into canonical redirects (0.9608ms)
+✔ public paths rewrite to internal Wealth paths (1.3066ms)
+✔ nested aliases redirect to public paths and strip query strings (1.4403ms)
+✔ resources pass through while API and private application prefixes deny (0.9266ms)
+✔ robots and sitemap are explicit noindex endpoints (0.6788ms)
+✔ sitemap has the requested bilingual inventory, alternates and XML escaping (3.3019ms)
+ℹ tests 29
+ℹ suites 0
+ℹ pass 29
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2959.9719

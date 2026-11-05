@@ -54,6 +54,8 @@ try {
     assert.match(await robots.text(), /Disallow: \/\s/);
     const sitemap = await page.request.get(host + "/sitemap.xml");
     assert.equal(sitemap.status(), 200);
+    assert.match(sitemap.headers()["x-robots-tag"], /noindex/);
+    assert.match(sitemap.headers()["cache-control"], /no-store/);
     assert.doesNotMatch(await sitemap.text(), /<loc>/, "No unapproved URLs may enter the sitemap");
   }
   const hiddenImport = await page.request.get(publicOrigin + "/zh/identity/import-review");

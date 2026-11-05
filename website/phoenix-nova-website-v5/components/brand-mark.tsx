@@ -9,19 +9,20 @@ type BrandMarkProps = {
 };
 
 export function BrandMark({ inverse = false, compact = false, className = "", href = "/", label = "Phoenix Nova 首页" }: BrandMarkProps) {
-  const asset = { src: "/brand/official/v3/phoenix-nova-header@2x.png", width: 1040, height: 320 };
+  const asset = { src: "/brand/official/v3/phoenix-nova-bilingual-b@2x.png", width: 2172, height: 724 };
   return (
     <Link
       href={href}
       aria-label={label}
+      data-testid="brand-mark"
+      data-brand-variant="b"
       className={`brand-mark ${compact ? "brand-mark--compact" : ""} ${inverse ? "brand-mark--inverse" : ""} ${className}`}
     >
-      <span className="brand-asset-wrap">
-        {/* Serve approved raster bytes directly: the image shim emits density
-            srcsets even for unoptimized images. No rescaling proxy for logos. */}
+      <span className="brand-asset-wrap brand-mark__asset-wrap">
+        {/* Serve the Founder-approved B-version raster directly; no redraw, filter, crop, or font reflow. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          className="brand-asset brand-asset--mark"
+          className="brand-asset brand-asset--mark brand-mark__asset"
           src={asset.src}
           width={asset.width}
           height={asset.height}
