@@ -4,7 +4,8 @@ import {existsSync,writeFileSync,readFileSync,unlinkSync,mkdirSync} from 'node:f
 import {drillRecorder} from './failure-drill-recorder.mjs';
 const root=process.cwd(),website=path.join(root,'website/phoenix-nova-website-v5'),file=path.join(website,'.dev.vars');
 const directory=process.env.FAMILY_DRILL_EVIDENCE_DIR;if(!directory)throw Error('Explicit owned evidence output required');
-const record=drillRecorder({directory,phase:'browser'}),origin='http://127.0.0.1:4512';
+let currentFlags={};
+const record=drillRecorder({directory,phase:'browser',flags:()=>({...currentFlags})}),origin='http://127.0.0.1:4512';
 const {chromium}=createRequire(path.join(website,'package.json'))(process.env.PLAYWRIGHT_MODULE||'playwright');
 let vite,browser,mode='ready',calls=0,ownedConfig=null,log='';const token=randomBytes(32).toString('base64url');
 const api=createServer((req,res)=>{calls++;assert.equal(req.method,'GET');assert.equal(req.headers.authorization,'Bearer '+token);res.setHeader('content-type','application/json');if(mode==='error'){res.writeHead(500);res.end('{"error":{"code":"SYNTHETIC_API_FAILURE"}}');return;}
@@ -12,6 +13,7 @@ res.end(JSON.stringify(req.url.endsWith('/family')?{schemaVersion:'family-summar
 async function stop(){if(vite){const child=vite;vite=null;if(process.platform==='win32')spawnSync('taskkill.exe',['/PID',String(child.pid),'/T','/F'],{windowsHide:true,stdio:'ignore'});else{child.kill('SIGTERM');await Promise.race([new Promise(r=>child.once('exit',r)),new Promise(r=>setTimeout(r,5000))]);if(child.exitCode===null)child.kill('SIGKILL');}}
 if(ownedConfig!==null){assert.equal(readFileSync(file,'utf8'),ownedConfig,'Concurrent config change preserved');unlinkSync(file);ownedConfig=null;}}
 async function start({projection=true,maintenance=false}={}){await stop();assert(!existsSync(file),'Existing configuration preserved');
+currentFlags={FAMILY_CENTER_V2_ENABLED:'true',FAMILY_CENTER_MAINTENANCE_ENABLED:String(maintenance),CANONICAL_FAMILY_PROJECTION_ENABLED:String(projection),CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED:String(projection),CANONICAL_BROKER_SESSION_BRIDGE_ENABLED:String(projection)};
 ownedConfig=`FAMILY_CENTER_V2_ENABLED=true\nFAMILY_CENTER_MAINTENANCE_ENABLED=${maintenance}\nCANONICAL_FAMILY_PROJECTION_ENABLED=${projection}\nCANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED=${projection}\nCANONICAL_BROKER_SESSION_BRIDGE_ENABLED=${projection}\nCANONICAL_SESSION_API_ORIGIN=http://127.0.0.1:${api.address().port}\n`;writeFileSync(file,ownedConfig,{flag:'wx',mode:0o600});
 const childEnv={...process.env,NODE_ENV:'development',WRANGLER_SEND_METRICS:'false',NO_PROXY:'127.0.0.1,localhost'};for(const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy'])delete childEnv[k];
 vite=spawn(process.execPath,[path.join(website,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port','4512','--strictPort'],{cwd:website,env:childEnv,windowsHide:true,stdio:['ignore','pipe','pipe']});vite.stdout.on('data',b=>log+=b);vite.stderr.on('data',b=>log+=b);
