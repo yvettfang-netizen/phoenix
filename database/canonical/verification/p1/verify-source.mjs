@@ -37,6 +37,23 @@ for(const marker of [
  'synthetic D1 outage',
  'SERVICE_WORKBENCH_API_ORIGIN'
 ])assert.ok(acceptance.includes(marker),'P1 acceptance coverage missing: '+marker)
+const browser=readFileSync(path.resolve(root,'database/canonical/verification/p1/browser.mjs'),'utf8')
+for(const marker of [
+ 'startP1Fixture',
+ 'PLAYWRIGHT_MODULE',
+ 'FamilyCenterV2',
+ 'family-center-v2.css',
+ 'ServiceWorkbench',
+ 'routeMocking:false',
+ 'Synthetic isolated browser component harness',
+ 'client-identity',
+ 'client-c',
+ 'client-empty',
+ 'No opened service projects yet',
+ 'Service history',
+ 'On hold',
+ 'scrollWidth'
+])assert.ok(browser.includes(marker),'P1 browser coverage missing: '+marker)
 for(const file of [
  'database/canonical/verification/p1/acceptance.mjs',
  'website/phoenix-nova-website-v5/lib/customer-canonical-bridge.ts',

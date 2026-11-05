@@ -8,6 +8,7 @@ import {pathToFileURL} from 'node:url'
 import {createCluster,id} from '../v0038/cluster.mjs'
 import {seedWorkbench} from '../v0038/fixtures.mjs'
 import {startWorkbench} from '../v0038/runtime.mjs'
+import {seedIdentityProject} from './fixture.mjs'
 
 const version=process.argv[2]||'16'
 assert(['16','17'].includes(version),'PostgreSQL matrix version must be 16 or 17')
@@ -93,6 +94,7 @@ async function run(){
  db.sql(readFileSync(summarySql,'utf8'))
  assert.equal(db.sql("SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='service' AND p.proname='workbench_summary'"),'1')
  const credentials=seedWorkbench(db)
+ seedIdentityProject(db)
  db.sql("UPDATE service.projects SET primary_domain='IDENTITY',project_name='Synthetic Identity Hong Kong 315' WHERE service_project_id='"+project(315)+"'")
  rt=await startWorkbench(db,credentials)
  const env={
@@ -172,7 +174,7 @@ async function run(){
  await register('client-b','client-b')
  await register('outsider','outsider')
  await register('client-identity','outsider')
- await register('client-c','client-a')
+ await register('client-c','client-b')
  await register('client-empty','client-b')
  const call=async(alias,resource,{method='GET',body,query='',headers={}}={})=>{
   const account=accounts[alias]
@@ -216,10 +218,14 @@ async function run(){
  assert.ok(data.projects.length>=2,'Synthetic client C must have multiple authorized projects')
  check('D1 client C receives multiple authorized projects through the same server mapping contract')
  db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp()-interval '1 second' WHERE service_project_id='"+project(312)+"' AND subject_person_id='"+id(2)+"'")
+ db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp()-interval '1 second' WHERE service_project_id='"+project(318)+"' AND subject_person_id='"+id(2)+"'")
+ db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp()-interval '1 second' WHERE service_project_id='"+project(314)+"' AND subject_person_id='"+id(2)+"'")
  response=await summary('client-empty')
  data=validateSummary(expectStatus(response,200))
  assert.equal(data.projects.length,0)
  db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(312)+"' AND subject_person_id='"+id(2)+"'")
+ db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(318)+"' AND subject_person_id='"+id(2)+"'")
+ db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(314)+"' AND subject_person_id='"+id(2)+"'")
  check('D1 synthetic no-service customer receives a real empty state')
  response=await summary('client-a','?limit=1');data=validateSummary(expectStatus(response,200));assert.ok(data.projects.length<=1)
  check('summary limit is bounded and cursor-safe')
@@ -249,7 +255,9 @@ async function run(){
  assert.ok(refreshedSummary.projects.find(x=>x.service_project_id===project(310)).customer_todo_count<initialTodoCount)
  check('client task completion path re-reads the current server state and refreshes summary counts')
 
- const advisorDetail=snapshotData(expectStatus(await rt.call('advisor-a','projects/'+project(310)),200))
+ const advisorRead=await rt.call('advisor-a','projects/'+project(310))
+ assert.equal(advisorRead.status,200,JSON.stringify(advisorRead.body))
+ const advisorDetail=snapshotData(advisorRead.body)
  const stageUpdate=await rt.call('advisor-a','projects/'+project(310)+'/commands',{kind:'STAGE',payload:{revision:advisorDetail.project.revision,stage:'SCHOOL_SELECTION'}},'p1-adviser-stage-update')
  assert.equal(stageUpdate.status,200,JSON.stringify(stageUpdate.body))
  response=await call('client-a','projects/'+project(310));detail=snapshotData(expectStatus(response,200))
