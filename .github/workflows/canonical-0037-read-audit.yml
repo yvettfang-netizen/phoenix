@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22.13.0'
@@ -41,9 +42,11 @@ jobs:
           for path in 'docs/database/combined-0036-0037-20261105' 'database/canonical/verification/v0037/ui-state-review-regression.mjs' 'Phoenix Compass/education compass/server/src/index.ts' 'website/phoenix-nova-website-v5/components/canonical-family-preview.tsx' 'website/phoenix-nova-website-v5/app/api/canonical/session-projections/[...path]/route.ts' 'website/phoenix-nova-website-v5/app/[locale]/canonical-session-preview/page.tsx' 'website/phoenix-nova-website-v5/tests/canonical-session-projection.test.mjs'; do
             docker run --rm --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
           done
-          for path in 'docs/database/family-center-v2-20261105' 'database/canonical/verification/v0037/family-center-v2-regression.mjs' 'website/phoenix-nova-website-v5/components/family-center-v2.tsx' 'website/phoenix-nova-website-v5/components/family-center-v2.css' 'website/phoenix-nova-website-v5/lib/family-center-v2.ts' 'website/phoenix-nova-website-v5/lib/family-center-v2-fixtures.ts' 'website/phoenix-nova-website-v5/tests/family-center-v2.test.mjs' 'website/phoenix-nova-website-v5/app/[locale]/family-center/page.tsx'; do
+          for path in 'docs/database/family-center-v2-20261105' 'database/canonical/verification/v0037/family-center-v2-regression.mjs' 'database/canonical/verification/v0037/browser-failure-drills.mjs' 'database/canonical/verification/v0037/database-failure-drills.mjs' 'database/canonical/verification/v0037/failure-drill-recorder.mjs' 'website/phoenix-nova-website-v5/components/family-center-v2.tsx' 'website/phoenix-nova-website-v5/components/family-center-v2.css' 'website/phoenix-nova-website-v5/lib/family-center-v2.ts' 'website/phoenix-nova-website-v5/lib/family-center-v2-fixtures.ts' 'website/phoenix-nova-website-v5/tests/family-center-v2.test.mjs' 'website/phoenix-nova-website-v5/app/[locale]/family-center/page.tsx'; do
             docker run --rm --network none --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
           done
+      - name: Scan synthetic drill record summarizer
+        run: docker run --rm --network none --mount "type=bind,source=$PWD/database/canonical/verification/v0037/summarize-failure-drills.mjs,target=/scan,readonly" ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f dir /scan --redact=100 --no-banner --exit-code=1
       - name: Existing backend validation
         working-directory: Phoenix Compass/education compass/server
         run: |
@@ -64,7 +67,17 @@ jobs:
       - name: Combined 0036 0037 fresh upgrade negative audits opaque-session browser and fresh restore
         run: |
           export PLAYWRIGHT_MODULE="$RUNNER_TEMP/read-audit-browser/node_modules/playwright"
-          export FAMILY_DRILL_EVIDENCE_DIR="$RUNNER_TEMP/family-drills-${{ matrix.pg }}"
-          mkdir -p "$FAMILY_DRILL_EVIDENCE_DIR"
-          node database/canonical/verification/v0037/browser-failure-drills.mjs
-          node database/canonical/verification/v0037/projection-e2e.mjs '${{ matrix.pg }}' --family-center-v2 --failure-drills
+          evidence="$RUNNER_TEMP/family-drills-${{ matrix.pg }}"
+          mkdir -p "$evidence/browser" "$evidence/pg${{ matrix.pg }}"
+          FAMILY_DRILL_EVIDENCE_DIR="$evidence/browser" node database/canonical/verification/v0037/browser-failure-drills.mjs
+          FAMILY_DRILL_EVIDENCE_DIR="$evidence/pg${{ matrix.pg }}" node database/canonical/verification/v0037/projection-e2e.mjs '${{ matrix.pg }}' --family-center-v2 --failure-drills
+          node database/canonical/verification/v0037/summarize-failure-drills.mjs "$evidence"
+      - name: Preserve only synthetic scenario records and screenshots
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: synthetic-family-drills-pg${{ matrix.pg }}
+          path: |
+            ${{ runner.temp }}/family-drills-${{ matrix.pg }}/**/*.json
+            ${{ runner.temp }}/family-drills-${{ matrix.pg }}/**/*.png
+          if-no-files-found: warn

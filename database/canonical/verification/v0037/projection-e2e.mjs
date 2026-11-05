@@ -363,6 +363,7 @@ try{
   docker(['cp',pass,`${db.id}:/tmp/projection-backup.pgpass`]);docker(['exec',db.id,'chmod','600','/tmp/projection-backup.pgpass']);
   const restoreRecord=failureDrills?drillRecorder({directory:process.env.FAMILY_DRILL_EVIDENCE_DIR,pg:version,phase:'logical-restore'}):null;
   const restoreRow=restoreRecord?.start('R08','Logical backup/fresh-cluster restore subprobe','Dedicated backup login exports synthetic snapshot; original owned cluster stopped; restore into new owned cluster');
+  if(restoreRow){restoreRow.backup_started_at=restoreRow.injected_at;restoreRow.injected_at=null;}
   const sourceIntegrity=failureDrills?integritySnapshot(db,sql):null;
   const sourceAuditRows=failureDrills?Number(sql(db,'SELECT count(*) FROM audit.access_events')):null;
   for(const [program,args]of [['pg_dump',['-d','phoenix_canonical_dev','-Fc','-f','/tmp/projection.dump']],['pg_dumpall',['--roles-only','--no-role-passwords','-f','/tmp/projection-roles.sql']]])
@@ -382,6 +383,7 @@ try{
   assert(events.some(x=>x.decision==='ALLOW')&&events.some(x=>x.decision==='DENY')&&events.some(x=>x.decision==='UNAVAILABLE'));
   assert(events.every(x=>Object.keys(x).sort().join(',')==='decision,operation,requestId'));
   console.log('PASS guardian revocation, mapping revocation and identity disable take effect on next read; denial/error cleanup and audit metadata verified');
+  if(restoreRow)restoreRow.injected_at=new Date().toISOString();
   docker(['stop',db.id]);assert.equal((await call()).status,503);
   if(restoreRow){restoreRecord.mark(restoreRow,'detected_at');restoreRecord.mark(restoreRow,'contained_at');restoreRecord.mark(restoreRow,'recovery_started_at');}
   const restored=await cluster('restore');integrity(dump,manifest.dump);integrity(roles,manifest.roles);
