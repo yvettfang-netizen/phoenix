@@ -280,6 +280,7 @@ BEGIN
  SELECT * INTO w FROM service.workbench_settings WHERE service_project_id=p_project FOR UPDATE;
  is_staff:=service.workbench_writer(p_project);manage:=service.workbench_staff(p_project,true);
  BEGIN
+  IF auth.current_channel()='ADVISOR' AND NOT is_staff THEN RAISE EXCEPTION 'OBSERVER_WRITE_DENIED' USING ERRCODE='42501'; END IF;
   IF (p_body->>'revision')::integer IS DISTINCT FROM w.revision THEN RAISE EXCEPTION 'VERSION_CONFLICT' USING ERRCODE='40001'; END IF;
   IF p.project_status IN('COMPLETED','CANCELLED') THEN RAISE EXCEPTION 'PROJECT_TERMINAL' USING ERRCODE='40001'; END IF;
   IF p_kind<>'PROJECT_STATUS' AND (p.project_status<>'ACTIVE' OR NOT service.workbench_opened(p_project)) THEN

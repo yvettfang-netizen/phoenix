@@ -1,5 +1,6 @@
 import {randomBytes} from 'node:crypto';
 import assert from 'node:assert/strict';
+import {readdirSync} from 'node:fs';
 import {id} from './cluster.mjs';
 export async function runWorkbenchSuite(db,rt,primary=310,offset=0,checks=[]){
  const baselineMessages=Number(db.sql('SELECT count(*) FROM service.workbench_messages'));
@@ -8,6 +9,11 @@ export async function runWorkbenchSuite(db,rt,primary=310,offset=0,checks=[]){
  const read=async(alias='client-a',project=primary)=>expect(await rt.call(alias,'projects/'+id(project)));
  const revision=async project=>Number(db.sql("SELECT revision FROM service.workbench_settings WHERE service_project_id='"+id(project)+"'"));
  const command=async(alias,kind,payload,project=primary,key=undefined)=>rt.call(alias,'projects/'+id(project)+'/commands',{kind,payload:{revision:await revision(project),...payload}},key);
+ const observer=await read('observer');assert.equal(observer.project.staff,true);assert.equal(observer.project.write,false);
+ expect(await command('observer','MESSAGE',{subjectId:id(1),body:'Observer must not use client write path',audience:'CLIENT'}),403);
+ const objectsBefore=readdirSync(rt.objectsRoot,{recursive:true});
+ expect(await rt.call('observer','projects/'+id(primary)+'/materials',{revision:await revision(primary),subjectId:id(1),kind:'OBSERVER_DENIED',mime:'text/plain',contentBase64:Buffer.from('Synthetic read-only observer denial').toString('base64')}),403);
+ assert.deepEqual(readdirSync(rt.objectsRoot,{recursive:true}),objectsBefore);check('OBSERVER reads but cannot borrow client message/upload path; denied upload stages no bytes');
  const listed=expect(await rt.call('client-a','projects')).items;assert(listed.some(x=>x.id===id(primary))&&listed.some(x=>x.id===id(311)));assert(!listed.some(x=>[id(312),id(313),id(315)].includes(x.id)));check('signed/opened authorized projects; multiple projects; unopened hidden');
  let snapshot=await read();assert.equal(snapshot.project.viewerPrincipalId,id(201));assert.equal(snapshot.tasks.length,1);assert.equal(snapshot.project.write,false);assert(snapshot.subjects.every(s=>s.id===id(1)));
  expect(await rt.call('client-a','projects/'+id(312)),403);expect(await rt.call('outsider','projects/'+id(primary)),403);expect(await rt.call('advisor-a','projects/'+id(312)),403);check('same-family subject isolation, cross-family and unassigned-adviser denial');

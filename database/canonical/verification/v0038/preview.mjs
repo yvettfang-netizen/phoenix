@@ -6,9 +6,10 @@ assert(!existsSync('website/phoenix-nova-website-v5/.dev.vars'),'Preserve existi
 let db,rt,web,closing=false;
 const close=async()=>{if(closing)return;closing=true;await web?.close();await rt?.close();db?.cleanup();process.exit();};
 process.on('SIGINT',()=>void close());process.on('SIGTERM',()=>void close());
+process.stdin.setEncoding('utf8');process.stdin.on('data',data=>{if(data.trim()==='STOP')void close();});process.stdin.resume();
 try{
  db=await createCluster('16');rt=await startWorkbench(db,seedWorkbench(db));web=await startWebsite(rt,4688);
  const directory=path.resolve('out/service-project-workbench-v1');mkdirSync(directory,{recursive:true});
- writeFileSync(path.join(directory,'retained-preview.json'),JSON.stringify({started:new Date().toISOString(),pid:process.pid,container:db.container,label:db.nonce,origin:web.origin,apiOrigin:rt.origin,syntheticOnly:true,candidateSha:db.candidateSha,stop:'Send Ctrl+C to this retained preview process; owned website/API/container/private test directory are cleaned. No shared database or historical volume is deleted.'},null,2)+'\n');
+ writeFileSync(path.join(directory,'retained-preview.json'),JSON.stringify({started:new Date().toISOString(),pid:process.pid,container:db.container,label:db.nonce,work:db.work,origin:web.origin,apiOrigin:rt.origin,syntheticOnly:true,candidateSha:db.candidateSha,stop:'Send STOP followed by newline to this retained process for graceful cleanup (preferred for Windows piped sessions). Ctrl+C in an interactive terminal also has a signal handler. No shared database or historical volume is deleted.'},null,2)+'\n');
  console.log('RETAINED SYNTHETIC PREVIEW '+web.origin+'/zh/my-services');console.log('No real identity, deployment, production data or financial source activation.');
 }catch(error){console.error(error);await close();}

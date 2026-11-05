@@ -102,7 +102,7 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
     if(body.mime!=='text/plain'&&body.mime!=='application/pdf'||body.mime==='application/pdf'&&!bytes.subarray(0,5).equals(Buffer.from('%PDF-')))throw failure(422,'FILE_TYPE_NOT_SUPPORTED')
     if(body.mime==='text/plain')try{const text=new TextDecoder('utf-8',{fatal:true}).decode(bytes);if(text.includes('\0'))throw failure(422,'INVALID_UPLOAD')}catch{throw failure(422,'INVALID_UPLOAD')}
     const gate=(await c.query('SELECT service.workbench_snapshot($1) AS result',[project])).rows[0].result
-    if(gate.status!=='ALLOW'||gate.data?.schemaVersion!=='service-workbench.v1'||gate.data?.project?.domain!=='EDUCATION'||gate.data?.project?.status!=='ACTIVE'||gate.data?.project?.opened!==true||
+    if(gate.status!=='ALLOW'||gate.data?.schemaVersion!=='service-workbench.v1'||gate.data?.project?.staff===true&&gate.data?.project?.write!==true||gate.data?.project?.domain!=='EDUCATION'||gate.data?.project?.status!=='ACTIVE'||gate.data?.project?.opened!==true||
       !Array.isArray(gate.data?.subjects)||!gate.data.subjects.some((s:{id:string;documentsAllowed:boolean})=>s.id===body.subjectId&&s.documentsAllowed===true))return {status:'DENY'}
     const objectKey='mock/workbench/'+project+'/'+hash(identity.principalId+':'+identityKey(key,project))
     await deps.objects.put(objectKey,bytes)

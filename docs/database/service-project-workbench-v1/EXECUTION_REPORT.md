@@ -16,7 +16,7 @@ Task PHOENIX-SERVICE-PROJECT-WORKBENCH-V1. Work2026-11-05–06 Asia/Shanghai. Ex
 
 `database/canonical/forward-candidates/service-workbench/0038_service_project_workbench.sql`
 
-SHA-256: `922c78b08a3cdd29474d1962fd930082b64a0b4ea6d2b3e8a33c9c617e3d3ad8`.
+SHA-256: `4b82dc15b86b5936258a3d32a1b91ccbaf756e8ca76cd11a609bb6373c934ecf`.
 
 Active0001–0037 remain byte-exact, validated by existing `verification/v0037/verify-source.mjs`. Branch starts at PR58 SHA `a0123c7f39292274962b72b73c06828b85770599`. Inspected main remains `9de1e8ddeecbd338d53230ef0ff3b3a82ac3e2fc`. See [audit](AUDIT.md) for unrelated ongoing branches. This is a **stacked candidate**, not a claim that0036/0037/0038 have been accepted into main.
 
@@ -41,6 +41,8 @@ Local evidence root is ignored `out/service-project-workbench-v1`; private archi
 Browser retries originally failed because an exact accessible-label selector included select-option text. The actual retained failure body showed the form and version option existed; regression now selects the named document field. Earlier failed transcripts remain evidence, not hidden. React ref/render and impure-clock lint findings were corrected, without suppressing the lint rule. Scoped review also tightened catalogue to active HK MASTER programmes and excluded expired assignees.
 
 Final self-review also found that key allowlists alone could accept a nested object hidden in an allowed string field. The BFF now checks scalar types, IDs, dates and closed clinical arrays; negative tests place a synthetic private nested field under title/status/stage/template and require refusal. All180 previously recorded successful fresh/restored HTTP responses from PG16 were replayed through the stricter contract with zero invalid responses. This is implementation review, not an independent signed security conclusion.
+
+Further role review found a read-only OBSERVER could otherwise borrow client message/upload paths. SQL now refuses all observer commands; the server refuses before staging upload bytes; UI omits those controls. Permanent API and browser regressions use a separate observer principal with valid read Consent, including fresh/restored verification. The UI also restricts HK-specific stage/application/delivery creation to its Education template and explicitly marks unavailable domain templates. Existing migrations remain unchanged; only the unapproved0038 candidate was revised and its manifest updated. Earlier candidate hashes in raw evidence are superseded, not erased.
 
 ## Required negative/recovery coverage
 

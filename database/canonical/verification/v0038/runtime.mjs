@@ -4,7 +4,7 @@ const root=process.cwd(),require=createRequire(path.join(root,'Phoenix Compass/e
 const {Pool}=require('pg'),{createAppServer}=require('./dist/http/app.js'),{createServiceWorkbench,privateWorkbenchObjects}=require('./dist/services/service-workbench.js'),{AppError}=require('./dist/domain/errors.js');
 export async function startWorkbench(db,credentials){
  const connection=(user,password)=>({host:'127.0.0.1',port:db.port,database:'phoenix_canonical_dev',user,password,max:2,connectionTimeoutMillis:1500,query_timeout:5000,idleTimeoutMillis:3000});
- const sessions=new Map(),tokens={};const aliases={'client-a':[1,100,'FAMILY'],'client-b':[2,100,'FAMILY'],outsider:[3,101,'FAMILY'],'advisor-a':[10,100,'ADVISOR'],'advisor-b':[11,100,'ADVISOR'],manager:[12,100,'ADVISOR']};
+ const sessions=new Map(),tokens={};const aliases={'client-a':[1,100,'FAMILY'],'client-b':[2,100,'FAMILY'],outsider:[3,101,'FAMILY'],'advisor-a':[10,100,'ADVISOR'],'advisor-b':[11,100,'ADVISOR'],manager:[12,100,'ADVISOR'],observer:[13,100,'ADVISOR']};
  const login=async alias=>{assert(alias in aliases);const token=randomBytes(32).toString('base64url');sessions.set(token,{alias,expires:Date.now()+900000});tokens[alias]=token;return token;};
  for(const alias of Object.keys(aliases))await login(alias);
  const resolve=async authorization=>{const token=authorization?.match(/^Bearer ([A-Za-z0-9_-]{32,256})$/)?.[1],session=sessions.get(token);if(!session)throw new AppError(401,'SIGN_IN_REQUIRED','Synthetic session required');
