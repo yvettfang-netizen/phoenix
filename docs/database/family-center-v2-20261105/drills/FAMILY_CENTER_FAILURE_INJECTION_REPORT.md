@@ -32,6 +32,8 @@ node database/canonical/verification/v0037/projection-e2e.mjs 17 --family-center
 
 ca1114adf0d5a4c9046f36162f62f063ac1a80a8的更严格导航验收实际失败：维护页原/contact目标404（browser-final.txt及final/browser失败JSON保留）。修复为现有education#consultation入口；保持原200断言不变，重新执行新SHA，不沿用失败提交的通过状态。该问题为维护导航缺陷，没有观察到权限泄露。
 
+随后f5cbf14398bb5d36a822a8a5cecaaddfa6d4e98e已通过维护页及目标导航，但R13重启后的旧浏览器页与热重载并发导航冲突而退出1（browser-fixed.txt及verified/browser保留）。复验改为关闭旧页、在同一合成认证context中新开页；不降低直接URL404、重新读取200等断言。所有失败记录与最终通过记录按目录/SHA分开保存。
+
 实际结果：R02跨家庭404且DB DENY关联请求ID；R04三种非法JWT401、伪造家庭头403、三种票据误用拒绝；R06不兼容DTO503；R07数据库暂停503、恢复200且上下文/票据0；R12审计INSERT失败503、恢复200且仅新增1条真实审计。PG16/17分别在fresh/restored重跑；37账本、93表、83策略。R01/R03浏览器采用实际页面/BFF及明示的loopback上游double，不能声称真实provider/Agent或Staging已联通。
 
 独立Draft PR基于PR57分支，不重复创建数据库，不改SQL、不合并、不部署、不连接腾讯。代码和可公开合成测试经固定镜像Gitleaks扫描；脱敏原始日志及截图留私有证据分支。单次测试FAIL必须保留；任何真实越权或完整性异常触发停止和安全审核，不自动解除S3。
