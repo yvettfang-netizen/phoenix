@@ -6,9 +6,9 @@ import {pathToFileURL} from 'node:url';
 import {createCluster,id,protect} from './cluster.mjs';
 import {seedWorkbench} from './fixtures.mjs';
 import {startWorkbench} from './runtime.mjs';
-export async function startWebsite(rt,port=4686){
+export async function startWebsite(rt,port=4686,options={}){
  const website=path.resolve('website/phoenix-nova-website-v5'),config=path.join(website,'.dev.vars');assert(!existsSync(config),'Existing preview configuration must be preserved');
- const content='SERVICE_WORKBENCH_ENABLED=true\nSERVICE_WORKBENCH_SYNTHETIC_PREVIEW=true\nSERVICE_WORKBENCH_API_ORIGIN='+rt.origin+'\nFAMILY_CENTER_V2_ENABLED=true\n';
+ const content='SERVICE_WORKBENCH_ENABLED=true\nSERVICE_WORKBENCH_SYNTHETIC_PREVIEW=true\nSERVICE_WORKBENCH_API_ORIGIN='+rt.origin+'\nFAMILY_CENTER_V2_ENABLED=true\n'+(options.familyDashboard?'FAMILY_OS_DASHBOARD_ENABLED=true\n':'');
  writeFileSync(config,content,{mode:0o600,flag:'wx'});protect(config);
  const env={...process.env,WRANGLER_SEND_METRICS:'false',WRANGLER_WRITE_LOGS:'false',WRANGLER_LOG_PATH:'.wrangler/logs',MINIFLARE_REGISTRY_PATH:'.wrangler/registry'};
  for(const name of Object.keys(env))if(/proxy/i.test(name))delete env[name];
