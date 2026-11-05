@@ -28,14 +28,14 @@ const browser = await chromium.launch({ headless: true, ...(process.env.HEALTH_B
 const results = [];
 const passed = name => results.push({ name, status: "PASS" });
 
-async function inspectBrandImage(locator, route, role, width) {
+async function inspectBrandImage(locator, route, role, width, wrapperBackground = BRAND_ASSETS[role].wrapperBackground) {
   assert.equal(await locator.count(), 1, `${route} ${role} must render one brand image`);
   const image = locator.first();
   await image.evaluate(element => element.decode());
   const details = await image.evaluate(element => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
-    const wrapper = element.closest(".brand-mark__asset-wrap");
+    const wrapper = element.closest(".brand-asset-wrap");
     const wrapperStyle = wrapper ? getComputedStyle(wrapper) : null;
     return {
       src: element.currentSrc || element.getAttribute("src") || "",
@@ -61,12 +61,11 @@ async function inspectBrandImage(locator, route, role, width) {
   assert.equal(details.naturalHeight, expected.height, `${route}: ${role} asset height changed`);
   assert.ok(details.width > 0 && details.height > 0, `${route}: ${role} image has no rendered box`);
   assert.equal(details.objectFit, "contain", `${route}: ${role} must use object-fit: contain`);
-  // The Founder-approved B lockup is a single transparent composite PNG.
-  // `object-fit: contain` preserves the uploaded 2172×724 aspect ratio.
-  if (expected.wrapperBackground === "transparent") {
+  assert.ok(Math.abs((details.width / details.height) - (details.naturalWidth / details.naturalHeight)) < 0.01, `${route}: ${role} image is cropped or distorted`);
+  if (wrapperBackground === "transparent") {
     assert.ok(TRANSPARENT.has(details.wrapperBackground), `${route}: ${role} wrapper must remain transparent`);
   } else {
-    assert.equal(details.wrapperBackground, expected.wrapperBackground, `${route}: ${role} wrapper must use the Phoenix Ivory surface`);
+    assert.equal(details.wrapperBackground, wrapperBackground, `${route}: ${role} wrapper must use the Phoenix Ivory surface`);
   }
   assert.ok(!["hidden", "clip"].includes(details.wrapperOverflow), `${route}: ${role} wrapper must not crop its image`);
   assert.equal(details.wrapperBorder, "0px", `${route}: ${role} wrapper must not frame its image`);
@@ -82,15 +81,16 @@ async function assertSharedBrandChrome(page, route, width) {
   await page.locator("footer").scrollIntoViewIfNeeded();
   await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
-  const expectedFooterWidth = width <= 680 ? 165 : 220;
-  assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer composite Logo must be ${expectedFooterWidth}px wide`);
+  const expectedFooterWidth = /^\/(zh|en)$/.test(route) ? 150 : width <= 700 ? 165 : 220;
+  assert.ok(Math.abs(footer.width - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand must be ${expectedFooterWidth}px wide`);
   assert.equal(await page.locator("footer.site-footer").evaluate(element => getComputedStyle(element).backgroundColor), FOOTER_SURFACE, `${route}: Footer must use the Phoenix Ivory surface`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${route} ${width}px horizontal overflow`);
 }
 
 async function assertCompassHeader(page, route, width) {
-  await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
+  // The existing questionnaire uses the approved ivory carrier on its dark header.
+  await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width, IVORY_SURFACE);
   assert.equal(await page.locator("footer .brand-mark img").count(), 0, `${route}: questionnaire must not invent a second footer brand image`);
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
 }
@@ -98,9 +98,9 @@ async function assertCompassHeader(page, route, width) {
 function expectedPrimaryHrefs(locale) {
   return [
     `/${locale}`,
-    `/${locale}/compass#education`,
-    `/${locale}/compass#identity`,
-    `https://wealth.phoenixnova.com.cn/${locale}`,
+    `/${locale}/education`,
+    `/${locale}/identity`,
+    `/${locale}/compass#wealth`,
     `/${locale}/health`,
     `/${locale}/about`,
     `/${locale}/insights`,
@@ -122,7 +122,7 @@ async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
   const hrefs = await links.evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute("href")));
   assert.deepEqual(hrefs.slice(0, expected.length), expected, `${locale}: primary navigation hrefs changed`);
   if (mobile) {
-    assert.equal(hrefs[7], `/${locale}/family-center`, `${locale}: mobile Family Center href changed`);
+    assert.equal(hrefs[7], `/${locale}/account`, `${locale}: mobile Family Center must use the controlled account entry`);
     assert.equal(hrefs[8], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
     await page.locator(".mobile-menu summary").click();
   }
@@ -324,12 +324,12 @@ try {
     await noScriptPage.locator('#referral-source').selectOption('uk');
     await noScriptPage.locator('footer').scrollIntoViewIfNeeded();
     await noScriptPage.locator('footer img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
-    // The no-JS path has already completed DOM loading above; waiting for a
-    // second network-idle window is flaky on the Windows frontend adapter.
+    // Observe the form itself; unrelated lazy resources need not become idle.
     const transmissions = [];
     const recordRequest = request => transmissions.push(request.url());
     noScriptPage.on('request', recordRequest);
     await noScriptPage.locator('#referral-source').press('Enter');
+    await noScriptPage.waitForTimeout(200);
     assert.equal(await submit.isDisabled(), true);
     assert.deepEqual(transmissions, [], 'No-JS form must not transmit fields through a native GET');
     noScriptPage.off('request', recordRequest);
@@ -348,4 +348,3 @@ try {
   await browser.close();
   console.log(JSON.stringify(results));
 }
-

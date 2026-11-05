@@ -32,6 +32,17 @@ jobs:
           cache: npm
           cache-dependency-path: ${{ matrix.site }}/package-lock.json
       - run: npm ci
+      - name: Block high and critical V5 dependency vulnerabilities
+        if: matrix.site == 'website/phoenix-nova-website-v5'
+        run: npm audit --audit-level=high --json > dependency-audit.json
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - name: Preserve V5 dependency audit evidence
+        if: always() && matrix.site == 'website/phoenix-nova-website-v5'
+        uses: actions/upload-artifact@v4
+        with:
+          name: v5-dependency-audit-${{ github.sha }}
+          path: website/phoenix-nova-website-v5/dependency-audit.json
+          if-no-files-found: warn
+          retention-days: 14

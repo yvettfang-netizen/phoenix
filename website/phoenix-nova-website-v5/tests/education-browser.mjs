@@ -84,14 +84,14 @@ async function assertContrast(selector, route, minimumRatio = 4.5) {
 }
 
 async function assertBrandAssets(route) {
-  const brands = await page.locator(".brand-mark__asset").evaluateAll(images => images.map(image => ({
+  const brands = await page.locator(".brand-asset").evaluateAll(images => images.map(image => ({
     src: image.getAttribute("src"),
     ratio: image.clientWidth / image.clientHeight,
     width: image.clientWidth,
     filter: getComputedStyle(image).filter,
   })));
   assert.equal(brands.length, 2, `${route}: shared Header/Footer must render two brand assets`);
-  assert.ok(brands.every(brand => brand.src.endsWith("/brand/official/v3/phoenix-nova-bilingual-b@2x.png") && Math.abs(brand.ratio - 2172 / 724) < 0.06 && brand.filter === "none" && brand.width >= 155 && brand.width <= 225), `${route}: B brand asset rendering changed`);
+  assert.ok(brands.every(brand => brand.src === "/brand/official/v3/phoenix-nova-bilingual-b@2x.png" && Math.abs(brand.ratio - 2172 / 724) < 0.06 && brand.filter === "none" && brand.width >= 150 && brand.width <= 230), `${route}: approved brand asset rendering changed`);
 }
 
 async function assertAccessibleEducationPage(locale, width) {
@@ -127,8 +127,8 @@ async function assertCompass(pageRoute) {
   assert.equal(await controlled.count(), 1, `${route}: controlled Education Compass marker missing`);
   assert.match(await controlled.innerText(), /(?:尚未|暂未|未开放|未接通|not open|not connected|unavailable)/i, `${route}: Compass availability copy is not truthful`);
   const start = page.getByRole("button", { name: /开始(?:教育(?:规划)?)?(?:评估|测评)|(?:Start )?Education(?: planning)? assessment/i });
-  assert.equal(await start.count(), 1, `${route}: the controlled Compass assessment action must be present once`);
-  assert.equal(await start.first().isDisabled(), true, `${route}: the controlled assessment action must remain disabled`);
+  assert.equal(await start.count(), 3, `${route}: Hero, pathways and Compass each retain a controlled assessment action`);
+  for (const action of await start.all()) assert.equal(await action.isDisabled(), true, `${route}: every assessment action must remain disabled`);
   assert.equal(await compass.getByRole("button", { name: /开始(?:教育规划)?(?:评估|测评)|Start(?: education planning)? assessment/i }).count(), 1, `${route}: Compass has one assessment action`);
   assert.equal(await page.locator('a[href*="/education/assessment"],a[href*="/education/result"],a[href*="/education/questionnaire"]').count(), 0, `${route}: controlled Compass must not expose questionnaire/result routes`);
 }
@@ -311,4 +311,3 @@ try {
   await browser.close();
   console.log(JSON.stringify({ passed: results.filter(result => result.status === "PASS").length, failed: results.filter(result => result.status === "FAIL").length }));
 }
-
