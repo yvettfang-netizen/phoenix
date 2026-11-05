@@ -5,6 +5,50 @@ BEGIN;
 -- Project authority. It does not create a customer, family, contract, payment,
 -- task, milestone or project master.
 
+CREATE FUNCTION service.workbench_customer_scope(p_project uuid) RETURNS boolean
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,service,pg_temp AS $scope$
+ SELECT coalesce(auth.current_channel()='FAMILY'
+   AND service.workbench_can_read(p_project) AND service.workbench_opened(p_project)
+   AND EXISTS(SELECT FROM service.projects p WHERE p.service_project_id=p_project
+     AND p.primary_domain IN('EDUCATION','IDENTITY','HEALTH','WEALTH')
+     AND (p.primary_domain='HEALTH' OR NOT EXISTS(
+       SELECT FROM service.project_domains d WHERE d.service_project_id=p_project AND d.business_domain='HEALTH'))),false)
+$scope$;
+REVOKE ALL ON FUNCTION service.workbench_customer_scope(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION service.workbench_customer_scope(uuid) TO phoenix_canonical_service_workbench;
+
+CREATE FUNCTION service.workbench_customer_snapshot(p_project uuid) RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,service,audit,pg_temp AS $snapshot$
+BEGIN
+ IF NOT service.workbench_customer_scope(p_project) THEN
+  PERFORM audit.record_access_event('READ','SERVICE_WORKBENCH',p_project,'DENY','CUSTOMER_SCOPE_DENIED');
+  RETURN jsonb_build_object('status','DENY');
+ END IF;
+ RETURN service.workbench_snapshot(p_project);
+END
+$snapshot$;
+REVOKE ALL ON FUNCTION service.workbench_customer_snapshot(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION service.workbench_customer_snapshot(uuid) TO phoenix_canonical_service_workbench;
+
+CREATE FUNCTION service.workbench_customer_list() RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,service,audit,pg_temp AS $list$
+DECLARE v_items jsonb;
+BEGIN
+ SELECT coalesce(jsonb_agg(jsonb_build_object('id',p.service_project_id,'title',p.project_name,
+   'domain',p.primary_domain,'status',p.project_status,'stage',w.current_stage,
+   'opened',true,'template',w.template_kind) ORDER BY p.updated_at DESC),'[]'::jsonb)
+ INTO v_items FROM service.projects p JOIN service.workbench_settings w USING(service_project_id)
+ WHERE service.workbench_customer_scope(p.service_project_id);
+ PERFORM audit.record_access_event('READ','SERVICE_WORKBENCH_LIST',NULL,'ALLOW','CUSTOMER_PROJECT_LIST');
+ RETURN jsonb_build_object('status','ALLOW','data',jsonb_build_object('schemaVersion','service-project-list.v1','items',v_items));
+END
+$list$;
+REVOKE ALL ON FUNCTION service.workbench_customer_list() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION service.workbench_customer_list() TO phoenix_canonical_service_workbench;
+
 CREATE FUNCTION service.workbench_summary(
   p_limit integer DEFAULT 20,
   p_cursor_at timestamptz DEFAULT NULL,
@@ -20,6 +64,9 @@ DECLARE
   v_last_at timestamptz;
   v_last_project uuid;
 BEGIN
+  IF auth.current_channel() IS DISTINCT FROM 'FAMILY' THEN
+    RETURN jsonb_build_object('status','DENY');
+  END IF;
   -- Keep the page bounded at the database boundary. Invalid values are
   -- rejected instead of silently truncating the caller's requested page.
   IF p_limit IS NULL OR p_limit < 1 OR p_limit > 50
@@ -68,6 +115,8 @@ BEGIN
      AND q.principal_kind='ADVISOR'
     LEFT JOIN core.people n ON n.person_id=q.person_id
     WHERE service.workbench_can_read(p.service_project_id)
+      AND service.workbench_customer_scope(p.service_project_id)
+      AND p.created_at<=v_as_of AND p.updated_at<=v_as_of
       AND (service.workbench_staff(p.service_project_id) OR service.workbench_opened(p.service_project_id))
       AND (p_cursor_at IS NULL OR (p.updated_at,p.service_project_id)<(p_cursor_at,p_cursor_project))
   ), projected AS (
@@ -81,6 +130,7 @@ BEGIN
         )
         FROM service.project_milestones m
         WHERE m.service_project_id=a.service_project_id
+          AND m.created_at<=v_as_of
           AND m.status='PENDING'
         ORDER BY m.target_at NULLS LAST,m.project_milestone_id
         LIMIT 1
@@ -90,6 +140,7 @@ BEGIN
         FROM service.tasks t
         JOIN service.workbench_task_scope s USING (task_id)
         WHERE t.service_project_id=a.service_project_id
+          AND t.created_at<=v_as_of
           AND s.audience='CLIENT'
           AND t.task_status NOT IN ('COMPLETED','CANCELLED')
           AND service.workbench_subject(a.service_project_id,s.subject_person_id)
@@ -99,6 +150,7 @@ BEGIN
         FROM service.tasks t
         JOIN service.workbench_task_scope s USING (task_id)
         WHERE t.service_project_id=a.service_project_id
+          AND t.created_at<=v_as_of
           AND s.audience='CLIENT'
           AND t.task_status NOT IN ('COMPLETED','CANCELLED')
           AND t.due_at IS NOT NULL
@@ -115,6 +167,7 @@ BEGIN
         )
         FROM service.workbench_events e
         WHERE e.service_project_id=a.service_project_id
+          AND e.occurred_at<=v_as_of
           AND e.audience='CLIENT'
           AND (e.subject_person_id IS NULL OR service.workbench_subject(a.service_project_id,e.subject_person_id))
         ORDER BY e.occurred_at DESC,e.event_id DESC

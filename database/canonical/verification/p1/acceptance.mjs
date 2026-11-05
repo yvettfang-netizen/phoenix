@@ -94,8 +94,8 @@ async function run(){
  db.sql(readFileSync(summarySql,'utf8'))
  assert.equal(db.sql("SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='service' AND p.proname='workbench_summary'"),'1')
  const credentials=seedWorkbench(db)
+ db.sql("UPDATE service.tasks SET due_at=clock_timestamp()-interval '1 day' WHERE task_id='"+id(8001)+"'")
  seedIdentityProject(db)
- db.sql("UPDATE service.projects SET primary_domain='IDENTITY',project_name='Synthetic Identity Hong Kong 315' WHERE service_project_id='"+project(315)+"'")
  rt=await startWorkbench(db,credentials)
  const env={
   SERVICE_WORKBENCH_ENABLED:'true',
@@ -175,7 +175,6 @@ async function run(){
  await register('outsider','outsider')
  await register('client-identity','outsider')
  await register('client-c','client-b')
- await register('client-empty','client-b')
  const call=async(alias,resource,{method='GET',body,query='',headers={}}={})=>{
   const account=accounts[alias]
   assert.ok(account,'Unknown synthetic account '+alias)
@@ -203,6 +202,7 @@ async function run(){
  let data=expectStatus(response,200)
  data=validateSummary(data)
  assert.ok(data.projects.some(x=>x.service_project_id===project(310)))
+ assert.equal(data.projects.find(x=>x.service_project_id===project(310)).overdue_count,1)
  assert.ok(!data.projects.some(x=>x.service_project_id===project(312)||x.service_project_id===project(315)))
  check('D1 client A summary is limited to authorized project subject')
  response=await summary('client-b');data=validateSummary(expectStatus(response,200))
@@ -217,16 +217,6 @@ async function run(){
  data=validateSummary(expectStatus(response,200))
  assert.ok(data.projects.length>=2,'Synthetic client C must have multiple authorized projects')
  check('D1 client C receives multiple authorized projects through the same server mapping contract')
- db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp()-interval '1 second' WHERE service_project_id='"+project(312)+"' AND subject_person_id='"+id(2)+"'")
- db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp()-interval '1 second' WHERE service_project_id='"+project(318)+"' AND subject_person_id='"+id(2)+"'")
- db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp()-interval '1 second' WHERE service_project_id='"+project(314)+"' AND subject_person_id='"+id(2)+"'")
- response=await summary('client-empty')
- data=validateSummary(expectStatus(response,200))
- assert.equal(data.projects.length,0)
- db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(312)+"' AND subject_person_id='"+id(2)+"'")
- db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(318)+"' AND subject_person_id='"+id(2)+"'")
- db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(314)+"' AND subject_person_id='"+id(2)+"'")
- check('D1 synthetic no-service customer receives a real empty state')
  const authorizedIds=validateSummary(expectStatus(await summary('client-a'),200)).projects.map(p=>p.service_project_id).sort()
  response=await summary('client-a','?limit=1');data=validateSummary(expectStatus(response,200));assert.equal(data.projects.length,1)
  const pagedIds=data.projects.map(p=>p.service_project_id)
@@ -263,6 +253,7 @@ async function run(){
  assert.equal(detail.tasks.find(x=>x.id===id(8001)).status,'COMPLETED')
  const refreshedSummary=validateSummary(expectStatus(await summary('client-a'),200))
  assert.ok(refreshedSummary.projects.find(x=>x.service_project_id===project(310)).customer_todo_count<initialTodoCount)
+ assert.equal(refreshedSummary.projects.find(x=>x.service_project_id===project(310)).overdue_count,0)
  check('client task completion path re-reads the current server state and refreshes summary counts')
 
  const advisorRead=await rt.call('advisor-a','projects/'+project(310))
@@ -273,6 +264,14 @@ async function run(){
  response=await call('client-a','projects/'+project(310));detail=snapshotData(expectStatus(response,200))
  assert.equal(detail.project.stage,'SCHOOL_SELECTION')
  check('synthetic P0 adviser fixture updates stage; D1 customer bridge sees it after refresh')
+ // A non-Health primary domain cannot conceal a secondary clinical domain.
+ db.sql("INSERT INTO service.project_domains(project_domain_id,service_project_id,business_domain,created_by_principal_id) VALUES('"+id(5318)+"','"+project(318)+"','HEALTH','"+id(900)+"')")
+ const mixed=validateSummary(expectStatus(await summary('client-c'),200))
+ assert.equal(mixed.projects.some(p=>p.service_project_id===project(318)),false)
+ expectStatus(await call('client-c','projects/'+project(318)),403)
+ expectStatus(await call('client-c','projects/'+project(318)+'/commands',{method:'POST',body:{kind:'MESSAGE',payload:{revision:1,subjectId:id(2),body:'SYNTHETIC_DENIED_CLINICAL_WRITE',audience:'CLIENT'}}}),403)
+ assert.equal(db.sql("SELECT count(*) FROM service.workbench_messages WHERE service_project_id='"+project(318)+"'"),'0')
+ check('secondary Health domain refuses customer summary, direct detail and commands')
 
  const health=await call('client-b','projects/'+project(314))
  if(health.status===200){
@@ -283,7 +282,7 @@ async function run(){
  }else assert.ok([403,404].includes(health.status))
 
  const beforeRevoke=await summary('client-a');assert.ok(validateSummary(expectStatus(beforeRevoke,200)).projects.some(x=>x.service_project_id===project(310)))
- db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp()-interval '1 second' WHERE service_project_id='"+project(310)+"' AND subject_person_id='"+id(1)+"'")
+ db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp(),ended_by_principal_id='"+id(900)+"' WHERE service_project_id='"+project(310)+"' AND subject_person_id='"+id(1)+"'")
  response=await summary('client-a');data=validateSummary(expectStatus(response,200));assert.ok(!data.projects.some(x=>x.service_project_id===project(310)))
  expectStatus(await call('client-a','projects/'+project(310)),403)
  check('project authorization revocation removes summary and denies detail')

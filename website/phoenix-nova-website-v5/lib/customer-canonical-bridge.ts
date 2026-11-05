@@ -19,7 +19,7 @@ export async function handleCustomerServices(request:Request,env:WorkbenchEnv,mo
  if(!customerBridgeEnabled(env,mode))return fail(404,"NOT_FOUND");
  const url=new URL(request.url);
  if(!["localhost","127.0.0.1"].includes(url.hostname)||(resource==="summary"?summarySearch(url)===null:!!url.search)||
-  ["authorization","x-customer-id","x-family-id","x-project-id","x-principal-id","x-role","x-channel","x-source-system"].some(h=>request.headers.has(h))||
+  ["authorization","x-customer-id","x-family-id","x-project-id","x-principal-id","x-role","x-channel","x-source-system","x-phoenix-customer-bridge"].some(h=>request.headers.has(h))||
   request.headers.get("sec-fetch-site")==="cross-site"||request.headers.has("origin")&&request.headers.get("origin")!==url.origin)
   return fail(403,"ACCESS_DENIED");
  if(resource==="dev-session")return fail(404,"NOT_FOUND");

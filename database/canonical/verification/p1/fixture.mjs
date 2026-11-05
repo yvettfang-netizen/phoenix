@@ -12,13 +12,15 @@ import {startWorkbench} from '../v0038/runtime.mjs'
 const project=n=>id(n)
 
 export function seedIdentityProject(db){
- db.sql("INSERT INTO service.projects(service_project_id,client_id,family_id,project_code,project_name,project_status,primary_domain,created_by_principal_id,updated_by_principal_id) VALUES('"+project(318)+"','"+id(500)+"','"+id(100)+"','SYN_PROJECT_318','Synthetic Identity Planning 318','ACTIVE','IDENTITY','"+id(900)+"','"+id(900)+"');"+
-  "INSERT INTO service.workbench_settings VALUES('"+project(318)+"','GENERAL','Synthetic identity planning and document coordination','DISCOVERY',now()+interval '7 days',1);"+
-  "INSERT INTO service.project_subjects(project_subject_id,service_project_id,family_id,subject_person_id,subject_role,data_scope,created_by_principal_id) VALUES('"+id(918)+"','"+project(318)+"','"+id(100)+"','"+id(2)+"','SERVICE_RECIPIENT','IDENTITY','"+id(900)+"');"+
-  "INSERT INTO service.project_parties(project_party_id,service_project_id,party_role,person_id,valid_from,created_by_principal_id) VALUES('"+id(1918)+"','"+project(318)+"','CONTRACTING_PARTY','"+id(2)+"',now()-interval '1 hour','"+id(900)+"');"+
-  "INSERT INTO service.workbench_commercial_events VALUES('"+id(13180)+"','"+project(318)+"','phoenix_operations','SYN_318_CONTRACT','CONTRACT_SIGNED','SYN_REFERENCE_318_CONTRACT','"+'b'.repeat(64)+"',1,now()-interval '1 hour',clock_timestamp(),'"+id(901)+"'),"+
-  "('"+id(13181)+"','"+project(318)+"','phoenix_operations','SYN_318_PAYMENT','PAYMENT_CONFIRMED','SYN_REFERENCE_318_PAYMENT','"+'b'.repeat(64)+"',2,now()-interval '1 hour',clock_timestamp(),'"+id(901)+"'),"+
-  "('"+id(13182)+"','"+project(318)+"','phoenix_operations','SYN_318_OPENING','OPENING_APPROVED','SYN_REFERENCE_318_OPENING','"+'b'.repeat(64)+"',3,now()-interval '1 hour',clock_timestamp(),'"+id(901)+"');")
+ // End the old grant without rewriting terminal history.
+ db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp(),ended_by_principal_id='"+id(900)+"' WHERE service_project_id='"+project(315)+"' AND status='ACTIVE'")
+ for(const [n,subject,family,name] of [[318,2,100,'Synthetic Identity Planning 318'],[319,3,101,'Synthetic Identity Hong Kong 319']]){
+  db.sql("INSERT INTO service.projects(service_project_id,client_id,family_id,project_code,project_name,project_status,primary_domain,created_by_principal_id,updated_by_principal_id) VALUES('"+project(n)+"','"+id(400+family)+"','"+id(family)+"','SYN_PROJECT_"+n+"','"+name+"','ACTIVE','IDENTITY','"+id(900)+"','"+id(900)+"');"+
+   "INSERT INTO service.workbench_settings VALUES('"+project(n)+"','GENERAL','Synthetic Identity coordination','DISCOVERY',now()+interval '7 days',1);"+
+   "INSERT INTO service.project_subjects(project_subject_id,service_project_id,family_id,subject_person_id,subject_role,data_scope,created_by_principal_id) VALUES('"+id(600+n)+"','"+project(n)+"','"+id(family)+"','"+id(subject)+"','SERVICE_RECIPIENT','IDENTITY','"+id(900)+"');"+
+   "INSERT INTO service.project_parties(project_party_id,service_project_id,party_role,person_id,valid_from,created_by_principal_id) VALUES('"+id(1600+n)+"','"+project(n)+"','CONTRACTING_PARTY','"+id(subject)+"',now()-interval '1 hour','"+id(900)+"');")
+  for(const [index,kind] of ['CONTRACT_SIGNED','PAYMENT_CONFIRMED','OPENING_APPROVED'].entries())db.sql("INSERT INTO service.workbench_commercial_events VALUES('"+id(10000+n*10+index)+"','"+project(n)+"','phoenix_operations','SYN_"+n+"_"+index+"','"+kind+"','SYN_REFERENCE_"+n+"_"+index+"','"+'b'.repeat(64)+"',"+(index+1)+",now()-interval '1 hour',clock_timestamp(),'"+id(901)+"')")
+ }
 }
 
 async function createD1(root,origin){
@@ -44,8 +46,6 @@ export async function startP1Fixture({root=process.cwd(),version='16'}={}){
  db.sql(readFileSync(summarySql,'utf8'))
  const credentials=seedWorkbench(db)
  seedIdentityProject(db)
- // Project 315 is a synthetic Identity project used only by this isolated harness.
- db.sql("UPDATE service.projects SET primary_domain='IDENTITY',project_name='Synthetic Identity Hong Kong 315' WHERE service_project_id='"+project(315)+"'")
  const rt=await startWorkbench(db,credentials)
  const env={
   SERVICE_WORKBENCH_ENABLED:'true',
@@ -174,10 +174,7 @@ export async function startP1Fixture({root=process.cwd(),version='16'}={}){
   return{status:response.status,data}
  }
  const revoke=async(projectNumber,subjectNumber)=>{
-  db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp()-interval '1 second' WHERE service_project_id='"+project(projectNumber)+"' AND subject_person_id='"+id(subjectNumber)+"'")
- }
- const restore=async(projectNumber,subjectNumber)=>{
-  db.sql("UPDATE service.project_subjects SET status='ACTIVE',valid_until=NULL WHERE service_project_id='"+project(projectNumber)+"' AND subject_person_id='"+id(subjectNumber)+"'")
+  db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp(),ended_by_principal_id='"+id(900)+"' WHERE service_project_id='"+project(projectNumber)+"' AND subject_person_id='"+id(subjectNumber)+"'")
  }
  const close=async()=>{
   try{bridgeServer.closeAllConnections();await new Promise(resolve=>bridgeServer.close(()=>resolve()))}catch{}
@@ -186,5 +183,5 @@ export async function startP1Fixture({root=process.cwd(),version='16'}={}){
   try{await rt.close()}catch{}
   try{db.cleanup()}catch{}
  }
- return{root,version,db,rt,mf,env,bridge,auth,config,provider,accounts,mappings,bridgeOrigin,emptyApi,call,summary,revoke,restore,close,project,id}
+ return{root,version,db,rt,mf,env,bridge,auth,config,provider,accounts,mappings,bridgeOrigin,emptyApi,call,summary,revoke,close,project,id}
 }

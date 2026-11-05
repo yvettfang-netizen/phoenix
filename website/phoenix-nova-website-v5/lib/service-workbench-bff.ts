@@ -7,7 +7,7 @@ export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mo
  const reply=(status:number,code:string)=>Response.json({error:{code}},{status,headers});
  if(!workbenchEnabled(env,mode))return reply(404,"NOT_FOUND");
  const url=new URL(request.url);
- if(!["127.0.0.1","localhost"].includes(url.hostname)||(resource==="summary"?summarySearch(url)===null:!!url.search)||["x-family-id","x-role","x-principal-id","x-channel","x-source-system","authorization"].some(h=>request.headers.has(h))||
+ if(!["127.0.0.1","localhost"].includes(url.hostname)||(resource==="summary"?summarySearch(url)===null:!!url.search)||["x-family-id","x-role","x-principal-id","x-channel","x-source-system","authorization","x-phoenix-customer-bridge"].some(h=>request.headers.has(h))||
   request.headers.get("sec-fetch-site")==="cross-site"||request.headers.has("origin")&&request.headers.get("origin")!==url.origin)return reply(403,"ACCESS_DENIED");
  if(!["GET","POST"].includes(request.method))return reply(405,"METHOD_NOT_ALLOWED");
  if(request.method==="POST"&&request.headers.get("origin")!==url.origin)return reply(403,"ORIGIN_REQUIRED");
@@ -35,6 +35,7 @@ export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mo
    const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}body=bytes.buffer;
   }
   const h:Record<string,string>={"Cache-Control":"no-store"};if(!login)h.Authorization="Bearer "+token;
+  if(trustedToken)h["X-Phoenix-Customer-Bridge"]="p1";
   if(body)h["Content-Type"]="application/json";
   const key=request.headers.get("idempotency-key");if(key)h["Idempotency-Key"]=key;
   const response=await fetch(new URL("/v1/service-workbench/"+resource+(resource==="summary"?url.search:""),upstream),{method:request.method,headers:h,body,redirect:"manual",signal:AbortSignal.timeout(12000)});

@@ -142,7 +142,7 @@ async function main(){
  let view=await pageFor('client-a','en',1440)
  await view.page.locator('[data-family-service-overview]').waitFor()
  await view.page.getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).waitFor()
- assert.equal(await view.page.getByRole('heading',{name:'Synthetic Identity Hong Kong 315',exact:true}).count(),0)
+ assert.equal(await view.page.getByRole('heading',{name:'Synthetic Identity Hong Kong 319',exact:true}).count(),0)
  await noOverflow(view.page,'client-a-en-1440')
  await shot(view.page,'client-a-en-1440')
  await view.page.setViewportSize({width:390,height:1100})
@@ -170,17 +170,16 @@ async function main(){
  await view.context.close()
 
  view=await pageFor('client-identity','en',1440)
- await view.page.getByRole('heading',{name:'Synthetic Identity Hong Kong 315',exact:true}).waitFor()
+ await view.page.getByRole('heading',{name:'Synthetic Identity Hong Kong 319',exact:true}).waitFor()
  assert.equal(await view.page.getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).count(),0)
  await noOverflow(view.page,'identity-en-1440');await shot(view.page,'identity-en-1440')
  check('client B Identity view contains only its authorized Identity project')
  await view.context.close()
 
- await fixture.revoke(314,2)
  view=await pageFor('client-c','zh',1440)
  await view.page.getByRole('heading',{name:'Synthetic HK Masters 312',exact:true}).waitFor()
  await view.page.getByRole('heading',{name:'Synthetic Identity Planning 318',exact:true}).waitFor()
- assert.equal(await view.page.getByRole('heading',{name:'Synthetic Identity Hong Kong 315',exact:true}).count(),0)
+ assert.equal(await view.page.getByRole('heading',{name:'Synthetic Identity Hong Kong 319',exact:true}).count(),0)
  assert.ok(await view.page.locator('.fso-card').count()>=2)
  await noOverflow(view.page,'client-c-zh-1440');await shot(view.page,'client-c-zh-1440')
  await view.page.setViewportSize({width:390,height:1100})
@@ -190,12 +189,11 @@ async function main(){
 
  fixture.env.SERVICE_WORKBENCH_API_ORIGIN=fixture.emptyApi.origin
  view=await pageFor('client-empty','en',1440)
- await view.page.getByText('No opened service projects yet',{exact:true}).waitFor()
+ await view.page.getByText('There are no service projects to show yet',{exact:true}).waitFor()
  await noOverflow(view.page,'empty-en-1440');await shot(view.page,'empty-en-1440')
  check('unsubscribed synthetic customer receives the real empty state and exploration path')
  await view.context.close()
  fixture.env.SERVICE_WORKBENCH_API_ORIGIN=fixture.rt.origin
- await fixture.restore(314,2)
 
  view=await pageFor('client-a','en',1440)
  await view.page.getByText('On hold',{exact:true}).waitFor()

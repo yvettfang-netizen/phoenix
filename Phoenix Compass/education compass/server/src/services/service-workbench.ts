@@ -107,18 +107,26 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
   if(status!=='ALLOW')throw failure(status==='DENY'?403:status==='CONFLICT'?409:status==='INVALID'?422:503,status==='DENY'?'ACCESS_DENIED':status==='CONFLICT'?'REVISION_OR_IDEMPOTENCY_CONFLICT':status==='INVALID'?'INVALID_COMMAND':'WORKBENCH_UNAVAILABLE')
   return result!
  }
- const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize)=>run(authorization,async c=>{
-  const query=resource==='list'?'SELECT service.workbench_list() AS result':resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
+ const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize,customer=false)=>run(authorization,async c=>{
+  if(customer&&resource==='download'){
+   const gate=(await c.query('SELECT service.workbench_customer_snapshot($1) AS result',[project])).rows[0].result
+   if(gate.status!=='ALLOW')return gate
+  }
+  const query=resource==='list'?(customer?'SELECT service.workbench_customer_list() AS result':'SELECT service.workbench_list() AS result'):resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
    resource==='summary'?'SELECT service.workbench_summary($1,$2::timestamptz,$3::uuid) AS result':
-   resource==='download'?'SELECT service.workbench_download($1,$2) AS result':'SELECT service.workbench_snapshot($1) AS result'
+   resource==='download'?'SELECT service.workbench_download($1,$2) AS result':customer?'SELECT service.workbench_customer_snapshot($1) AS result':'SELECT service.workbench_snapshot($1) AS result'
   const params:(string|number|null)[]=resource==='list'||resource==='catalogue'?[]:
    resource==='summary'?[limit,cursor?.at??null,cursor?.project??null]:
    resource==='download'?[project??null,version??null]:[project??null]
   return (await c.query(query,params)).rows[0].result
  })
- async function command(authorization:string|undefined,project:string,body:Record<string,unknown>,key:string,upload:boolean){
+ async function command(authorization:string|undefined,project:string,body:Record<string,unknown>,key:string,upload:boolean,customer=false){
   if(!/^[A-Za-z0-9_-]{16,100}$/.test(key))throw failure(400,'IDEMPOTENCY_KEY_REQUIRED')
   return run(authorization,async(c,identity)=>{
+   if(customer){
+    const gate=(await c.query('SELECT service.workbench_customer_snapshot($1) AS result',[project])).rows[0].result
+    if(gate.status!=='ALLOW')return gate
+   }
    let kind:string,payload:Record<string,unknown>
    if(upload){
     const allowed=['revision','subjectId','documentId','kind','contentBase64','mime']
@@ -173,21 +181,22 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
     return json(200,{token:await deps.syntheticLogin(body.account),synthetic:true})
    }
    const authorization=request.headers.authorization,key=String(request.headers['idempotency-key']??'')
+   const customer=request.headers['x-phoenix-customer-bridge']==='p1'
    if(route==='summary'&&(method==='GET'||method==='POST')){
     if(method==='POST'&&Object.keys(body).some(k=>k!=='limit'&&k!=='cursor'))throw failure(422,'INVALID_QUERY')
     const cursor=method==='POST'?parseSummaryCursor(body.cursor):summaryCursor
     const limit=method==='POST'?parseSummaryLimit(body.limit):summaryLimit
     return json(200,(await read(authorization,'summary',undefined,undefined,cursor,limit)).data)
    }
-   if(method==='GET'&&route==='projects')return json(200,(await read(authorization,'list')).data)
+   if(method==='GET'&&route==='projects')return json(200,(await read(authorization,'list',undefined,undefined,undefined,summaryPageSize,customer)).data)
    if(method==='GET'&&route==='catalogue')return json(200,(await read(authorization,'catalogue')).data)
    const parts=route.split('/');if(parts[0]!=='projects'||!uuid.test(parts[1]??''))throw failure(404,'NOT_FOUND')
-   if(method==='GET'&&parts.length===2)return json(200,(await read(authorization,'project',parts[1])).data)
-   if(method==='POST'&&parts.length===3&&['commands','materials'].includes(parts[2]))return json(200,await command(authorization,parts[1],body,key,parts[2]==='materials'))
+   if(method==='GET'&&parts.length===2)return json(200,(await read(authorization,'project',parts[1],undefined,undefined,summaryPageSize,customer)).data)
+   if(method==='POST'&&parts.length===3&&['commands','materials'].includes(parts[2]))return json(200,await command(authorization,parts[1],body,key,parts[2]==='materials',customer))
    if(method==='GET'&&parts.length===5&&parts[2]==='materials'&&uuid.test(parts[3])&&parts[4]==='download'){
-    const result=await read(authorization,'download',parts[1],parts[3]),d=result.data as {key:string;sha256:string;size:number;mime:string}
+    const result=await read(authorization,'download',parts[1],parts[3],undefined,summaryPageSize,customer),d=result.data as {key:string;sha256:string;size:number;mime:string}
     const bytes=await deps.objects.get(d.key);if(bytes.length!==Number(d.size)||hash(bytes)!==d.sha256)throw failure()
-    const final=await read(authorization,'download',parts[1],parts[3]);if(JSON.stringify(final.data)!==JSON.stringify(d))throw failure(403,'ACCESS_DENIED')
+    const final=await read(authorization,'download',parts[1],parts[3],undefined,summaryPageSize,customer);if(JSON.stringify(final.data)!==JSON.stringify(d))throw failure(403,'ACCESS_DENIED')
     response.writeHead(200,{...headers,'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="material-'+parts[3]+(d.mime==='application/pdf'?'.pdf':'.txt')+'"'});response.end(bytes);return
    }
    throw failure(405,'METHOD_NOT_ALLOWED')

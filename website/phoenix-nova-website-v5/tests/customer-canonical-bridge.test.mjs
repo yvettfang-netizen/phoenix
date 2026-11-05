@@ -20,7 +20,7 @@ test('bridge refuses production, missing config/mapping, client authority and de
  assert.equal((await handleCustomerServices(request(),env,'development','projects',null,f.provider)).status,503);
  assert.equal((await handleCustomerServices(request(),env,'development','projects',f.config,undefined)).status,503);
  assert.equal((await handleCustomerServices(request(),env,'development','dev-session',f.config,f.provider)).status,404);
- for(const h of ['authorization','x-customer-id','x-family-id','x-project-id','x-principal-id','x-role']){
+ for(const h of ['authorization','x-customer-id','x-family-id','x-project-id','x-principal-id','x-role','x-phoenix-customer-bridge']){
   assert.equal((await handleCustomerServices(request({[h]:'forged'}),env,'development','projects',f.config,f.provider)).status,403);
  }
  const missing={async resolve(){return null;}};
@@ -33,6 +33,7 @@ test('server mapping supplies opaque token, never browser workbench cookie; expi
    const f=fixture();
    globalThis.fetch=async(_url,options)=>{
     assert.equal(options.headers.Authorization,'Bearer '+token);
+    assert.equal(options.headers["X-Phoenix-Customer-Bridge"],'p1');
     if(event!=='success')f[event]();
     return Response.json({schemaVersion:'service-project-list.v1',items:[]});
    };

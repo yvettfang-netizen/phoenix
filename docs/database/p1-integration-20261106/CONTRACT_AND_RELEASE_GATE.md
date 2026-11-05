@@ -59,6 +59,18 @@ Task and event scopes reuse current project and subject authorization.
 Summary validity is at most60 seconds; after expiry/focus change/error the UI
 clears old data and re-fetches. No cache is an authorization source.
 
+The four-Compass contract excludes other primary domains. A non-Health project
+with a secondary HEALTH domain fails closed rather than borrowing its primary
+domain's access. Candidate0039 supplies customer scope/snapshot/list wrappers;
+the BFF adds a server-only customer-bridge marker after trusted session mapping.
+The API applies this guard inside read/command transactions, including downloads.
+Browser-supplied copies of that marker are rejected. Without0039 the customer
+seam fails closed; legacy P0 development requests retain their original path.
+No001–0038 policy or migration is weakened. Future-created records and future
+progress events are excluded from current summaries. Keyset pagination is
+re-authorized per request, not a fixed database snapshot; refresh restarts it,
+and the UI never extends old page validity when appending another page.
+
 Health summary suppresses free-text milestones/progress and task counts;
 neither summaries nor this homepage read clinical records, sensitive
 questionnaires, claims files, material bodies or object links. Contract/payment

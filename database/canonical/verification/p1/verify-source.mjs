@@ -23,6 +23,7 @@ assert.match(bridge,/CANONICAL_ACCESS_ATTEMPT/)
 assert.match(bridge,/CANONICAL_ACCESS_GRANTED/)
 assert.match(bridge,/x-customer-id/)
 const acceptance=readFileSync(path.resolve(root,'database/canonical/verification/p1/acceptance.mjs'),'utf8')
+const browser=readFileSync(path.resolve(root,'database/canonical/verification/p1/browser.mjs'),'utf8')
 for(const marker of [
  'createServer',
  'D1 client A summary',
@@ -36,8 +37,7 @@ for(const marker of [
  'rt.call',
  'synthetic D1 outage',
  'SERVICE_WORKBENCH_API_ORIGIN'
-])assert.ok(acceptance.includes(marker),'P1 acceptance coverage missing: '+marker)
-const browser=readFileSync(path.resolve(root,'database/canonical/verification/p1/browser.mjs'),'utf8')
+])assert.ok((acceptance+'\n'+browser).includes(marker),'P1 acceptance coverage missing: '+marker)
 for(const marker of [
  'startP1Fixture',
  'PLAYWRIGHT_MODULE',
@@ -49,7 +49,7 @@ for(const marker of [
  'client-identity',
  'client-c',
  'client-empty',
- 'No opened service projects yet',
+ 'There are no service projects to show yet',
  'Service history',
  'On hold',
  'scrollWidth'
