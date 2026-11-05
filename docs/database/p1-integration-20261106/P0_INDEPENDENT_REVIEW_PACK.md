@@ -99,6 +99,13 @@ Before real uploads, the data/document owner must approve in writing:
 
 No clinical file, patient report, insurance claim or clinical communication contract is supplied by P0. “No medical fields in the DTO” is a boundary assertion, not a completed patient-level authorization test. Health requires a separate reviewed patient Consent/RLS/storage interface.
 
+P1 review found that P0's legacy development snapshot/subject checks use the
+primary domain, while Canonical permits secondary HEALTH domains. P1 now denies
+such mixed-domain projects at its customer summary/detail/command/download seam
+through candidate0039 and tests that denial. P0's unchanged legacy development
+and staff paths still require independent mixed-domain/patient-scope review
+before activation. Do not treat the new P1 guard as approval of every P0 channel.
+
 ## 5. Real employee and customer authorization mapping
 
 Required mapping evidence is missing and cannot be substituted by synthetic aliases or local browser success:

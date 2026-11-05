@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
 import {execFileSync} from 'node:child_process'
 import {createServer} from 'node:http'
-import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
+import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import path from 'node:path'
 import {pathToFileURL,fileURLToPath} from 'node:url'
 import {startP1Fixture} from './fixture.mjs'
@@ -108,14 +108,22 @@ async function startUiServer(bundle){
  return'http://127.0.0.1:'+uiServer.address().port
 }
 
+export async function loadChromium(modulePath){
+ const entry=existsSync(path.join(modulePath,'index.mjs'))?'index.mjs':'index.js'
+ const imported=await import(pathToFileURL(path.join(modulePath,entry)).href)
+ const chromium=(imported.default??imported).chromium
+ assert.equal(typeof chromium?.launch,'function','Pinned Playwright Chromium launcher is required')
+ return chromium
+}
+
 async function main(){
  assert.ok(process.env.PLAYWRIGHT_MODULE,'PLAYWRIGHT_MODULE must point to the pinned Playwright package')
  fixture=await startP1Fixture({root,version})
  const bundle=await bundleComponents()
  const uiOrigin=await startUiServer(bundle)
  const modulePath=path.resolve(process.env.PLAYWRIGHT_MODULE)
- const playwright=await import(pathToFileURL(path.join(modulePath,'index.js')).href)
- browser=await playwright.chromium.launch({headless:true})
+ const chromium=await loadChromium(modulePath)
+ browser=await chromium.launch({headless:true})
  const contexts=[]
  const contextFor=async(alias)=>{
   const context=await browser.newContext({viewport:{width:1440,height:1100}})
@@ -156,7 +164,9 @@ async function main(){
  await card310.getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).click()
  await view.page.locator('[data-service-workbench]').waitFor()
  await view.page.getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).waitFor()
- await view.page.getByRole('button',{name:'Tasks',exact:true}).click()
+ await view.page.goto(uiOrigin+'/en/family-center',{waitUntil:'networkidle'})
+ await view.page.locator('.fso-next-list a[href$="/'+fixture.project(310)+'#tasks"]').click()
+ await view.page.getByRole('heading',{name:'Project tasks',exact:true}).waitFor()
  const taskRow=view.page.locator('article').filter({hasText:'Synthetic client: upload transcript'})
  await taskRow.getByText('Synthetic client: upload transcript',{exact:true}).waitFor()
  await taskRow.getByRole('button',{name:'In progress',exact:true}).click()
@@ -187,6 +197,16 @@ async function main(){
  await view.page.setViewportSize({width:390,height:1100})
  await noOverflow(view.page,'client-c-zh-390');await shot(view.page,'client-c-zh-390')
  check('client C Chinese view contains multiple authorized project cards')
+ await view.context.close()
+
+ const cancelRead=await fixture.rt.call('manager','projects/'+fixture.project(312))
+ assert.equal(cancelRead.status,200)
+ const cancel=await fixture.rt.call('manager','projects/'+fixture.project(312)+'/commands',{kind:'PROJECT_STATUS',payload:{revision:cancelRead.body.project.revision,status:'CANCELLED',reason:'P1_BROWSER_TERMINATE'}},'p1-browser-cancel-312')
+ assert.equal(cancel.status,200,JSON.stringify(cancel.body))
+ view=await pageFor('client-c','en',390)
+ await view.page.locator('.fso-history .fso-card').filter({hasText:'Synthetic HK Masters 312'}).getByText('Terminated',{exact:true}).waitFor()
+ await noOverflow(view.page,'terminated-en-390');await shot(view.page,'terminated-en-390')
+ check('terminated service moves to history after a real manager command')
  await view.context.close()
 
  fixture.env.SERVICE_WORKBENCH_API_ORIGIN=fixture.emptyApi.origin
