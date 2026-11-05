@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import {createRequire} from 'node:module'
+import {execFileSync} from 'node:child_process'
 import {createServer} from 'node:http'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import path from 'node:path'
-import {pathToFileURL} from 'node:url'
+import {pathToFileURL,fileURLToPath} from 'node:url'
 import {startP1Fixture} from './fixture.mjs'
 
 const version=process.argv[2]||'16'
@@ -14,6 +15,7 @@ const output=path.resolve(process.env.P1_EVIDENCE_DIR||('out/p1-family-service/b
 mkdirSync(output,{recursive:true})
 const record={
  schemaVersion:'phoenix-p1-family-service-browser.v1',
+ sourceSha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
  started:new Date().toISOString(),
  postgres:version,
  harness:'isolated esbuild React component harness; not the built Worker/Sites runtime',
@@ -29,7 +31,7 @@ let fixture,uiServer,browser
 const check=(name,details={})=>{record.checks.push({name,status:'PASS',...details});console.log('PASS browser '+name)}
 const safeName=value=>value.replace(/[^a-z0-9_-]/gi,'_')
 
-async function bundleComponents(){
+export async function bundleComponents(){
  const require=createRequire(path.join(website,'package.json'))
  const esbuild=require('esbuild')
  const familyPath=path.resolve(website,'components/family-service-overview.tsx').replaceAll('\\','/')
@@ -51,9 +53,9 @@ async function bundleComponents(){
   name:'p1-browser-stubs',
   setup(build){
    build.onResolve({filter:new RegExp('^next/link$')},()=>({path:'next-link',namespace:'p1-browser'}))
-   build.onLoad({filter:/^next-link$/,namespace:'p1-browser'},()=>({loader:'js',contents:'import React from "react";export default function Link(props){const p={...props};delete p.children;delete p.prefetch;return React.createElement("a",p,props.children)}'}))
+   build.onLoad({filter:/^next-link$/,namespace:'p1-browser'},()=>({loader:'js',resolveDir:website,contents:'import React from "react";export default function Link(props){const p={...props};delete p.children;delete p.prefetch;return React.createElement("a",p,props.children)}'}))
    build.onResolve({filter:new RegExp('^next/image$')},()=>({path:'next-image',namespace:'p1-browser'}))
-   build.onLoad({filter:/^next-image$/,namespace:'p1-browser'},()=>({loader:'js',contents:'import React from "react";export default function Image(props){const p={...props};delete p.unoptimized;return React.createElement("img",p)}'}))
+   build.onLoad({filter:/^next-image$/,namespace:'p1-browser'},()=>({loader:'js',resolveDir:website,contents:'import React from "react";export default function Image(props){const p={...props};delete p.unoptimized;return React.createElement("img",p)}'}))
    build.onLoad({filter:new RegExp('\\.css$')},()=>({loader:'js',contents:'export default "";'}))
   }
  }
@@ -233,6 +235,7 @@ async function main(){
  console.log('PASS P1 isolated browser component harness on PG'+version)
 }
 
+if(path.resolve(process.argv[1]??'')===fileURLToPath(import.meta.url)){
 try{await main()}
 catch(error){
  record.status='FAIL'
@@ -246,4 +249,6 @@ finally{
  try{await browser?.close()}catch{}
  try{await uiServer?.closeAllConnections();await new Promise(resolve=>uiServer?uiServer.close(()=>resolve()):resolve())}catch{}
  try{await fixture?.close()}catch{}
+}
+
 }

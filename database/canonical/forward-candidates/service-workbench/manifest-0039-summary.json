@@ -2,8 +2,8 @@
   "status": "P1 DEVELOPMENT CANDIDATE; NOT APPROVED OR ACTIVE",
   "dependsOn": "0038_service_project_workbench.sql",
   "file": "0039_service_project_summary.sql",
-  "sha256": "E5529BD428FC515FC36B45A0F12AA1EB67CBFD47C9F0E8845116DAC454057B3E",
+  "sha256": "7679B16297EBCFFB301A2AEDFC3B9A3F0DD962E23BB571C1A748786D6160FE76",
   "authority": "Existing Canonical project/subject/domain authorization, tasks, milestones, assignments, principal/person display names and workbench events; existing snapshot/download/command APIs are guarded for the customer bridge",
-  "sensitiveData": "The projection excludes materials, deliverables, messages, commercial references, patient records, raw questionnaires and document bodies",
+  "sensitiveData": "The homepage summary excludes materials, deliverables, messages, commercial references, patient records, raw questionnaires and document bodies; guarded wrappers preserve the existing authorized P0 detail contract",
   "activation": "Requires independent security/authorization review and Founder gate; never copy into active migrations automatically"
 }

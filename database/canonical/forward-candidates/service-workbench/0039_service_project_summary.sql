@@ -105,6 +105,7 @@ BEGIN
     LEFT JOIN service.project_assignments a
       ON a.service_project_id=p.service_project_id
      AND a.status='ACTIVE'
+     AND a.assignment_role IN('PROJECT_OWNER','PROJECT_MANAGER','SPECIALIST','COORDINATOR')
      AND a.valid_from<=v_as_of
      AND (a.valid_until IS NULL OR a.valid_until>v_as_of)
      AND EXISTS (SELECT FROM auth.principals live WHERE live.principal_id=a.principal_id

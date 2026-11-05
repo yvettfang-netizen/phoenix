@@ -106,6 +106,10 @@ login denial, no stale DOM data, noindex, audits and DB/gateway health.
 This candidate does not apply0039 to production. In isolated databases only,
 the forward projection can be removed with REVOKE/DROP of the exact summary
 function after stopping consumers;0001–0038 and all business masters remain.
+The exact dependency order is: disable the bridge, revoke/drop
+workbench_summary(integer,timestamptz,uuid), workbench_customer_snapshot(uuid)
+and workbench_customer_list(), then workbench_customer_scope(uuid). Use no
+CASCADE: unexpected dependencies must stop rollback for independent review.
 For any future activated environment, take a verified backup and preserve audit
 records; independent DB review must approve rollback order, function dependencies,
 owner and recovery runbook. Never delete service data or rewrite migration history.
