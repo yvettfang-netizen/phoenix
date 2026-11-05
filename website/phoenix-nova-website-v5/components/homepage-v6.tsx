@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { localizedHref } from "@/lib/locale-navigation";
+import { WEALTH_ORIGIN } from "@/lib/wealth-routing";
 import { SiteFooter, SiteHeader, type Locale } from "./v5-site";
 import styles from "./homepage-v6.module.css";
 
@@ -27,6 +28,10 @@ function copy(locale: Locale, value: Bilingual) {
 
 function Arrow() {
   return <ArrowUpRight aria-hidden="true" size={17} strokeWidth={1.8} />;
+}
+
+function homepageHref(locale: Locale, id: string, href: string) {
+  return id === "wealth" || id === "family-legacy" ? `${WEALTH_ORIGIN}/${locale}` : localizedHref(locale, href);
 }
 
 const compassCards: readonly {
@@ -187,7 +192,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
               {compassCards.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link className={`${styles.compassCard} ${styles[`compassCard--${item.tone}`]}`} href={localizedHref(locale, item.href)} key={item.id} data-v6-compass={item.id}>
+                  <Link className={`${styles.compassCard} ${styles[`compassCard--${item.tone}`]}`} href={homepageHref(locale, item.id, item.href)} key={item.id} data-v6-compass={item.id}>
                     <div className={styles.compassVisual}>
                       <Image src={item.image} alt="" fill sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 25vw" unoptimized />
                       <span className={styles.compassBadge}><Icon aria-hidden="true" size={22} strokeWidth={1.5} />{copy(locale, item.title)}</span>
@@ -216,7 +221,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
               {journeyItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link className={styles.journeyItem} href={localizedHref(locale, item.href)} key={item.id} data-v6-journey={item.id}>
+                  <Link className={styles.journeyItem} href={homepageHref(locale, item.id, item.href)} key={item.id} data-v6-journey={item.id}>
                     <Icon aria-hidden="true" size={28} strokeWidth={1.3} />
                     <strong>{copy(locale, item.title)}</strong>
                     <span>{copy(locale, item.description)}</span>
@@ -285,7 +290,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
               </header>
               <nav className={styles.insightTopicList} aria-label={copy(locale, ["凤启洞察内容方向", "Phoenix Insights topics"])}>
                 {insightTopics.map((topic) => (
-                  <Link className={styles.insightTopic} href={localizedHref(locale, topic.href)} key={topic.id}>
+                  <Link className={styles.insightTopic} href={homepageHref(locale, topic.id, topic.href)} key={topic.id}>
                     {copy(locale, topic.title)} <Arrow />
                   </Link>
                 ))}

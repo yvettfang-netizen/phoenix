@@ -103,3 +103,30 @@ The timeout defaults can be overridden for a controlled canary with `SITES_INSTA
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)
 - [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+
+## PR #38 runtime upgrade validation
+
+Use Node 22.13.0 and npm 10.9.2 (see `packageManager`) when regenerating this
+lockfile. npm 11 generated a lockfile that passed local installation but was
+rejected by npm 10 CI for optional esbuild platforms. Validate with `npm ci`
+under the CI npm version; do not replace CI's clean install with `npm install`.
+
+The runtime group is upgraded together: Next 16.4.5, React/DOM/RSC 19.3.1,
+Vinext 1.4.3, Vite 8.3.5, Cloudflare Vite plugin 1.67.0 and Wrangler 4.157.0.
+Zod 4.6.7 is supported by the form resolver; website source has no Zod schema
+migration. Satori's installed fflate dependency uses the 0.7.5 security backport.
+The upstream @vercel/og distribution also embeds its own older fflate copy;
+the override cannot patch that bundled copy. This app has no dynamic OG image
+route. A built-Worker scan found no OG/fflate/HarfBuzz code markers; this is
+limited reachability evidence. Keep this
+upstream residual risk visible before adding any font/archive or OG input.
+
+The V5 PR workflow now blocks high/critical audit findings and uploads its JSON.
+Remaining moderate development-tool findings (minimatch amplification and the
+legacy Drizzle Kit esbuild server) are recorded separately; a passing severity
+gate is not a claim of zero vulnerabilities. Do not force incompatible major
+versions into those dependency trees or downgrade the lint rules.
+
+Miniflare 5 test fixtures use the package's official `convertV4MiniflareOptions`
+adapter to preserve bindings, isolated D1, and all existing assertions. Linux
+Worker CI and frontend-only Windows browser previews remain distinct evidence.

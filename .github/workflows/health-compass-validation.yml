@@ -62,6 +62,22 @@ jobs:
             wait "$preview_pid" || true
             trap - EXIT
           done
+      - name: Wealth bilingual routes and browser regression (frontend rehearsal)
+        run: |
+          export PLAYWRIGHT_MODULE="$(python -c 'import pathlib, playwright; print(pathlib.Path(playwright.__file__).parent / "driver" / "package")')"
+          mkdir -p health-evidence/wealth
+          export WEALTH_PREVIEW_PORT=4481
+          node scripts/wealth-node-preview.mjs > health-evidence/wealth/preview.log 2>&1 &
+          wealth_pid=$!
+          WEALTH_PREVIEW_PORT=4482 WEALTH_PREVIEW_HOST=example.com node scripts/wealth-node-preview.mjs > health-evidence/wealth/main-preview.log 2>&1 &
+          main_pid=$!
+          trap 'kill "$wealth_pid" "$main_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:4481/zh > /dev/null && curl --fail --silent http://127.0.0.1:4482/zh > /dev/null; then break; fi
+            sleep 1
+          done
+          WEALTH_TEST_ORIGIN=http://127.0.0.1:4481 MAIN_TEST_ORIGIN=http://127.0.0.1:4482 node --import ./tests/register-typescript.mjs --test tests/wealth-http.test.mjs tests/wealth-main-regression.test.mjs
+          WEALTH_ORIGIN=http://127.0.0.1:4481 WEALTH_EVIDENCE_DIR=health-evidence/wealth node tests/wealth-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

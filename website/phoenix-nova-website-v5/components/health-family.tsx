@@ -29,7 +29,7 @@ export function HealthFamily({ locale }: { locale: "zh" | "en" }) {
     <a className={shared.skip} href="#family-main">{t("跳至主要内容", "Skip to main content")}</a>
     <SiteHeader locale={locale} page="health/family" brandLocale={locale} />
     <main id="family-main">
-      <nav className={shared.subnav} aria-label={t("家庭健康规划导航", "Family health navigation")}><div className={shared.wrap}><Link href={`/${locale}/health`}>{t("全球健康", "HEALTH")}</Link><span>/</span><span>{t("家庭健康规划", "FAMILY PLANNING")}</span><a href="#family-consultation">{t("规划咨询准备", "Plan a conversation")} ↗</a></div></nav>
+      <nav className={shared.subnav} aria-label={t("家庭健康规划导航", "Family health navigation")}><div className={shared.wrap}><Link href={`/${locale}/health`} prefetch={false}>{t("全球健康", "HEALTH")}</Link><span>/</span><span>{t("家庭健康规划", "FAMILY PLANNING")}</span><a href="#family-consultation">{t("规划咨询准备", "Plan a conversation")} ↗</a></div></nav>
       <section className={`${shared.wrap} ${styles.hero}`}>
         <div>
           <p className={shared.eyebrow}>{t("PHOENIX NOVA™ / 家庭健康规划", "PHOENIX NOVA™ / FAMILY HEALTH PLANNING")}</p>
@@ -50,7 +50,7 @@ export function HealthFamily({ locale }: { locale: "zh" | "en" }) {
             <h2 id="family-brand-origin-title">{text(healthBrandOrigin.title, locale)}</h2>
             <p className={shared.brandOriginBody}>{text(healthBrandOrigin.body, locale)}</p>
             <div className={shared.brandOriginActions}>
-              <Link className={shared.primary} href={`/${locale}/health/shenzhen-international-medical`}>{text(healthBrandOrigin.cta, locale)} ↗</Link>
+              <Link className={shared.primary} href={`/${locale}/health/shenzhen-international-medical`} prefetch={false}>{text(healthBrandOrigin.cta, locale)} ↗</Link>
               <a className={shared.secondary} href="#family-consultation">{text(healthBrandOrigin.consultationCta, locale)} ↗</a>
             </div>
           </div>
@@ -84,7 +84,7 @@ export function HealthFamily({ locale }: { locale: "zh" | "en" }) {
             <p>{t("对于需要进一步协助的家庭，Phoenix Nova™ 也提供国际医疗服务信息与咨询入口，包括跨境就医协调、医疗翻译、陪同及保险理赔行政协助等。", "For families seeking further support, Phoenix Nova™ also offers international medical service information and consultation entry points, including cross-border care coordination, medical interpretation, accompaniment and insurance claims administration assistance.")}</p>
             <p>{t("是否申请咨询，由您自主决定。评估答案不会自动发送给顾问。", "Consultation is your choice. Assessment answers are not automatically sent to an advisor.")}</p>
           </div>
-          <div className={styles.serviceBridge}><small>{t("全球健康服务", "GLOBAL HEALTH SERVICES")}</small><h3>{t("有明确的国际就医需要？", "Already have an international care need?")}</h3><p>{t("无需先完成14题，也可直接了解服务和自愿咨询。", "Explore services and voluntary consultation without completing the 14 questions.")}</p><Link className={shared.primary} href={`/${locale}/health#services`}>{t("了解国际医疗服务", "Explore international medical services")} ↗</Link><Link className={shared.secondary} href={`/${locale}/health#consultation`}>{t("申请服务咨询", "Request a service consultation")} ↗</Link><p className={shared.micro}>{t("当前进入独立咨询准备演示，尚未发送申请；不附带问卷答案，不自动预约。", "This opens an independent preparation demo. No request is sent, no answers accompany the link and no appointment is booked.")}</p></div>
+          <div className={styles.serviceBridge}><small>{t("全球健康服务", "GLOBAL HEALTH SERVICES")}</small><h3>{t("有明确的国际就医需要？", "Already have an international care need?")}</h3><p>{t("无需先完成14题，也可直接了解服务和自愿咨询。", "Explore services and voluntary consultation without completing the 14 questions.")}</p><Link className={shared.primary} href={`/${locale}/health#services`} prefetch={false}>{t("了解国际医疗服务", "Explore international medical services")} ↗</Link><Link className={shared.secondary} href={`/${locale}/health#consultation`} prefetch={false}>{t("申请服务咨询", "Request a service consultation")} ↗</Link><p className={shared.micro}>{t("当前进入独立咨询准备演示，尚未发送申请；不附带问卷答案，不自动预约。", "This opens an independent preparation demo. No request is sent, no answers accompany the link and no appointment is booked.")}</p></div>
         </div>
       </section>
       <section className={`${shared.section} ${shared.wrap} ${styles.split}`} id="family-consultation"><div><div className={shared.sectionHeading}><p>{t("05 / 咨询准备", "05 / YOUR NEXT CONVERSATION")}</p><h2>{t("让家庭的下一步，\n有条理，也有温度。", "A thoughtful conversation.\nA practical next step.")}</h2></div><p>{t("独立的家庭规划咨询准备入口。无论是否参加评估，都可自行选择希望了解的方向。问卷答案不会传送到此入口。", "An independent preparation step for family planning support. Choose a direction whether or not you take the assessment. Questionnaire answers are never transferred here.")}</p><p className={shared.micro}>{t("前端演示 · 未接通正式顾问或提交系统", "Frontend demo · No advisor or submission system connected")}</p></div><HealthConsultation locale={locale} family /></section>

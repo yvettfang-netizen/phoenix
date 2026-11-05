@@ -1,0 +1,936 @@
+{
+  "results": [
+    {
+      "locale": "zh",
+      "route": "",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/kindergarten",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/primary-schools",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/secondary-schools",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/hong-kong-universities",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/subdegrees",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/postgraduate",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/global",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/academy",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/schools",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/programmes",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hku",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/cuhk",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hkust",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/polyu",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/cityuhk",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hkbu",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/lu",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/eduhk",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/kindergarten",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/primary-schools",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/secondary-schools",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/hong-kong-universities",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/subdegrees",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/postgraduate",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/global",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/academy",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/schools",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/programmes",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hku",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/cuhk",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hkust",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/polyu",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/cityuhk",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hkbu",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/lu",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/eduhk",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/kindergarten",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/primary-schools",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/secondary-schools",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/hong-kong-universities",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/subdegrees",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/postgraduate",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/global",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/academy",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/schools",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/programmes",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hku",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/cuhk",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hkust",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/polyu",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/cityuhk",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hkbu",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/lu",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/eduhk",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/kindergarten",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/primary-schools",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/secondary-schools",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/hong-kong-universities",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/subdegrees",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/postgraduate",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/global",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/academy",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/schools",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/programmes",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hku",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/cuhk",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hkust",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/polyu",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/cityuhk",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/hkbu",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/lu",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "route": "/universities/eduhk",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "zh",
+      "status": "PASS",
+      "check": "composed GET filters preserve choices"
+    },
+    {
+      "locale": "en",
+      "route": "",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/kindergarten",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/primary-schools",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/secondary-schools",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/hong-kong-universities",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/subdegrees",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/postgraduate",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/global",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/academy",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/schools",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/programmes",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hku",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/cuhk",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hkust",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/polyu",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/cityuhk",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hkbu",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/lu",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/eduhk",
+      "width": 320,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/kindergarten",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/primary-schools",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/secondary-schools",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/hong-kong-universities",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/subdegrees",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/postgraduate",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/global",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/academy",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/schools",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/programmes",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hku",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/cuhk",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hkust",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/polyu",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/cityuhk",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hkbu",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/lu",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/eduhk",
+      "width": 390,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/kindergarten",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/primary-schools",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/secondary-schools",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/hong-kong-universities",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/subdegrees",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/postgraduate",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/global",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/academy",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/schools",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/programmes",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hku",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/cuhk",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hkust",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/polyu",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/cityuhk",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hkbu",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/lu",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/eduhk",
+      "width": 768,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/kindergarten",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/primary-schools",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/secondary-schools",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/hong-kong-universities",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/subdegrees",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/postgraduate",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/global",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/academy",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/schools",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/programmes",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hku",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/cuhk",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hkust",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/polyu",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/cityuhk",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/hkbu",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/lu",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "route": "/universities/eduhk",
+      "width": 1440,
+      "status": "PASS"
+    },
+    {
+      "locale": "en",
+      "status": "PASS",
+      "check": "composed GET filters preserve choices"
+    },
+    {
+      "locale": "zh",
+      "status": "PASS",
+      "check": "real EDB records, query-preserving pagination, unknown curriculum, university JSON-LD"
+    },
+    {
+      "locale": "en",
+      "status": "PASS",
+      "check": "real EDB records, query-preserving pagination, unknown curriculum, university JSON-LD"
+    }
+  ]
+}

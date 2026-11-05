@@ -126,9 +126,10 @@ async function assertCompass(pageRoute) {
   const controlled = page.getByTestId("education-compass-controlled");
   assert.equal(await controlled.count(), 1, `${route}: controlled Education Compass marker missing`);
   assert.match(await controlled.innerText(), /(?:尚未|暂未|未开放|未接通|not open|not connected|unavailable)/i, `${route}: Compass availability copy is not truthful`);
-  const start = page.getByRole("button", { name: /开始(?:教育规划)?(?:评估|测评)|Start(?: education planning)? assessment/i });
-  assert.equal(await start.count(), 1, `${route}: exactly one disabled assessment action is expected`);
-  assert.equal(await start.isDisabled(), true, `${route}: assessment action must remain disabled`);
+  const start = page.getByRole("button", { name: /开始(?:教育(?:规划)?)?(?:评估|测评)|(?:Start )?Education(?: planning)? assessment/i });
+  assert.equal(await start.count(), 3, `${route}: Hero, pathways and Compass each retain a controlled assessment action`);
+  for (const action of await start.all()) assert.equal(await action.isDisabled(), true, `${route}: every assessment action must remain disabled`);
+  assert.equal(await compass.getByRole("button", { name: /开始(?:教育规划)?(?:评估|测评)|Start(?: education planning)? assessment/i }).count(), 1, `${route}: Compass has one assessment action`);
   assert.equal(await page.locator('a[href*="/education/assessment"],a[href*="/education/result"],a[href*="/education/questionnaire"]').count(), 0, `${route}: controlled Compass must not expose questionnaire/result routes`);
 }
 
@@ -294,7 +295,7 @@ try {
   await noJsPage.goto(`${origin}/zh/education`, { waitUntil: "networkidle" });
   assert.equal(await noJsPage.locator("h1").count(), 1, "No-JS Education route must retain a readable heading");
   assert.equal(await noJsPage.locator("form,input[type=file],input[type=email]").count(), 0, "No-JS Education route must not expose native submission");
-  assert.equal(await noJsPage.getByRole("button", { name: /开始(?:教育规划)?(?:评估|测评)|Start(?: education planning)? assessment/i }).isDisabled(), true, "No-JS controlled Compass action must remain disabled");
+  assert.equal(await noJsPage.locator("#education-compass").getByRole("button", { name: /开始(?:教育规划)?(?:评估|测评)|Start(?: education planning)? assessment/i }).isDisabled(), true, "No-JS controlled Compass action must remain disabled");
   assert.match(await noJsPage.getByTestId("education-preparation-status").innerText(), /(?:尚未发送咨询|No enquiry has been sent)/i, "No-JS local status must remain truthful");
   await noJs.close();
   passed("No-JS route has readable content and no native submission");

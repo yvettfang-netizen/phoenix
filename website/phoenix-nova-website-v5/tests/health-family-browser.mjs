@@ -115,7 +115,7 @@ try {
     await page.locator('#family-consultation button[type="submit"]').click();
     const status = await page.getByTestId("health-consultation-status").innerText();
     assert.match(status, locale === "zh" ? /尚未发送咨询/ : /No enquiry has been sent/);
-    assert.equal(requests.length, 0, `${locale} family consultation must not send requests`);
+    assert.equal(requests.length, 0, `${locale} family consultation must not send requests: ${JSON.stringify(requests)}`);
     assert.deepEqual(
       await page.evaluate(() => ({
         local: Object.keys(localStorage),

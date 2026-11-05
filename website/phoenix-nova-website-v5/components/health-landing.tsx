@@ -38,7 +38,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
     <main id="health-main">
       <nav className={styles.subnav} aria-label={zh ? "健康页面导航" : "Health page navigation"}>
         <div className={styles.wrap}>
-          <Link href={`/${locale}/compass`}>{zh ? "凤启罗盘" : "PHOENIX COMPASS"}</Link><span aria-hidden="true"> / </span><span>{zh ? "健康" : "HEALTH"}</span>
+          <Link href={`/${locale}/compass`} prefetch={false}>{zh ? "凤启罗盘" : "PHOENIX COMPASS"}</Link><span aria-hidden="true"> / </span><span>{zh ? "健康" : "HEALTH"}</span>
           <a href="#consultation">{zh ? "咨询准备" : "Prepare a conversation"} ↗</a>
         </div>
       </nav>
@@ -52,7 +52,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
           <p className={styles.heroSubtitle}>{t([healthHero.zh.subtitle, healthHero.en.subtitle])}</p>
           <p className={styles.lead}>{t([healthHero.zh.body, healthHero.en.body])}</p>
           <div className={styles.actions}>
-            <Link className={styles.primary} href={`/${locale}/health/family`}>{t(["家庭健康规划", "Family Health Planning"])} <span aria-hidden="true">↗</span></Link>
+            <Link className={styles.primary} href={`/${locale}/health/family`} prefetch={false}>{t(["家庭健康规划", "Family Health Planning"])} <span aria-hidden="true">↗</span></Link>
             <a className={styles.secondary} href="#services">{t(["了解跨境医疗服务", "Explore Cross-Border Medical Services"])} <span aria-hidden="true">↗</span></a>
           </div>
           <p className={styles.micro}>{t(["非临床协调支持 · 服务及预约须另行确认", "Non-clinical coordination · Services and appointments subject to confirmation"])}</p>
@@ -66,7 +66,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
             <h2 id="brand-origin-title">{t(healthBrandOrigin.title)}</h2>
             <p className={styles.brandOriginBody}>{t(healthBrandOrigin.body)}</p>
             <div className={styles.brandOriginActions}>
-              <Link className={styles.primary} data-testid="brand-origin-shenzhen" href={`/${locale}/health/shenzhen-international-medical`}>{t(healthBrandOrigin.cta)} <span aria-hidden="true">↗</span></Link>
+              <Link className={styles.primary} data-testid="brand-origin-shenzhen" href={`/${locale}/health/shenzhen-international-medical`} prefetch={false}>{t(healthBrandOrigin.cta)} <span aria-hidden="true">↗</span></Link>
               <a className={styles.secondary} href="#consultation">{t(healthBrandOrigin.consultationCta)} <span aria-hidden="true">↗</span></a>
             </div>
           </div>
@@ -88,7 +88,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
               <p>{t(entry.body)}</p>
               <ul>{entry.points.map(point => <li key={point[1]}>{t(point)}</li>)}</ul>
               {entry.launchNote && <p className={styles.entryLaunch}>{t(entry.launchNote)}</p>}
-              <Link className={styles.textLink} data-testid={entry.id === "shenzhen" ? "shenzhen-launch-link" : undefined} href={`/${locale}/${t(entry.href)}`}>{t(entry.cta)} <span aria-hidden="true">↗</span></Link>
+              <Link className={styles.textLink} data-testid={entry.id === "shenzhen" ? "shenzhen-launch-link" : undefined} href={`/${locale}/${t(entry.href)}`} prefetch={false}>{t(entry.cta)} <span aria-hidden="true">↗</span></Link>
             </article>)}
           </div>
         </div>
@@ -129,7 +129,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
               <span className={styles.providerStatus}>{t(["资料待逐项核验 · 非凤启合作声明", "Information pending verification · Not a Phoenix Nova partnership statement"])}</span>
               <h3>{t(["深圳禾正医院", "Hyzen Hospital Shenzhen"])}</h3>
               <p>{t(["首发资源页面将说明医院公开资料、专科方向、国际患者服务及预约核实路径；具体内容以医院及主管部门最新信息为准。", "The first resource page will outline public provider information, specialties, international patient services and appointment verification. Current details must be confirmed with the provider and competent authorities."])}</p>
-              <div className={styles.providerLinks}><Link className={styles.textLink} href={`/${locale}/health/providers/hyzen-hospital`}>{t(["查看禾正医院资源页", "View Hyzen Hospital resource page"])} <span aria-hidden="true">↗</span></Link><Link className={styles.textLink} href={`/${locale}/health/providers`}>{t(["浏览医疗机构中心", "Browse provider hub"])} <span aria-hidden="true">↗</span></Link></div>
+              <div className={styles.providerLinks}><Link className={styles.textLink} href={`/${locale}/health/providers/hyzen-hospital`} prefetch={false}>{t(["查看禾正医院资源页", "View Hyzen Hospital resource page"])} <span aria-hidden="true">↗</span></Link><Link className={styles.textLink} href={`/${locale}/health/providers`} prefetch={false}>{t(["浏览医疗机构中心", "Browse provider hub"])} <span aria-hidden="true">↗</span></Link></div>
             </article>
           </div>
           <p className={styles.note}>{t(["医疗机构、医生执业、英语服务、病房环境、费用、保险及出诊信息均须逐项核实；本页面不构成医疗推荐、接诊承诺或合作关系。", "Provider, clinician, language, room, cost, insurance and schedule information must be verified individually. This page is not a medical recommendation, acceptance guarantee or partnership statement."])}</p>
@@ -149,8 +149,8 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
         <div className={`${styles.section} ${styles.wrap}`}>
           {heading("07", "家庭健康规划", "FAMILY HEALTH PLANNING", ["不同的家庭阶段，相同的安心期待。", "Different family stages. A shared need for clarity."], "family-planning-title")}
           <p className={styles.intro}>{t(["从日常健康事务、家庭协作与成员授权出发，建立适合家庭的长期安排。", "Start with everyday arrangements, family coordination and member permissions to shape a long-term plan."])}</p>
-          <div className={styles.lifeStages}>{familyStages.map((stage, index) => <article key={stage.title[1]}><div className={`${styles.lifePhoto} ${styles[stage.image]}`} role="img" aria-label={t([`${stage.title[0]}生活场景示意`, `Illustrative ${stage.title[1].toLowerCase()} lifestyle scene`])} /><div className={styles.lifeBody}><span>0{index + 1} / {zh ? "家庭阶段" : "FAMILY STAGE"}</span><h3>{t(stage.title)}</h3><p>{t(stage.body)}</p><Link href={`/${locale}/health/family`}>{t(["了解规划", "Explore planning"])} ↗</Link></div></article>)}</div>
-          <Link className={styles.lifeLink} href={`/${locale}/health/family`}>{t(["进入家庭健康规划", "Enter family health planning"])} <span aria-hidden="true">↗</span></Link>
+          <div className={styles.lifeStages}>{familyStages.map((stage, index) => <article key={stage.title[1]}><div className={`${styles.lifePhoto} ${styles[stage.image]}`} role="img" aria-label={t([`${stage.title[0]}生活场景示意`, `Illustrative ${stage.title[1].toLowerCase()} lifestyle scene`])} /><div className={styles.lifeBody}><span>0{index + 1} / {zh ? "家庭阶段" : "FAMILY STAGE"}</span><h3>{t(stage.title)}</h3><p>{t(stage.body)}</p><Link href={`/${locale}/health/family`} prefetch={false}>{t(["了解规划", "Explore planning"])} ↗</Link></div></article>)}</div>
+          <Link className={styles.lifeLink} href={`/${locale}/health/family`} prefetch={false}>{t(["进入家庭健康规划", "Enter family health planning"])} <span aria-hidden="true">↗</span></Link>
         </div>
       </section>
 
@@ -171,7 +171,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
       <section className={styles.familyCenterSection} id="family-center" aria-labelledby="family-center-title">
         <div className={`${styles.section} ${styles.wrap} ${styles.familyCenterGrid}`}>
           <div>{heading("10", "家庭中心", "FAMILY CENTER", ["把获准的健康服务进度，放回家庭的长期安排。", "Keep authorised health progress within the family's long-term plan."], "family-center-title")}<p>{t(["凤启家序｜家庭中心是客户家庭的受控入口。按患者级授权，可查看健康规划、服务申请状态、预约、协调任务及后续提醒。", "Phoenix Family OS · Family Center is a controlled family entry. With patient-level authorisation, it may show planning, service status, appointments, coordination tasks and follow-up reminders."])}</p><p className={styles.micro}>{t(["家庭中心当前为受控预览，健康服务尚未接通。原始病历、理赔文件和问卷答案不会自动进入普通家庭时间轴。", "Family Center is currently a controlled preview and Health service connection is not active. Raw records, claims files and questionnaire answers are not automatically added to a general family timeline."])}</p></div>
-          <div className={styles.familyCenterPanel}><ShieldCheck aria-hidden="true" size={30} /><h3>{t(["凤启家序｜家庭中心", "Phoenix Family OS · Family Center"])}</h3><p>{t(["真实入口，受控访问。", "Real route, controlled access."])}</p><Link className={styles.primary} href={`/${locale}/family-center`}>{t(["进入家庭中心", "Open Family Center"])} ↗</Link></div>
+          <div className={styles.familyCenterPanel}><ShieldCheck aria-hidden="true" size={30} /><h3>{t(["凤启家序｜家庭中心", "Phoenix Family OS · Family Center"])}</h3><p>{t(["真实入口，受控访问。", "Real route, controlled access."])}</p><Link className={styles.primary} href={`/${locale}/family-center`} prefetch={false}>{t(["进入家庭中心", "Open Family Center"])} ↗</Link></div>
         </div>
       </section>
 

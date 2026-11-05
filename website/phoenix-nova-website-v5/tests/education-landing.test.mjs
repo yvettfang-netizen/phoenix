@@ -72,7 +72,7 @@ function assertEducationStructure(html, locale) {
 function assertEducationFooter(html, locale) {
   const footerStart = html.indexOf('<footer class="site-footer');
   assert.ok(footerStart >= 0, `${locale}: shared V3 footer is missing`);
-  const footer = html.slice(footerStart);
+  const footer = html.slice(footerStart, html.indexOf("</footer>", footerStart) + "</footer>".length);
   assert.equal((footer.match(/<details\b/gi) ?? []).length, 5, `${locale}: Footer must retain five groups`);
   for (const label of locale === "zh"
     ? ["凤启学苑", "ASKWISE", "学苑约课管理系统", "学员入口", "导师入口", "教育与学习平台"]

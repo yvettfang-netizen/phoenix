@@ -16,6 +16,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE
   ? pathToFileURL(resolve(process.env.PLAYWRIGHT_MODULE, "index.mjs")).href : "playwright");
 const origin = process.env.HEALTH_ORIGIN || "http://127.0.0.1:4387";
 const out = resolve(process.env.HEALTH_EVIDENCE_DIR || "outputs/health-landing");
+const WEALTH_ORIGIN = "https://wealth.phoenixnova.com.cn";
 const IVORY_SURFACE = "rgb(248, 246, 241)";
 const BRAND_ASSETS = {
   header: { url: BRAND_HEADER_URL, ...BRAND_HEADER_SIZE, wrapperBackground: "transparent" },
@@ -141,8 +142,7 @@ async function inspectBrandImage(locator, route, role, width, wrapperBackground 
 async function assertSharedBrandChrome(page, route, width) {
   // Footer branding is intentionally lazy; make it visible before decoding.
   await page.locator("footer").scrollIntoViewIfNeeded();
-  const headerBackground = /^\/(?:zh|en)\/(?:compass|health\/family)$/.test(route) ? IVORY_SURFACE : BRAND_ASSETS.header.wrapperBackground;
-  const header = await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width, headerBackground);
+  await inspectBrandImage(page.locator("header .brand-mark img"), route, "header", width);
   const footer = await inspectBrandImage(page.locator("footer .brand-mark img"), route, "footer", width);
   const expectedFooterWidth = /^\/(?:zh|en)$/.test(route.split(' ')[0]) ? 150 : width <= 700 ? 165 : 220;
   assert.ok(Math.abs(footer.wrapperWidth - expectedFooterWidth) < 0.5, `${route} ${width}px: Footer brand wrapper must be ${expectedFooterWidth}px wide`);
@@ -163,7 +163,7 @@ function expectedPrimaryHrefs(locale) {
     `/${locale}`,
     `/${locale}/education`,
     `/${locale}/identity`,
-    `/${locale}/compass#wealth`,
+    `${WEALTH_ORIGIN}/${locale}`,
     `/${locale}/health`,
     `/${locale}/about`,
     `/${locale}/insights`,
@@ -185,7 +185,7 @@ async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
   const hrefs = await links.evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute("href")));
   assert.deepEqual(hrefs.slice(0, expected.length), expected, `${locale}: primary navigation hrefs changed`);
   if (mobile) {
-    assert.equal(hrefs[7], `/${locale}/family-center`, `${locale}: mobile Family Center href changed`);
+    assert.equal(hrefs[7], `/${locale}/account`, `${locale}: mobile Family Center must use the controlled account entry`);
     assert.equal(hrefs[8], '#partners');
     assert.equal(hrefs[9], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
     await page.locator(".mobile-menu summary").click();
@@ -278,7 +278,7 @@ async function assertConsultationPreparation(page, locale) {
   const statusText = await status.innerText();
   assert.match(statusText, locale === "zh" ? /尚未发送咨询/ : /No enquiry has been sent/);
   assert.ok(statusText.trim().length > 0, `${locale}: prepared checklist is empty`);
-  assert.equal(requests.length, 0, `${locale}: consultation preparation must not send requests`);
+  assert.equal(requests.length, 0, `${locale}: consultation preparation must not send requests: ${JSON.stringify(requests)}`);
   assert.deepEqual(await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookies: document.cookie })), { local: [], session: [], cookies: "" });
 
   await fields.region.selectOption({ index: 2 });
@@ -289,7 +289,7 @@ async function assertConsultationPreparation(page, locale) {
   assert.equal(await service.inputValue(), "", `${locale}: clear selection did not reset service`);
   for (const [key, field] of Object.entries(fields)) assert.equal(await field.inputValue(), "", `${locale}: clear selection did not reset ${key}`);
   assert.equal((await status.innerText()).trim(), "", `${locale}: clear selection did not hide prepared state`);
-  assert.equal(requests.length, 0, `${locale}: clearing consultation preparation must not send requests`);
+  assert.equal(requests.length, 0, `${locale}: clearing consultation preparation must not send requests: ${JSON.stringify(requests)}`);
   assert.deepEqual(await page.evaluate(() => ({ local: Object.keys(localStorage), session: Object.keys(sessionStorage), cookies: document.cookie })), { local: [], session: [], cookies: "" });
 
   page.off("request", onRequest);
