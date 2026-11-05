@@ -5,6 +5,7 @@ import {Pool,PoolClient} from 'pg'
 import {IncomingMessage,ServerResponse} from 'node:http'
 import {execFileSync} from 'node:child_process'
 import {AppError} from '../domain/errors'
+import {readFamilyDashboard} from './family-os-dashboard'
 
 export interface WorkbenchIdentity {
  principalId:string;actorPersonId:string;familyId:string;channel:'FAMILY'|'ADVISOR'
@@ -43,6 +44,8 @@ export interface WorkbenchDependencies {
  /** Explicit local synthetic preview only; never set by normal application bootstrap. */
  syntheticLogin?:(alias:string)=>Promise<string>
  mode:'test'|'development'
+ /** Optional P1 compatibility layer. False preserves the P0 API contract. */
+ familyDashboardEnabled?:boolean
 }
 async function guard(client:PoolClient,binder:boolean):Promise<void>{
  const result=await client.query(
@@ -86,10 +89,17 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
   if(status!=='ALLOW')throw failure(status==='DENY'?403:status==='CONFLICT'?409:status==='INVALID'?422:503,status==='DENY'?'ACCESS_DENIED':status==='CONFLICT'?'REVISION_OR_IDEMPOTENCY_CONFLICT':status==='INVALID'?'INVALID_COMMAND':'WORKBENCH_UNAVAILABLE')
   return result!
  }
- const read=async(authorization:string|undefined,resource:string,project?:string,version?:string)=>run(authorization,async c=>{
+ const read=async(authorization:string|undefined,resource:string,project?:string,version?:string)=>run(authorization,async(c,identity)=>{
+  if(resource==='dashboard')return deps.familyDashboardEnabled?readFamilyDashboard(c,identity):{status:'DENY'}
+  if(deps.familyDashboardEnabled&&identity.channel==='FAMILY'&&project){
+   const gate=(await c.query('SELECT service.workbench_snapshot($1) AS result',[project])).rows[0].result
+   if(gate.status!=='ALLOW'||gate.data?.project?.status==='CANCELLED')return {status:'DENY'}
+  }
   const query=resource==='list'?'SELECT service.workbench_list() AS result':resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
    resource==='download'?'SELECT service.workbench_download($1,$2) AS result':'SELECT service.workbench_snapshot($1) AS result'
-  return (await c.query(query,resource==='list'||resource==='catalogue'?[]:resource==='download'?[project,version]:[project])).rows[0].result
+  const result=(await c.query(query,resource==='list'||resource==='catalogue'?[]:resource==='download'?[project,version]:[project])).rows[0].result
+  if(deps.familyDashboardEnabled&&identity.channel==='FAMILY'&&resource==='list'&&result.status==='ALLOW')result.data.items=result.data.items.filter((p:{status:string})=>p.status!=='CANCELLED')
+  return result
  })
  async function command(authorization:string|undefined,project:string,body:Record<string,unknown>,key:string,upload:boolean){
   if(!/^[A-Za-z0-9_-]{16,100}$/.test(key))throw failure(400,'IDEMPOTENCY_KEY_REQUIRED')
@@ -141,6 +151,7 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
    const authorization=request.headers.authorization,key=String(request.headers['idempotency-key']??'')
    if(method==='GET'&&route==='projects')return json(200,(await read(authorization,'list')).data)
    if(method==='GET'&&route==='catalogue')return json(200,(await read(authorization,'catalogue')).data)
+   if(method==='GET'&&route==='dashboard'&&deps.familyDashboardEnabled)return json(200,(await read(authorization,'dashboard')).data)
    const parts=route.split('/');if(parts[0]!=='projects'||!uuid.test(parts[1]??''))throw failure(404,'NOT_FOUND')
    if(method==='GET'&&parts.length===2)return json(200,(await read(authorization,'project',parts[1])).data)
    if(method==='POST'&&parts.length===3&&['commands','materials'].includes(parts[2]))return json(200,await command(authorization,parts[1],body,key,parts[2]==='materials'))

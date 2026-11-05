@@ -1,4 +1,5 @@
 import {validWorkbenchResponse} from "./service-workbench-contract";
+import {familyDashboardEnabled,validFamilyDashboard} from './family-os-dashboard';
 export type WorkbenchEnv=Record<string,unknown>;
 export function workbenchEnabled(env:WorkbenchEnv,mode:string|undefined){return mode==="development"&&env.SERVICE_WORKBENCH_ENABLED==="true";}
 export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mode:string|undefined,resource:string):Promise<Response>{
@@ -6,12 +7,14 @@ export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mo
  const reply=(status:number,code:string)=>Response.json({error:{code}},{status,headers});
  if(!workbenchEnabled(env,mode))return reply(404,"NOT_FOUND");
  const url=new URL(request.url);
+ if(resource==='dashboard'&&(!familyDashboardEnabled(env,mode)||request.method!=='GET'))return reply(404,"NOT_FOUND");
+ if(familyDashboardEnabled(env,mode)&&(env.CUSTOMER_AUTH_ENABLED==='1'||/(?:^|;\s*)(?:__Host-phoenix-session|phoenix-local-session)=/.test(request.headers.get('cookie')??'')))return reply(403,'IDENTITY_MAPPING_HOLD');
  if(!["127.0.0.1","localhost"].includes(url.hostname)||url.search||["x-family-id","x-role","x-principal-id","x-channel","x-source-system","authorization"].some(h=>request.headers.has(h))||
   request.headers.get("sec-fetch-site")==="cross-site"||request.headers.has("origin")&&request.headers.get("origin")!==url.origin)return reply(403,"ACCESS_DENIED");
  if(!["GET","POST"].includes(request.method))return reply(405,"METHOD_NOT_ALLOWED");
  if(request.method==="POST"&&request.headers.get("origin")!==url.origin)return reply(403,"ORIGIN_REQUIRED");
  const uuid="[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
- const route=new RegExp("^(projects|catalogue|dev-session)$|^projects/"+uuid+"(?:/(commands|materials)|/materials/"+uuid+"/download)?$");
+ const route=new RegExp("^(projects|catalogue|dev-session|dashboard)$|^projects/"+uuid+"(?:/(commands|materials)|/materials/"+uuid+"/download)?$");
  if(!route.test(resource))return reply(404,"NOT_FOUND");
  const login=resource==="dev-session";
  if(login&&(request.method!=="POST"||env.SERVICE_WORKBENCH_SYNTHETIC_PREVIEW!=="true"))return reply(404,"NOT_FOUND");
@@ -52,7 +55,7 @@ export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mo
    if(typeof data.token!=="string"||!/^[A-Za-z0-9_-]{32,256}$/.test(data.token)||data.synthetic!==true)return reply(503,"WORKBENCH_UNAVAILABLE");
    return Response.json({synthetic:true},{status:200,headers:{...headers,"Set-Cookie":"phoenix_workbench_session="+data.token+"; HttpOnly; SameSite=Strict; Path=/; Max-Age=900"}});
   }
-  if(!validWorkbenchResponse(resource,data))return reply(503,"WORKBENCH_UNAVAILABLE");
+  if(!(resource==='dashboard'?validFamilyDashboard(data):validWorkbenchResponse(resource,data)))return reply(503,"WORKBENCH_UNAVAILABLE");
   return Response.json(data,{status:200,headers});
  }catch{return reply(503,"WORKBENCH_UNAVAILABLE");}
 }
