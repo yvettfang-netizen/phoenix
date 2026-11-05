@@ -4,6 +4,7 @@ import { isAbsolute } from 'node:path'
 import { Pool, PoolClient, PoolConfig } from 'pg'
 import { AppError } from '../domain/errors'
 import { createSyntheticFamilyVerifier } from '../auth/synthetic-family-identity'
+import { createSessionFamilyResolver, ResolvedFamilyIdentity, SessionBridgeDependencies } from '../auth/session-family-bridge'
 
 export type ProjectionOperation = 'family' | 'students' | 'student'
 export interface ProjectionAudit { requestId: string; operation: ProjectionOperation; decision: 'ALLOW' | 'DENY' | 'UNAVAILABLE' }
@@ -106,13 +107,27 @@ async function guardRole(client: PoolClient, binder: boolean): Promise<void> {
 
 export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
   audit: (event: ProjectionAudit) => void = event => console.info('canonical_family_projection', JSON.stringify(event))): Promise<FamilyProjection | undefined> {
+  return loadProjection(env, audit)
+}
+
+/** Explicitly injected local harness only. The normal application bootstrap never calls this. */
+export async function loadSessionBoundFamilyProjection(env: NodeJS.ProcessEnv, deps: SessionBridgeDependencies,
+  audit: (event: ProjectionAudit) => void = event => console.info('canonical_family_projection', JSON.stringify(event))): Promise<FamilyProjection | undefined> {
+  if (env.CANONICAL_BROKER_SESSION_BRIDGE_ENABLED !== 'true') return undefined
+  if (env.NODE_ENV !== 'test' || env.CANONICAL_FAMILY_PROJECTION_ENABLED !== 'true' ||
+      env.CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED !== 'true') throw unavailable()
+  return loadProjection(env, audit, createSessionFamilyResolver(deps))
+}
+
+async function loadProjection(env: NodeJS.ProcessEnv, audit: (event: ProjectionAudit) => void,
+  resolve?: (authorization: string | undefined, operation: string) => Promise<ResolvedFamilyIdentity>): Promise<FamilyProjection | undefined> {
   if (env.CANONICAL_FAMILY_PROJECTION_ENABLED !== 'true') return undefined
   const audited = env.CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED === 'true'
   if (!['development','test'].includes(env.NODE_ENV ?? 'development') || (env.LISTEN_HOST ?? '127.0.0.1') !== '127.0.0.1') throw unavailable()
   const appConfig = connection(await protectedJson(env.CANONICAL_FAMILY_APP_CONFIG_FILE ?? ''))
   const binderConfig = connection(await protectedJson(env.CANONICAL_FAMILY_BINDER_CONFIG_FILE ?? ''))
   if (appConfig.user === binderConfig.user || appConfig.password === binderConfig.password || appConfig.port !== binderConfig.port) throw unavailable()
-  const verify = createSyntheticFamilyVerifier(await protectedJson(env.CANONICAL_FAMILY_IDENTITY_CONFIG_FILE ?? ''))
+  const verify = resolve ?? createSyntheticFamilyVerifier(await protectedJson(env.CANONICAL_FAMILY_IDENTITY_CONFIG_FILE ?? ''))
   const appPool = new Pool({ ...appConfig, application_name: 'synthetic_family_projection_reader' })
   const binderPool = new Pool({ ...binderConfig, application_name: 'synthetic_family_projection_binder' })
   appPool.on('error', () => {}); binderPool.on('error', () => {})
@@ -124,8 +139,9 @@ export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
       let app: PoolClient | undefined, binder: PoolClient | undefined
       let appClean = false, binderClean = false
       let result: unknown, error: unknown
+      let identity: { iss: string; sub: string; application_family_id: string; exp: number; assertCurrent?: () => Promise<void> } | undefined
       try {
-        const identity = verify(authorization)
+        identity = await verify(authorization, operation)
         if (!['family','students','student'].includes(operation) || (operation === 'student' && !(audited ? publicStudent : uuid).test(studentRef ?? ''))) throw denied()
         app = await appPool.connect()
         if (audited) await guardAuditedRole(app)
@@ -206,6 +222,10 @@ export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
           } catch { error = unavailable() }
           app.release(!appClean)
         }
+      }
+      if (!error) {
+        try { await identity?.assertCurrent?.() }
+        catch (caught) { error = caught instanceof AppError ? caught : unavailable() }
       }
       try { audit({ requestId, operation, decision: error ? (error instanceof AppError && error.status < 500 ? 'DENY' : 'UNAVAILABLE') : 'ALLOW' }) }
       catch { throw unavailable() }

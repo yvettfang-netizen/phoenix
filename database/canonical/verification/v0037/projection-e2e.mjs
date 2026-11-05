@@ -8,6 +8,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {runReadAuditRegression} from './read-audit-regression.mjs';
 import {reviewConfigProbe,reviewRuntimeProbes} from './review-regression.mjs';
+import {runBrokerSessionRegression} from './broker-session-regression.mjs';
 import {createRequire} from 'node:module';
 const publicFamily=n=>'fam_'+id(n).replaceAll('-','');
 const publicStudent=n=>'stu_'+id(n).replaceAll('-','');
@@ -191,6 +192,7 @@ try{
   await migrationChecks(db);
   seed(db);
   await runReadAuditRegression({db,sql,connection,Pool,appPassword,binderPassword,id,issuer,familyKey,randomUUID,docker});console.log(`PASS PG${version} 0001-0035 plus independent 0037; synthetic principals, managed family mappings and guardian fixtures`);
+  await runBrokerSessionRegression({db,sql,id,familyKey,root,work,save,connection,appPassword,binderPassword,docker,nonce});
   const rawApp=new Pool(connection(db,'projection_app',appPassword)),rawBinder=new Pool(connection(db,'projection_binder',binderPassword));
   try{
     for(const q of ['SET ROLE phoenix_canonical_app','SET ROLE phoenix_canonical_context_binder','SELECT * FROM auth.external_identities',
@@ -292,6 +294,7 @@ try{
   for(const [table,expected]of [['pg_tables','92'],['pg_policies','83']])assert.equal(sql(restored,`SELECT count(*) FROM ${table} WHERE schemaname IN ('auth','core','consent','audit','integration','docs','casework','education','identity','operations_ref','learning','crm','service')`),expected);
   sql(restored,`ALTER ROLE projection_app PASSWORD '${appPassword}';ALTER ROLE projection_binder PASSWORD '${binderPassword}';`);
   await runReadAuditRegression({db:restored,sql,connection,Pool,appPassword,binderPassword,id,issuer,familyKey,randomUUID,docker});
+  await runBrokerSessionRegression({db:restored,sql,id,familyKey,root,work,save,connection,appPassword,binderPassword,docker,nonce});
   await close(api);api=undefined;await projection.close();projection=await adapter(restored,'restored');api=await serve(projection,apiPort);
   await reviewRuntimeProbes({db:restored,sql,call,original:originalReview});
   assert.equal((await call()).status,200);assert.equal((await call('students/'+publicStudent(4))).status,404);
