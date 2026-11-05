@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {randomBytes,createHash} from 'node:crypto';
 import {readFileSync,writeFileSync,readdirSync,cpSync} from 'node:fs';
 import path from 'node:path';
+import {spawnSync} from 'node:child_process';
 import {createCluster,protect} from './cluster.mjs';
 
 const schemas="'auth','core','consent','audit','integration','docs','casework','education','identity','operations_ref','learning','crm','service'";
@@ -16,14 +17,23 @@ export function fingerprint(db){
  tables:tables.map(table=>({table,...JSON.parse(db.sql(`SELECT json_build_object('count',count(*),'digest',md5(coalesce(string_agg(j,E'\\n' ORDER BY j),''))) FROM (SELECT row_to_json(t)::text j FROM ${table} t)s`))}))};
 }
 export function migrationFaults(db){
+ const refusal=(expected,needle)=>{
+  const context=process.env.DOCKER_CONTEXT||(process.platform==='win32'?'desktop-linux':'default');
+  const args=['--context',context,'exec','-e','CANONICAL_EXPECTED_MIGRATIONS='+expected,db.container,'bash','/opt/verification/migrate.sh'];
+  // Only the deliberately failed migration invocation is captured here. No
+  // credential values or SQL fixture creation inputs enter this transcript.
+  const r=spawnSync('docker',args,{encoding:'utf8',windowsHide:true,maxBuffer:2e6});
+  console.log(JSON.stringify({command:['docker',...args],exitCode:r.status,stdout:r.stdout,stderr:r.stderr}));
+  assert.notEqual(r.status,0,'Injected failure must refuse');assert((r.stdout+r.stderr).includes(needle),'Expected actual failure: '+needle);
+ };
  const original='/opt/canonical-migrations/0038_service_project_workbench.sql';
  db.call(['exec',db.container,'bash','-c',`cp ${original} /tmp/workbench-original.sql; printf '\n-- synthetic drift\n' >> ${original}`]);
- try{assert.throws(()=>db.migrate(),/failed/);}finally{db.call(['exec',db.container,'cp','/tmp/workbench-original.sql',original]);}
+ try{refusal(38,'DRIFT_REFUSED 0038');}finally{db.call(['exec',db.container,'cp','/tmp/workbench-original.sql',original]);}
  const before=db.sql('SELECT count(*) FROM canonical_migrations.applied');
  const fixture=path.join(db.work,'0039_synthetic_atomic_probe.sql');
  writeFileSync(fixture,'BEGIN;\nCREATE SCHEMA workbench_atomic_probe;\nSELECT 1/0;\nCOMMIT;\n');
  db.call(['cp',fixture,db.container+':/opt/canonical-migrations/0039_synthetic_atomic_probe.sql']);
- try{assert.throws(()=>db.call(['exec','-e','CANONICAL_EXPECTED_MIGRATIONS=39',db.container,'bash','/opt/verification/migrate.sh']),/failed/);
+ try{refusal(39,'division by zero');
  assert.equal(db.sql("SELECT count(*) FROM pg_namespace WHERE nspname='workbench_atomic_probe'"),'0');assert.equal(db.sql('SELECT count(*) FROM canonical_migrations.applied'),before);
  }finally{db.call(['exec',db.container,'rm','/opt/canonical-migrations/0039_synthetic_atomic_probe.sql']);}
  assert(db.migrate().includes('SKIP 0038'));console.log('PASS drift refusal, atomic DDL/ledger rollback, repeat after recovery');
