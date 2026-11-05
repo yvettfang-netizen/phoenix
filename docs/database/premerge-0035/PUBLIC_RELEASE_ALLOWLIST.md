@@ -1,5 +1,7 @@
 # Public release allowlist — Canonical 0035 candidate
 
+Post-merge addendum (2026-11-03): PR #36/#37 are merged. The historical candidate review below is retained. The individually reviewed post-merge package may add sanitized Markdown, JSON/CSV manifests and contract-test fixtures under `docs/database/postmerge-p1-20261103/`, and purpose-built runners under `database/canonical/verification/postmerge/`. These paths must pass the same pinned security scan before publication. Only synthetic fixtures and public code provenance may be included; private logs, Notion contents, operational topology and credentials stay private. Verified CODEOWNERS are `yvettfang-netizen` and `Jimson614`; both now have the documented main-branch ownership entries. No additional Migration is allowlisted by this addendum.
+
 **Gate 2: CONDITIONAL.** Applies only to the new integration branch of the public `yvettfang-netizen/phoenix` repository. It does not authorize release of the private repository or its full history.
 
 ## Allowed files

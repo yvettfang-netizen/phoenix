@@ -1,0 +1,272 @@
+{
+  "task": "PHOENIX-CANONICAL-POSTMERGE-P1-20261103",
+  "status": "PASS_PG16_PG17_SYNTHETIC",
+  "rawAccess": "private evidence repository only",
+  "artifacts": [
+    {
+      "sha256": "c901c427449238452ade4f13484820cb2a70b00eb975c5d4263ca40c0278b40f",
+      "bytes": 81,
+      "file": "private-evidence-scan.txt"
+    },
+    {
+      "sha256": "9367852790316d9aadd793377202102cc847eb3ef7bff3e4e34c661e581b0007",
+      "bytes": 1020,
+      "file": "public-candidate-scan.txt"
+    },
+    {
+      "sha256": "22261245021b0944979146c6dfe5c3f5bbfa7611279922aa54e00954488a7de8",
+      "bytes": 97,
+      "file": "execution/cleanup-proof.json"
+    },
+    {
+      "sha256": "eddffb1091d6f5eb12a759731c5cfc0dac698e08b2eace4e64abc3a5c7d6dc3c",
+      "bytes": 64836,
+      "file": "execution/postmerge-pg16-commands.txt"
+    },
+    {
+      "sha256": "26dd47e5d7dfe4f32fa7c0c5759683911d8508b10370a088bb1f2a7d2cb55657",
+      "bytes": 41458,
+      "file": "execution/postmerge-pg16-full-acceptance.txt"
+    },
+    {
+      "sha256": "72439d563cccc5449a03d2d77ccd069acf61ce386f9fd12d158078b5338ecf1c",
+      "bytes": 6422,
+      "file": "execution/postmerge-pg16-migrations.json"
+    },
+    {
+      "sha256": "41c884aa8f4c1ad175cd23ee5d20f4937dc18a397fe9b4de36f136e5cee336e2",
+      "bytes": 13054,
+      "file": "execution/postmerge-pg16-private-test-manifest.json"
+    },
+    {
+      "sha256": "f839fe9276d0552346c6a24e7942aaf4825766281322d626b2684501da3507b9",
+      "bytes": 7117,
+      "file": "execution/postmerge-pg16-smoke-fresh.txt"
+    },
+    {
+      "sha256": "8ae325400bc81fc153afedbaf47d1c61df60a050464be66a2895e8d4061f0d5a",
+      "bytes": 8913,
+      "file": "execution/postmerge-pg16-smoke-upgrade.txt"
+    },
+    {
+      "sha256": "8c4bbd1de0a5f3eb2f43d620c15a710a1a178721df2b72fdbaa8fd83563ba256",
+      "bytes": 5392,
+      "file": "execution/postmerge-pg16-three-route-http.txt"
+    },
+    {
+      "sha256": "bfbeeac276f06292377b71849e7ddfb7d9d34e266f9b766fc331c18e025f7bfe",
+      "bytes": 20710,
+      "file": "execution/postmerge-pg16-v2.0-m5-0035-pwsh-audit-db-ids-pg16.txt"
+    },
+    {
+      "sha256": "85044e7a8aa83c30a1a76b6dbf2a688647b6bf8bc660cb845b4247e018ad8ece",
+      "bytes": 220305,
+      "file": "execution/postmerge-pg16-v2.0-m5-0035-pwsh-audit-log-pg16.txt"
+    },
+    {
+      "sha256": "f200a616b9c63f197e0bd473a5a93fe82428bd899f4e10a989100639d1fd96f4",
+      "bytes": 328,
+      "file": "execution/postmerge-pg16-v2.0-m5-0035-pwsh-audit-reconcile-pg16.txt"
+    },
+    {
+      "sha256": "45e7780be841f3dc404f92477884e635c0f656acda6f1f0b917cf707500ab571",
+      "bytes": 42225,
+      "file": "execution/postmerge-pg16-v2.0-m5-0035-pwsh-f10-pg16.txt"
+    },
+    {
+      "sha256": "e7e2715b1eda7f14639d9b4cdbc78de1d91d3443adb43ca9ac51754843eb92a2",
+      "bytes": 64837,
+      "file": "execution/postmerge-pg17-commands.txt"
+    },
+    {
+      "sha256": "e3880b448725a716865a57f90209ed84b6998cbc9ac9d610c149fa5fa67a85b1",
+      "bytes": 41458,
+      "file": "execution/postmerge-pg17-full-acceptance.txt"
+    },
+    {
+      "sha256": "72439d563cccc5449a03d2d77ccd069acf61ce386f9fd12d158078b5338ecf1c",
+      "bytes": 6422,
+      "file": "execution/postmerge-pg17-migrations.json"
+    },
+    {
+      "sha256": "41c884aa8f4c1ad175cd23ee5d20f4937dc18a397fe9b4de36f136e5cee336e2",
+      "bytes": 13054,
+      "file": "execution/postmerge-pg17-private-test-manifest.json"
+    },
+    {
+      "sha256": "c403ca38c6d6dd42d87c6497bb8db97365755c5f003574c7d233bf710c79e1e3",
+      "bytes": 7117,
+      "file": "execution/postmerge-pg17-smoke-fresh.txt"
+    },
+    {
+      "sha256": "ba11464aa1dfe98e753c40ff098edfbaa35c88d81b22e8c604276914e5ccbf5d",
+      "bytes": 8913,
+      "file": "execution/postmerge-pg17-smoke-upgrade.txt"
+    },
+    {
+      "sha256": "00252f7ce1fbe2ec61d169f47e6d6c9ed48587af103e0e213831e66302933519",
+      "bytes": 5392,
+      "file": "execution/postmerge-pg17-three-route-http.txt"
+    },
+    {
+      "sha256": "46f8be986a7458e6bff079c5839ffb3cef67af229812916b2739762c01eb1bd1",
+      "bytes": 20710,
+      "file": "execution/postmerge-pg17-v2.0-m5-0035-pwsh-audit-db-ids-pg17.txt"
+    },
+    {
+      "sha256": "4e2b96c6602db55eae4fa4a05d3f94fca136f7676e2a4c11d005cd17350aaef0",
+      "bytes": 220296,
+      "file": "execution/postmerge-pg17-v2.0-m5-0035-pwsh-audit-log-pg17.txt"
+    },
+    {
+      "sha256": "14ffa83bb685360401e0c33fd4b94c06c8f7c5cc208300816a190be28c7dcf90",
+      "bytes": 328,
+      "file": "execution/postmerge-pg17-v2.0-m5-0035-pwsh-audit-reconcile-pg17.txt"
+    },
+    {
+      "sha256": "a619fadf2bbda3c4fa261a78bb32e1f037f4bcef155e64b6ed07371e52f1520f",
+      "bytes": 42225,
+      "file": "execution/postmerge-pg17-v2.0-m5-0035-pwsh-f10-pg17.txt"
+    },
+    {
+      "sha256": "f28fa25c0d0d5b4d17dfcfcbfdd253234f6e7e821201bf38461b87660d24c806",
+      "bytes": 402815,
+      "file": "github/askwise-commit.json"
+    },
+    {
+      "sha256": "e07b08d6290105c1690aaa9bc6049eb0e257092c69a99298d03c50971561bbb4",
+      "bytes": 694724,
+      "file": "github/main.json"
+    },
+    {
+      "sha256": "621d6c831f65966217d53a438e3af82e9c77a5e6b5fa61b087c8137f30801c55",
+      "bytes": 190,
+      "file": "github/metadata-minimization.json"
+    },
+    {
+      "sha256": "330394a8874fc06c31770ac91145279e31c18730387716e1a364b1f3e359f930",
+      "bytes": 21605,
+      "file": "github/private-pr8.json"
+    },
+    {
+      "sha256": "3e60a1f548cb14447620614fcb29e50f3e61d7db27941b2f409b281b78a97657",
+      "bytes": 477,
+      "file": "github/private-repo.json"
+    },
+    {
+      "sha256": "1aa8282e8445cfb23d18440d0ef221424b5bd4dbcc731800de394b661e7456bd",
+      "bytes": 1688,
+      "file": "github/protection.json"
+    },
+    {
+      "sha256": "bb10f005e0b335cb54b0153b85989d13623c136812c4c29a565f29228d93982f",
+      "bytes": 12905,
+      "file": "sources/askwise-contract.txt"
+    },
+    {
+      "sha256": "2e157209e03399aa77299c163aa9c73e08b8486176976c36d7d98636250bec3b",
+      "bytes": 35246,
+      "file": "sources/askwise-db.txt"
+    },
+    {
+      "sha256": "acb251b32d81a323a110c0f34b9ed91073c3840079964332840376feb0d97f8b",
+      "bytes": 281,
+      "file": "sources/askwise-db.txt.metadata.json"
+    },
+    {
+      "sha256": "1bbba63d7618c765e1af7bc703d5a5c847143cc13eafd161809acdd92b00b866",
+      "bytes": 2136,
+      "file": "sources/askwise-mapping.txt"
+    },
+    {
+      "sha256": "0202292486b5319d47a1f0dc76831e2b3090d592e567d343d5621105b0d5f3ac",
+      "bytes": 1164,
+      "file": "sources/askwise-rules.txt"
+    },
+    {
+      "sha256": "fef177107e1f51c2c8e8176c15b307842f64a1dd87ea24f68dcab076faf2999c",
+      "bytes": 2123,
+      "file": "sources/askwise-session.txt"
+    },
+    {
+      "sha256": "554b80f4bc6037e4f7a4ddf688e6a1702cc967c77052ca6af9af30d41b709908",
+      "bytes": 306,
+      "file": "sources/askwise-session.txt.metadata.json"
+    },
+    {
+      "sha256": "ee740da7d0364e17cebdc230774ddabc0a62efbdec21f7ddb5b5b5010851b0c9",
+      "bytes": 5718,
+      "file": "sources/code-sources.json"
+    },
+    {
+      "sha256": "00fc8e8027588aa8fddf101d1a8577e96c18b427a1748ad30231843c597640d9",
+      "bytes": 3669,
+      "file": "sources/education-consultation.txt"
+    },
+    {
+      "sha256": "66e9ff50b998e431d01415cd05f2154f206b7b8bff69287a708b1f7db89a0119",
+      "bytes": 11166,
+      "file": "sources/education-current.txt"
+    },
+    {
+      "sha256": "da53f311833d59320252849ab684148ccbc36bc3fa11370afa7bf8f9104b11c2",
+      "bytes": 20142,
+      "file": "sources/education-geo.txt"
+    },
+    {
+      "sha256": "e847680b5779bc1bd89d16dda6eb9777f3fe47cdbbf35af0be2018a6bb5f64d8",
+      "bytes": 8752,
+      "file": "sources/education-main-contract.txt"
+    },
+    {
+      "sha256": "a3061c5a8163d1ed0f5778c30deb3e073c1a8e3988f35d889415facd35619a9c",
+      "bytes": 14451,
+      "file": "sources/education-v3.txt"
+    },
+    {
+      "sha256": "069f7ea3bd1ca16280d77bb43c121c8799bf50eeedbd0c25bce8b5c80512ccc5",
+      "bytes": 7874,
+      "file": "sources/health-api.txt"
+    },
+    {
+      "sha256": "d2cea6a525f3b477a520bd68c6d9975adb158857b90d4f487145a58d47a89b00",
+      "bytes": 10075,
+      "file": "sources/health-contract.txt"
+    },
+    {
+      "sha256": "180a2e075821469557892092f8ff09a681188191268fdd726d84f081dcc38b7d",
+      "bytes": 10956,
+      "file": "sources/health-mapping.txt"
+    },
+    {
+      "sha256": "8b3210394589521deec5f1c5487c86a7fd41402a5e3a4ed44378b3aff94c719f",
+      "bytes": 7343,
+      "file": "sources/identity-fields.txt"
+    },
+    {
+      "sha256": "147a5ad4c01e7e74ce49faf7b390001a0e99bde2701ba4cb0d87d7c1ff898bba",
+      "bytes": 6708,
+      "file": "sources/identity-mapping.txt"
+    },
+    {
+      "sha256": "1a3626e4f6bf2fba27098c1c47baa1a1587a24475507d4774eaafa786216b54d",
+      "bytes": 35410,
+      "file": "sources/identity-schema.txt"
+    },
+    {
+      "sha256": "eb32493d913b2650d05414e1f7cb946764658a9d607edccdf6670a433838a630",
+      "bytes": 5869,
+      "file": "sources/notion-schema-audit.json"
+    },
+    {
+      "sha256": "d5b5e04a7d54e479600a39c9e09baddee8d2d5fa4c54e360ff3fce9cd30a3b12",
+      "bytes": 741,
+      "file": "sources/wealth-readme.txt"
+    },
+    {
+      "sha256": "43f71280d9d7f6f3a8ec13c367bcdc032ac0b73b0552175140ce44014a96932b",
+      "bytes": 1990,
+      "file": "sources/wealth-schema.txt"
+    }
+  ]
+}

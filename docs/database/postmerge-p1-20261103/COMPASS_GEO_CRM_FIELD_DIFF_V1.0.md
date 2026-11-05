@@ -1,0 +1,33 @@
+# Compass / GEO / CRM Field Difference V1.0
+
+2026-11-03 · **PASS: source and field audit; ADDITIVE_MIGRATION_REQUIRED.** SQL anchor is [main 9355d286](https://github.com/yvettfang-netizen/phoenix/tree/9355d28667ee9cf4761b4abcdaf959f0ad154820/database/canonical/migrations). Exact website input commits and file hashes: [source index](SOURCE_INDEX.json). This is a proposal, not an approved write contract.
+
+Founder taxonomy: professional domains **EDUCATION / IDENTITY / WEALTH / HEALTH**; CHILD_COMPASS is an Education entry, FAMILY_COMPASS a cross-domain entry. Entry/source, explicit professional need and final consulted/sold/delivered service are separate facts. Existing GLOBAL_LIVING/HERITAGE domain values are preserved; the four-domain task does not delete frozen values.
+
+| Existing authority | Actual fields / constraints / API | Difference and proposed reuse |
+|---|---|---|
+| `crm.leads` 0027/0032 | `lead_id`, `lead_source_id`, `campaign_id`, `partner_organization_id`, optional `contact_person_id`/`family_id`, status/qualification/assignee; `crm.create_lead(...)` | No typed need assertion or source-content revision. Keep the Lead master and existing identity-verification workflow; never match a person from contact text. |
+| `crm.lead_sources` | `source_system`, `source_channel`, campaign and partner-organization references; controlled registration | Transport/acquisition source, not professional need or current region. Reuse the real source authority. |
+| `crm.lead_attributions` 0032 | lead/source FK; optional `partner_relationship_id` and campaign FK; `FIRST_TOUCH`/`CONVERSION_TOUCH`; mandatory `compass_kind`, source system and model version; unique `(lead_id,attribution_kind)`; update/delete rejected | Four legacy Compass codes only. No exact Identity/Wealth direct-page code, GEO content ID/revision/digest or source-event idempotency. Extend this authority, not a new source/Lead master. |
+| `crm.lead_events` | immutable event UUID/Lead FK/kind/status/reason, `actor_principal_id`, occurred time; internal `record_lead_event` | The actor currently records the executing principal, often SERVICE. Missing typed need domain, user-selection/advisor-confirmation provenance and authenticated asserting actor; reason text is insufficient. |
+| `crm.consultations` 0027/0033 | Lead or Client; Client+Family composite FK; optional subject; business domain, owner/schedule/lifecycle; optional consultation type and legacy `compass_kind`; controlled create/transition | One consultation domain is a consultation fact, not a complete Lead need history. New accepted need-event link, if mandatory, requires a separate decision. |
+| `crm.deals` / `crm.deal_items` | Client/Family FK; `primary_lead_id`; domain and estimated amount/currency; items have domain, mandatory legacy Compass kind, quantity/unit price; managed API and immutable events | Domain supports all four; legacy item classification cannot describe exact new direct entries. Amounts are pipeline/quote facts, not receipts/revenue/insurance contracts. |
+| `service.projects` / `service.project_domains` | Client/Family composite FK; optional matching Deal FK; primary domain; per-project domain rows unique; controlled project/delivery functions | Actual delivery authority. Never turn an ASKWISE daily task into this commercial project master or automatically create a project from a page view. |
+| Partner attribution | partner relationship points to the existing person/organization relationship; server validates source and ownership | A referral grants neither tenant access nor commission authority. No invented generic `partner_id` FK or browser-granted role. |
+
+The legacy APIs themselves enforce the four codes. Editing a CHECK alone would not safely enable new entry semantics. First Touch history must not be backfilled or reinterpreted; the existing immutable triggers remain.
+
+## GEO authority audit
+
+The connected Notion **Phoenix Insights & GEO Content Hub** is the existing content authority. Read-only schema evidence (private N-GEO-001) confirms Content ID, Slug, Source URL/Date/Verified Date, Status, Publish/Updated/Effective/Expiry dates, reviewer fields, Primary Category, Related Compass, GEO fields and reuse mode. Its categories and related Compass values already distinguish the four domains. “Applicable Family” is a segment tag, not a Canonical Family FK. Last Edited is a mutable timestamp, not an immutable publication revision. No dedicated publication revision ID/digest was present in the inspected schema.
+
+Canonical should store only an approved source-qualified content reference, immutable revision/digest and entry mapping version at acquisition time. Do not copy the CMS body, internal review notes, medical case material, personal contact data or all Notion database options. Proposed export evidence must distinguish source retrieval, review and publication; a Draft/expired record cannot be presented as approved content. Adding a second CMS is not required.
+
+## Website-to-CRM differences
+
+- **Education V3**: local consultation checklist explicitly collects/sends no student name, contact or answers. Public assessment URL/handoff approval is absent. **V2 GEO**: language-neutral entities, official source provenance, periods, reviewer/publication lifecycle are logical content contracts; preserve the existing questionnaire. Neither is a live `create_lead` integration.
+- **Identity #35**: separate country/policy content model, no approved physical policy publication authority. Direct Identity entry must remain exact; it cannot be disguised as Family Compass.
+- **Wealth**: retain WEALTH domain on consultations/deals/projects. Current main `Phoenix Compass/Wealth Compass/README.md` explicitly reports `BUSINESS_RULES_STATUS=BLOCKED / RULES_NOT_LOADED`. Its Zod contracts have session/ruleVersion/sourceChannel/idempotency/consent metadata, but the reviewed questionnaire/scoring sources are absent and it is not a finished product. Preserve that boundary; no persona/scoring or Finance conclusion is inferred. Existing website or standalone assessment code does not prove Finance ownership, a signing/payment authority, or a current Canonical ingestion contract.
+- **Health #33/#34**: current region, destination, language and contact consent are distinct from source channel; missing typed non-sensitive fields cannot be hidden in `reason_code`, a name or a generic free-text event. Contact permission, assessment handoff and patient-record consent remain independent.
+
+This audit proposes fields in [0036 design](CANONICAL_0036_DESIGN_DECISION.md). No constraint, API, production data or First Touch record is changed here.

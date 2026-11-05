@@ -1,0 +1,79 @@
+{
+  "status": "SOURCE_CODE_VERIFIED_NOT_RUNTIME_APPROVAL",
+  "recordOwner": "Jimson",
+  "founderApproval": "PENDING",
+  "runtimeEntryRegistry": "NOT_ESTABLISHED",
+  "statement": "No product codes, runtime issuer values or principal identities are invented by this source inventory.",
+  "sources": [
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "c66f6a0a23e6078b6fe1d23396e92f63db82929e",
+      "sha256": "9827b6b92497904799313fd99b174ecbce6c31866e50c019c4055ccae31cdbcd",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/lib/site-directory.ts",
+      "path": "website/phoenix-nova-website-v5/lib/site-directory.ts"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "01169a45ecd97d8768f8c247cae6ce31309c4c7b",
+      "sha256": "c6d8614ee30ac63a530c47d9532dd5d8a3b129c8f517307006d8563bd23ef92f",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/app/%5Blocale%5D/education/page.tsx",
+      "path": "website/phoenix-nova-website-v5/app/[locale]/education/page.tsx"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "b4b542f21deae099355cbda490d82e654dec5285",
+      "sha256": "f07230b5fc05a23bd339168935f2465d1003dc65e1239db994f47f3f5cd02371",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/app/%5Blocale%5D/identity/page.tsx",
+      "path": "website/phoenix-nova-website-v5/app/[locale]/identity/page.tsx"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "aa7272a5eb064d1668684b64959beef47180156e",
+      "sha256": "5f363d8883bc8cc8b1f6f3135fb2c3db5f8ef97f263e974589fb72fda2cf6665",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/app/%5Blocale%5D/health/page.tsx",
+      "path": "website/phoenix-nova-website-v5/app/[locale]/health/page.tsx"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "033edbcc7e08a8741196dc68781eb833067036f5",
+      "sha256": "90e21b55ccd69c3ed3c71bd66590410438688ad7283f496b618ba5901c015e47",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/app/%5Blocale%5D/%5Bpage%5D/page.tsx",
+      "path": "website/phoenix-nova-website-v5/app/[locale]/[page]/page.tsx"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "c590f81587361884c19c808a7b79b786820584ff",
+      "sha256": "00fc8e8027588aa8fddf101d1a8577e96c18b427a1748ad30231843c597640d9",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/components/education-consultation.tsx",
+      "path": "website/phoenix-nova-website-v5/components/education-consultation.tsx"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "88bd161444ceb19ca4024a6b3bc6b1b581c04da6",
+      "sha256": "ef101cf9c00dec6b36b81150010c066ea9867a9caf0d319d4a759da2a277a10a",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/components/v5-site.tsx",
+      "path": "website/phoenix-nova-website-v5/components/v5-site.tsx"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "8febc49658d28e6bb3cff1b95698b0765c838f43",
+      "sha256": "81976bd7835a7ada6ab8d0e335ac751d3fd98432a53b0dc4d343c750456e78cc",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/database/canonical/migrations/0027_crm_lead_deal_foundation.sql",
+      "path": "database/canonical/migrations/0027_crm_lead_deal_foundation.sql"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "542246e986aaa0e000a0772e2d41a436221567fd",
+      "sha256": "714ee075bde36d52545e6ae38afc61b3de2509b6f749f0ed31ba29805931047e",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/database/canonical/migrations/0032_m2_lead_acquisition_management.sql",
+      "path": "database/canonical/migrations/0032_m2_lead_acquisition_management.sql"
+    },
+    {
+      "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+      "blob": "c417131940c8fbe5be2c19799a978fe19ad6e956",
+      "sha256": "c701f74897ca13d503c8c165fd2182d77a06583afa832760dc80f8dd9524aab6",
+      "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/database/canonical/migrations/0017_external_identity_request_trace.sql",
+      "path": "database/canonical/migrations/0017_external_identity_request_trace.sql"
+    }
+  ]
+}
