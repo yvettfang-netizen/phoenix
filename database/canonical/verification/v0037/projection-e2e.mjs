@@ -10,11 +10,14 @@ import {runReadAuditRegression} from './read-audit-regression.mjs';
 import {reviewConfigProbe,reviewRuntimeProbes} from './review-regression.mjs';
 import {runBrokerSessionRegression} from './broker-session-regression.mjs';
 import {runUiStateReviewRegression} from './ui-state-review-regression.mjs';
+import {familyCenterVisualRegression} from './family-center-v2-regression.mjs';
 import {createRequire} from 'node:module';
 const publicFamily=n=>'fam_'+id(n).replaceAll('-','');
 const publicStudent=n=>'stu_'+id(n).replaceAll('-','');
 const version=process.argv[2]; assert(['16','17'].includes(version));
 const originalReview=process.argv.includes('--review-original');
+const familyCenterV2=process.argv.includes('--family-center-v2');
+const familyCenterFlags=familyCenterV2?'FAMILY_CENTER_V2_ENABLED=true\n':'';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../../..');
 const combinedPath=path.join(root,'database/canonical/migration-manifests/combined-0036-0037-candidate.json');
 const combined=existsSync(combinedPath)?JSON.parse(readFileSync(combinedPath)):undefined;
@@ -186,7 +189,7 @@ async function sessionBrowserProbe({apiOrigin,tokens,revokeBrowserSession,expect
   try{
     if(!vite){
       assert(!existsSync(devVars),'Existing preview config preserved');
-      save(devVars,`CANONICAL_FAMILY_PROJECTION_ENABLED=true\nCANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED=true\nCANONICAL_BROKER_SESSION_BRIDGE_ENABLED=true\nCANONICAL_SESSION_API_ORIGIN=${apiOrigin}\n`);ownConfig=true;
+      save(devVars,`${familyCenterFlags}CANONICAL_FAMILY_PROJECTION_ENABLED=true\nCANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED=true\nCANONICAL_BROKER_SESSION_BRIDGE_ENABLED=true\nCANONICAL_SESSION_API_ORIGIN=${apiOrigin}\n`);ownConfig=true;
       const childEnv={...process.env,NODE_ENV:'development',WRANGLER_SEND_METRICS:'false',NO_PROXY:'127.0.0.1,localhost'};
       for(const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy'])delete childEnv[k];
       ownVite=spawn(process.execPath,[path.join(website,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port','4500','--strictPort'],{cwd:website,env:childEnv,stdio:['ignore','pipe','pipe'],windowsHide:true});
@@ -195,6 +198,7 @@ async function sessionBrowserProbe({apiOrigin,tokens,revokeBrowserSession,expect
     }
     const activeBrowser=browser??(ownBrowser=await chromium.launch({headless:true,channel:process.env.CATALOG_BROWSER_CHANNEL||(process.platform==='win32'&&!existsSync(chromium.executablePath())?'msedge':'chromium')}));
     await runUiStateReviewRegression({browser:activeBrowser,origin:target,website});
+    if(familyCenterV2)await familyCenterVisualRegression({browser:activeBrowser,origin:target,website});
     context=await activeBrowser.newContext();await context.route('**/*',route=>['127.0.0.1','localhost'].includes(new URL(route.request().url()).hostname)?route.continue():route.abort());
     const page=await context.newPage();
     for(const sub of ['usr_parent_a','usr_parent_b','usr_parent_a']){
@@ -207,7 +211,21 @@ async function sessionBrowserProbe({apiOrigin,tokens,revokeBrowserSession,expect
     changeStudentName();await page.reload({waitUntil:'domcontentloaded'});await page.locator('[data-student-summary]').filter({hasText:'Synthetic session database change'}).waitFor();
     assert.equal(await page.evaluate(async()=> (await fetch('/api/canonical/session-projections/family?family=forged')).status),403);
     assert.equal(await page.evaluate(async()=> (await fetch('/api/canonical/session-projections/family',{headers:{'x-family-id':'forged'}})).status),403);
-    await revokeBrowserSession();await page.reload({waitUntil:'domcontentloaded'});await page.getByText('家庭资料暂不可用或未获授权。',{exact:true}).waitFor();
+    if(familyCenterV2){
+      for(const sub of ['usr_parent_b','usr_parent_a']){
+        await context.addCookies([{name:'phoenix_family_session',value:tokens.get(sub),url:target,httpOnly:true,sameSite:'Strict'}]);
+        await page.goto(target+'/en/family-center',{waitUntil:'domcontentloaded'});
+        await page.getByLabel('Family',{exact:true}).locator('option').filter({hasText:sub==='usr_parent_b'?'Synthetic Family B':'Synthetic Family A'}).waitFor({state:'attached'});
+        assert.equal(await page.locator('.fc-members button').count(),1);
+        assert.equal(await page.locator('.fc-service-detail').count(),0);
+      }
+      await page.evaluate(()=>window.dispatchEvent(new Event('blur')));await page.getByText('Please refresh to verify current information.',{exact:true}).first().waitFor();assert.equal(await page.locator('.fc-members button').count(),0);
+      await page.getByRole('button',{name:'Refresh authorization',exact:true}).click();await page.locator('.fc-members button').waitFor();
+    }
+    await revokeBrowserSession();
+    if(familyCenterV2){await page.reload({waitUntil:'domcontentloaded'});await page.getByText('Access to these records is not authorized.',{exact:true}).first().waitFor();assert.equal(await page.locator('.fc-members button').count(),0);console.log('PASS FAMILY-V2 real page -> existing BFF -> broker/binder/app -> PG; A/B isolation, no fabricated services, blur/stale clearing, refresh and revoked session deny');await page.goto(target+'/zh/canonical-session-preview',{waitUntil:'domcontentloaded'});}
+    else await page.reload({waitUntil:'domcontentloaded'});
+    await page.getByText('家庭资料暂不可用或未获授权。',{exact:true}).waitFor();
     assert.equal(await page.locator('[data-family-name]').count(),0);
     console.log('PASS actual browser -> HttpOnly opaque session -> dedicated BFF -> application composition -> internal subject-only broker -> binder/ticket -> Canonical audited DTO; A/B/A isolated, revoked cookie shows no data; no JWT cookie or production identity');
   }finally{
@@ -311,7 +329,7 @@ try{
   sql(db,'GRANT pg_read_server_files TO phoenix_canonical_projection_reader');assert.equal((await call()).status,503);
   sql(db,'REVOKE pg_read_server_files FROM phoenix_canonical_projection_reader');assert.equal((await call()).status,200);
   console.log('PASS excessive app membership rejected; structured outcome audit contains no identities or DTO fields');
-  save(devVars,`CANONICAL_FAMILY_PROJECTION_ENABLED=true\nCANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED=true\nCANONICAL_FAMILY_API_ORIGIN=${origin}\n${combined?'CANONICAL_BROKER_SESSION_BRIDGE_ENABLED=true\nCANONICAL_SESSION_API_ORIGIN=http://127.0.0.1:4506\n':''}`);ownsVars=true;
+  save(devVars,`${familyCenterFlags}CANONICAL_FAMILY_PROJECTION_ENABLED=true\nCANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED=true\nCANONICAL_FAMILY_API_ORIGIN=${origin}\n${combined?'CANONICAL_BROKER_SESSION_BRIDGE_ENABLED=true\nCANONICAL_SESSION_API_ORIGIN=http://127.0.0.1:4506\n':''}`);ownsVars=true;
   const webEnv={...process.env,NODE_ENV:'development',WRANGLER_SEND_METRICS:'false',NO_PROXY:'127.0.0.1,localhost'};
   for(const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy'])delete webEnv[k];
   vite=spawn(process.execPath,[path.join(website,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port','4499','--strictPort'],{cwd:website,env:webEnv,stdio:['ignore','pipe','pipe'],windowsHide:true});

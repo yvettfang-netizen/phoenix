@@ -8,6 +8,7 @@ on:
       - 'docs/database/broker-session-bridge-20261105/**'
       - 'docs/database/closeout-gates-20261105/**'
       - 'docs/database/combined-0036-0037-20261105/**'
+      - 'docs/database/family-center-v2-20261105/**'
       - '.github/workflows/canonical-0037-read-audit.yml'
 permissions:
   contents: read
@@ -40,6 +41,9 @@ jobs:
           for path in 'docs/database/combined-0036-0037-20261105' 'database/canonical/verification/v0037/ui-state-review-regression.mjs' 'Phoenix Compass/education compass/server/src/index.ts' 'website/phoenix-nova-website-v5/components/canonical-family-preview.tsx' 'website/phoenix-nova-website-v5/app/api/canonical/session-projections/[...path]/route.ts' 'website/phoenix-nova-website-v5/app/[locale]/canonical-session-preview/page.tsx' 'website/phoenix-nova-website-v5/tests/canonical-session-projection.test.mjs'; do
             docker run --rm --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
           done
+          for path in 'docs/database/family-center-v2-20261105' 'database/canonical/verification/v0037/family-center-v2-regression.mjs' 'website/phoenix-nova-website-v5/components/family-center-v2.tsx' 'website/phoenix-nova-website-v5/components/family-center-v2.css' 'website/phoenix-nova-website-v5/lib/family-center-v2.ts' 'website/phoenix-nova-website-v5/lib/family-center-v2-fixtures.ts' 'website/phoenix-nova-website-v5/tests/family-center-v2.test.mjs' 'website/phoenix-nova-website-v5/app/[locale]/family-center/page.tsx'; do
+            docker run --rm --network none --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
+          done
       - name: Existing backend validation
         working-directory: Phoenix Compass/education compass/server
         run: |
@@ -52,7 +56,7 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           node node_modules/workerd/install.js
-          node --test tests/canonical-family-projection.test.mjs tests/canonical-session-projection.test.mjs
+          node --import ./tests/register-typescript.mjs --test tests/canonical-family-projection.test.mjs tests/canonical-session-projection.test.mjs tests/family-center-v2.test.mjs
       - name: Isolated pinned synthetic browser
         run: |
           npm install --prefix "$RUNNER_TEMP/read-audit-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
@@ -60,4 +64,4 @@ jobs:
       - name: Combined 0036 0037 fresh upgrade negative audits opaque-session browser and fresh restore
         run: |
           export PLAYWRIGHT_MODULE="$RUNNER_TEMP/read-audit-browser/node_modules/playwright"
-          node database/canonical/verification/v0037/projection-e2e.mjs '${{ matrix.pg }}'
+          node database/canonical/verification/v0037/projection-e2e.mjs '${{ matrix.pg }}' --family-center-v2
