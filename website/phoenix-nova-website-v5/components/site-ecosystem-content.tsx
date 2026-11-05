@@ -6,7 +6,7 @@ import Link from "next/link";
 import { localizedHref } from "@/lib/locale-navigation";
 import { healthPreviewEnabled } from "@/lib/health-compass-gate";
 
-export function SiteEcosystemContent({ locale, consultationPath, compact = false, mainOrigin }: { locale: Locale; consultationPath?: string; compact?: boolean; mainOrigin?: string }) {
+export function SiteEcosystemContent({ locale, consultationPath, localized = false, brandLocale, compact = false, mainOrigin }: { locale: Locale; consultationPath?: string; localized?: boolean; brandLocale?: Locale; compact?: boolean; mainOrigin?: string }) {
   const zh = locale === "zh";
   if (compact) return <div className={styles.compactFooter} data-compact-footer>
     <div className={styles.compactPromise}><div><strong>{zh ? "每一次启程，都值得更好的未来。" : "Every Beginning Deserves a Better Future."}</strong><span>{zh ? "连接世界资源，陪伴家庭成长。" : "Connecting Global Resources. Growing with Families."}</span></div><Link href={`${mainOrigin ?? ""}${localizedHref(locale, "/about")}`}>{zh ? "了解我们的故事 →" : "Our Story →"}</Link></div>
@@ -20,15 +20,15 @@ export function SiteEcosystemContent({ locale, consultationPath, compact = false
   return <div className={styles.inner}>
     <div className={styles.top}>
       <div className={styles.brand}>
-        <BrandMark href={`${mainOrigin ?? ""}/${locale}`} label={zh ? "Phoenix Nova 首页" : "Phoenix Nova home"} />
-        <p>{zh ? "每一次启程。" : "For Every Beginning."}</p>
+        <BrandMark href={`${mainOrigin ?? ""}/${locale}`} label={zh ? (localized || brandLocale === "zh" ? "凤启环球首页" : "Phoenix Nova 首页") : "Phoenix Nova home"} />
+        <p>{zh && localized ? "每一次启程。" : "For Every Beginning."}</p>
         <span>{zh ? "每一次启程，都值得更好的未来。" : "Every beginning deserves a better future."}</span>
       </div>
-      <div className={styles.mission}><small>{zh ? "全球家庭成长平台" : "GLOBAL FAMILY GROWTH PLATFORM"}</small><p>{zh ? <>承东方之源，<br />启全球新程。</> : <>Rooted in the East.<br />Opening a global chapter.</>}</p></div>
-      <div className={styles.digital}><strong>{zh ? "数字凤启" : "NOVA DIGITAL"}</strong><p>{zh ? "进入凤启世界" : "Enter the Phoenix world"}</p><a href="https://fengqi-research-institute.yvettfang.chatgpt.site">{zh ? "进入仙兽图 →" : "Explore the guardian world →"}</a></div>
+      <div className={styles.mission}><small>{zh && localized ? "全球家庭成长平台" : "GLOBAL FAMILY GROWTH PLATFORM"}</small><p>{zh ? <>承东方之源，<br />启全球新程。</> : <>Rooted in the East.<br />Opening a global chapter.</>}</p></div>
+      <div className={styles.digital}><strong>{localized ? "NOVA DIGITAL" : zh ? "数字凤启" : "NOVA DIGITAL"}</strong><p>{zh ? "进入凤启世界" : "Enter the Phoenix world"}</p>{localized ? <small>{zh ? "公开入口待确认 · 暂未开放" : "Public entry unconfirmed · Not open"}</small> : <a href="https://fengqi-research-institute.yvettfang.chatgpt.site">{zh ? "进入仙兽图 →" : "Explore the guardian world →"}</a>}</div>
     </div>
-    <SiteDirectory locale={locale} consultationPath={consultationPath} mainOrigin={mainOrigin} />
-    <div className={styles.company}><div><small>{zh ? "公司主体" : "LEGAL ENTITY"}</small><strong>{zh ? "凤启环球信息科技（深圳）有限公司" : "Phoenix Nova™"}</strong></div><p>{zh ? "公开信息仅用于方向理解，不构成录取、身份、医疗、法律或收益保证。" : "Public information supports understanding only and is not a guarantee of admission, immigration, medical, legal or financial outcomes."}</p></div>
+    <SiteDirectory locale={locale} consultationPath={consultationPath} localized={localized} mainOrigin={mainOrigin} />
+    <div className={styles.company}><div><small>{zh ? "公司主体" : localized ? "OPERATING BRAND" : "LEGAL ENTITY"}</small><strong>{!zh && localized ? "Phoenix Nova™" : "凤启环球信息科技（深圳）有限公司"}</strong>{!zh && localized && <Link href={`${mainOrigin ?? ""}/en/about`}>Company information ↗</Link>}</div><p>{zh ? "公开信息仅用于方向理解，不构成录取、身份、医疗、法律或收益保证。" : "Public information supports understanding only and is not a guarantee of admission, immigration, medical, legal or financial outcomes."}</p></div>
     <div className={styles.bottom}><span>© 2026 Phoenix Nova™</span><span>{zh ? "品牌版权保留 · 候选预览，尚未正式发布" : "All brand rights reserved · Candidate preview, not released"}</span></div>
   </div>;
 }

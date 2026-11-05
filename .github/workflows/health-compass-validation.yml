@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22.13.0
@@ -53,6 +54,10 @@ jobs:
             done
             node tests/health-landing-browser.mjs
             HEALTH_EVIDENCE_DIR="$HEALTH_EVIDENCE_DIR/family" node tests/health-family-browser.mjs
+            if [ "$enabled" = 0 ]; then
+              HEALTH_EVIDENCE_DIR=health-evidence/geo node tests/health-geo-browser.mjs
+              HEALTH_EVIDENCE_DIR=health-evidence/apec node tests/health-apec-browser.mjs
+            fi
             kill "$preview_pid"
             wait "$preview_pid" || true
             trap - EXIT

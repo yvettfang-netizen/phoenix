@@ -16,25 +16,27 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
   const [referralSource, setReferralSource] = useState("");
   const [clientRegion, setClientRegion] = useState("");
   const [insuranceChannel, setInsuranceChannel] = useState("");
+  const [careDestination, setCareDestination] = useState("");
+  const [coordinationNeed, setCoordinationNeed] = useState("");
   const [prepared, setPrepared] = useState(false);
   const options = family ? [...dimensions.map(dimension => text(dimension.title, locale)), zh ? "希望先了解规划方式" : "Explore the planning approach first"] : zh
     ? [
-      "就医前评估协调",
-      "专业医疗翻译",
-      "国际患者导航",
-      "在地就医礼宾",
-      "国际保险理赔协助",
-      "海外客户赴华就医协调",
+      "医疗机构与预约协调",
+      "医疗翻译与患者导航",
+      "跨境就医安排",
+      "在地服务支持",
+      "后续跟进与保险理赔协助",
+      "海外客户大湾区就医协调",
       "香港保险客户医疗协调",
       "希望先了解服务",
     ]
     : [
-      "Pre-visit coordination",
-      "Medical interpretation",
-      "International patient navigation",
-      "Local care concierge",
-      "Insurance claims assistance",
-      "Overseas-to-China care coordination",
+      "Medical institution & appointment coordination",
+      "Medical translation & patient navigation",
+      "Cross-border care arrangements",
+      "Local support services",
+      "Follow-up & insurance claims assistance",
+      "Overseas-to-Greater-Bay-Area coordination",
       "Hong Kong insurance coordination",
       "Explore the services first",
     ];
@@ -60,6 +62,26 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
         : [["uk", "United Kingdom"], ["hong-kong", "Hong Kong"], ["mainland-china", "Mainland China"], ["other-overseas", "Other overseas region"], ["unclear", "Not yet clear"]],
     },
     {
+      id: "care-destination",
+      name: "care_destination",
+      label: zh ? "就医目的地" : "Care destination",
+      value: careDestination,
+      setValue: setCareDestination,
+      options: zh
+        ? [["hong-kong", "香港"], ["shenzhen", "深圳"], ["other-gba", "其他大湾区内地城市（服务条件待核实）"], ["unclear", "尚未确定"]]
+        : [["hong-kong", "Hong Kong"], ["shenzhen", "Shenzhen"], ["other-gba", "Other mainland GBA city (availability to verify)"], ["unclear", "Not decided"]],
+    },
+    {
+      id: "coordination-need",
+      name: "coordination_need",
+      label: zh ? "服务协调需求" : "Coordination needs",
+      value: coordinationNeed,
+      setValue: setCoordinationNeed,
+      options: zh
+        ? [["appointment", "预约与流程沟通"], ["language", "语言与资料翻译协调"], ["travel", "跨境行程与在地安排"], ["insurance", "保险资料及后续跟进"], ["unclear", "希望先了解"]]
+        : [["appointment", "Appointments and processes"], ["language", "Language and document translation"], ["travel", "Travel and local arrangements"], ["insurance", "Insurance documentation and follow-up"], ["unclear", "Explore the options first"]],
+    },
+    {
       id: "insurance-channel",
       name: "insurance_channel",
       label: zh ? "保险协调渠道" : "Insurance channel",
@@ -75,11 +97,14 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
     setReferralSource("");
     setClientRegion("");
     setInsuranceChannel("");
+    setCareDestination("");
+    setCoordinationNeed("");
     setPrepared(false);
   };
+  const PreparationContainer = family ? "form" : "div";
   return <div className={styles.consultation}>
     <p>{zh ? "咨询准备演示 · 无需填写个人或医疗资料" : "Consultation preparation demo · No personal or medical information needed"}</p>
-    <form onSubmit={event => { event.preventDefault(); setPrepared(true); }}>
+    <PreparationContainer onSubmit={event => { event.preventDefault(); if (service) setPrepared(true); }}>
       <label htmlFor="health-service">{zh ? "您希望了解哪项服务？" : "Which service would you like to explore?"}</label>
       <select id="health-service" required value={service} onChange={event => { setService(event.target.value); setPrepared(false); }}>
         <option value="">{zh ? "请选择服务方向" : "Select a service"}</option>
@@ -87,19 +112,19 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
       </select>
       {!family && <details>
         <summary>{zh ? "补充沟通背景（可选）" : "Additional conversation context (optional)"}</summary>
-        <p>{zh ? "以下三项含义不同，可分别留空；正式咨询时由顾问分别核对。本页仅作本地准备，不发送任何内容。" : "These three fields have different meanings and may be left blank independently. An adviser will verify them separately during a formal consultation. This page is local preparation only and sends nothing."}</p>
+        <p>{zh ? "来源、所在地区、目的地、协调需求与保险渠道分别确认，可独立留空。本页仅作本地准备，不发送任何内容，也不确定合作伙伴或费用归属。" : "Source, current region, destination, coordination needs and insurance channel are separate and optional. This page prepares a conversation locally, sends nothing and does not assign a partner or financial attribution."}</p>
         {contextFields.map(field => <div key={field.name}>
           <label htmlFor={field.id}>{field.label}</label>
-          <select id={field.id} name={field.name} value={field.value} onChange={event => { field.setValue(event.target.value); setPrepared(false); }}>
+          <select id={field.id} value={field.value} onChange={event => { field.setValue(event.target.value); setPrepared(false); }}>
             <option value="">{zh ? "请选择（可留空）" : "Select (optional)"}</option>
             {field.options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
         </div>)}
       </details>}
-      <button className={styles.primary} type="submit" disabled={!ready}>{family
+      <button data-testid="health-consultation-prepare" className={styles.primary} type={family ? "submit" : "button"} disabled={!ready || !service} onClick={() => { if (!family && service) setPrepared(true); }}>{family
         ? (zh ? "查看咨询准备清单" : "View preparation checklist")
         : (zh ? "准备预约咨询" : "Prepare a consultation")}<span aria-hidden="true">↗</span></button>
-    </form>
+    </PreparationContainer>
     <noscript><p>{zh ? "请启用 JavaScript 以使用本地咨询准备演示；此入口不发送咨询。" : "Enable JavaScript to use the local preparation demo. This entry does not send an enquiry."}</p></noscript>
     <div role="status" aria-live="polite" data-testid="health-consultation-status">
       {prepared && <div className={styles.prepared}>
@@ -110,8 +135,10 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
         {!family && <>
           {referralSource && <p><strong>{zh ? "咨询来源渠道：" : "Referral source: "}</strong>{contextFields[0].options.find(([value]) => value === referralSource)?.[1]}</p>}
           {clientRegion && <p><strong>{zh ? "当前所在地区：" : "Current region: "}</strong>{contextFields[1].options.find(([value]) => value === clientRegion)?.[1]}</p>}
-          {insuranceChannel && <p><strong>{zh ? "保险协调渠道：" : "Insurance channel: "}</strong>{contextFields[2].options.find(([value]) => value === insuranceChannel)?.[1]}</p>}
-          <p>{zh ? "三项背景各自含义不同，正式咨询时由顾问分别核对；本页仅作本地准备，不发送任何内容。" : "These three fields have different meanings. An adviser will verify them separately during a formal consultation. This page is local preparation only and sends nothing."}</p>
+          {careDestination && <p><strong>{zh ? "就医目的地：" : "Care destination: "}</strong>{contextFields[2].options.find(([value]) => value === careDestination)?.[1]}</p>}
+          {coordinationNeed && <p><strong>{zh ? "服务协调需求：" : "Coordination needs: "}</strong>{contextFields[3].options.find(([value]) => value === coordinationNeed)?.[1]}</p>}
+          {insuranceChannel && <p><strong>{zh ? "保险协调渠道：" : "Insurance channel: "}</strong>{contextFields[4].options.find(([value]) => value === insuranceChannel)?.[1]}</p>}
+          <p>{zh ? "正式联系、资料使用与患者授权将分别确认；此处的选择不构成授权，也不会随评估答案自动交接。" : "Contact, document use and patient permissions must be confirmed separately. These choices do not grant permission or transfer assessment answers."}</p>
         </>}
         <p>{zh ? "当前未接通顾问或预约系统。请勿在此提供病历、证件或保险单；本演示不保存选择，刷新即清空。" : "No advisor or booking system is connected. Do not provide medical records, identity documents or policies here. Your selection is not saved and resets on refresh."}</p>
         <button type="button" onClick={clearSelection}>{zh ? "清空选择" : "Clear selection"}</button>
