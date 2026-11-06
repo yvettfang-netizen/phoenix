@@ -5,6 +5,7 @@ import { SiteHeader, SiteFooter, type Locale } from "./v5-site";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { EducationConsultation } from "./education-consultation";
+import { LearningCourseCatalog } from "./learning-course-catalog";
 import { educationServices, educationValues, compassPresentation, learningSteps, type EducationCopy } from "@/lib/education-content";
 import styles from "./education-landing.module.css";
 
@@ -20,7 +21,7 @@ const educationStages = [
   { route: "education/global", cn: "全球升学与流动", en: "Global education pathways", cnBody: "比较不同国家和地区的教育目的地与发展方向。", enBody: "Compare education destinations and development directions across regions." },
   { route: "education/academy", cn: "凤启学苑｜启明堂", en: "Phoenix Academy · Qiming Hall", cnBody: "连接课程、导师与长期学习支持，能力入口待开放。", enBody: "Connect courses, tutors and continuing learning support; access awaits confirmation." },
 ] as const;
-export function EducationLanding({ locale }: { locale: Locale }) {
+export function EducationLanding({ locale, catalogPreviewEnabled = false }: { locale: Locale; catalogPreviewEnabled?: boolean }) {
   const zh = locale === "zh";
   const t = (cn: string, en: string) => zh ? cn : en;
   const copy = (value: EducationCopy) => value[zh ? 0 : 1];
@@ -65,6 +66,7 @@ export function EducationLanding({ locale }: { locale: Locale }) {
       </div></section>
 
       <section className={`${styles.section} ${styles.academySection}`} id="academy" aria-labelledby="academy-title"><div className={styles.container}>
+        {catalogPreviewEnabled ? <LearningCourseCatalog locale={locale} /> : null}
         <div className={styles.productGrid}><div className={styles.productCopy}><p className={styles.eyebrow}>{t("凤启学苑｜启明堂", "PHOENIX ACADEMY · QIMING HALL")}</p><h2 id="academy-title">{t("全球家庭的教育与成长平台", "Learning and growth for global families")}</h2><p className={styles.lead}>{t("融合课程学习、专业导师与智能工具，为全球家庭提供持续的学习与成长支持。", "Bringing courses, professional tutors and intelligent tools together for continuing learning and growth.")}</p><ul className={styles.capabilities}>{[["国际教育与升学规划", "International education & admissions planning"], ["专业导师与一对一教学", "Professional tutors & one-to-one teaching"], ["课程学习及学术能力提升", "Courses & academic development"], ["学习进度、成长记录及长期跟进", "Learning progress, growth records & continuing support"]].map(([cn,en]) => <li key={en}><Check size={17} aria-hidden="true" />{t(cn,en)}</li>)}</ul><a className={styles.textLink} href="#consultation">{t("了解课程与导师支持", "Explore courses & tutor support")}<Arrow /></a></div><div className={styles.academyImage}><Image src="/images/education-v3/education-academy.png" alt={t("现代学习空间中进行远程课程的示意场景", "An illustrative remote lesson in a modern learning space")} fill unoptimized sizes="(max-width: 800px) 100vw, 50vw" /><span className={styles.imageTag}><GraduationCap aria-hidden="true" />{t("凤启学苑｜启明堂", "Phoenix Academy · Qiming Hall")}<small>{t("课程 · 导师 · 成长", "Courses · Tutors · Growth")}</small></span></div></div>
         <div className={styles.booking} id="academy-booking"><div><CalendarDays size={30} strokeWidth={1.2} aria-hidden="true" /><h3>{t("学苑约课管理系统", "Academy booking & teaching operations")}</h3><p>{t("凤启学苑的教学运营能力，不是独立品牌。以下为能力介绍，公开平台尚未开放。", "An Academy teaching-operations capability, not a separate brand. This is a capability preview; the public platform is not open.")}</p></div><div><ul className={styles.tags}>{[["课程预约", "Booking"], ["课程排期", "Scheduling"], ["导师管理", "Tutor coordination"], ["学员管理", "Student coordination"], ["学习进度", "Progress"], ["课程记录", "Lesson records"], ["教学跟进", "Teaching follow-up"]].map(([cn,en]) => <li key={en}>{t(cn,en)}</li>)}</ul><div className={styles.portalStates}><span><LockKeyhole size={16} aria-hidden="true" />{t("学员入口 · 待开放", "Student entry · Not open")}</span><span><LockKeyhole size={16} aria-hidden="true" />{t("导师入口 · 待开放", "Tutor entry · Not open")}</span></div></div></div>
       </div></section>
