@@ -31,8 +31,12 @@ It must not log the bearer or cookie. Static client-selected identity maps
 and browser cookies for P0 development sessions cannot replace this contract.
 
 The BFF buffers the upstream response and appends a preparation checkpoint
-before the last provider and read-only D1 session checks. An attempt and any
-preparation or terminal failure share a server-generated request ID prefix.
+before a read-only D1 check and the final provider check. The source session
+deadline is checked again at release. The final provider check must cover
+revocation of the exact bound source session and its grants. The evidence for
+that check against the real authority is part of the real-identity gate.
+An attempt and any preparation or terminal failure share a server-generated
+request ID prefix.
 Preparation means the upstream response was ready for authorization to release.
 It is independent of delivery. An audit write failure closes access. If a
 command committed before release was denied, authorized retries must reuse its
@@ -42,7 +46,9 @@ are reused from P0. No alternate customer/family/project/financial master exists
 The connection guard checks binder and app LOGINs and the effective workbench
 role after SET ROLE, before any context ticket is issued. The grant allowlist
 covers role edges, schemas, callable routines and absence of direct table,
-column and sequence access.
+column and sequence access. Ownership of the database or an application
+object is refused even when ordinary grants were revoked. PostgreSQL 17
+relation MAINTAIN is treated as an unexpected privilege.
 
 `CUSTOMER_CANONICAL_BRIDGE_ENABLED=true` requires the workbench flag and an
 allowed loopback origin. The private-staging composition additionally requires

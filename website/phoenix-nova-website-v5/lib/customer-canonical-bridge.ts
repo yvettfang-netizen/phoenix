@@ -4,7 +4,8 @@ import {summarySearch} from "./family-service-summary";
 import {workbenchRequestAllowed} from "./workbench-private-staging";
 
 /** Server-owned adapter only. Never deserialize this capability from request data.
- * Mapping authority must recheck account, principal, family, subject and grants.
+ * assertCurrent must recheck the bound source account and session as well as
+ * the current principal, family, subject and grants.
  * The server-to-server opaque token must resolve to the CUSTOMER gateway profile. */
 export interface CustomerCanonicalProvider {
  resolve(identity:{customerId:string;sessionHash:string}):Promise<{
@@ -54,10 +55,11 @@ export async function handleCustomerServices(request:Request,env:WorkbenchEnv,mo
    // The upstream response is buffered. This audit row precedes the final
    // release check and records preparation, not delivery.
    await audit("prepared","CANONICAL_ACCESS_PREPARED");
-   await mapped.assertCurrent();
    const current=await readCustomerSession(request,config,{touch:false});
    if(!current||current.id!==session.id||current.token_hash!==session.token_hash)
     return recordFailure(fail(401,"SIGN_IN_REQUIRED"));
+   await mapped.assertCurrent();
+   if(!(current.valid_until>Date.now()))return recordFailure(fail(401,"SIGN_IN_REQUIRED"));
    return response;
   }catch{return recordFailure(unavailable());}
  }catch{return unavailable();}

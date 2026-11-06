@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {setTimeout as delay} from 'node:timers/promises'
 import {id} from '../v0038/cluster.mjs'
 
 const bridgeHeader='x-phoenix-customer-bridge'
@@ -49,6 +50,7 @@ export async function verifyGatewaySecurity(db,rt,customerToken,check){
   ['binder EXECUTE drift','EXECUTE ON FUNCTION auth.clear_context()', 'workbench_binder'],
   ['role membership','phoenix_canonical_reader',role]
  ]
+ if(db.version==='17')grants.push(['table MAINTAIN','MAINTAIN ON service.projects',role])
  for(const [name,privilege,grantee] of grants){
   db.sql('GRANT '+privilege+' TO '+grantee)
   try{
@@ -57,16 +59,32 @@ export async function verifyGatewaySecurity(db,rt,customerToken,check){
    assert.equal(db.sql('SELECT count(*) FROM auth.context_exchange_tickets'),'0',name)
   }finally{db.sql('REVOKE '+privilege+' FROM '+grantee)}
  }
+ const ownedTable='service.workbench_owner_drift_probe'
+ db.sql('CREATE TABLE '+ownedTable+' (probe integer); ALTER TABLE '+ownedTable+' OWNER TO '+role+'; REVOKE ALL ON '+ownedTable+' FROM '+role)
+ try{
+  assert.equal(db.sql("SELECT has_table_privilege('"+role+"','"+ownedTable+"','SELECT')"),'f')
+  assert.equal((await call(project(312),'p1')).status,503,'ownership without ordinary ACLs')
+  assert.equal(db.sql('SELECT count(*) FROM auth.session_contexts'),'0')
+  assert.equal(db.sql('SELECT count(*) FROM auth.context_exchange_tickets'),'0')
+ }finally{db.sql('ALTER TABLE '+ownedTable+' OWNER TO phoenix_bootstrap')}
  assert.equal((await call(project(312),'p1')).status,200)
- check('A3 effective role rejects unexpected table, column, schema, function and role grants before ticket issue',{driftCases:grants.map(([name])=>name)})
+ check('A3 effective role rejects unexpected ACLs and object ownership before ticket issue',{driftCases:[...grants.map(([name])=>name),'table ownership with ordinary ACLs revoked']})
 }
 
 export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,account,mapping,check}){
- const invoke=async(resource,{onAudit=()=>{},mappedProvider=provider,body,key}={})=>{
+ const invoke=async(resource,{onAudit=()=>{},onReleaseRead,mappedProvider=provider,body,key}={})=>{
   const ids=[]
+  let sessionReads=0
   const observedDb={
    prepare(sql){
     const statement=config.db.prepare(sql)
+    if(onReleaseRead&&sql.includes('FROM core_auth_sessions')){
+     return {bind(...values){return {async first(){
+      const row=await statement.bind(...values).first()
+      if(++sessionReads===2)await onReleaseRead(row)
+      return row
+     }}}}
+    }
     if(!sql.startsWith('INSERT INTO core_auth_audit'))return statement
     return {bind(...values){
      const bound=statement.bind(...values)
@@ -106,6 +124,49 @@ export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,acc
   assert.deepEqual(await expired.response.json(),{error:{code:'SIGN_IN_REQUIRED'}})
   assert.deepEqual(expired.actions,[attempt,prepared,denied])
  }finally{await setExpiry(expiry.expires_at)}
+
+ let releaseRow=false
+ try{
+  const revoked=await invoke('summary',{onReleaseRead:row=>{releaseRow=!!row;mapping.active=false}})
+  assert.equal(releaseRow,true)
+  assert.equal(revoked.response.status,503)
+  assert.deepEqual(await revoked.response.json(),{error:{code:'IDENTITY_BRIDGE_UNAVAILABLE'}})
+  assert.deepEqual(revoked.actions,[attempt,prepared,unavailable])
+ }finally{mapping.active=true}
+ check('A2 revoking the mapping during the last D1 session lookup withholds the buffered project')
+
+ for(const point of ['D1 read','authority check']){
+  let deadline=0,entered=false
+  const onAudit=async action=>{
+   if(atPreparation(action)){
+    deadline=Date.now()+600
+    await setExpiry(deadline)
+   }
+  }
+  const crossDeadline=async()=>{
+   entered=true
+   await delay(Math.max(0,deadline-Date.now()+10))
+  }
+  try{
+   const mappedProvider={async resolve(identity){
+    const resolved=await provider.resolve(identity)
+    let checks=0
+    return {token:resolved.token,async assertCurrent(){
+     await resolved.assertCurrent()
+     if(point==='authority check'&&++checks===2)await crossDeadline()
+    }}
+   }}
+   const expired=await invoke('summary',{onAudit,mappedProvider,onReleaseRead:async row=>{
+    assert.equal(row?.valid_until,deadline)
+    if(point==='D1 read')await crossDeadline()
+   }})
+   assert.ok(entered&&Date.now()>=deadline,point)
+   assert.equal(expired.response.status,401,point)
+   assert.deepEqual(await expired.response.json(),{error:{code:'SIGN_IN_REQUIRED'}})
+   assert.deepEqual(expired.actions,[attempt,prepared,denied])
+  }finally{await setExpiry(expiry.expires_at)}
+ }
+ check('A2 the session deadline must still be valid after both the D1 lookup and the final authority check')
 
  const currentRevision=()=>Number(db.sql("SELECT revision FROM service.workbench_settings WHERE service_project_id='"+id(310)+"'"))
  const content='Synthetic authorized download bytes'

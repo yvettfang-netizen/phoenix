@@ -6,7 +6,7 @@ const env={SERVICE_WORKBENCH_ENABLED:'true',CUSTOMER_CANONICAL_BRIDGE_ENABLED:'t
 // Unit adapter, not D1/PG/Staging evidence.
 function fixture(){
  let active=true,revoked=false,failAudit=false;
- const session={id:'synthetic-customer-a',token_hash:'synthetic-session-hash'};
+ const session={id:'synthetic-customer-a',token_hash:'synthetic-session-hash',valid_until:Date.now()+60000};
  const audits=[];
  const db={prepare(sql){return {bind(...args){this.args=args;return this;},async first(){return active?session:null;},async run(){if(sql.startsWith('INSERT')){if(failAudit)throw Error('audit down');audits.push(this.args[2]);}return {meta:{changes:1}};}};}};
  const config={db,origin,registration:false};

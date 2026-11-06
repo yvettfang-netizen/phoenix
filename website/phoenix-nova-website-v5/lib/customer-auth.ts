@@ -12,7 +12,7 @@ export interface AuthDatabase {
 }
 export type AuthConfig = { db: AuthDatabase; origin: string; registration: boolean };
 type User = { id: string; username: string; password_hash: string; recovery_hash: string; status: string; created_at: number };
-type Session = { id: string; username: string; created_at: number; token_hash: string };
+type Session = { id: string; username: string; created_at: number; token_hash: string; valid_until: number };
 const IDLE_MS = 30 * 60_000;
 const ABSOLUTE_MS = 12 * 60 * 60_000;
 const MAX_BODY = 4096;
@@ -88,11 +88,13 @@ export async function readCustomerSession(request: Request, config: AuthConfig, 
   const token = tokenFrom(request, config);
   if (!token) return null;
   const now = Date.now();
-  const user = await config.db.prepare(`SELECT u.id,u.username,u.created_at,s.token_hash
+  const user = await config.db.prepare(`SELECT u.id,u.username,u.created_at,s.token_hash,
+    min(s.expires_at,s.last_seen_at+?) AS valid_until
     FROM core_auth_sessions s JOIN core_auth_users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND s.last_seen_at>? AND u.status='active'`)
-    .bind(digest(token), now, now - IDLE_MS).first<Session>();
-  if (user && touch) await config.db.prepare("UPDATE core_auth_sessions SET last_seen_at=? WHERE token_hash=?").bind(now, digest(token)).run();
+    .bind(IDLE_MS, digest(token), now, now - IDLE_MS).first<Session>();
+  if (!user || !(user.valid_until > Date.now())) return null;
+  if (touch) await config.db.prepare("UPDATE core_auth_sessions SET last_seen_at=? WHERE token_hash=?").bind(now, digest(token)).run();
   return user;
 }
 async function limited(db: AuthDatabase, key: string, max: number, now = Date.now()) {

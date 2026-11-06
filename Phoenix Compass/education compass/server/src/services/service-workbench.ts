@@ -87,7 +87,7 @@ async function guard(client:PoolClient,role:keyof typeof roleFunctions):Promise<
  const schemas=role==='workbench'?['auth','service']:['auth']
  const result=await client.query(`
   WITH app_schemas AS (
-   SELECT oid,nspname FROM pg_catalog.pg_namespace
+   SELECT oid,nspname,nspowner FROM pg_catalog.pg_namespace
    WHERE nspname NOT IN ('pg_catalog','information_schema','pg_toast')
      AND nspname !~ '^pg_(temp|toast_temp)_[0-9]+$'
   ), allowed_functions AS (
@@ -98,28 +98,32 @@ async function guard(client:PoolClient,role:keyof typeof roleFunctions):Promise<
             ELSE rolcanlogin AND current_user=session_user END
    AND NOT pg_catalog.has_database_privilege(current_database(),'CREATE')
    AND NOT EXISTS (
+    SELECT FROM pg_catalog.pg_database d WHERE d.datname=current_database() AND d.datdba=r.oid
+   )
+   AND NOT EXISTS (
     SELECT FROM pg_catalog.pg_auth_members m WHERE m.member=r.oid
       AND ($1<>'app' OR m.roleid<>$2::regrole OR m.admin_option OR m.inherit_option OR NOT m.set_option)
    )
    AND ($1<>'app' OR pg_catalog.pg_has_role(current_user,$2::name,'SET'))
    AND NOT EXISTS (
-    SELECT FROM app_schemas n WHERE pg_catalog.has_schema_privilege(n.oid,'CREATE,USAGE WITH GRANT OPTION')
+    SELECT FROM app_schemas n WHERE n.nspowner=r.oid OR pg_catalog.has_schema_privilege(n.oid,'CREATE,USAGE WITH GRANT OPTION')
       OR (n.nspname<>ALL($3::name[]) AND pg_catalog.has_schema_privilege(n.oid,'USAGE'))
    )
    AND NOT EXISTS (
     SELECT FROM pg_catalog.pg_class t JOIN app_schemas n ON n.oid=t.relnamespace
-    WHERE CASE
+    WHERE t.relowner=r.oid OR CASE
      WHEN t.relkind='S' THEN pg_catalog.has_sequence_privilege(t.oid,'USAGE,SELECT,UPDATE')
      WHEN t.relkind IN ('r','p','v','m','f') THEN
-      pg_catalog.has_table_privilege(t.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+      pg_catalog.has_table_privilege(t.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER' ||
+       CASE WHEN current_setting('server_version_num')::int>=170000 THEN ',MAINTAIN' ELSE '' END)
       OR pg_catalog.has_any_column_privilege(t.oid,'SELECT,INSERT,UPDATE,REFERENCES')
      ELSE false END
    )
    AND NOT EXISTS (
     SELECT FROM pg_catalog.pg_proc p JOIN app_schemas n ON n.oid=p.pronamespace
-    WHERE pg_catalog.has_schema_privilege(n.oid,'USAGE') AND pg_catalog.has_function_privilege(p.oid,'EXECUTE')
+    WHERE p.proowner=r.oid OR (pg_catalog.has_schema_privilege(n.oid,'USAGE') AND pg_catalog.has_function_privilege(p.oid,'EXECUTE')
       AND (pg_catalog.has_function_privilege(p.oid,'EXECUTE WITH GRANT OPTION')
-        OR NOT EXISTS (SELECT FROM allowed_functions f WHERE f.oid=p.oid))
+        OR NOT EXISTS (SELECT FROM allowed_functions f WHERE f.oid=p.oid)))
    ) AS ok
   FROM pg_catalog.pg_roles r WHERE rolname=current_user
  `,[role,workbenchRole,schemas,roleFunctions[role]])
