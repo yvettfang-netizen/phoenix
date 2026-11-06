@@ -16,7 +16,26 @@ fi
 check 200 "$base/__service-project-staging/health"
 check 404 -H 'Host: preview.invalid:4775' "$base/__service-project-staging/health"
 check 200 "$base/en/my-services"
-check 200 "$base/brand/official/v3/phoenix-nova-header@2x.png"
+node --input-type=module <<'ASSET'
+import assert from "node:assert/strict";
+const origin = "http://127.0.0.1:4775";
+let url = new URL("/brand/official/v3/phoenix-nova-header@2x.png", origin);
+for (let hop = 0; ; hop++) {
+  const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(5000) });
+  if (response.status === 200) {
+    assert.match(response.headers.get("content-type") ?? "", /^image\/png(?:;|$)/);
+    assert.match(response.headers.get("x-robots-tag") ?? "", /noindex/);
+    await response.body?.cancel();
+    break;
+  }
+  assert([301, 302, 307, 308].includes(response.status) && hop < 2, "Logo did not resolve to an image");
+  const location = response.headers.get("location");
+  assert(location, "Missing asset redirect");
+  url = new URL(location, url);
+  assert.equal(url.origin, origin, "Asset redirect escaped the private Worker");
+  await response.body?.cancel();
+}
+ASSET
 check 404 -X POST -H "Origin: $base" -H 'Content-Type: application/json' \
   --data '{"account":"client-a"}' "$base/api/service-workbench/dev-session"
 check 401 "$base/api/family-services/summary"

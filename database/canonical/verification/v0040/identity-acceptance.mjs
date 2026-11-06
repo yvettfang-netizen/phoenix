@@ -31,10 +31,21 @@ const record={
 let db,rt
 const check=(name,details={})=>{record.synthetic.checks.push({name,status:'PASS',at:new Date().toISOString(),...details});console.log('PASS '+name)}
 const expectSqlFailure=(sqlText,marker)=>{
- let failed=false,error
- try{db.sql(sqlText)}catch(caught){failed=true;error=caught}
- assert(failed,'Expected PostgreSQL trigger rejection: '+marker)
- assert.match(String(error?.message||error),new RegExp(marker))
+ assert.match(marker,/^[A-Z_]+$/)
+ // Check the exact trigger error inside PostgreSQL before the runner redacts
+ // long log tokens. A missing or different rejection aborts the probe.
+ db.sql(`DO $probe$
+  DECLARE reason text;
+  BEGIN
+   BEGIN
+    ${sqlText};
+    RAISE EXCEPTION 'MISSING_TRIGGER_DENIAL';
+   EXCEPTION WHEN raise_exception THEN
+    GET STACKED DIAGNOSTICS reason = MESSAGE_TEXT;
+    IF reason IS DISTINCT FROM '${marker}' THEN RAISE; END IF;
+   END;
+  END
+ $probe$;`)
 }
 
 function seedIdentityProject(){
