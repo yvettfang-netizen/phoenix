@@ -22,22 +22,33 @@ No customer/family/principal/role header or query is an authority.
 The provider is an unimplemented real-provider port, not a JSON setting.
 Its approved implementation must resolve a unique current Canonical principal,
 actor, family and subject grants using an authoritative server-side mapping;
-issue a short-lived opaque gateway session; and implement `assertCurrent`
+issue a short-lived opaque gateway session bound to the `CUSTOMER` profile and
+implement `assertCurrent`
 against live account/mapping/grant/session state. It must bind the token to the
 verified customer session, enforce revocation and expiry, and never grant
 ADVISOR authority from a customer login. Multiple or missing matches deny.
 It must not log the bearer or cookie. Static client-selected identity maps
 and browser cookies for P0 development sessions cannot replace this contract.
 
-The BFF rechecks D1 session and provider state before releasing each response.
-D1 access-attempt/outcome auditing is mandatory; audit failures close access.
+The BFF buffers the upstream response and appends a preparation checkpoint
+before the last provider and read-only D1 session checks. An attempt and any
+preparation or terminal failure share a server-generated request ID prefix.
+Preparation means the upstream response was ready for authorization to release.
+It is independent of delivery. An audit write failure closes access. If a
+command committed before release was denied, authorized retries must reuse its
+idempotency key to reconcile the result.
 Canonical ticket, transaction, RLS/subject authorization and read/write auditing
 are reused from P0. No alternate customer/family/project/financial master exists.
+The connection guard checks binder and app LOGINs and the effective workbench
+role after SET ROLE, before any context ticket is issued. The grant allowlist
+covers role edges, schemas, callable routines and absence of direct table,
+column and sequence access.
 
-`CUSTOMER_CANONICAL_BRIDGE_ENABLED=true` requires the existing development-only
-workbench flag and loopback origin. Missing auth configuration/provider/mapping
-denies. Production and non-loopback remain closed. This patch deliberately
-does not turn an injectable interface into an approved identity provider.
+`CUSTOMER_CANONICAL_BRIDGE_ENABLED=true` requires the workbench flag and an
+allowed loopback origin. The private-staging composition additionally requires
+its dedicated server-side configuration and a separate identity authority.
+Missing auth configuration, provider or mapping denies. Public and
+non-loopback access remains closed.
 The deployed Cloudflare binding/configuration and real mapping require separate
 implementation/security review; the synthetic harness is not that approval.
 
@@ -61,11 +72,16 @@ clears old data and re-fetches. No cache is an authorization source.
 
 The four-Compass contract excludes other primary domains. A non-Health project
 with a secondary HEALTH domain fails closed rather than borrowing its primary
-domain's access. Candidate0039 supplies customer scope/snapshot/list wrappers;
-the BFF adds a server-only customer-bridge marker after trusted session mapping.
-The API applies this guard inside read/command transactions, including downloads.
-Browser-supplied copies of that marker are rejected. Without0039 the customer
-seam fails closed; legacy P0 development requests retain their original path.
+domain's access. Candidate0039 supplies customer scope/snapshot/list wrappers.
+The development BFF sends a transport marker after trusted session mapping.
+The gateway requires it to match the bearer profile resolved by the server.
+Private staging uses the authority's verified FAMILY or ADVISOR channel to
+derive CUSTOMER or STAFF, and rejects markers. STAFF requires the dedicated
+staging composition and its 0040 mixed-Health guard. Current-state checks in
+that adapter require HTTP 204 and an unexpired assertion. The SYNTHETIC profile
+is limited to an explicitly configured development preview. The resolved
+profile selects the database guard for reads, commands and downloads. Unknown
+profiles and missing candidate guards deny.
 No001–0038 policy or migration is weakened. Future-created records and future
 progress events are excluded from current summaries. Keyset pagination is
 re-authorized per request, not a fixed database snapshot; refresh restarts it,

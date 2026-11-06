@@ -95,7 +95,7 @@ async function run(){
  const credentials=seedWorkbench(db)
  seedIdentityProject()
  seedTriggerProbes()
- rt=await startWorkbench(db,credentials)
+ rt=await startWorkbench(db,credentials,{privateStaging:true})
 
  const before=await rt.call('manager','projects/'+project(316))
  assert.equal(before.status,200,JSON.stringify(before.body))
@@ -107,7 +107,7 @@ async function run(){
  assert.equal(stageUpdate.status,200,JSON.stringify(stageUpdate.body))
  assert.equal(stageUpdate.body.status,'ALLOW')
  assert.equal(stageUpdate.body.result.toStatus,'IDENTITY_DOCUMENTS')
- check('valid Identity stage command is accepted through the real BFF and PostgreSQL function',{to:'IDENTITY_DOCUMENTS'})
+ check('valid Identity stage command is accepted through the staging API and PostgreSQL function',{to:'IDENTITY_DOCUMENTS'})
 
  const after=await rt.call('manager','projects/'+project(316))
  assert.equal(after.status,200,JSON.stringify(after.body))
@@ -127,6 +127,11 @@ async function run(){
  assert.equal(familyRead.status,200,JSON.stringify(familyRead.body))
  assert.equal(familyRead.body.project.domain,'IDENTITY')
  check('authorized family identity can read only the synthetic project',{actor:'client-a',project:project(316)})
+ for(const alias of ['client-a','manager']){
+  const forged=await rt.call(alias,'projects/'+project(316),undefined,undefined,{headers:{'X-Phoenix-Customer-Bridge':'p1'}})
+  assert.equal(forged.status,403)
+ }
+ check('staging CUSTOMER and STAFF profiles reject client-supplied bridge markers')
  const sameFamilyDenied=await rt.call('client-a','projects/'+project(312))
  assert.equal(sameFamilyDenied.status,403,JSON.stringify(sameFamilyDenied.body))
  const crossFamilyDenied=await rt.call('client-a','projects/'+project(315))
@@ -134,6 +139,12 @@ async function run(){
  check('unrelated same-family and cross-family project links are denied',{sameFamily:project(312),crossFamily:project(315)})
 
  db.sql("INSERT INTO service.project_domains(project_domain_id,service_project_id,business_domain,created_by_principal_id) VALUES('"+id(5316)+"','"+project(316)+"','HEALTH','"+id(900)+"')")
+ for(const alias of ['client-a','manager']){
+  assert.equal((await rt.call(alias,'projects/'+project(316))).status,403)
+  assert.equal((await rt.call(alias,'projects/'+project(316)+'/commands',
+   {kind:'STAGE',payload:{revision:after.body.project.revision,stage:'IDENTITY_SUBMISSION'}})).status,403)
+ }
+ check('verified staging profiles deny mixed Health reads and writes without a bridge marker')
  const {rows:[{ticket}]}=await rt.binder.query(
   "SELECT auth.issue_context_ticket($1,$2,$3,'ADVISOR',clock_timestamp()+interval '30 seconds',$4,$1) AS ticket",
   [id(212),id(12),id(100),id(9940)]

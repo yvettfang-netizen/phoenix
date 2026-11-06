@@ -200,7 +200,7 @@ async function readResponse(response: IncomingMessage, maxBytes = 64 * 1024): Pr
 }
 
 export function createPrivateStagingAuthority(config: PrivateStagingConfig): StagingIdentityAuthority {
-  const call = async (payload: Record<string, string>, emptyOk = false): Promise<unknown> => new Promise((resolve, reject) => {
+  const call = async (payload: Record<string, string>, acceptedStatuses = [200]): Promise<unknown> => new Promise((resolve, reject) => {
     const headers = {
       Accept: 'application/json',
       'Cache-Control': 'no-store',
@@ -224,9 +224,11 @@ export function createPrivateStagingAuthority(config: PrivateStagingConfig): Sta
       headers: { ...headers, 'Content-Length': body.length },
     }, async response => {
       try {
-        const parsed = response.statusCode === 204 && emptyOk ? null : await readResponse(response)
-        if (response.statusCode !== 200 && !(emptyOk && response.statusCode === 204)) throw fail('STAGING_IDENTITY_UNAVAILABLE', '身份 authority 未授权请求')
-        resolve(parsed)
+        if (!acceptedStatuses.includes(response.statusCode ?? 0)) {
+          response.resume()
+          throw fail('STAGING_IDENTITY_UNAVAILABLE', '身份 authority 未授权请求')
+        }
+        resolve(response.statusCode === 204 ? null : await readResponse(response))
       } catch (error) { reject(error) }
     })
     request.setTimeout(config.identityTimeoutMs, () => request.destroy(fail('STAGING_IDENTITY_UNAVAILABLE', '身份 authority 超时')))
@@ -242,10 +244,10 @@ export function createPrivateStagingAuthority(config: PrivateStagingConfig): Sta
     },
     async assertCurrent(assertionToken, channel) {
       if (!TOKEN.test(assertionToken)) throw fail('STAGING_IDENTITY_INVALID', '身份 assertion 无效')
-      await call({ action: 'assert-current', token: assertionToken, ...(channel ? { channel } : {}) }, true)
+      await call({ action: 'assert-current', token: assertionToken, ...(channel ? { channel } : {}) }, [204])
     },
     async check() {
-      await call({ action: 'readiness' }, true)
+      await call({ action: 'readiness' }, [200, 204])
     },
   }
 }
@@ -261,14 +263,17 @@ export function createPrivateStagingResolver(authority: StagingIdentityAuthority
     if (!TOKEN.test(token)) throw new AppError(401, 'AUTH_REQUIRED', '请先登录')
     const resolved = await authority.resolveBearer(token)
     if (!resolved) throw new AppError(403, 'ACCESS_DENIED', '身份未获授权')
+    const expiresAt = Date.parse(resolved.expiresAt)
     const identity: WorkbenchIdentity = {
       principalId: resolved.principalId,
       actorPersonId: resolved.actorPersonId,
       familyId: resolved.familyId,
       channel: resolved.channel,
+      profile: resolved.channel === 'FAMILY' ? 'CUSTOMER' : 'STAFF',
       async assertCurrent() {
-        if (Date.parse(resolved.expiresAt) <= Date.now()) throw new AppError(401, 'AUTH_EXPIRED', '登录已过期')
+        if (!(expiresAt > Date.now())) throw new AppError(401, 'AUTH_EXPIRED', '登录已过期')
         await authority.assertCurrent(resolved.assertionToken, resolved.channel)
+        if (!(expiresAt > Date.now())) throw new AppError(401, 'AUTH_EXPIRED', '登录已过期')
       },
     }
     return identity
@@ -325,7 +330,6 @@ export function createPrivateStagingWorkbench(config: PrivateStagingConfig, depe
     objects: dependencies.objects ?? failClosedObjects(),
     resolve: createPrivateStagingResolver(authority),
     mode: 'private-staging',
-    customerAuthorizationMode: 'verified-channel',
     projectSafetyGuard: privateStagingProjectSafetyGuard,
   })
   return {

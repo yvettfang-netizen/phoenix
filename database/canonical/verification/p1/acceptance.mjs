@@ -9,6 +9,7 @@ import {createCluster,id} from '../v0038/cluster.mjs'
 import {seedWorkbench} from '../v0038/fixtures.mjs'
 import {startWorkbench} from '../v0038/runtime.mjs'
 import {seedIdentityProject} from './fixture.mjs'
+import {verifyBridgeSecurity,verifyGatewaySecurity} from './security-regression.mjs'
 
 const version=process.argv[2]||'16'
 assert(['16','17'].includes(version),'PostgreSQL matrix version must be 16 or 17')
@@ -112,13 +113,13 @@ async function run(){
   async resolve(identity){
    const mapping=mappings.get(identity.customerId)
    if(!mapping||!mapping.active||mapping.sessionHash!==identity.sessionHash)return null
-   const token=rt.tokens[mapping.alias]
+   const {token}=mapping
    return{
     token,
     async assertCurrent(){
      const current=mappings.get(identity.customerId)
      const session=rt.sessions.get(token)
-     if(!current||!current.active||current.sessionHash!==identity.sessionHash||!session||session.expires<=Date.now())throw Error('synthetic mapping revoked')
+     if(current!==mapping||!current.active||current.sessionHash!==identity.sessionHash||!session||session.expires<=Date.now())throw Error('synthetic mapping revoked')
     }
    }
   }
@@ -167,7 +168,7 @@ async function run(){
   const session=await auth.readCustomerSession(sessionRequest,config)
   assert.equal(session?.id,created.user.id)
   accounts[alias]={id:created.user.id,cookie,sessionHash:session.token_hash,routeAlias}
-  mappings.set(created.user.id,{alias:routeAlias,sessionHash:session.token_hash,active:true})
+  mappings.set(created.user.id,{token:rt.issueCustomerSession(routeAlias),sessionHash:session.token_hash,active:true})
   record.synthetic.identities.push({alias,customerId:created.user.id,canonicalAlias:routeAlias,synthetic:true})
  }
  await register('client-a','client-a')
@@ -274,6 +275,9 @@ async function run(){
  expectStatus(await call('client-c','projects/'+project(318)+'/commands',{method:'POST',body:{kind:'MESSAGE',payload:{revision:1,subjectId:id(2),body:'SYNTHETIC_DENIED_CLINICAL_WRITE',audience:'CLIENT'}}}),403)
  assert.equal(db.sql("SELECT count(*) FROM service.workbench_messages WHERE service_project_id='"+project(318)+"'"),'0')
  check('secondary Health domain refuses customer summary, direct detail and commands')
+ await verifyGatewaySecurity(db,rt,mappings.get(accounts['client-c'].id).token,check)
+ await verifyBridgeSecurity({db,rt,bridge,env,config,provider,account:accounts['client-a'],
+  mapping:mappings.get(accounts['client-a'].id),check})
 
  const health=await call('client-b','projects/'+project(314))
  if(health.status===200){
@@ -307,13 +311,15 @@ async function run(){
  assert.equal(gatewayFault.status,503)
  check('D1/database and gateway failures fail closed without a false progress payload')
  const auditRows=[]
- for(const action of ['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_GRANTED','CANONICAL_ACCESS_DENIED']){
+ for(const action of ['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_PREPARED','CANONICAL_ACCESS_DENIED','CANONICAL_ACCESS_UNAVAILABLE']){
   const row=await mf.database.prepare('SELECT count(*) AS count FROM core_auth_audit WHERE action=?').bind(action).first()
   auditRows.push({action,count:Number(row?.count||0)})
  }
  record.synthetic.audit=auditRows
  assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_ATTEMPT')?.count>0)
- assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_GRANTED')?.count>0)
+ assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_PREPARED')?.count>0)
+ assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_DENIED')?.count>0)
+ assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_UNAVAILABLE')?.count>0)
  check('D1 bridge audit records attempts and outcomes')
  // Stop only this harness's owned Canonical container, after other assertions.
  // D1 availability alone must never make a failed Canonical read look empty.

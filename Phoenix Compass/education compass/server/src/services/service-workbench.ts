@@ -8,6 +8,8 @@ import {AppError} from '../domain/errors'
 
 export interface WorkbenchIdentity {
  principalId:string;actorPersonId:string;familyId:string;channel:'FAMILY'|'ADVISOR'
+ /** Bound by the server-side bearer resolver when the session is issued. */
+ profile:'CUSTOMER'|'STAFF'|'SYNTHETIC'
  assertCurrent():Promise<void>
 }
 export interface WorkbenchObjects {
@@ -63,48 +65,96 @@ export interface WorkbenchDependencies {
  resolve(authorization:string|undefined):Promise<WorkbenchIdentity>
  /** Explicit local synthetic preview only; never set by normal application bootstrap. */
  syntheticLogin?:(alias:string)=>Promise<string>
-  /**
-   * Customer projections normally require the private BFF marker. A private
-   * staging adapter can derive this view from the verified identity channel,
-   * so a browser header never changes FAMILY or ADVISOR authority.
-   */
-  customerAuthorizationMode?:'advisory-header'|'verified-channel'
-  /** Private staging can install an additional server-side project safety gate. */
-  projectSafetyGuard?:(client:PoolClient,identity:WorkbenchIdentity,project?:string)=>Promise<void>
+ /** The private staging composition installs the 0040 staff safety gate. */
+ projectSafetyGuard?:(client:PoolClient,identity:WorkbenchIdentity,project?:string)=>Promise<void>
  mode:'test'|'development'|'private-staging'
 }
-async function guard(client:PoolClient,binder:boolean):Promise<void>{
- const result=await client.query(
- "SELECT NOT(rolsuper OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolinherit)"+
- " AND NOT has_database_privilege(session_user,current_database(),'CREATE')"+
- " AND NOT EXISTS(SELECT FROM pg_namespace n WHERE n.nspname !~ '^pg_(temp|toast_temp)_[0-9]+$' AND has_schema_privilege(session_user,n.oid,'CREATE'))"+
- " AND NOT EXISTS(SELECT FROM pg_auth_members m WHERE m.member=r.oid AND ($1::boolean OR m.roleid<>'phoenix_canonical_service_workbench'::regrole))"+
- " AND ($1::boolean OR pg_has_role(session_user,'phoenix_canonical_service_workbench','MEMBER'))"+
- " AND NOT EXISTS(SELECT FROM pg_class t JOIN pg_namespace n ON n.oid=t.relnamespace WHERE n.nspname IN('core','auth','docs','education','service','audit','crm') AND t.relkind IN('r','p','v','m','f') AND has_table_privilege(session_user,t.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')) AS ok FROM pg_roles r WHERE rolname=session_user",[binder])
+const workbenchRole='phoenix_canonical_service_workbench'
+const roleFunctions={
+ binder:['auth.issue_context_ticket(uuid,uuid,uuid,text,timestamptz,uuid,uuid)'],
+ app:[],
+ workbench:[
+  'auth.clear_context()','auth.redeem_context_ticket(uuid,uuid)',
+  'service.workbench_snapshot(uuid)','service.workbench_list()',
+  'service.workbench_command(uuid,text,jsonb,text,uuid)','service.workbench_download(uuid,uuid)',
+  'service.workbench_catalogue()','service.workbench_customer_scope(uuid)',
+  'service.workbench_customer_snapshot(uuid)','service.workbench_customer_list()',
+  'service.workbench_summary(integer,timestamptz,uuid)',
+  'service.workbench_staging_staff_mixed_health(uuid)'
+ ]
+}
+async function guard(client:PoolClient,role:keyof typeof roleFunctions):Promise<void>{
+ const schemas=role==='workbench'?['auth','service']:['auth']
+ const result=await client.query(`
+  WITH app_schemas AS (
+   SELECT oid,nspname FROM pg_catalog.pg_namespace
+   WHERE nspname NOT IN ('pg_catalog','information_schema','pg_toast')
+     AND nspname !~ '^pg_(temp|toast_temp)_[0-9]+$'
+  ), allowed_functions AS (
+   SELECT pg_catalog.to_regprocedure(signature) AS oid FROM unnest($4::text[]) AS f(signature)
+  )
+  SELECT NOT (rolsuper OR rolcreaterole OR rolcreatedb OR rolreplication OR rolbypassrls OR rolinherit)
+   AND CASE WHEN $1='workbench' THEN NOT rolcanlogin AND current_user=$2::name
+            ELSE rolcanlogin AND current_user=session_user END
+   AND NOT pg_catalog.has_database_privilege(current_database(),'CREATE')
+   AND NOT EXISTS (
+    SELECT FROM pg_catalog.pg_auth_members m WHERE m.member=r.oid
+      AND ($1<>'app' OR m.roleid<>$2::regrole OR m.admin_option OR m.inherit_option OR NOT m.set_option)
+   )
+   AND ($1<>'app' OR pg_catalog.pg_has_role(current_user,$2::name,'SET'))
+   AND NOT EXISTS (
+    SELECT FROM app_schemas n WHERE pg_catalog.has_schema_privilege(n.oid,'CREATE,USAGE WITH GRANT OPTION')
+      OR (n.nspname<>ALL($3::name[]) AND pg_catalog.has_schema_privilege(n.oid,'USAGE'))
+   )
+   AND NOT EXISTS (
+    SELECT FROM pg_catalog.pg_class t JOIN app_schemas n ON n.oid=t.relnamespace
+    WHERE CASE
+     WHEN t.relkind='S' THEN pg_catalog.has_sequence_privilege(t.oid,'USAGE,SELECT,UPDATE')
+     WHEN t.relkind IN ('r','p','v','m','f') THEN
+      pg_catalog.has_table_privilege(t.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+      OR pg_catalog.has_any_column_privilege(t.oid,'SELECT,INSERT,UPDATE,REFERENCES')
+     ELSE false END
+   )
+   AND NOT EXISTS (
+    SELECT FROM pg_catalog.pg_proc p JOIN app_schemas n ON n.oid=p.pronamespace
+    WHERE pg_catalog.has_schema_privilege(n.oid,'USAGE') AND pg_catalog.has_function_privilege(p.oid,'EXECUTE')
+      AND (pg_catalog.has_function_privilege(p.oid,'EXECUTE WITH GRANT OPTION')
+        OR NOT EXISTS (SELECT FROM allowed_functions f WHERE f.oid=p.oid))
+   ) AS ok
+  FROM pg_catalog.pg_roles r WHERE rolname=current_user
+ `,[role,workbenchRole,schemas,roleFunctions[role]])
  if(result.rows[0]?.ok!==true)throw failure()
- if(!binder)await client.query('SET ROLE phoenix_canonical_service_workbench')
 }
 export function createServiceWorkbench(deps:WorkbenchDependencies){
  if(!['test','development','private-staging'].includes(deps.mode))throw failure()
+ const privateStaging=deps.mode==='private-staging'
+ if(privateStaging&&(!deps.projectSafetyGuard||deps.syntheticLogin))throw failure()
  for(const pool of [deps.app,deps.binder]){pool.on('error',()=>{});pool.on('connect',client=>client.on('error',()=>{}))}
- async function run(authorization:string|undefined,operation:(client:PoolClient,identity:WorkbenchIdentity)=>Promise<Record<string,unknown>>,guardProject?:string){
+ async function run(authorization:string|undefined,customerRoute:boolean,
+  operation:(client:PoolClient,identity:WorkbenchIdentity)=>Promise<Record<string,unknown>>,guardProject?:string){
   const identity=await deps.resolve(authorization)
-  if(![identity.principalId,identity.actorPersonId,identity.familyId].every(v=>uuid.test(v))||!['FAMILY','ADVISOR'].includes(identity.channel))throw failure(403,'ACCESS_DENIED')
+  const customer=identity.profile==='CUSTOMER'
+  const allowedProfile=customer?identity.channel==='FAMILY':
+   identity.profile==='STAFF'?privateStaging&&identity.channel==='ADVISOR':
+   identity.profile==='SYNTHETIC'&&!privateStaging&&!!deps.syntheticLogin&&['FAMILY','ADVISOR'].includes(identity.channel)
+  if(![identity.principalId,identity.actorPersonId,identity.familyId].every(v=>uuid.test(v))||
+   !allowedProfile||customerRoute!==(customer&&!privateStaging))throw failure(403,'ACCESS_DENIED')
   await identity.assertCurrent()
   let app:PoolClient|undefined,binder:PoolClient|undefined,transaction=false,result:Record<string,unknown>|undefined,error:unknown,appClean=false,binderClean=false
   try{
-   binder=await deps.binder.connect();await guard(binder,true)
+   binder=await deps.binder.connect();await guard(binder,'binder')
+   app=await deps.app.connect();await guard(app,'app')
+   await app.query('SET ROLE phoenix_canonical_service_workbench')
+   await guard(app,'workbench')
+   await app.query('SELECT auth.clear_context()')
    const ticket=await binder.query('SELECT auth.issue_context_ticket($1,$2,$3,$4,clock_timestamp()+interval \'30 seconds\',$5,$1) AS ticket',
     [identity.principalId,identity.actorPersonId,identity.familyId,identity.channel,workbenchUuid()])
-   app=await deps.app.connect();await guard(app,false)
-   await app.query('SELECT auth.clear_context()')
    await app.query('SELECT auth.redeem_context_ticket($1,$2)',[ticket.rows[0].ticket,identity.principalId])
-   await deps.projectSafetyGuard?.(app,identity,guardProject)
    await app.query('BEGIN');transaction=true;await app.query("SET LOCAL statement_timeout='3000ms'")
+   await deps.projectSafetyGuard?.(app,identity,guardProject)
    result=await operation(app,identity)
    await identity.assertCurrent()
    await app.query('COMMIT');transaction=false
-   await identity.assertCurrent()
   }catch(e){error=e instanceof AppError?e:failure();if(app&&transaction)try{await app.query('ROLLBACK')}catch{}}
   finally{
    if(app)try{await app.query('SELECT auth.clear_context()');await app.query('DISCARD ALL');appClean=true}catch{error=failure()}
@@ -114,31 +164,28 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
   if(error)throw error
   const status=result?.status
   if(status!=='ALLOW')throw failure(status==='DENY'?403:status==='CONFLICT'?409:status==='INVALID'?422:503,status==='DENY'?'ACCESS_DENIED':status==='CONFLICT'?'REVISION_OR_IDEMPOTENCY_CONFLICT':status==='INVALID'?'INVALID_COMMAND':'WORKBENCH_UNAVAILABLE')
+  await identity.assertCurrent()
   return result!
  }
- const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize,customer=false)=>run(authorization,async (c,identity)=>{
-  const customerView=deps.customerAuthorizationMode==='verified-channel'
-    ? identity.channel==='FAMILY'
-    : customer
-  if(customerView&&resource==='download'){
+ const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize,customerRoute=false)=>run(authorization,customerRoute,async(c,identity)=>{
+  const customer=identity.profile==='CUSTOMER'
+  if(resource==='summary'&&!customer)return {status:'DENY'}
+  if(customer&&resource==='download'){
    const gate=(await c.query('SELECT service.workbench_customer_snapshot($1) AS result',[project])).rows[0].result
    if(gate.status!=='ALLOW')return gate
   }
-  const query=resource==='list'?(customerView?'SELECT service.workbench_customer_list() AS result':'SELECT service.workbench_list() AS result'):resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
+  const query=resource==='list'?(customer?'SELECT service.workbench_customer_list() AS result':'SELECT service.workbench_list() AS result'):resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
    resource==='summary'?'SELECT service.workbench_summary($1,$2::timestamptz,$3::uuid) AS result':
-   resource==='download'?'SELECT service.workbench_download($1,$2) AS result':customerView?'SELECT service.workbench_customer_snapshot($1) AS result':'SELECT service.workbench_snapshot($1) AS result'
+   resource==='download'?'SELECT service.workbench_download($1,$2) AS result':customer?'SELECT service.workbench_customer_snapshot($1) AS result':'SELECT service.workbench_snapshot($1) AS result'
   const params:(string|number|null)[]=resource==='list'||resource==='catalogue'?[]:
    resource==='summary'?[limit,cursor?.at??null,cursor?.project??null]:
    resource==='download'?[project??null,version??null]:[project??null]
   return (await c.query(query,params)).rows[0].result
  },project)
- async function command(authorization:string|undefined,project:string,body:Record<string,unknown>,key:string,upload:boolean,customer=false){
+ async function command(authorization:string|undefined,project:string,body:Record<string,unknown>,key:string,upload:boolean,customerRoute=false){
   if(!/^[A-Za-z0-9_-]{16,100}$/.test(key))throw failure(400,'IDEMPOTENCY_KEY_REQUIRED')
-  return run(authorization,async(c,identity)=>{
-   const customerView=deps.customerAuthorizationMode==='verified-channel'
-     ? identity.channel==='FAMILY'
-     : customer
-   if(customerView){
+  return run(authorization,customerRoute,async(c,identity)=>{
+   if(identity.profile==='CUSTOMER'){
     const gate=(await c.query('SELECT service.workbench_customer_snapshot($1) AS result',[project])).rows[0].result
     if(gate.status!=='ALLOW')return gate
    }
@@ -196,22 +243,25 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
     return json(200,{token:await deps.syntheticLogin(body.account),synthetic:true})
    }
    const authorization=request.headers.authorization,key=String(request.headers['idempotency-key']??'')
-   const customer=request.headers['x-phoenix-customer-bridge']==='p1'
+   // The marker asserts transport intent. Only the verified session selects permissions.
+   const marker=request.headers['x-phoenix-customer-bridge']
+   if(marker!==undefined&&marker!=='p1')throw failure(403,'ACCESS_DENIED')
+   const customerRoute=marker==='p1'
    if(route==='summary'&&(method==='GET'||method==='POST')){
     if(method==='POST'&&Object.keys(body).some(k=>k!=='limit'&&k!=='cursor'))throw failure(422,'INVALID_QUERY')
     const cursor=method==='POST'?parseSummaryCursor(body.cursor):summaryCursor
     const limit=method==='POST'?parseSummaryLimit(body.limit):summaryLimit
-    return json(200,(await read(authorization,'summary',undefined,undefined,cursor,limit)).data)
+    return json(200,(await read(authorization,'summary',undefined,undefined,cursor,limit,customerRoute)).data)
    }
-   if(method==='GET'&&route==='projects')return json(200,(await read(authorization,'list',undefined,undefined,undefined,summaryPageSize,customer)).data)
-   if(method==='GET'&&route==='catalogue')return json(200,(await read(authorization,'catalogue')).data)
+   if(method==='GET'&&route==='projects')return json(200,(await read(authorization,'list',undefined,undefined,undefined,summaryPageSize,customerRoute)).data)
+   if(method==='GET'&&route==='catalogue')return json(200,(await read(authorization,'catalogue',undefined,undefined,undefined,summaryPageSize,customerRoute)).data)
    const parts=route.split('/');if(parts[0]!=='projects'||!uuid.test(parts[1]??''))throw failure(404,'NOT_FOUND')
-   if(method==='GET'&&parts.length===2)return json(200,(await read(authorization,'project',parts[1],undefined,undefined,summaryPageSize,customer)).data)
-   if(method==='POST'&&parts.length===3&&['commands','materials'].includes(parts[2]))return json(200,await command(authorization,parts[1],body,key,parts[2]==='materials',customer))
+   if(method==='GET'&&parts.length===2)return json(200,(await read(authorization,'project',parts[1],undefined,undefined,summaryPageSize,customerRoute)).data)
+   if(method==='POST'&&parts.length===3&&['commands','materials'].includes(parts[2]))return json(200,await command(authorization,parts[1],body,key,parts[2]==='materials',customerRoute))
    if(method==='GET'&&parts.length===5&&parts[2]==='materials'&&uuid.test(parts[3])&&parts[4]==='download'){
-    const result=await read(authorization,'download',parts[1],parts[3],undefined,summaryPageSize,customer),d=result.data as {key:string;sha256:string;size:number;mime:string}
+    const result=await read(authorization,'download',parts[1],parts[3],undefined,summaryPageSize,customerRoute),d=result.data as {key:string;sha256:string;size:number;mime:string}
     const bytes=await deps.objects.get(d.key);if(bytes.length!==Number(d.size)||hash(bytes)!==d.sha256)throw failure()
-    const final=await read(authorization,'download',parts[1],parts[3],undefined,summaryPageSize,customer);if(JSON.stringify(final.data)!==JSON.stringify(d))throw failure(403,'ACCESS_DENIED')
+    const final=await read(authorization,'download',parts[1],parts[3],undefined,summaryPageSize,customerRoute);if(JSON.stringify(final.data)!==JSON.stringify(d))throw failure(403,'ACCESS_DENIED')
     response.writeHead(200,{...headers,'Content-Type':'application/octet-stream','Content-Disposition':'attachment; filename="material-'+parts[3]+(d.mime==='application/pdf'?'.pdf':'.txt')+'"'});response.end(bytes);return
    }
    throw failure(405,'METHOD_NOT_ALLOWED')

@@ -42,7 +42,9 @@ test('server mapping supplies opaque token, never browser workbench cookie; expi
    assert(!(await result.text()).includes(token));
    assert.equal(result.headers.get('cache-control'),'private, no-store');
    assert(f.audits.includes('CANONICAL_ACCESS_ATTEMPT'));
-   if(event==='success')assert(f.audits.includes('CANONICAL_ACCESS_GRANTED'));
+   assert.deepEqual(f.audits,event==='success'?['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_PREPARED']:
+    event==='expire'?['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_PREPARED','CANONICAL_ACCESS_DENIED']:
+    event==='revoke'?['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_PREPARED','CANONICAL_ACCESS_UNAVAILABLE']:['CANONICAL_ACCESS_ATTEMPT']);
   }
  }finally{globalThis.fetch=original;}
 });

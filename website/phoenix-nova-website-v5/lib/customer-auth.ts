@@ -84,7 +84,7 @@ function publicUser(user: { id: string; username: string; created_at: number }) 
 function audit(db: AuthDatabase, action: string, actor: string | null) {
   return db.prepare("INSERT INTO core_auth_audit (id,actor_user_id,action,created_at) VALUES (?,?,?,?)").bind(randomUUID(), actor, action, Date.now());
 }
-export async function readCustomerSession(request: Request, config: AuthConfig): Promise<Session | null> {
+export async function readCustomerSession(request: Request, config: AuthConfig, { touch = true } = {}): Promise<Session | null> {
   const token = tokenFrom(request, config);
   if (!token) return null;
   const now = Date.now();
@@ -92,7 +92,7 @@ export async function readCustomerSession(request: Request, config: AuthConfig):
     FROM core_auth_sessions s JOIN core_auth_users u ON u.id=s.user_id
     WHERE s.token_hash=? AND s.expires_at>? AND s.last_seen_at>? AND u.status='active'`)
     .bind(digest(token), now, now - IDLE_MS).first<Session>();
-  if (user) await config.db.prepare("UPDATE core_auth_sessions SET last_seen_at=? WHERE token_hash=?").bind(now, digest(token)).run();
+  if (user && touch) await config.db.prepare("UPDATE core_auth_sessions SET last_seen_at=? WHERE token_hash=?").bind(now, digest(token)).run();
   return user;
 }
 async function limited(db: AuthDatabase, key: string, max: number, now = Date.now()) {

@@ -35,13 +35,14 @@ test('private staging configuration rejects public listeners, shared roles, and 
 
 test('private staging identity authority uses loopback machine authentication and fail-closed current checks', async () => {
   const calls: Array<{ auth: string; body: Record<string, unknown> }> = []
+  let currentStatus = 204
   const server = createServer(async (request, response) => {
     const chunks: Buffer[] = []
     for await (const chunk of request) chunks.push(Buffer.from(chunk))
     calls.push({ auth: String(request.headers.authorization), body: JSON.parse(Buffer.concat(chunks).toString('utf8')) })
     if (calls.at(-1)?.body.action === 'assert-current') {
-      response.writeHead(204)
-      response.end()
+      response.writeHead(currentStatus)
+      response.end(currentStatus === 204 ? undefined : JSON.stringify({ status: 'DENY' }))
       return
     }
     response.writeHead(200, { 'content-type': 'application/json' })
@@ -63,6 +64,10 @@ test('private staging identity authority uses loopback machine authentication an
     assert.equal(calls[0].auth, `Bearer ${machine}`)
     assert.deepEqual(calls[0].body, { action: 'resolve-bearer', token: 'b'.repeat(43) })
     assert.deepEqual(calls[1].body, { action: 'assert-current', token: assertion, channel: 'FAMILY' })
+    currentStatus = 200
+    await assert.rejects(() => authority.assertCurrent(assertion, 'FAMILY'))
+    currentStatus = 403
+    await assert.rejects(() => authority.assertCurrent(assertion, 'FAMILY'))
   } finally {
     await new Promise<void>(resolve => server.close(() => resolve()))
   }
@@ -78,6 +83,7 @@ test('staging resolver derives identity from the verified bearer and rejects bro
   })
   const identity = await resolver('Bearer ' + 'b'.repeat(43))
   assert.equal(identity.channel, 'FAMILY')
+  assert.equal(identity.profile, 'CUSTOMER')
   await identity.assertCurrent()
   await assert.rejects(() => resolver(undefined), error => (error as { code?: string }).code === 'AUTH_REQUIRED')
   await assert.rejects(() => resolver('Bearer customer-id=forged'), error => (error as { code?: string }).code === 'AUTH_REQUIRED')
