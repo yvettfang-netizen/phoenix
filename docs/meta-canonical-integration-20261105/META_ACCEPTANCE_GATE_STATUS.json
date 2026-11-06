@@ -1,0 +1,75 @@
+{
+  "task": "PHOENIX-META-CANONICAL-ACCEPTANCE-ROLLBACK-20261105",
+  "application_candidate_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+  "application_baseline_sha": "a96de29bbfdf32558b202123f15a3ca3c5b2a9a3",
+  "canonical_main_sha": "19feef190dcba13ccc9181c998d4c82527377803",
+  "environment": "LOCAL WINDOWS NODE24; NO STAGING",
+  "production_authorized": false,
+  "release_allowed": false,
+  "gates": [
+    {
+      "id": "M0",
+      "status": "HOLD",
+      "reason": "Deployed source freeze drift; original regression 8/17; rollback target not qualified"
+    },
+    {
+      "id": "M1",
+      "status": "HOLD",
+      "reason": "Missing authorized Gateway/projections, agent-human relation, versioned evidence DTO, cleanup proof"
+    },
+    {
+      "id": "M2",
+      "status": "HOLD",
+      "reason": "Partial UI tests only; business flows and evidence detail absent"
+    },
+    {
+      "id": "M3",
+      "status": "HOLD",
+      "reason": "No full backend negative matrix or independent security review"
+    },
+    {
+      "id": "M4",
+      "status": "NOT RUN",
+      "reason": "No PG16/17 runner available and no complete Gateway"
+    },
+    {
+      "id": "M5",
+      "status": "NOT RUN",
+      "reason": "No approved staging/thresholds"
+    },
+    {
+      "id": "M6",
+      "status": "HOLD",
+      "reason": "Runbook prepared; no qualified API/DB/Runtime restore source"
+    },
+    {
+      "id": "M7",
+      "status": "HOLD",
+      "reason": "5 mock component probes only; no actual rollback"
+    },
+    {
+      "id": "M8",
+      "status": "PENDING",
+      "reason": "No independent reviewer or Founder production approval"
+    }
+  ],
+  "release_states": {
+    "CODE COMPLETE": false,
+    "SYNTHETIC TEST PASS": false,
+    "STAGING UAT PASS": false,
+    "SECURITY REVIEW PASS": false,
+    "ROLLBACK DRILL PASS": false,
+    "FOUNDER APPROVED": false,
+    "PRODUCTION DEPLOYED": false,
+    "POST-DEPLOY VERIFIED": false
+  },
+  "thresholds_approved": false,
+  "independent_reviews": {
+    "Jimson": "PENDING",
+    "Xuanwu": "TECHNICAL_HOLD_NOT_INDEPENDENT_SIGNOFF",
+    "Baihu": "PENDING",
+    "Qilin": "PENDING",
+    "GPT_Pro": "PENDING",
+    "Founder": "NOT_APPROVED_FOR_PRODUCTION"
+  }
+}
