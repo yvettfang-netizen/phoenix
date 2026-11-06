@@ -46,6 +46,30 @@ test("connects Digital Phoenix to the approved immortal-guardian world", async (
   assert.match(html, /https:\/\/fengqi-research-institute\.yvettfang\.chatgpt\.site/);
 });
 
+test("website navigation leads to the Family Center in the current language", async () => {
+  for (const locale of ["zh", "en"]) {
+    const familyLink = new RegExp(`<a\\b[^>]*\\bhref="/${locale}/family-center"[^>]*>`);
+    const pages = ["", "/education", "/identity", "/health", "/compass"];
+    for (const page of pages) {
+      const path = `/${locale}${page}`;
+      const response = await get(path);
+      assert.equal(response.status, 200, path);
+      const html = await response.text();
+      const header = html.match(/<header\b[^>]*\bclass="site-header[^"]*"[^>]*>[\s\S]*?<\/header>/)?.[0] ?? "";
+      const portal = header.match(/<a\b[^>]*\bclass="portal-link"[^>]*>/)?.[0] ?? "";
+      const mobile = header.match(/<details\b[^>]*\bclass="mobile-menu"[^>]*>[\s\S]*?<\/details>/)?.[0] ?? "";
+      const footer = html.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] ?? "";
+      assert.match(portal, familyLink, `${path} desktop entry`);
+      assert.match(mobile, familyLink, `${path} mobile entry`);
+      assert.match(footer, familyLink, `${path} footer entry`);
+      if (page === "") {
+        const section = html.match(/<section\b[^>]*aria-labelledby="family-os-heading"[^>]*>[\s\S]*?<\/section>/)?.[0] ?? "";
+        assert.match(section, familyLink, `${path} Family OS section`);
+      }
+    }
+  }
+});
+
 test("renders every bilingual candidate destination", async () => {
   const pages = ["compass", "lighthouse", "services", "insights", "oriental", "about", "family-center", "admissions", "application"];
   for (const locale of ["zh", "en"]) {

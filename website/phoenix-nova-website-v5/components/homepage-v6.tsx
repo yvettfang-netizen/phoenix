@@ -15,7 +15,7 @@ import {
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
-import { localizedHref } from "@/lib/locale-navigation";
+import { localeRouteMap, localizedHref } from "@/lib/locale-navigation";
 import { WEALTH_ORIGIN } from "@/lib/wealth-routing";
 import { SiteFooter, SiteHeader, type Locale } from "./v5-site";
 import styles from "./homepage-v6.module.css";
@@ -257,7 +257,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
               </ul>
               <div className={styles.familyActions}>
               <span className={styles.previewNotice}>{copy(locale, ["预览／即将开放", "Preview / Coming Soon"])}</span>
-              <Link className={styles.textLink} href={localizedHref(locale, "/account")}>
+              <Link className={styles.textLink} href={localizedHref(locale, localeRouteMap.family)} prefetch={false}>
                 {copy(locale, ["进入家庭中心", "Enter Family Center"])} <Arrow />
               </Link>
               </div>
