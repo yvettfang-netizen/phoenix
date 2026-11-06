@@ -1,9 +1,0 @@
-{
-  "status": "P1 DEVELOPMENT CANDIDATE; NOT APPROVED OR ACTIVE",
-  "dependsOn": "0038_service_project_workbench.sql and 0039_service_project_summary.sql",
-  "file": "0040_hk_identity_workbench.sql",
-  "sha256": "FC3FA2C2125E7E94C73B938A34F60EBCC893E2DE748757047E05855A3C69B19E",
-  "authority": "Existing service.projects and workbench_settings, with existing project and subject authorization",
-  "scope": "Adds HK_IDENTITY template and identity workflow stage values plus a narrowly granted private-Staging staff predicate for mixed HEALTH denial. It does not add customer, family, contract, payment, identity-provider or clinical data authorities.",
-  "activation": "Requires independent database/security review and Founder gate. External government references, identity mapping and document policy remain separate integrations."
-}

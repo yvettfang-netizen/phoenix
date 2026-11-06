@@ -2,7 +2,6 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import { wealthEdgeRequest, wealthEdgeResponse } from "../lib/wealth-edge";
-import { privateStagingHeaders, privateWorkbenchOrigin } from "../lib/workbench-private-staging";
 
 interface Env {
   ASSETS: Fetcher;
@@ -29,27 +28,6 @@ interface ExecutionContext {
 
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const values = env as unknown as Record<string, unknown>;
-    if (values.SERVICE_WORKBENCH_PRIVATE_STAGING !== undefined) {
-      const url = new URL(request.url);
-      const headers = privateStagingHeaders();
-      if (url.origin !== privateWorkbenchOrigin(values)) return new Response("Not found", { status: 404, headers });
-      if (url.pathname === "/__service-project-staging/health" && request.method === "GET") {
-        return Response.json({ status: "ok", runtime: "private-staging" }, { headers });
-      }
-      const staticAsset = /^(?:\/_next\/static\/|\/brand\/|\/images\/)/.test(url.pathname);
-      const response = staticAsset && (request.method === "GET" || request.method === "HEAD")
-        ? await env.ASSETS.fetch(request)
-        : await routeRequest(request, env, ctx);
-      const protectedResponse = new Response(response.body, response);
-      headers.forEach((value, name) => protectedResponse.headers.set(name, value));
-      return protectedResponse;
-    }
-    return routeRequest(request, env, ctx);
-  },
-};
-
-async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const original=request;
     const routed=wealthEdgeRequest(request);
     if(routed instanceof Response)return wealthEdgeResponse(routed,original);
@@ -74,6 +52,7 @@ async function routeRequest(request: Request, env: Env, ctx: ExecutionContext): 
     headers.delete("x-phoenix-health-locale");
     if (healthLocale) headers.set("x-phoenix-health-locale", healthLocale);
     return wealthEdgeResponse(await handler.fetch(new Request(request, { headers }), env, ctx), original);
-}
+  },
+};
 
 export default worker;
