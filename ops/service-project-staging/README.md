@@ -49,6 +49,8 @@ bash ops/service-project-staging/verify.sh accounts /absolute/private/synthetic-
 
 需要 Linux、Node 22.13+（22.x）、GNU 工具、`flock`、`curl`、PG16/17 和干净的提交。数据库脚本独立运行。服务启动脚本使用本地 Wrangler 与专用 D1 状态目录，绑定 `127.0.0.1:4775`，API 绑定 `127.0.0.1:4776`，身份 authority 在 `127.0.0.1:4777`。SSH 转发仅开放 Worker，例如在获批准的工作站执行 `ssh -N -L 127.0.0.1:4775:127.0.0.1:4775 STAGING_SSH_ALIAS`。限制服务器 OS 访问，禁止转发 API、PostgreSQL、调试端口或身份 authority。
 
+CI 的运行包包含 Worker 和 Node API 的构建输出、完整源码 SHA 和逐文件校验清单。使用运行包时，在对应 SHA 的干净 Linux checkout 中先安装两处锁定依赖，再校验压缩包 SHA-256 并解包到 checkout 根目录。`stage.sh start` 会复核构建 SHA 和文件校验值。也可以在相同 SHA 上直接运行 `stage.sh build` 重建。
+
 运行目录由当前专用服务用户拥有，权限为 0700，位于源码目录之外。`worker.env`、`server.env` 权限为 0600。Worker 文件只含 `WORKBENCH_STAGING_IDENTITY_KEY`。API 文件另含 `PHOENIX_STAGING_DB_NAME`、`PHOENIX_STAGING_APP_DSN`、`PHOENIX_STAGING_BINDER_DSN`。机器密钥由获批的密钥管理系统生成并同步到 authority。所有值由实际责任人配置。禁止在命令行或日志中放置密钥。
 
 日常启停交给授权操作员或私有 Linux 服务管理器。发送 TERM 后，由启动脚本回收自己启动的 Worker 和 API。回退时先关闭 SSH 转发与服务，再按旧 SHA 构建并恢复已审查的制品和该版本配置。保留 D1/Canonical 与审计记录供 DBA 检查。Linux 启动冒烟仅验证包和回环防护。
@@ -73,6 +75,8 @@ BUILD FIRST 使用标记为 synthetic 的一次性 PostgreSQL 16/17 数据库、
 | App LOGIN | 执行受控 SECURITY DEFINER 函数 | 不得拥有业务表直接读写、DDL、BYPASSRLS 或 SUPERUSER |
 | Operations SERVICE | 写入经过签名和版本校验的合同、付款和 opening 来源引用 | 不开放客户网页路由，不接受 CRM 预计金额或 entitlement 代替付款 |
 | Backup operator | 仅在批准的恢复演练中导出和恢复 | 不作为应用读者，不与 app/binder 共用凭据 |
+
+实际运行使用两个独立的 `LOGIN NOINHERIT`。App 只需数据库 CONNECT、auth schema USAGE 和对 `phoenix_canonical_service_workbench` 的 `INHERIT FALSE, SET TRUE` 成员关系。Binder 只需 CONNECT、auth schema USAGE 和对 `auth.issue_context_ticket(uuid,uuid,uuid,text,timestamptz,uuid,uuid)` 的 EXECUTE。两个登录都不应直接读取业务表。由 DBA 在专用 staging cluster 中用批准的密钥流程配置和核对。
 
 角色、连接池、数据库、对象存储和日志目的地都必须独立。密钥和口令只放在获批的私有 secret manager 或运行时绑定中。仓库、CI artifact、截图、日志和本 README 不得包含密钥值、cookie、JWT、pgpass、对象内容或真实标识。
 

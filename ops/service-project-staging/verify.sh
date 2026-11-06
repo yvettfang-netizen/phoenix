@@ -15,6 +15,8 @@ if [[ "${1:-}" != smoke && "${1:-}" != accounts ]]; then
 fi
 check 200 "$base/__service-project-staging/health"
 check 404 -H 'Host: preview.invalid:4775' "$base/__service-project-staging/health"
+check 200 "$base/en/my-services"
+check 200 "$base/brand/official/v3/phoenix-nova-header@2x.png"
 check 404 -X POST -H "Origin: $base" -H 'Content-Type: application/json' \
   --data '{"account":"client-a"}' "$base/api/service-workbench/dev-session"
 check 401 "$base/api/family-services/summary"

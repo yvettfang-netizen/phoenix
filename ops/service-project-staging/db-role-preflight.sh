@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly DB_STAGING_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly entry_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=db-staging-common.sh
-source "$DB_STAGING_SCRIPT_DIR/db-staging-common.sh"
+source "$entry_dir/db-staging-common.sh"
 
 db_staging_parse_args "$@"
 db_staging_require_tools

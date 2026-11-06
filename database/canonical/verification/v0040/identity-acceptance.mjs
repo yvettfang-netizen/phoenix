@@ -69,9 +69,9 @@ async function run(){
  const summaryManifest=JSON.parse(readFileSync(path.resolve(root,'database/canonical/forward-candidates/service-workbench/manifest-0039-summary.json'),'utf8'))
  const identitySql=path.resolve(root,'database/canonical/forward-candidates/service-workbench/0040_hk_identity_workbench.sql')
  const identityManifest=JSON.parse(readFileSync(path.resolve(root,'database/canonical/forward-candidates/service-workbench/manifest-0040-identity.json'),'utf8'))
- assert.equal(sha(workbenchSql).toUpperCase(),workbenchManifest.sha256,'0038 candidate changed without its manifest')
- assert.equal(sha(summarySql).toUpperCase(),summaryManifest.sha256,'0039 candidate changed without its manifest')
- assert.equal(sha(identitySql).toUpperCase(),identityManifest.sha256,'0040 candidate changed without its manifest')
+ assert.equal(sha(workbenchSql),workbenchManifest.sha256.toLowerCase(),'0038 candidate changed without its manifest')
+ assert.equal(sha(summarySql),summaryManifest.sha256.toLowerCase(),'0039 candidate changed without its manifest')
+ assert.equal(sha(identitySql),identityManifest.sha256.toLowerCase(),'0040 candidate changed without its manifest')
  record.dependencies={serviceWorkbench0038Sha:workbenchManifest.sha256,serviceSummary0039Sha:summaryManifest.sha256,identity0040Sha:identityManifest.sha256}
  db=await createCluster(version)
  record.postgres.candidateSha=db.candidateSha
@@ -121,6 +121,23 @@ async function run(){
  const crossFamilyDenied=await rt.call('client-a','projects/'+project(315))
  assert.equal(crossFamilyDenied.status,403,JSON.stringify(crossFamilyDenied.body))
  check('unrelated same-family and cross-family project links are denied',{sameFamily:project(312),crossFamily:project(315)})
+
+ db.sql("INSERT INTO service.project_domains(project_domain_id,service_project_id,business_domain,created_by_principal_id) VALUES('"+id(5316)+"','"+project(316)+"','HEALTH','"+id(900)+"')")
+ const {rows:[{ticket}]}=await rt.binder.query(
+  "SELECT auth.issue_context_ticket($1,$2,$3,'ADVISOR',clock_timestamp()+interval '30 seconds',$4,$1) AS ticket",
+  [id(212),id(12),id(100),id(9940)]
+ )
+ const staff=await rt.app.connect()
+ try {
+  await staff.query('SET ROLE phoenix_canonical_service_workbench')
+  await staff.query('SELECT auth.redeem_context_ticket($1,$2)',[ticket,id(212)])
+  for (const [idValue,expected] of [[project(316),true],[project(310),false],[project(315),false],[null,true]]) {
+   const {rows:[{mixed}]}=await staff.query('SELECT service.workbench_staging_staff_mixed_health($1::uuid) AS mixed',[idValue])
+   assert.equal(mixed,expected)
+  }
+  await assert.rejects(staff.query('SELECT * FROM service.project_domains LIMIT 1'),{code:'42501'})
+ } finally { staff.release(true) }
+ check('separated staff role can evaluate mixed Health safety without direct table reads')
 
  record.synthetic.requests=rt.receipts
  record.synthetic.status='PASS'

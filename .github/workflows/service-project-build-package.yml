@@ -49,6 +49,7 @@ jobs:
             export PGPASSFILE=/tmp/phoenix-build-stage.pgpass
             printf "127.0.0.1:5432:phoenix_service_project_staging:phoenix_bootstrap:%s\n" "$POSTGRES_PASSWORD" > "$PGPASSFILE"
             cd /review
+            bash ops/service-project-staging/db-preflight.test.sh
             bash ops/service-project-staging/db-preflight.sh --user phoenix_bootstrap
             bash ops/service-project-staging/db-apply.sh --confirm-staging --user phoenix_bootstrap
             bash ops/service-project-staging/db-role-preflight.sh --user phoenix_bootstrap
@@ -92,7 +93,13 @@ jobs:
             sed -E 's/[A-Za-z0-9_-]{32,}/[redacted]/g' "$state/runtime.log"
             exit 1
           fi
-      - name: Preserve build receipt
+      - name: Package checked build artifacts
+        run: |
+          set -Eeuo pipefail
+          tar --sort=name -czf "$RUNNER_TEMP/service-project-runtime.tgz" \
+            website/phoenix-nova-website-v5/dist 'Phoenix Compass/education compass/server/dist'
+          (cd "$RUNNER_TEMP"; sha256sum service-project-runtime.tgz > service-project-runtime.tgz.sha256)
+      - name: Preserve build receipt and runtime bundle
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: service-project-build-receipt
@@ -100,3 +107,5 @@ jobs:
           path: |
             website/phoenix-nova-website-v5/dist/.service-project-stage-sha
             website/phoenix-nova-website-v5/dist/.service-project-stage-hashes
+            ${{ runner.temp }}/service-project-runtime.tgz
+            ${{ runner.temp }}/service-project-runtime.tgz.sha256
