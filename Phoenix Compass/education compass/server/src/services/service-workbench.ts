@@ -63,7 +63,15 @@ export interface WorkbenchDependencies {
  resolve(authorization:string|undefined):Promise<WorkbenchIdentity>
  /** Explicit local synthetic preview only; never set by normal application bootstrap. */
  syntheticLogin?:(alias:string)=>Promise<string>
- mode:'test'|'development'
+  /**
+   * Customer projections normally require the private BFF marker. A private
+   * staging adapter can derive this view from the verified identity channel,
+   * so a browser header never changes FAMILY or ADVISOR authority.
+   */
+  customerAuthorizationMode?:'advisory-header'|'verified-channel'
+  /** Private staging can install an additional server-side project safety gate. */
+  projectSafetyGuard?:(client:PoolClient,identity:WorkbenchIdentity,project?:string)=>Promise<void>
+ mode:'test'|'development'|'private-staging'
 }
 async function guard(client:PoolClient,binder:boolean):Promise<void>{
  const result=await client.query(
@@ -77,9 +85,9 @@ async function guard(client:PoolClient,binder:boolean):Promise<void>{
  if(!binder)await client.query('SET ROLE phoenix_canonical_service_workbench')
 }
 export function createServiceWorkbench(deps:WorkbenchDependencies){
- if(!['test','development'].includes(deps.mode))throw failure()
+ if(!['test','development','private-staging'].includes(deps.mode))throw failure()
  for(const pool of [deps.app,deps.binder]){pool.on('error',()=>{});pool.on('connect',client=>client.on('error',()=>{}))}
- async function run(authorization:string|undefined,operation:(client:PoolClient,identity:WorkbenchIdentity)=>Promise<Record<string,unknown>>){
+ async function run(authorization:string|undefined,operation:(client:PoolClient,identity:WorkbenchIdentity)=>Promise<Record<string,unknown>>,guardProject?:string){
   const identity=await deps.resolve(authorization)
   if(![identity.principalId,identity.actorPersonId,identity.familyId].every(v=>uuid.test(v))||!['FAMILY','ADVISOR'].includes(identity.channel))throw failure(403,'ACCESS_DENIED')
   await identity.assertCurrent()
@@ -91,6 +99,7 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
    app=await deps.app.connect();await guard(app,false)
    await app.query('SELECT auth.clear_context()')
    await app.query('SELECT auth.redeem_context_ticket($1,$2)',[ticket.rows[0].ticket,identity.principalId])
+   await deps.projectSafetyGuard?.(app,identity,guardProject)
    await app.query('BEGIN');transaction=true;await app.query("SET LOCAL statement_timeout='3000ms'")
    result=await operation(app,identity)
    await identity.assertCurrent()
@@ -107,23 +116,29 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
   if(status!=='ALLOW')throw failure(status==='DENY'?403:status==='CONFLICT'?409:status==='INVALID'?422:503,status==='DENY'?'ACCESS_DENIED':status==='CONFLICT'?'REVISION_OR_IDEMPOTENCY_CONFLICT':status==='INVALID'?'INVALID_COMMAND':'WORKBENCH_UNAVAILABLE')
   return result!
  }
- const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize,customer=false)=>run(authorization,async c=>{
-  if(customer&&resource==='download'){
+ const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize,customer=false)=>run(authorization,async (c,identity)=>{
+  const customerView=deps.customerAuthorizationMode==='verified-channel'
+    ? identity.channel==='FAMILY'
+    : customer
+  if(customerView&&resource==='download'){
    const gate=(await c.query('SELECT service.workbench_customer_snapshot($1) AS result',[project])).rows[0].result
    if(gate.status!=='ALLOW')return gate
   }
-  const query=resource==='list'?(customer?'SELECT service.workbench_customer_list() AS result':'SELECT service.workbench_list() AS result'):resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
+  const query=resource==='list'?(customerView?'SELECT service.workbench_customer_list() AS result':'SELECT service.workbench_list() AS result'):resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
    resource==='summary'?'SELECT service.workbench_summary($1,$2::timestamptz,$3::uuid) AS result':
-   resource==='download'?'SELECT service.workbench_download($1,$2) AS result':customer?'SELECT service.workbench_customer_snapshot($1) AS result':'SELECT service.workbench_snapshot($1) AS result'
+   resource==='download'?'SELECT service.workbench_download($1,$2) AS result':customerView?'SELECT service.workbench_customer_snapshot($1) AS result':'SELECT service.workbench_snapshot($1) AS result'
   const params:(string|number|null)[]=resource==='list'||resource==='catalogue'?[]:
    resource==='summary'?[limit,cursor?.at??null,cursor?.project??null]:
    resource==='download'?[project??null,version??null]:[project??null]
   return (await c.query(query,params)).rows[0].result
- })
+ },project)
  async function command(authorization:string|undefined,project:string,body:Record<string,unknown>,key:string,upload:boolean,customer=false){
   if(!/^[A-Za-z0-9_-]{16,100}$/.test(key))throw failure(400,'IDEMPOTENCY_KEY_REQUIRED')
   return run(authorization,async(c,identity)=>{
-   if(customer){
+   const customerView=deps.customerAuthorizationMode==='verified-channel'
+     ? identity.channel==='FAMILY'
+     : customer
+   if(customerView){
     const gate=(await c.query('SELECT service.workbench_customer_snapshot($1) AS result',[project])).rows[0].result
     if(gate.status!=='ALLOW')return gate
    }
@@ -148,7 +163,7 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
     if(kind==='MATERIAL_UPLOAD')throw failure(403,'UPLOAD_ADAPTER_REQUIRED')
    }
    return (await c.query('SELECT service.workbench_command($1,$2,$3::jsonb,$4,$5) AS result',[project,kind,JSON.stringify(payload),key,workbenchUuid()])).rows[0].result
-  })
+  },project)
  }
  function identityKey(key:string,project:string){return project+':'+key}
  async function handle(request:IncomingMessage,response:ServerResponse):Promise<void>{

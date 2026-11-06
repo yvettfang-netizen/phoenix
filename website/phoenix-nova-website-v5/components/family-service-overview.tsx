@@ -58,6 +58,12 @@ const STAGE_LABELS: Record<string, [string, string]> = {
   INTERVIEW: ["面试与补件", "Interview & follow-up"],
   DECISION: ["申请结果", "Decision"],
   DEPOSIT: ["留位与后续", "Deposit & next steps"],
+  IDENTITY_ELIGIBILITY: ["身份资格评估", "Eligibility"],
+  IDENTITY_DOCUMENTS: ["身份材料准备", "Identity documents"],
+  IDENTITY_SUBMISSION: ["身份申请递交", "Application submission"],
+  IDENTITY_APPOINTMENT: ["预约与核验", "Appointment & verification"],
+  IDENTITY_DECISION: ["身份申请结果", "Application decision"],
+  IDENTITY_COMPLETION: ["身份服务交付", "Service completion"],
   CLOSED: ["结案", "Closed"],
 };
 
