@@ -8,6 +8,7 @@ import {
   gbaValues,
   healthEntries,
   healthBrandOrigin,
+  healthLaunchValues,
   healthFaqs,
   healthHero,
   healthJourney,
@@ -17,6 +18,8 @@ import {
   healthText,
   type HealthCopy,
 } from "@/lib/health-landing-content";
+import { HealthV6Insurance } from "./health-v6-insurance";
+import { HealthV6Specialties, HealthV6Faq } from "./health-v6-specialties";
 import styles from "./health-landing.module.css";
 
 const strengthIcons = { globe: Globe2, leaf: Leaf, users: UsersRound, shield: ShieldCheck } as const;
@@ -46,7 +49,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
       <section className={styles.hero} aria-labelledby="health-title">
         <div className={styles.heroImage} role="img" aria-label={zh ? "大湾区现代城市、家庭与服务协调艺术场景" : "Illustrative modern Greater Bay Area city, family and care coordination scene"} />
         <div className={`${styles.heroCopy} ${styles.wrap}`}>
-          <p className={styles.eyebrow}>{t(["PHOENIX NOVA™ · 全球健康", "PHOENIX NOVA™ · GLOBAL HEALTH"])}</p>
+          <p className={styles.eyebrow}>{t(["PHOENIX NOVA™ · 健康罗盘 V6.0", "PHOENIX NOVA™ · HEALTH COMPASS V6.0"])}</p>
           <p className={styles.brandName}>{t([healthHero.zh.eyebrow, healthHero.en.eyebrow])}</p>
           <h1 id="health-title">{t([healthHero.zh.title, healthHero.en.title])}</h1>
           <p className={styles.heroSubtitle}>{t([healthHero.zh.subtitle, healthHero.en.subtitle])}</p>
@@ -59,12 +62,29 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
         </div>
       </section>
 
+      <section className={styles.compassSection} id="health-compass" aria-labelledby="compass-title">
+        <div className={`${styles.wrap} ${styles.compassLayout}`}>
+          <div>{heading("08", "健康罗盘", "HEALTH COMPASS", ["先了解家庭需要，再规划下一步。", "Understand your needs. Then plan your next step."], "compass-title")}<p>{t(["通过14题健康安排问卷，帮助家庭整理健康事务、服务协调与支持方向。可跳过、返回修改，并在本地整理行动清单；不作诊断、医疗评分或治疗建议。", "A 14-question arrangements questionnaire to organise health matters, coordination and support directions. Skip, review and prepare a local action list. It provides no diagnosis, medical score or treatment advice."])}</p></div>
+          <div className={styles.compassPanel}><span className={styles.compassSymbol} aria-hidden="true">{zh ? "北" : "N"}<br />│<br />— ◇ —<br />│</span><p>{t(["教育 · 身份 · 财富 · 健康", "EDUCATION · IDENTITY · WEALTH · HEALTH"])}</p><h3>{t(["一套评估，连接两类服务价值。", "One Compass. Two kinds of support."])}</h3>{enabled ? <Link className={styles.primary} prefetch={false} data-testid="health-landing-assessment" href={`/${locale}/compass/health`}>{t(["进入健康罗盘受控体验", "Open controlled Health Compass preview"])} ↗</Link> : <><span className={styles.closed} data-testid="health-landing-closed">{t(["健康需求评估 · 尚未开放", "Health needs assessment · Not open yet"])}</span><p>{t(["评估目前保持受控状态。您可先了解服务或准备咨询。", "The assessment remains controlled. Explore the services or prepare for a conversation first."])}</p><div className={styles.closedActions}><a href="#services">{t(["了解跨境医疗服务", "Explore cross-border care"])} ↗</a><a href="#consultation">{t(["准备咨询", "Prepare a consultation"])} ↗</a></div></>}<small>{t(["回答不自动上传，不写入客户管理系统或家庭中心。", "Answers are not automatically uploaded or saved to CRM or Family Center."])}</small></div>
+        </div>
+      </section>
+
+      <section className={`${styles.section} ${styles.wrap}`} id="services" aria-labelledby="services-title">
+        {heading("04", "五大医疗协调服务", "FIVE COORDINATION SERVICES", ["Global Health｜国际医疗与跨境协调", "Global Health | International Care and Cross-Border Coordination"], "services-title")}
+        <p className={styles.intro}>{t(["从医疗机构信息与预约，到翻译、在地支持及后续理赔行政协助，服务内容按家庭需要和约定范围确认。", "From provider information and appointments to interpretation, local support and claims administration, scope is confirmed around each family's needs."])}</p>
+        <div className={styles.services}>{healthServices.map((service, index) => <article key={service.title[1]}>
+          <div className={`${styles.serviceImage} ${styles[service.image]}`} role="img" aria-label={t(service.alt)} />
+          <div className={styles.serviceBody}><span className={styles.number}>0{index + 1}</span><p className={styles.serviceEnglish}>{t(service.subtitle)}</p><h3>{t(service.title)}</h3><p>{t(service.body)}</p><a href="#consultation">{t(["了解与咨询", "Explore and prepare"])} <span aria-hidden="true">↗</span></a></div>
+        </article>)}</div>
+        <p className={styles.micro}>{t(["图片仅作场景示意，不代表凤启客户、医疗机构或合作关系。", "Images are illustrative and do not identify Phoenix Nova clients, providers or partnerships."])}</p>
+      </section>
+
       <section className={styles.brandOrigin} id="brand-origin" aria-labelledby="brand-origin-title">
         <div className={`${styles.section} ${styles.wrap} ${styles.brandOriginGrid}`}>
           <div>
             <p className={styles.brandOriginEyebrow}>{t(healthBrandOrigin.eyebrow)}</p>
             <h2 id="brand-origin-title">{t(healthBrandOrigin.title)}</h2>
-            <p className={styles.brandOriginBody}>{t(healthBrandOrigin.body)}</p>
+            <p className={styles.brandOriginBody}>{t(healthBrandOrigin.body)}</p><div className={styles.launchValues}>{healthLaunchValues.map(value => <article key={value.title[1]}><h3>{t(value.title)}</h3><p>{t(value.body)}</p></article>)}</div>
             <div className={styles.brandOriginActions}>
               <Link className={styles.primary} data-testid="brand-origin-shenzhen" href={`/${locale}/health/shenzhen-international-medical`} prefetch={false}>{t(healthBrandOrigin.cta)} <span aria-hidden="true">↗</span></Link>
               <a className={styles.secondary} href="#consultation">{t(healthBrandOrigin.consultationCta)} <span aria-hidden="true">↗</span></a>
@@ -73,7 +93,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
           <aside className={styles.brandOriginNote} aria-label={zh ? "APEC 背景说明" : "APEC context note"}>
             <p>{t(healthBrandOrigin.boundary)}</p>
             <a href={healthBrandOrigin.sourceHref} target="_blank" rel="noreferrer noopener">{t(healthBrandOrigin.sourceLabel)} ↗</a>
-            <small>{zh ? "事实核验日期：2026年11月2日" : "Fact checked: 2 November 2026"}</small>
+            <small>{zh ? "城市背景来源核验：2026年11月2日（非运营批准）" : "City-context source checked: 2 November 2026 (not operational approval)"}</small>
           </aside>
         </div>
       </section>
@@ -110,16 +130,6 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
         </div>
       </section>
 
-      <section className={`${styles.section} ${styles.wrap}`} id="services" aria-labelledby="services-title">
-        {heading("04", "五大医疗协调服务", "FIVE COORDINATION SERVICES", ["把跨境就医安排，拆解为清晰、可沟通的每一步。", "Make cross-border care easier to understand, discuss and arrange."], "services-title")}
-        <p className={styles.intro}>{t(["从医疗机构信息与预约，到翻译、在地支持及后续理赔行政协助，服务内容按家庭需要和约定范围确认。", "From provider information and appointments to interpretation, local support and claims administration, scope is confirmed around each family's needs."])}</p>
-        <div className={styles.services}>{healthServices.map((service, index) => <article key={service.title[1]}>
-          <div className={`${styles.serviceImage} ${styles[service.image]}`} role="img" aria-label={t(service.alt)} />
-          <div className={styles.serviceBody}><span className={styles.number}>0{index + 1}</span><p className={styles.serviceEnglish}>{t(service.subtitle)}</p><h3>{t(service.title)}</h3><p>{t(service.body)}</p><a href="#consultation">{t(["了解与咨询", "Explore and prepare"])} <span aria-hidden="true">↗</span></a></div>
-        </article>)}</div>
-        <p className={styles.micro}>{t(["图片仅作场景示意，不代表凤启客户、医疗机构或合作关系。", "Images are illustrative and do not identify Phoenix Nova clients, providers or partnerships."])}</p>
-      </section>
-
       <section className={styles.providerSection} id="providers" aria-labelledby="providers-title">
         <div className={`${styles.section} ${styles.wrap}`}>
           {heading("05", "大湾区医疗机构与资源中心", "GREATER BAY AREA PROVIDER HUB", ["大湾区医疗机构与资源中心", "Greater Bay Area Provider Hub"], "providers-title")}
@@ -136,6 +146,9 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
         </div>
       </section>
 
+<section className={styles.section + " " + styles.wrap} id="insurance-verification" aria-labelledby="insurance-title"><div className={styles.sectionHeading}><p>{zh ? "香港保单 · 逐项核实" : "HONG KONG POLICIES · PLAN CHECKS"}</p><h2 id="insurance-title">{zh ? "11个保险品牌，从具体计划开始核实。" : "11 insurance brands. Start with the plan."}</h2></div><HealthV6Insurance locale={locale} /></section>
+<section className={styles.section + " " + styles.wrap} id="specialty-planning" aria-labelledby="specialty-title"><div className={styles.sectionHeading}><p>{zh ? "四大专科 · 咨询与住院规划" : "FOUR SPECIALTIES · CONSULTATION AND STAY PLANNING"}</p><h2 id="specialty-title">{zh ? "先整理问题，再由医疗机构判断。" : "Organise questions. Let the provider assess."}</h2></div><HealthV6Specialties locale={locale} /></section>
+
       <section className={styles.journeySection} id="cross-border-process" aria-labelledby="journey-title">
         <div className={`${styles.section} ${styles.wrap}`}>
           {heading("06", "跨境医疗六步流程", "SIX STEPS THROUGH CROSS-BORDER CARE", ["从初步咨询，到后续跟进，每一步都有清晰边界。", "From the first conversation to follow-up, every step has a clear boundary."], "journey-title")}
@@ -151,13 +164,6 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
           <p className={styles.intro}>{t(["从日常健康事务、家庭协作与成员授权出发，建立适合家庭的长期安排。", "Start with everyday arrangements, family coordination and member permissions to shape a long-term plan."])}</p>
           <div className={styles.lifeStages}>{familyStages.map((stage, index) => <article key={stage.title[1]}><div className={`${styles.lifePhoto} ${styles[stage.image]}`} role="img" aria-label={t([`${stage.title[0]}生活场景示意`, `Illustrative ${stage.title[1].toLowerCase()} lifestyle scene`])} /><div className={styles.lifeBody}><span>0{index + 1} / {zh ? "家庭阶段" : "FAMILY STAGE"}</span><h3>{t(stage.title)}</h3><p>{t(stage.body)}</p><Link href={`/${locale}/health/family`} prefetch={false}>{t(["了解规划", "Explore planning"])} ↗</Link></div></article>)}</div>
           <Link className={styles.lifeLink} href={`/${locale}/health/family`} prefetch={false}>{t(["进入家庭健康规划", "Enter family health planning"])} <span aria-hidden="true">↗</span></Link>
-        </div>
-      </section>
-
-      <section className={styles.compassSection} id="health-compass" aria-labelledby="compass-title">
-        <div className={`${styles.wrap} ${styles.compassLayout}`}>
-          <div>{heading("08", "健康罗盘", "HEALTH COMPASS", ["先了解家庭需要，再规划下一步。", "Understand your needs. Then plan your next step."], "compass-title")}<p>{t(["通过14题健康安排问卷，帮助家庭整理健康事务、服务协调与支持方向。可跳过、返回修改，并在本地整理行动清单；不作诊断、医疗评分或治疗建议。", "A 14-question arrangements questionnaire to organise health matters, coordination and support directions. Skip, review and prepare a local action list. It provides no diagnosis, medical score or treatment advice."])}</p></div>
-          <div className={styles.compassPanel}><span className={styles.compassSymbol} aria-hidden="true">{zh ? "北" : "N"}<br />│<br />— ◇ —<br />│</span><p>{t(["教育 · 身份 · 财富 · 健康", "EDUCATION · IDENTITY · WEALTH · HEALTH"])}</p><h3>{t(["一套评估，连接两类服务价值。", "One Compass. Two kinds of support."])}</h3>{enabled ? <Link className={styles.primary} prefetch={false} data-testid="health-landing-assessment" href={`/${locale}/compass/health`}>{t(["进入健康罗盘受控体验", "Open controlled Health Compass preview"])} ↗</Link> : <><span className={styles.closed} data-testid="health-landing-closed">{t(["健康需求评估 · 尚未开放", "Health needs assessment · Not open yet"])}</span><p>{t(["评估目前保持受控状态。您可先了解服务或准备咨询。", "The assessment remains controlled. Explore the services or prepare for a conversation first."])}</p><div className={styles.closedActions}><a href="#services">{t(["了解跨境医疗服务", "Explore cross-border care"])} ↗</a><a href="#consultation">{t(["准备咨询", "Prepare a consultation"])} ↗</a></div></>}<small>{t(["回答不自动上传，不写入客户管理系统或家庭中心。", "Answers are not automatically uploaded or saved to CRM or Family Center."])}</small></div>
         </div>
       </section>
 
@@ -185,6 +191,8 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
         {heading("12", "常见问题", "QUESTIONS, ANSWERED", ["您关心的，先说清楚。", "Your questions. Clearly answered."], "faq-title")}
         <div>{healthFaqs.map(faq => <details key={faq.question[1]}><summary>{t(faq.question)}<span aria-hidden="true">+</span></summary><p>{t(faq.answer)}</p></details>)}</div>
       </div></section>
+
+<section className={styles.section + " " + styles.wrap} id="elder-family-faq" aria-labelledby="elder-faq-title"><div className={styles.sectionHeading}><p>{zh ? "香港长者与家属" : "OLDER HONG KONG RESIDENTS AND FAMILIES"}</p><h2 id="elder-faq-title">{zh ? "就医与保险，先问清楚。" : "Questions to ask about care and insurance."}</h2></div><HealthV6Faq locale={locale} /></section>
 
       <section className={styles.contactSection} id="consultation" aria-labelledby="consultation-title"><div className={`${styles.section} ${styles.wrap} ${styles.contact}`}>
         <div>{heading("13", "咨询准备", "PREPARE A CONVERSATION", ["专业连接，安心同行。", "Expert connections. Thoughtful support."], "consultation-title")}<p>{t(["从一次清晰的沟通开始，了解适合家庭的协调支持。", "Start with a clear conversation about the coordination your family needs."])}</p><p className={styles.micro}>{t(["当前为前端候选预览，正式咨询渠道尚未接通。此入口不提交预约、不接收医疗资料。", "Frontend candidate preview. A formal enquiry channel is not connected. This entry does not book or receive medical records."])}</p></div>

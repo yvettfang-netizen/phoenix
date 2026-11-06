@@ -3,6 +3,7 @@
 Status: draft / noindex / Founder review required
 
 Last checked: 2026-11-02
+Targeted F1/F2 source and translation recheck: 2026-11-05 (Codex evidence review, not human sign-off; other source dates remain unchanged).
 Content contract: `lib/health-geo-content.ts`
 
 This register is a source boundary, not a medical-provider directory. The
@@ -28,7 +29,7 @@ search result and linked page; it must be rechecked before public indexing.
 | `nhc-public-health-information-search` | National Health Commission of the PRC | <https://zwfw.nhc.gov.cn/cxx/> | Official entry points for physician and hospital practice-registration searches | Search results and fields can change; use the current official result, not an old copy or third-party profile. |
 | `shenzhen-health-commission-provider-and-physician-directory` | Shenzhen Municipal Health Commission | <https://wjw.sz.gov.cn/bmfw/wycx/hygl/wjglbm/index.html> | Shenzhen medical-institution name and physician-registration query entry points | A query entry is not a recommendation, partnership, quality ranking or appointment confirmation. |
 | `shenzhen-health-commission-physician-registration` | Shenzhen Municipal Health Commission | <https://wjw.sz.gov.cn/ztzl/yszyzc/> | Shenzhen physician registration authority and published handling conditions | Does not prove that a named or advertised doctor has a particular current scope. |
-| `shenzhen-health-commission-institution-registration-rules` | Shenzhen Municipal Health Commission | <https://wjw.sz.gov.cn/gkmlpt/content/7/7391/post_7391852.html> | Requirement to obtain medical-institution practice registration or filing before operation; regulatory allocation of registration | Current institution licence, site and business scope still need an official-record check. |
+| `shenzhen-health-commission-institution-registration-rules` | Shenzhen Municipal Health Commission | <https://wjw.sz.gov.cn/xxgk/zcfggfxwj/mybh_5/content/post_11667974.html> | 2024 rules (深卫健规〔2024〕4号), effective 2024-12-01: registration or filing before practice (Article 3); repeal of the 2020 rules (Article 44). Rechecked 2026-11-05. | The 2020 rules were repealed. Current institution licence, site and business scope still need an official-record check. |
 | `hk-government-cross-boundary-healthcare-2026` | Hong Kong SAR Government | <https://www.info.gov.hk/gia/general/202602/25/P2026022500444p.htm> | Hong Kong Government description of cross-boundary healthcare pilots, designated institutions and eHealth functions for specific groups | Pilot scope and designated institutions are not universal eligibility or acceptance. |
 | `hk-government-cross-boundary-insurance-arrangements-2024` | Hong Kong SAR Government | <https://www.info.gov.hk/gia/general/202407/17/P2024071700469p.htm> | Government description of individual insurers' pre-approval and direct-claim arrangements with Mainland institutions | An individual insurer arrangement is not universal policy coverage or a Phoenix service commitment. |
 | `hong-kong-insurance-authority-medical-claims-guidance` | Insurance Authority Hong Kong | <https://www.ia.org.hk/en/medical_insurance/tips_on_making_claims.html> | Claim deadlines, pre-authorisation, common documents, final claim decisions, and reasonable-and-customary charges | Coverage, exclusions, limits and final payment follow the policy and insurer decision. No claim guarantee. |
@@ -49,13 +50,30 @@ specific so a source cannot silently become support for a broader claim.
 | `shenzhen-international-private-medical` | `shenzhen-health-commission-institution-registration-rules`; `shenzhen-health-commission-provider-and-physician-directory`; `eyeshenzhen-international-services-2026` | Registration first; named-service descriptions only; no private-care ranking |
 | `overseas-chinese-returning-care` | `nhc-public-health-information-search`; `shenzhen-health-commission-provider-and-physician-directory`; `hong-kong-insurance-authority-medical-claims-guidance` | Provider search, records/coordination checklist, and insurer-document boundary |
 | `hong-kong-resident-shenzhen-care` | `hk-government-cross-boundary-healthcare-2026`; `hk-government-cross-boundary-insurance-arrangements-2024`; `shenzhen-health-commission-provider-and-physician-directory`; `hong-kong-insurance-authority-medical-claims-guidance` | Specific pilots/designated institutions and individual insurer arrangements only |
-| `greater-bay-area-cross-border-resources` | `hk-government-cross-boundary-healthcare-2026`; `hk-government-cross-boundary-insurance-arrangements-2024`; `nhc-public-health-information-search`; `shenzhen-health-commission-provider-and-physician-directory` | Resource-layering and pilot/designated-provider boundaries |
+| `greater-bay-area-cross-border-resources` | `hk-government-cross-boundary-healthcare-2026`; `hk-government-cross-boundary-insurance-arrangements-2024`; `nhc-public-health-information-search`; `shenzhen-health-commission-provider-and-physician-directory`; `hong-kong-insurance-authority-medical-claims-guidance` | Resource-layering and pilot/designated-provider boundaries; medical providers decide clinical matters, while insurers decide coverage and claims |
 | `shenzhen-international-medical-services` | `eyeshenzhen-international-services-2026`; `sysu-international-center-shenzhen-2026`; `shenzhen-health-commission-provider-and-physician-directory`; `hong-kong-insurance-authority-medical-claims-guidance` | Named institution examples; SYSU statement is not city-wide; insurance remains policy-specific |
 | `english-care-in-shenzhen` | `sysu-international-center-shenzhen-2026`; `eyeshenzhen-international-services-2026`; `shenzhen-health-commission-provider-and-physician-directory` | Specific bilingual statements and the need to check each communication step |
 | `hong-kong-doctor-shenzhen-registration` | `nhc-hong-kong-macao-physician-short-term-practice-rule`; `shenzhen-health-commission-physician-registration`; `nhc-public-health-information-search` | Registration, practice location/category/scope and official lookup path |
 | `shenzhen-hong-kong-private-cost-comparison` | `shenzhen-healthcare-security-medical-service-prices`; `hong-kong-hospital-authority-fees-and-charges-2026`; `hong-kong-insurance-authority-medical-claims-guidance` | Comparable cost categories, public-vs-private distinction, and insurer pre-authorisation |
 | `international-medical-insurance-claims-china` | `hong-kong-insurance-authority-medical-claims-guidance`; `hong-kong-insurance-authority-policyholder-protection`; `hk-government-cross-boundary-insurance-arrangements-2024` | Claim preparation, insurer authorisation and individual cross-boundary arrangements |
 | `international-patient-gba-appointment-travel` | `eyeshenzhen-international-services-2026`; `hk-government-cross-boundary-healthcare-2026`; `shenzhen-government-hospital-appointment-example` | Provider confirmation, designated/pilot context and one appointment-flow example |
+
+## F1/F2 targeted recheck — 2026-11-05
+
+- F1: the [current Shenzhen rules](https://wjw.sz.gov.cn/xxgk/zcfggfxwj/mybh_5/content/post_11667974.html)
+  are published as 深卫健规〔2024〕4号 and appear in the authority's
+  [current effective-document directory](https://wjw.sz.gov.cn/xxgk/gfxwjml/xxyxgfxwjml/).
+  Article 44 makes them effective from 2024-12-01 and repeals 深卫健规〔2020〕2号.
+  The source record and its two referencing guides now carry the 2026-11-05
+  targeted review date. This establishes a regulatory source, not any provider's licence.
+- F2: the GBA resources guide now separates clinical decisions by medical
+  providers from coverage and claims decisions by insurers in both languages.
+  The [Insurance Authority claims guidance](https://www.ia.org.hk/en/medical_insurance/tips_on_making_claims.html)
+  was rechecked on 2026-11-05 and is linked directly from that guide.
+  Pre-authorisation remains preliminary and does not guarantee a final payment.
+- Only these two source records and three affected guides received new review
+  dates. This is a targeted code/content correction, not a fresh verification
+  of every provider fact or an independent human approval. Sites remains HOLD.
 
 ## Deliberately blocked claims
 

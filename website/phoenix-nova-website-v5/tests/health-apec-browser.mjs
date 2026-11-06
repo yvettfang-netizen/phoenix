@@ -8,15 +8,19 @@ const origin=process.env.HEALTH_ORIGIN||'http://127.0.0.1:4432';
 const b=await chromium.launch({headless:true,...(process.env.HEALTH_BROWSER_PATH?{executablePath:process.env.HEALTH_BROWSER_PATH}:{})});
 const results=[];
 try {
- const path='website/phoenix-nova-website-v5/components/health-landing.tsx';
+  const path='website/phoenix-nova-website-v5/components/health-landing.tsx';
  const before=execFileSync('git',['show','ef0b8ca8229723590466bef8ea2eeb3bce048541:'+path],{encoding:'utf8'});
  const after=readFileSync('components/health-landing.tsx','utf8');
  for(const token of before.match(/id="[^"]+"|heading\("\d+"/g)||[])assert.ok(after.includes(token),'preserved anchor/number '+token);
  for(const locale of ['zh','en'])for(const width of [390,768,1440]){
   const p=await b.newPage({viewport:{width,height:1000}});await p.goto(origin+`/${locale}/health`,{waitUntil:'networkidle'});
   const region=p.locator('#brand-origin');assert.equal(await region.count(),1);
-  const text=await region.innerText();assert.match(text,/2026/);assert.match(text,/18/);assert.match(text,/19/);assert.match(text,/APEC/);
-  assert.match(text,locale==='zh'?/无关|不.*官方/:/not affiliated|no affiliation|independent/i);
+  const text=await region.innerText();assert.match(text,/APEC/i);
+  assert.match(text,locale==='zh'?/会后|计划启动|首发/:/Post-APEC|after APEC|planned|launching/i);
+  assert.match(text,locale==='zh'?/与APEC会议官方组织、授权、指定医疗服务或赞助无关/:/independent of the official APEC organisers, authorisations, designated medical services and sponsorship/i);
+  assert.doesNotMatch(text,/倒计时|报名|开幕|活动预告|18.?19|countdown|registration|opening ceremony|event preview/i);
+  assert.doesNotMatch(text,/\b(?:is|as|an?)\s+(?:an?\s+)?(?:official\s+APEC\s+(?:partner|project)|APEC[- ]designated\s+medical\s+service|APEC\s+sponsor)\b/i);
+  assert.doesNotMatch(text,/(?:是|为|作为).{0,20}APEC.{0,30}(?:官方合作伙伴|官方项目|指定医疗服务|赞助方)/i);
   assert.equal(await region.locator('img,form,input').count(),0);
   assert.ok(await region.locator('a[href="https://www.szns.gov.cn/english/apec2026shenzhen/"]').count());
   assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));

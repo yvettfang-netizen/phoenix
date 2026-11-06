@@ -19,6 +19,7 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
   const [careDestination, setCareDestination] = useState("");
   const [coordinationNeed, setCoordinationNeed] = useState("");
   const [prepared, setPrepared] = useState(false);
+  const [privacyUnderstood, setPrivacyUnderstood] = useState(false);
   const options = family ? [...dimensions.map(dimension => text(dimension.title, locale)), zh ? "希望先了解规划方式" : "Explore the planning approach first"] : zh
     ? [
       "医疗机构与预约协调",
@@ -48,8 +49,8 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
       value: referralSource,
       setValue: setReferralSource,
       options: zh
-        ? [["uk", "英国来源渠道"], ["other-overseas", "其他海外来源渠道"], ["hong-kong", "香港来源渠道"], ["self-or-recommendation", "自行了解或推荐"], ["unclear", "尚未明确"]]
-        : [["uk", "UK referral source"], ["other-overseas", "Other overseas referral source"], ["hong-kong", "Hong Kong referral source"], ["self-or-recommendation", "Self-discovered or recommendation"], ["unclear", "Not yet clear"]],
+        ? [["uk", "英国来源渠道"], ["hong-kong-adviser", "香港保险顾问转介"], ["website", "网站自然咨询"], ["partner", "其他合作伙伴"], ["existing-client", "现有客户推荐"], ["other-overseas", "其他海外来源渠道"], ["hong-kong", "香港来源渠道"], ["self-or-recommendation", "自行了解或推荐"], ["unclear", "尚未明确"]]
+        : [["uk", "UK referral source"], ["hong-kong-adviser", "Hong Kong insurance adviser referral"], ["website", "Website enquiry"], ["partner", "Other partner"], ["existing-client", "Existing client referral"], ["other-overseas", "Other overseas referral source"], ["hong-kong", "Hong Kong referral source"], ["self-or-recommendation", "Self-discovered or recommendation"], ["unclear", "Not yet clear"]],
     },
     {
       id: "client-region",
@@ -58,8 +59,8 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
       value: clientRegion,
       setValue: setClientRegion,
       options: zh
-        ? [["uk", "英国"], ["hong-kong", "香港"], ["mainland-china", "中国内地"], ["other-overseas", "其他海外地区"], ["unclear", "尚未明确"]]
-        : [["uk", "United Kingdom"], ["hong-kong", "Hong Kong"], ["mainland-china", "Mainland China"], ["other-overseas", "Other overseas region"], ["unclear", "Not yet clear"]],
+        ? [["uk", "英国"], ["us", "美国"], ["canada", "加拿大"], ["australia", "澳大利亚"], ["hong-kong", "香港"], ["mainland-china", "中国内地"], ["other-overseas", "其他海外地区"], ["unclear", "尚未明确"]]
+        : [["uk", "United Kingdom"], ["us", "United States"], ["canada", "Canada"], ["australia", "Australia"], ["hong-kong", "Hong Kong"], ["mainland-china", "Mainland China"], ["other-overseas", "Other overseas region"], ["unclear", "Not yet clear"]],
     },
     {
       id: "care-destination",
@@ -121,6 +122,7 @@ export function HealthConsultation({ locale, family = false }: { locale: "zh" | 
           </select>
         </div>)}
       </details>}
+      {!family && <details><summary>{zh ? "联系与隐私授权边界（Demo）" : "Contact and privacy permissions (demo)"}</summary><label><input type="checkbox" checked={privacyUnderstood} onChange={event => setPrivacyUnderstood(event.target.checked)} />{zh ? "我了解这些非敏感选择仅在本页临时处理，刷新即清空。" : "I understand these non-sensitive selections are temporary on this page and clear on refresh."}</label><p>{zh ? "这不是联系同意、患者资料授权或服务委托。正式提交保持关闭；不同地区的隐私条款、保存期限及撤回流程须经法务审核。请勿提供姓名、联系方式、病历、证件或保险文件。" : "This is not contact consent, patient-record permission or a service instruction. Formal submission remains closed. Regional privacy terms, retention and withdrawal procedures require legal review. Do not provide names, contact details, records, IDs or insurance files."}</p><button type="button" disabled>{zh ? "正式咨询提交尚未开放" : "Formal enquiry submission is not open"}</button></details>}
       <button data-testid="health-consultation-prepare" className={styles.primary} type={family ? "submit" : "button"} disabled={!ready || !service} onClick={() => { if (!family && service) setPrepared(true); }}>{family
         ? (zh ? "查看咨询准备清单" : "View preparation checklist")
         : (zh ? "准备预约咨询" : "Prepare a consultation")}<span aria-hidden="true">↗</span></button>
