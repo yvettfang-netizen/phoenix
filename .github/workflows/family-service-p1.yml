@@ -4,6 +4,8 @@ on:
     paths:
       - 'database/canonical/forward-candidates/service-workbench/**'
       - 'database/canonical/verification/p1/**'
+      - 'database/canonical/verification/v0038/**'
+      - 'database/canonical/verification/v0040/**'
       - 'Phoenix Compass/education compass/server/**'
       - 'website/phoenix-nova-website-v5/**'
       - 'docs/database/p1-integration-20261106/**'
@@ -34,7 +36,7 @@ jobs:
       - name: Scoped P1 secret scan
         run: |
           image='ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f'
-          for path in 'database/canonical/verification/p1' 'database/canonical/forward-candidates/service-workbench/0039_service_project_summary.sql' 'docs/database/p1-integration-20261106' 'website/phoenix-nova-website-v5/lib/customer-canonical-bridge.ts' 'website/phoenix-nova-website-v5/lib/family-service-summary.ts' 'website/phoenix-nova-website-v5/components/family-service-overview.tsx' 'website/phoenix-nova-website-v5/app/api/family-services'; do
+          for path in 'database/canonical/verification/p1' 'database/canonical/verification/v0040' 'database/canonical/forward-candidates/service-workbench/0039_service_project_summary.sql' 'docs/database/p1-integration-20261106' 'website/phoenix-nova-website-v5/lib/customer-canonical-bridge.ts' 'website/phoenix-nova-website-v5/lib/family-service-summary.ts' 'website/phoenix-nova-website-v5/components/family-service-overview.tsx' 'website/phoenix-nova-website-v5/app/api/family-services'; do
             docker run --rm --network none --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
           done
       - name: Backend build for the real PostgreSQL API
@@ -51,9 +53,11 @@ jobs:
           node node_modules/workerd/install.js
           npm run typecheck
           npm run build
-          node --import ./tests/register-typescript.mjs --test tests/customer-canonical-bridge.test.mjs tests/family-service-summary.test.mjs tests/family-service-overview.test.mjs
+          node --import ./tests/register-typescript.mjs --test tests/customer-canonical-bridge.test.mjs tests/family-service-summary.test.mjs tests/family-service-overview.test.mjs tests/service-workbench-identity.test.mjs
       - name: Summary candidate contract
-        run: node database/canonical/verification/v0039/summary-contract.test.mjs
+        run: |
+          node database/canonical/verification/v0039/summary-contract.test.mjs
+          node database/canonical/verification/v0040/identity-contract.test.mjs
       - name: Install pinned Playwright browser
         run: |
           npm install --prefix "$RUNNER_TEMP/p1-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
@@ -75,4 +79,35 @@ jobs:
           path: |
             ${{ runner.temp }}/p1-family-service/pg${{ matrix.pg }}/**
             ${{ runner.temp }}/p1-family-service/browser-pg${{ matrix.pg }}/**
+
+  identity-0040-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16', '17']
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Build the real PostgreSQL workbench API
+        working-directory: Phoenix Compass/education compass/server
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+      - name: Focused 0040 Identity PostgreSQL acceptance
+        env:
+          P1_IDENTITY_EVIDENCE_DIR: ${{ runner.temp }}/p1-identity-0040/pg${{ matrix.pg }}
+        run: node database/canonical/verification/v0040/identity-acceptance.mjs '${{ matrix.pg }}'
+      - name: Upload focused 0040 evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: identity-0040-pg${{ matrix.pg }}
+          path: ${{ runner.temp }}/p1-identity-0040/pg${{ matrix.pg }}/**
           if-no-files-found: warn
