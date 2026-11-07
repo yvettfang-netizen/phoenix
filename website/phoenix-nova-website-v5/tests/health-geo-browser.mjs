@@ -28,6 +28,18 @@ try{
     assert.equal(await page.locator('input[type=file],form[method=post]').count(),0);
     assert.equal(await page.locator('a[href*="founder"],a[href*="/admin"]').count(),0);
     const guide=guides.find(g=>g.paths[locale]===path),hub=hubs.find(h=>h.paths[locale]===path);
+    if(guide?.officialSources.some(source=>source.id==='shenzhen-health-commission-institution-registration-rules')){
+     assert.equal(await page.locator('main a[href="https://wjw.sz.gov.cn/xxgk/zcfggfxwj/mybh_5/content/post_11667974.html"]').count(),1,`${path}: current registration source missing`);
+     assert.equal(await page.locator('main a[href*="post_7391852"]').count(),0,`${path}: repealed registration source still linked`);
+    }
+    if(guide?.id==='greater-bay-area-cross-border-resources'){
+     const boundary=page.locator('main section').filter({has:page.getByRole('heading',{name:locale==='zh'?'协调边界':'Coordination boundary',exact:true})});
+     const body=await boundary.locator('p').innerText();
+     assert.match(body,locale==='zh'?/医疗机构决定[^；。]*接诊[^；。]*转诊/:/\bmedical providers decide[^.;]*\bacceptance\b[^.;]*\breferral\b/i);
+     assert.match(body,locale==='zh'?/保险机构决定[^；。]*承保[^；。]*理赔/:/\binsurers decide[^.;]*\bcoverage\b[^.;]*\bclaims\b/i);
+     assert.doesNotMatch(body,/providers decide[^.;]*claims/i);
+     assert.equal(await page.locator('main a[href="https://www.ia.org.hk/en/medical_insurance/tips_on_making_claims.html"]').count(),1,`${path}: insurer decision source missing`);
+    }
     if(guide||hub){const record=guide||hub;const expected=record.paths[locale==='zh'?'en':'zh'];assert.equal(await page.locator('header .locale-switch').getAttribute('href'),expected);}
     if([390,1440].includes(width)&&(path===`/${locale}/health`||path===guides[0].paths[locale]||path.endsWith('/hyzen-hospital'))){await page.locator('footer').scrollIntoViewIfNeeded();await page.locator('footer img').evaluateAll(images=>Promise.all(images.map(i=>i.decode())));await page.screenshot({path:resolve(out,`${locale}-${width}-${path===`/${locale}/health`?'home':path.endsWith('/hyzen-hospital')?'hyzen':'guide'}.png`),fullPage:true});}
     results.push({path,width,status:'PASS'});
