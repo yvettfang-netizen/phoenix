@@ -1,0 +1,65 @@
+name: Identity V3.1 CBI candidate validation
+on:
+  pull_request:
+    paths:
+      - "website/phoenix-nova-website-v5/**"
+      - ".github/workflows/identity-v31-cbi.yml"
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: website/phoenix-nova-website-v5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.19.0"
+          cache: npm
+          cache-dependency-path: website/phoenix-nova-website-v5/package-lock.json
+      - run: npm ci
+      - name: Full dependency audit (including development dependencies)
+        run: |
+          mkdir -p outputs/identity-v31
+          npm audit --audit-level=moderate --json | tee outputs/identity-v31/dependency-audit.json
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
+      - name: Actual Workers and pure model tests
+        run: node --import ./tests/register-typescript.mjs --test tests/*.test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install playwright==1.57.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Responsive UI, interaction and release-isolation evidence
+        run: |
+          export PLAYWRIGHT_MODULE="$(python -c 'import pathlib, playwright; print(pathlib.Path(playwright.__file__).parent / "driver" / "package")')"
+          mkdir -p outputs/identity-v31
+          IDENTITY_CBI_REVIEW_PREVIEW=1 IDENTITY_CBI_IMPORT_REVIEW=1 HEALTH_TEST_PORT=44631 node scripts/health-node-preview.mjs > outputs/identity-v31/review-preview.log 2>&1 &
+          review_pid=$!
+          IDENTITY_CBI_REVIEW_PREVIEW=0 HEALTH_TEST_PORT=44632 node scripts/health-node-preview.mjs > outputs/identity-v31/public-preview.log 2>&1 &
+          public_pid=$!
+          trap 'kill "$review_pid" "$public_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:44631/zh/identity > /dev/null && curl --fail --silent http://127.0.0.1:44632/zh/identity > /dev/null; then break; fi
+            sleep 1
+          done
+          IDENTITY_ORIGIN=http://127.0.0.1:44631 IDENTITY_EVIDENCE_DIR=outputs/identity-v31/regression node tests/identity-browser.mjs
+          V6_ORIGIN=http://127.0.0.1:44631 V6_EVIDENCE_DIR=outputs/identity-v31/homepage node tests/homepage-v6-browser.mjs
+          IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 IDENTITY_V31_PUBLIC_ORIGIN=http://127.0.0.1:44632 node tests/cbi-browser.mjs
+          IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 node tests/cbi-import-browser.mjs
+          IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 IDENTITY_V31_PUBLIC_ORIGIN=http://127.0.0.1:44632 node tests/cbi-geo-browser.mjs
+          IDENTITY_V31_ORIGIN=http://127.0.0.1:44631 node tests/cbi-part8-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: identity-v31-${{ github.event.pull_request.head.sha }}
+          path: website/phoenix-nova-website-v5/outputs/identity-v31/
+          if-no-files-found: warn
+          retention-days: 14
