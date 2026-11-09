@@ -3,7 +3,7 @@ import { SiteDirectory } from "./site-directory";
 import type { Locale } from "./v5-site";
 import styles from "./site-chrome-v3.module.css";
 import Link from "next/link";
-import { localizedHref } from "@/lib/locale-navigation";
+import { localeRouteMap, localizedHref } from "@/lib/locale-navigation";
 import { healthPreviewEnabled } from "@/lib/health-compass-gate";
 
 export function SiteEcosystemContent({ locale, consultationPath, localized = false, brandLocale, compact = false, mainOrigin }: { locale: Locale; consultationPath?: string; localized?: boolean; brandLocale?: Locale; compact?: boolean; mainOrigin?: string }) {
@@ -11,7 +11,7 @@ export function SiteEcosystemContent({ locale, consultationPath, localized = fal
   if (compact) return <div className={styles.compactFooter} data-compact-footer>
     <div className={styles.compactPromise}><div><strong>{zh ? "每一次启程，都值得更好的未来。" : "Every Beginning Deserves a Better Future."}</strong><span>{zh ? "连接世界资源，陪伴家庭成长。" : "Connecting Global Resources. Growing with Families."}</span></div><Link href={`${mainOrigin ?? ""}${localizedHref(locale, "/about")}`}>{zh ? "了解我们的故事 →" : "Our Story →"}</Link></div>
     <div className={styles.compactLinks}><BrandMark href={`${mainOrigin ?? ""}${localizedHref(locale, "")}`} label={zh ? "凤启环球首页" : "Phoenix Nova home"} /><nav aria-label={zh ? "页脚导航" : "Footer navigation"}>
-      {[["专业服务", "Services", "/compass"], ["教育生态", "Learning", "/education#academy"], ["家庭中心", "Family Center", "/account"], ["凤启洞察", "Insights", "/insights"], ["关于凤启", "About", "/about"]].map(([cn,en,path]) => <Link key={path} href={`${mainOrigin ?? ""}${localizedHref(locale,path)}`}>{zh ? cn : en}</Link>)}
+      {[["专业服务", "Services", "/compass"], ["教育生态", "Learning", "/education#academy"], ["家庭中心", "Family Center", localeRouteMap.family], ["凤启洞察", "Insights", "/insights"], ["关于凤启", "About", "/about"]].map(([cn,en,path]) => <Link key={path} prefetch={path === localeRouteMap.family ? false : undefined} href={`${mainOrigin ?? ""}${localizedHref(locale,path)}`}>{zh ? cn : en}</Link>)}
       <a href="https://fengqi-research-institute.yvettfang.chatgpt.site">{zh ? "数字凤启 · 进入仙兽图" : "Digital Phoenix"}</a>
       {healthPreviewEnabled() && <Link href={localizedHref(locale,"/compass/health")} data-testid="health-entry">{zh ? "健康评估预览" : "Health assessment preview"}</Link>}
     </nav></div>
