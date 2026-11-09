@@ -214,7 +214,7 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
     if(kind==='MATERIAL_UPLOAD')throw failure(403,'UPLOAD_ADAPTER_REQUIRED')
    }
    return (await c.query('SELECT service.workbench_command($1,$2,$3::jsonb,$4,$5) AS result',[project,kind,JSON.stringify(payload),key,workbenchUuid()])).rows[0].result
-  },project)
+  })
  }
  function identityKey(key:string,project:string){return project+':'+key}
  async function handle(request:IncomingMessage,response:ServerResponse):Promise<void>{
