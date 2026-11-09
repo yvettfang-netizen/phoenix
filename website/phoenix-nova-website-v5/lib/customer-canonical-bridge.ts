@@ -3,8 +3,9 @@ import {handleServiceWorkbench,type WorkbenchEnv,workbenchEnabled} from "./servi
 import {summarySearch} from "./family-service-summary";
 
 /** Server-owned adapter only. Never deserialize this capability from request data.
- * Mapping authority must recheck account, principal, family, subject and grants.
- * The opaque token is server-to-server only and never returned to the browser. */
+ * assertCurrent must recheck the bound source account and session as well as
+ * the current principal, family, subject and grants.
+ * The server-to-server opaque token must resolve to the CUSTOMER gateway profile. */
 export interface CustomerCanonicalProvider {
  resolve(identity:{customerId:string;sessionHash:string}):Promise<{
   token:string;assertCurrent():Promise<void>;
@@ -25,21 +26,40 @@ export async function handleCustomerServices(request:Request,env:WorkbenchEnv,mo
  if(resource==="dev-session")return fail(404,"NOT_FOUND");
  if(resource==="summary"&&request.method!=="GET")return fail(405,"METHOD_NOT_ALLOWED");
  if(!config||config.origin!==url.origin)return fail(503,"IDENTITY_BRIDGE_UNAVAILABLE");
+ const unavailable=()=>fail(503,"IDENTITY_BRIDGE_UNAVAILABLE");
  try{
   const session=await readCustomerSession(request,config);
   if(!session)return fail(401,"SIGN_IN_REQUIRED");
-  const audit=async(action:string)=>{await config.db.prepare("INSERT INTO core_auth_audit (id,actor_user_id,action,created_at) VALUES (?,?,?,?)").bind(crypto.randomUUID(),session.id,action,Date.now()).run();};
-  await audit("CANONICAL_ACCESS_ATTEMPT");
-  if(!provider||typeof provider.resolve!=="function"){await audit("CANONICAL_MAPPING_UNAVAILABLE");return fail(503,"IDENTITY_MAPPING_NOT_CONFIGURED");}
-  const mapped=await provider.resolve({customerId:session.id,sessionHash:session.token_hash});
-  if(!mapped||!/^[A-Za-z0-9_-]{32,256}$/.test(mapped.token)||typeof mapped.assertCurrent!=="function"){await audit("CANONICAL_MAPPING_DENIED");return fail(403,"IDENTITY_MAPPING_REQUIRED");}
-  await mapped.assertCurrent();
-  const response=await handleServiceWorkbench(request,env,mode,resource,mapped.token);
-  // Never release a response after logout, session expiry or mapping revocation.
-  const current=await readCustomerSession(request,config);
-  if(!current||current.id!==session.id||current.token_hash!==session.token_hash)return fail(401,"SIGN_IN_REQUIRED");
-  await mapped.assertCurrent();
-  await audit(response.ok?"CANONICAL_ACCESS_GRANTED":"CANONICAL_ACCESS_DENIED");
-  return response;
- }catch{return fail(503,"IDENTITY_BRIDGE_UNAVAILABLE");}
+  const requestId=crypto.randomUUID();
+  const audit=async(phase:"attempt"|"prepared"|"outcome",action:string)=>{
+   const result=await config.db.prepare("INSERT INTO core_auth_audit (id,actor_user_id,action,created_at) VALUES (?,?,?,?)")
+    .bind(requestId+":"+phase,session.id,action,Date.now()).run();
+   if(result.meta?.changes!==1)throw new Error("Canonical audit write failed");
+  };
+  await audit("attempt","CANONICAL_ACCESS_ATTEMPT");
+  const recordFailure=async(response:Response)=>{
+   try{
+    await audit("outcome",response.status>=500?"CANONICAL_ACCESS_UNAVAILABLE":"CANONICAL_ACCESS_DENIED");
+    return response;
+   }catch{return unavailable();}
+  };
+  try{
+   if(!provider||typeof provider.resolve!=="function")return recordFailure(fail(503,"IDENTITY_MAPPING_NOT_CONFIGURED"));
+   const mapped=await provider.resolve({customerId:session.id,sessionHash:session.token_hash});
+   if(!mapped||!/^[A-Za-z0-9_-]{32,256}$/.test(mapped.token)||typeof mapped.assertCurrent!=="function")
+    return recordFailure(fail(403,"IDENTITY_MAPPING_REQUIRED"));
+   await mapped.assertCurrent();
+   const response=await handleServiceWorkbench(request,env,mode,resource,mapped.token);
+   if(!response.ok)return recordFailure(response);
+   // The upstream response is buffered. This audit row precedes the final
+   // release check and records preparation, not delivery.
+   await audit("prepared","CANONICAL_ACCESS_PREPARED");
+   const current=await readCustomerSession(request,config,{touch:false});
+   if(!current||current.id!==session.id||current.token_hash!==session.token_hash)
+    return recordFailure(fail(401,"SIGN_IN_REQUIRED"));
+   await mapped.assertCurrent();
+   if(!(current.valid_until>Date.now()))return recordFailure(fail(401,"SIGN_IN_REQUIRED"));
+   return response;
+  }catch{return recordFailure(unavailable());}
+ }catch{return unavailable();}
 }

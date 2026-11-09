@@ -6,7 +6,7 @@ const env={SERVICE_WORKBENCH_ENABLED:'true',CUSTOMER_CANONICAL_BRIDGE_ENABLED:'t
 // Unit adapter, not D1/PG/Staging evidence.
 function fixture(){
  let active=true,revoked=false,failAudit=false;
- const session={id:'synthetic-customer-a',token_hash:'synthetic-session-hash'};
+ const session={id:'synthetic-customer-a',token_hash:'synthetic-session-hash',valid_until:Date.now()+60000};
  const audits=[];
  const db={prepare(sql){return {bind(...args){this.args=args;return this;},async first(){return active?session:null;},async run(){if(sql.startsWith('INSERT')){if(failAudit)throw Error('audit down');audits.push(this.args[2]);}return {meta:{changes:1}};}};}};
  const config={db,origin,registration:false};
@@ -42,7 +42,9 @@ test('server mapping supplies opaque token, never browser workbench cookie; expi
    assert(!(await result.text()).includes(token));
    assert.equal(result.headers.get('cache-control'),'private, no-store');
    assert(f.audits.includes('CANONICAL_ACCESS_ATTEMPT'));
-   if(event==='success')assert(f.audits.includes('CANONICAL_ACCESS_GRANTED'));
+   assert.deepEqual(f.audits,event==='success'?['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_PREPARED']:
+    event==='expire'?['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_PREPARED','CANONICAL_ACCESS_DENIED']:
+    event==='revoke'?['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_PREPARED','CANONICAL_ACCESS_UNAVAILABLE']:['CANONICAL_ACCESS_ATTEMPT']);
   }
  }finally{globalThis.fetch=original;}
 });

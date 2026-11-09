@@ -27,7 +27,7 @@ try {
   Run 'start isolated disposable PostgreSQL' @('run','-d','--name',$name,'--network','none','--env-file',$envPath,$image)
   $ready = $false
   for($i=0;$i -lt 60;$i++) {
-    & docker exec $name pg_isready -U phoenix_bootstrap -d phoenix_canonical_dev *> $null
+    & docker exec $name pg_isready -h 127.0.0.1 -U phoenix_bootstrap -d phoenix_canonical_dev *> $null
     if($LASTEXITCODE -eq 0) { $ready = $true; break }
     Start-Sleep -Seconds 1
   }

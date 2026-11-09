@@ -62,10 +62,10 @@ export async function startP1Fixture({root=process.cwd(),version='16'}={}){
   async resolve(identity){
    const mapping=mappings.get(identity.customerId)
    if(!mapping||!mapping.active||mapping.sessionHash!==identity.sessionHash)return null
-   const token=mapping.token??rt.tokens[mapping.alias]
+   const {token}=mapping
    return{token,async assertCurrent(){
     const current=mappings.get(identity.customerId),session=rt.sessions.get(token)
-    if(!current||!current.active||current.sessionHash!==identity.sessionHash||(mapping.sessionToken&&(!session||session.expires<=Date.now())))throw Error('synthetic mapping revoked')
+    if(current!==mapping||!current.active||current.sessionHash!==identity.sessionHash||(mapping.alias!=='empty'&&(!session||session.expires<=Date.now())))throw Error('synthetic mapping revoked')
    }}
   }
  }
@@ -107,7 +107,7 @@ export async function startP1Fixture({root=process.cwd(),version='16'}={}){
   const session=await auth.readCustomerSession(new Request(bridgeOrigin+'/api/customer-auth/session',{headers:{cookie}}),config)
   assert.equal(session?.id,created.user.id)
   accounts[alias]={id:created.user.id,cookie,sessionHash:session.token_hash,routeAlias}
-  mappings.set(created.user.id,{alias:routeAlias,sessionHash:session.token_hash,active:true})
+  mappings.set(created.user.id,{alias:routeAlias,token:rt.issueCustomerSession(routeAlias),sessionHash:session.token_hash,active:true})
  }
  await register('client-a','client-a')
  await register('client-b','client-b')
@@ -135,13 +135,13 @@ export async function startP1Fixture({root=process.cwd(),version='16'}={}){
   app:emptyApp,binder:emptyBinder,objects:emptyStore,mode:'test',
   resolve:async authorization=>{
    const token=authorization?.match(/^Bearer ([A-Za-z0-9_-]{32,256})$/)?.[1]
-   if(token===emptyToken)return{principalId:id(204),actorPersonId:id(4),familyId:id(102),channel:'FAMILY',async assertCurrent(){}}
+   if(token===emptyToken)return{principalId:id(204),actorPersonId:id(4),familyId:id(102),channel:'FAMILY',profile:'CUSTOMER',async assertCurrent(){}}
    const session=rt.sessions.get(token)
    const customerAliases={'client-a':[1,100],'client-b':[2,100],outsider:[3,101]}
    const scope=session&&customerAliases[session.alias]
-   if(!scope)throw Error('customer synthetic session required')
+   if(!scope||session.profile!=='CUSTOMER')throw Error('customer synthetic session required')
    const [person,family]=scope
-   return{principalId:id(200+person),actorPersonId:id(person),familyId:id(family),channel:'FAMILY',async assertCurrent(){
+   return{principalId:id(200+person),actorPersonId:id(person),familyId:id(family),channel:'FAMILY',profile:'CUSTOMER',async assertCurrent(){
     if(rt.sessions.get(token)!==session||session.expires<=Date.now())throw Error('synthetic customer session revoked')
    }}
   }
