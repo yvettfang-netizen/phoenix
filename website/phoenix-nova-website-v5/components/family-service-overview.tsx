@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, CheckCircle2, CircleAlert, Compass, RefreshCw, UserRound } from "lucide-react";
-import { CUSTOMER_SESSION_ENDED_EVENT } from "@/lib/customer-session-event";
+import { onCustomerSessionEnded } from "@/lib/customer-session-event";
 import { validFamilyServiceSummary } from "@/lib/family-service-summary";
 import "./family-service-overview.css";
 
@@ -182,6 +182,7 @@ export function FamilyServiceOverview({ locale }: { locale: Locale }) {
   }, []);
 
   const load = useCallback(async (cursor: string | null = null, append = false) => {
+    if (document.visibilityState === "hidden") return;
     const request = ++generation.current;
     activeController.current?.abort();
     if (timer.current) clearTimeout(timer.current);
@@ -236,12 +237,11 @@ export function FamilyServiceOverview({ locale }: { locale: Locale }) {
     const onBlur = () => clear("stale");
     const onPageHide = () => clear("stale");
     const onPageShow = () => { void load(); };
-    const onSessionEnded = () => clear("unavailable");
+    const stopListening = onCustomerSessionEnded(() => clear("unavailable"));
     window.addEventListener("focus", onFocus);
     window.addEventListener("blur", onBlur);
     window.addEventListener("pagehide", onPageHide);
     window.addEventListener("pageshow", onPageShow);
-    window.addEventListener(CUSTOMER_SESSION_ENDED_EVENT, onSessionEnded);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       if (timer.current) clearTimeout(timer.current);
@@ -252,7 +252,7 @@ export function FamilyServiceOverview({ locale }: { locale: Locale }) {
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("pageshow", onPageShow);
-      window.removeEventListener(CUSTOMER_SESSION_ENDED_EVENT, onSessionEnded);
+      stopListening();
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [clear, load]);

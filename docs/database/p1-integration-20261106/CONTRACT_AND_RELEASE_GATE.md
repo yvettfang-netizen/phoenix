@@ -19,8 +19,9 @@ idle expiry. The BFF passes only that verified session's customer ID and
 session hash to the server-injected `CustomerCanonicalProvider.resolve`.
 No customer/family/principal/role header or query is an authority.
 
-The provider is an unimplemented real-provider port, not a JSON setting.
-Its approved implementation must resolve a unique current Canonical principal,
+The dedicated [private FAMILY adapter](PRIVATE_FAMILY_STAGING.md) calls a separately
+approved identity authority through a server binding. Its approved authority
+must resolve a unique current Canonical principal,
 actor, family and subject grants using an authoritative server-side mapping;
 issue a short-lived opaque gateway session bound to the `CUSTOMER` profile and
 implement `assertCurrent`
@@ -50,11 +51,11 @@ column and sequence access. Ownership of the database or an application
 object is refused even when ordinary grants were revoked. PostgreSQL 17
 relation MAINTAIN is treated as an unexpected privilege.
 
-`CUSTOMER_CANONICAL_BRIDGE_ENABLED=true` requires the workbench flag and an
-allowed loopback origin. The private-staging composition additionally requires
-its dedicated server-side configuration and a separate identity authority.
+`CUSTOMER_CANONICAL_BRIDGE_ENABLED=true` requires the workbench flag. The existing
+development bridge requires an allowed loopback origin. Private FAMILY staging
+requires an exact private HTTPS origin and dedicated server bindings.
 Missing auth configuration, provider or mapping denies. Public and
-non-loopback access remains closed.
+unconfigured access remains closed.
 The deployed Cloudflare binding/configuration and real mapping require separate
 implementation/security review; the synthetic harness is not that approval.
 
@@ -81,10 +82,10 @@ with a secondary HEALTH domain fails closed rather than borrowing its primary
 domain's access. Candidate0039 supplies customer scope/snapshot/list wrappers.
 The development BFF sends a transport marker after trusted session mapping.
 The gateway requires it to match the bearer profile resolved by the server.
-Private staging uses the authority's verified FAMILY or ADVISOR channel to
-derive CUSTOMER or STAFF, and rejects markers. STAFF requires the dedicated
-staging composition and its 0040 mixed-Health guard. Current-state checks in
-that adapter require HTTP 204 and an unexpired assertion. The SYNTHETIC profile
+Private FAMILY staging uses the authority's verified FAMILY channel to derive
+CUSTOMER, rejects markers and exposes only allowlisted reads. It checks the
+same short-lived source-session assertion at both sides of the gateway.
+STAFF requires separate authorization and its 0040 mixed-Health guard. The SYNTHETIC profile
 is limited to an explicitly configured development preview. The resolved
 profile selects the database guard for reads, commands and downloads. Unknown
 profiles and missing candidate guards deny.

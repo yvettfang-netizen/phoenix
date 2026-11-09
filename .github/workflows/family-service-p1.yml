@@ -51,7 +51,7 @@ jobs:
           node node_modules/workerd/install.js
           npm run typecheck
           npm run build
-          node --import ./tests/register-typescript.mjs --test tests/customer-canonical-bridge.test.mjs tests/family-service-summary.test.mjs tests/family-service-overview.test.mjs
+          node --import ./tests/register-typescript.mjs --test tests/customer-canonical-bridge.test.mjs tests/private-customer-workbench.test.mjs tests/family-service-summary.test.mjs tests/family-service-overview.test.mjs
       - name: Summary candidate contract
         run: node database/canonical/verification/v0039/summary-contract.test.mjs
       - name: Install pinned Playwright browser

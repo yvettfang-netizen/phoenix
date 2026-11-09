@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { CUSTOMER_SESSION_ENDED_EVENT } from "@/lib/customer-session-event";
+import { notifyCustomerSessionEnded, onCustomerSessionEnded } from "@/lib/customer-session-event";
 
 type User = { id:string; username:string; createdAt:number };
 type Mode = "login" | "register" | "recover";
@@ -43,16 +43,25 @@ export function CustomerAccount({locale, familyView=false}:{locale:"zh"|"en";fam
   }
   useEffect(()=>{
     let live=true;
+    let ended=false;
+    const stopListening=onCustomerSessionEnded(()=>{
+      ended=true;
+      setUser(null);
+      setRecovery("");
+      setPassword("");
+      setNewPassword("");
+      setRecoveryInput("");
+    });
     fetch("/api/customer-auth/session",{credentials:"same-origin",cache:"no-store"})
       .then(async response=>({ok:response.ok,data:await response.json()}))
-      .then(({ok,data})=>{if(!live)return;setAvailable(ok);setRegistration(Boolean(data.registration));setUser(data.user??null);if(data.user)setUsername(data.user.username);if(!ok)setMessage(en?"Account access is not enabled yet.":"账户服务尚未启用。");})
+      .then(({ok,data})=>{if(!live)return;setAvailable(ok);setRegistration(Boolean(data.registration));if(!ended){setUser(data.user??null);if(data.user)setUsername(data.user.username);}if(!ok)setMessage(en?"Account access is not enabled yet.":"账户服务尚未启用。");})
       .catch(()=>{if(live)setMessage(en?"Account service is unavailable.":"账户服务暂时无法连接。");})
       .finally(()=>{if(live)setReady(true);});
-    return()=>{live=false;};
+    return()=>{live=false;stopListening();};
   },[en]);
   function endSession() {
     setUser(null);
-    window.dispatchEvent(new Event(CUSTOMER_SESSION_ENDED_EVENT));
+    notifyCustomerSessionEnded();
   }
   async function act(action:string,payload:Record<string,unknown>) {
     setBusy(true);setMessage("");
@@ -61,7 +70,7 @@ export function CustomerAccount({locale, familyView=false}:{locale:"zh"|"en";fam
       const data=await response.json();
       if(!response.ok){setMessage(errorMessage(data.error));if(data.error==="SIGN_IN_REQUIRED")endSession();return;}
       setPassword("");setNewPassword("");setRecoveryInput("");
-      if(data.recoveryCode){setRecovery(data.recoveryCode);endSession();setMode("login");setMessage(t("请保存新的恢复码，随后使用用户名和密码登录。旧恢复码已失效。","Save your new recovery code, then sign in with your username and password. Any previous code is invalid."));}
+      if(data.recoveryCode){endSession();setRecovery(data.recoveryCode);setMode("login");setMessage(t("请保存新的恢复码，随后使用用户名和密码登录。旧恢复码已失效。","Save your new recovery code, then sign in with your username and password. Any previous code is invalid."));}
       else if(action==="login"){setUser(data.user);window.location.assign(`/${locale}/family-center`);}
       else {endSession();setMessage(t("已安全退出。","You have signed out."));}
     } catch {setMessage(t("网络连接中断，请重试。","The connection was interrupted. Please try again."));}

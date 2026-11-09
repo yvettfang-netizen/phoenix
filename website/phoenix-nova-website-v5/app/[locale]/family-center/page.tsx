@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { SiteHeader, V5Site } from "@/components/v5-site";
 import { CustomerAccount } from "@/components/customer-account";
-import { customerAuthEnabled, customerAuthConfig } from "@/db/customer-auth";
+import { customerAuthEnabled, customerAuthConfig, privateCustomerAuthRequested } from "@/db/customer-auth";
 import { readCustomerSession } from "@/lib/customer-auth";
 import { env } from "cloudflare:workers";
 import { FamilyCenterV2 } from "@/components/family-center-v2";
@@ -26,8 +26,11 @@ export const dynamic="force-dynamic";
 async function ProtectedCenter({locale}:{locale:"zh"|"en"}) {
   const config=customerAuthConfig();
   if(!config)return <><SiteHeader locale={locale} page="family-center"/><CustomerAccount locale={locale}/></>;
+  const incoming=await headers();
+  const privateMode=privateCustomerAuthRequested();
+  if(privateMode&&incoming.get("host")!==new URL(config.origin).host)notFound();
   let user;
-  try {user=await readCustomerSession(new Request(`${config.origin}/api/customer-auth/session`,{headers:await headers()}),config);}
+  try {user=await readCustomerSession(new Request(`${config.origin}/api/customer-auth/session`,{headers:incoming}),config,{touch:!privateMode});}
   catch {return <><SiteHeader locale={locale} page="family-center"/><CustomerAccount locale={locale}/></>;}
   if(!user)redirect(`/${locale}/account`);
   // A verified account does not own the synthetic family shown in the UI preview.
