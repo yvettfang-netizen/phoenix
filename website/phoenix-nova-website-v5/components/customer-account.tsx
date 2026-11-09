@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { CUSTOMER_SESSION_ENDED_EVENT } from "@/lib/customer-session-event";
 
 type User = { id:string; username:string; createdAt:number };
 type Mode = "login" | "register" | "recover";
@@ -49,16 +50,20 @@ export function CustomerAccount({locale, familyView=false}:{locale:"zh"|"en";fam
       .finally(()=>{if(live)setReady(true);});
     return()=>{live=false;};
   },[en]);
+  function endSession() {
+    setUser(null);
+    window.dispatchEvent(new Event(CUSTOMER_SESSION_ENDED_EVENT));
+  }
   async function act(action:string,payload:Record<string,unknown>) {
     setBusy(true);setMessage("");
     try {
       const response=await fetch(`/api/customer-auth/${action}`,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
       const data=await response.json();
-      if(!response.ok){setMessage(errorMessage(data.error));if(data.error==="SIGN_IN_REQUIRED")setUser(null);return;}
+      if(!response.ok){setMessage(errorMessage(data.error));if(data.error==="SIGN_IN_REQUIRED")endSession();return;}
       setPassword("");setNewPassword("");setRecoveryInput("");
-      if(data.recoveryCode){setRecovery(data.recoveryCode);setUser(null);setMode("login");setMessage(t("请保存新的恢复码，随后使用用户名和密码登录。旧恢复码已失效。","Save your new recovery code, then sign in with your username and password. Any previous code is invalid."));}
+      if(data.recoveryCode){setRecovery(data.recoveryCode);endSession();setMode("login");setMessage(t("请保存新的恢复码，随后使用用户名和密码登录。旧恢复码已失效。","Save your new recovery code, then sign in with your username and password. Any previous code is invalid."));}
       else if(action==="login"){setUser(data.user);window.location.assign(`/${locale}/family-center`);}
-      else {setUser(null);setMessage(t("已安全退出。","You have signed out."));}
+      else {endSession();setMessage(t("已安全退出。","You have signed out."));}
     } catch {setMessage(t("网络连接中断，请重试。","The connection was interrupted. Please try again."));}
     finally {setBusy(false);}
   }
