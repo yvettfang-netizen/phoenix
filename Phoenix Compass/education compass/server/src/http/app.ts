@@ -36,6 +36,8 @@ export interface AppDependencies {
   learningCatalog?: LearningCatalog
   familyProjection?: FamilyProjection
   sessionFamilyProjection?: FamilyProjection
+  /** Explicit composition only. No production or legacy identity fallback. */
+  serviceWorkbench?: { handle(request: IncomingMessage, response: ServerResponse): Promise<void> }
   logger?: { error(message: string, context?: Record<string, unknown>): void }
 }
 
@@ -193,6 +195,10 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
     try {
       const url = new URL(request.url ?? '/', 'http://localhost')
       route = url.pathname
+      if (route.startsWith('/v1/service-workbench/')) {
+        invariant(deps.serviceWorkbench, 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        return deps.serviceWorkbench.handle(request, response)
+      }
       if (url.pathname.startsWith('/v1/canonical/projections/') || url.pathname.startsWith('/v1/canonical/session-projections/')) {
         const sessionMode = url.pathname.startsWith('/v1/canonical/session-projections/')
         const projection = sessionMode ? deps.sessionFamilyProjection : deps.familyProjection
