@@ -9,7 +9,6 @@
     "project.config.json",
     "backend/server.js"
   ],
-  "migrationSource": "backend/migrations/001_questionnaire_submissions.sql",
   "reservedDirectories": [
     "apps/mini-program",
     "apps/web",
@@ -78,7 +77,7 @@
       "purpose": "消费 Core 授权结果，检查用途、家庭归属与角色",
       "sources": [
         "services/session.js",
-        "backend/auth.js"
+        "backend/server.js"
       ]
     },
     {
@@ -88,7 +87,7 @@
       "sources": [
         "services/auth.js",
         "services/backend-api.js",
-        "backend/auth.js"
+        "backend/server.js"
       ]
     },
     {
@@ -119,5 +118,8 @@
         "utils/navigation.js"
       ]
     }
+  ],
+  "dataAuthorityDocuments": [
+    "database/README.md"
   ]
 }

@@ -32,9 +32,7 @@ export async function handleCustomerServices(request:Request,env:WorkbenchEnv,mo
   if(!session)return fail(401,"SIGN_IN_REQUIRED");
   const requestId=crypto.randomUUID();
   const audit=async(phase:"attempt"|"prepared"|"outcome",action:string)=>{
-   const result=await config.db.prepare("INSERT INTO core_auth_audit (id,actor_user_id,action,created_at) VALUES (?,?,?,?)")
-    .bind(requestId+":"+phase,session.id,action,Date.now()).run();
-   if(result.meta?.changes!==1)throw new Error("Canonical audit write failed");
+   await config.recordAccess(session.id,action,requestId+":"+phase);
   };
   await audit("attempt","CANONICAL_ACCESS_ATTEMPT");
   const recordFailure=async(response:Response)=>{
