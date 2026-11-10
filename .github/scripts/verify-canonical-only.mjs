@@ -45,6 +45,18 @@ for (const site of ['phoenix-nova-website-v5','phoenix-east','phoenix-digital-wo
 }
 const store=readFileSync(join(root,'Phoenix Family OS/phoenix-family-os-mvp/services/store.js'),'utf8');
 assert(!store.includes('PFS_DB_V01')&&store.includes('CANONICAL_PROVIDER_REQUIRED'),'WeChat runtime still accepts legacy business storage');
+const education=readFileSync(join(root,'Phoenix Compass/education compass/services/store.js'),'utf8');
+assert(!education.includes('PFS_DB_V01')&&education.includes('CANONICAL_EDUCATION_PROVIDER_REQUIRED'),'Education client still accepts legacy business storage');
+const extraLegacy = [
+  'Phoenix Compass/education compass/ops/server/apply-migrations.sh',
+  'Phoenix Compass/education compass/ops/server/backup-databases.sh',
+  'Phoenix Compass/education compass/ops/server/set-cos-backup.sh',
+  'Phoenix Compass/education compass/ops/server/sync-backups-to-cos.sh',
+  'Phoenix Compass/education compass/ops/server/setup-postgres-tls.sh',
+  'Phoenix Compass/education compass/server/src/store/file-store.ts',
+  'Phoenix Compass/education compass/server/scripts/migrate.js'
+];
+for (const path of extraLegacy) assert(!existsSync(join(root,path)),'Retired Education database operation reappeared: '+path);
 const site=JSON.parse(readFileSync(join(root,'website/phoenix-nova-website-v5/.openai/hosting.json'),'utf8'));
 assert(site.d1===null,'V5 D1 binding is not retired');
 console.log('PASS — Canonical-only database assets, non-Canonical SQL absent, D1/SQLite retired');

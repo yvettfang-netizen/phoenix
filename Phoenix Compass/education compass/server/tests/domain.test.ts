@@ -19,7 +19,6 @@ import { AuthService } from '../src/services/auth-service'
 import { OrderService, seedProducts } from '../src/services/order-service'
 import { ProfileService } from '../src/services/profile-service'
 import { ReportService } from '../src/services/report-service'
-import { FileStore } from '../src/store/file-store'
 import { InMemoryStore } from '../src/store/memory-store'
 import { Store, StoreTransaction } from '../src/store/store'
 import { Clock, randomId } from '../src/utils/runtime'
@@ -709,22 +708,9 @@ test('refund reconciliation replays an intent after a crash before the provider 
   assert.equal((await context.reports.get(context.session.user.id, submitted.reportId)).access, 'preview')
 })
 
-test('file adapter persists isolated test state without an independent SQL schema', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'phoenix-server-test-'))
-  try {
-    const path = join(directory, 'state.json')
-    const first = await FileStore.open(path)
-    await first.transaction(async (tx) => {
-      await tx.insert('users', { id: 'usr_file', role: 'family_user', createdAt: clock().toISOString() })
-    })
-    const reopened = await FileStore.open(path)
-    assert.equal((await reopened.read((tx) => tx.findById('users', 'usr_file')))?.id, 'usr_file')
-  } finally {
-    await rm(directory, { recursive: true, force: true })
-  }
-
-  // The independent Education PostgreSQL schema is retired. Canonical migrations live only in database/canonical.
+test('retired independent SQL and JSON data files are not available for production', async () => {
   await assert.rejects(readFile(resolve(__dirname, '../../migrations/001_initial_schema.sql'), 'utf8'), { code: 'ENOENT' })
+  await assert.rejects(readFile(resolve(__dirname, '../src/store/file-store.ts'), 'utf8'), { code: 'ENOENT' })
 })
 
 test('portable store does not expose a transaction whose durable commit hook failed', async () => {
