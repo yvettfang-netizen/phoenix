@@ -21,7 +21,6 @@ import { ProfileService } from '../src/services/profile-service'
 import { ReportService } from '../src/services/report-service'
 import { FileStore } from '../src/store/file-store'
 import { InMemoryStore } from '../src/store/memory-store'
-import { PostgresStore } from '../src/store/postgres-store'
 import { Store, StoreTransaction } from '../src/store/store'
 import { Clock, randomId } from '../src/utils/runtime'
 
@@ -710,7 +709,7 @@ test('refund reconciliation replays an intent after a crash before the provider 
   assert.equal((await context.reports.get(context.session.user.id, submitted.reportId)).access, 'preview')
 })
 
-test('file adapter persists isolated state and migration matches production model', async () => {
+test('file adapter persists isolated test state without an independent SQL schema', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'phoenix-server-test-'))
   try {
     const path = join(directory, 'state.json')
@@ -724,20 +723,8 @@ test('file adapter persists isolated state and migration matches production mode
     await rm(directory, { recursive: true, force: true })
   }
 
-  const migration = await readFile(resolve(__dirname, '../../migrations/001_initial_schema.sql'), 'utf8')
-  assert.match(migration, /status IN \('CREATED', 'PENDING', 'PAID'/)
-  assert.doesNotMatch(migration, /'PAYING'|'EXPIRED'/)
-  assert.match(migration, /source_catalog_verified boolean NOT NULL/)
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS refunds[\s\S]+requested_by text NOT NULL[\s\S]+idempotency_key text NOT NULL/)
-  const feishuMigration = await readFile(resolve(__dirname, '../../migrations/002_feishu_bitable_integration.sql'), 'utf8')
-  assert.match(feishuMigration, /CREATE TABLE IF NOT EXISTS integration_links/)
-  assert.match(feishuMigration, /lease_token text/)
-  assert.match(feishuMigration, /operation_token text[\s\S]+operation_digest text[\s\S]+operation_body text/)
-  assert.match(feishuMigration, /'BLOCKED'/)
-  assert.match(feishuMigration, /UNIQUE \(provider, table_id, entity_type, entity_id\)/)
-  assert.match(feishuMigration, /UNIQUE \(provider, table_id, external_record_id\)/)
-  const postgres = new PostgresStore({ connectionString: 'postgresql://unused:unused@127.0.0.1:1/unused', connectionTimeoutMillis: 1 })
-  await postgres.close()
+  // The independent Education PostgreSQL schema is retired. Canonical migrations live only in database/canonical.
+  await assert.rejects(readFile(resolve(__dirname, '../../migrations/001_initial_schema.sql'), 'utf8'), { code: 'ENOENT' })
 })
 
 test('portable store does not expose a transaction whose durable commit hook failed', async () => {
