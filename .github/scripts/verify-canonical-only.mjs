@@ -39,6 +39,10 @@ const askPkg=JSON.parse(readFileSync(join(root,'askwise/askwise-learning-engine/
 assert(!askPkg.dependencies?.['better-sqlite3']&&!askPkg.devDependencies?.['@types/better-sqlite3'],'SQLite package was reintroduced');
 const askLock=readFileSync(join(root,'askwise/askwise-learning-engine/pnpm-lock.yaml'),'utf8');
 assert(!askLock.includes('better-sqlite3'),'ASKWISE SQLite remains pinned');
+for (const site of ['phoenix-nova-website-v5','phoenix-east','phoenix-digital-world']) {
+  const pkg=JSON.parse(readFileSync(join(root,'website',site,'package.json'),'utf8'));
+  assert(!pkg.dependencies?.['drizzle-orm']&&!pkg.devDependencies?.['drizzle-kit'],'Retired D1 database dependencies returned: '+site);
+}
 const store=readFileSync(join(root,'Phoenix Family OS/phoenix-family-os-mvp/services/store.js'),'utf8');
 assert(!store.includes('PFS_DB_V01')&&store.includes('CANONICAL_PROVIDER_REQUIRED'),'WeChat runtime still accepts legacy business storage');
 const site=JSON.parse(readFileSync(join(root,'website/phoenix-nova-website-v5/.openai/hosting.json'),'utf8'));
