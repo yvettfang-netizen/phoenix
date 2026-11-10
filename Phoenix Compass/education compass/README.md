@@ -1,5 +1,7 @@
 # Phoenix Family OS™ Mini Program MVP V0.5.0 本地验证工作副本
 
+> 2026-11-10 数据权威变更：旧 Education 独立 PostgreSQL schema、迁移、PostgresStore 以及 Agent 旧 Worker 已退役。以下关于原生产数据库、独立迁移和付款流程的描述均为历史行为记录，不再构成可执行的生产指令。业务库统一以主仓库 `database/canonical/` 为准；未接入受控 Canonical API 的服务必须拒绝生产启动。
+
 原生微信小程序 MVP。V0.5.0 在保留 V0.4.1 既有页面、Agent、支付与飞书能力的基础上，新增可填写、可退出恢复、可提交并查看结果的 Education Compass Level 1 免费家长问卷与 Level 2 学生成长发现闭环；Level 2 提交后以服务端商品目录的 ¥39.90 单次产品解锁完整报告。
 
 > 当前仓库根目录是可运行、可测试的开发源码，不是可直接上传的正式包，也不是已上线产品。`demo/local` 中的“演示解锁”不会真实扣款；生产只能发布经 `npm.cmd run build:release` 生成的 `dist/release`。仓库没有真实 OpenAI、微信支付或飞书凭据，也没有证明外部 PostgreSQL、OpenAI、微信支付和飞书 Base 已经部署；这些能力仍受外部配置、未成年人安全与人工验收闸门约束。
@@ -59,7 +61,7 @@
 - 退款 `PROCESSING` 由持久化对账任务每分钟退避查询；若进程在记录退款意图后、调用微信前崩溃，会以同一 `out_refund_no` 幂等重放，再通过签名查退款完成撤权；
 - entitlement 门禁后的完整报告、临时PDF下载和反馈接口；
 - V0.4.1 Agent provider-neutral合同、两种一次性分析及已有付费追问、独立专项同意、字段级加密会话、原子队列/租约worker、分路径权益门禁、moderation与本地来源/安全QA；默认关闭，生产worker与API进程隔离；
-- 开发/测试内存存储及生产 PostgreSQL schema/migration；生产数据库URL强制 `sslmode=verify-full`，回调URL必须是 `PUBLIC_BASE_URL` 同源固定路径；
+- 仅保留隔离的开发/测试内存 Fixture；原生产独立 PostgreSQL schema/migration 已删除，生产必须经受控 Canonical API 接入；
 - 可选飞书多维表格单向同步：把7类服务端实体投影为稳定HMAC伪名ID和脱敏运营字段，使用 `integration_links` 保存映射、摘要、冻结UUIDv4幂等操作、状态和退避重试；稳定伪名仍按受保护数据处理；
 - 飞书外写前会预检7表必需字段、类型和主字段；管理员可校验Schema、查看同步状态或触发1—200条小批量核对，周期任务默认每60秒运行，飞书失败不进入支付、退款、权益或报告读取事务。
 
@@ -153,7 +155,7 @@ npm.cmd --prefix server start
 
 `server/.env.example` 只是配置模板，当前服务不会自动读取 `.env` 文件；运行时必须由 shell、容器或进程管理器注入。`FEISHU_BITABLE_ENABLED` 和 `FEISHU_CUSTOMER_PROFILE_FIELDS_ENABLED` 均默认 `false`；启用飞书时强制要求持久化 PostgreSQL、飞书 App凭据、独立32字节以上伪名密钥和7个有效Table ID。客户资料扩展开关还要求预先审批、受限 Base 和人工删除SOP，不能因为总开关已开启而自动开启。完整顺序和可复制的 Codex 指令见 [Codex后端代理运行手册](docs/CODEX_BACKEND_PROXY_RUNBOOK.md)。
 
-连接 PostgreSQL 后先运行 `npm.cmd --prefix server run db:migrate`；迁移器会加 advisory lock 并校验已应用文件的SHA-256，已经应用的迁移不可修改。`001`—`003`为不可变历史，V0.4.1 新增 `004_dual_agent_analysis.sql`；飞书未来结构变更必须新建 `005` 或更高迁移。飞书候选同步当前最多扫描10000条源投影，建议先按单实例运行；尚未实现 transactional outbox、跨实例全局限速、异步 reconcile job、空值清除或删除 tombstone，不能描述成已满足生产SLA。
+严禁再执行本模块的旧 PostgreSQL 迁移：独立迁移器与 SQL 已删除。数据库结构变更一律提交主仓库 `database/canonical/` 的受审前向迁移。真实身份、收款、退款及资料写入在 Canonical 受控接口验收前保持关闭。
 
 开发者工具联调必须使用 `npm.cmd run build:development` 生成的回环专用包，不要手工修改 `config/runtime.js`。正式体验版/发布版必须使用 HTTPS 域名构建 `dist/release`；生产参数和启用条件见 [微信支付运行手册](docs/WECHAT_PAY_RUNBOOK.md)。
 
@@ -176,7 +178,7 @@ pages/             当前14个家庭端/付费/AI页面与2个demo管理员页�
 services/          demo/remote适配、鉴权、测评、支付、报告、双分析/追问API与数据访问
 models/            小程序DTO、问卷结构和demo/local schema
 config/            运行模式、产品、问卷与同意版本
-server/            可信API、领域服务、支付Provider、PostgreSQL migration、飞书运营镜像
+server/            历史领域/API与测试服务；已移除独立 PostgreSQL migration，生产受控接口待接通
 scripts/           参数化正式包构建器；产物只写入dist/release
 tests/             小程序领域及工程结构自动化
 docs/              决策、架构、API、数据、支付、验收与交接文档

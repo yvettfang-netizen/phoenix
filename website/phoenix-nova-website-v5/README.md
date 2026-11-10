@@ -2,7 +2,7 @@
 
 Existing unified, private-review V5 site for Phoenix Nova™. V4.0 / V4.1 remain untouched as the stable reference. The active product and content decisions are recorded in [`docs/WEBSITE_V5_CANDIDATE_BASELINE.md`](docs/WEBSITE_V5_CANDIDATE_BASELINE.md).
 
-The site uses a Vinext runtime with optional Cloudflare D1 and Drizzle support.
+The site uses a Vinext runtime. Legacy D1 business/authentication storage and Drizzle migrations have been retired; business records come only from authorized Canonical PostgreSQL service APIs.
 
 ## Prerequisites
 
@@ -23,18 +23,16 @@ Scripts that need writable project-scoped home, npm, XDG, and temporary paths us
 
 - edit site code under `app/`
 - `app/chatgpt-auth.ts` provides optional dispatch-owned ChatGPT sign-in helpers
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/index.ts` reads the D1 binding from the Cloudflare Worker environment
-- `db/schema.ts` defines the minimal customer credential, session, rate-limit and audit tables
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
+- `.openai/hosting.json` declares no D1 binding
+- `vite.config.ts` retains the frontend development runtime
+- `db/customer-auth.ts` is a trusted Canonical identity adapter, not a local user database
+- `lib/customer-canonical-bridge.ts` authorizes server-side project access; no browser-selected family identity
 
 ## Phoenix customer accounts
 
-The existing V5 now contains a default-off username/password authentication candidate at `/{locale}/account`. When enabled, the Family Center requires a server-validated session and displays only the account state until Core business authorization is integrated. It does not attach customers to the fictional family preview.
+The previous website-owned username/password implementation has been retired. The account endpoint now requires a configured trusted Canonical customer identity provider; without it, login/register/password actions return unavailable rather than creating independent users. The Family Center cannot infer business authorization from an anonymous account or fictional family preview.
 
-See [`docs/V5_USERNAME_AUTH_V1.md`](docs/V5_USERNAME_AUTH_V1.md) for configuration, recovery codes, migrations, tests and the exact remaining limits. [`docs/V5_CORE_ACCOUNT_AND_DATA_PLAN_V1.md`](docs/V5_CORE_ACCOUNT_AND_DATA_PLAN_V1.md) defines the shared SQL handoff. Customer authentication does not use the optional ChatGPT helpers below. SMS/email, MFA and private family records are not connected; this candidate has not been deployed.
+See [`docs/V5_USERNAME_AUTH_V1.md`](docs/V5_USERNAME_AUTH_V1.md) for the retirement status and [`docs/CANONICAL_ONLY_AUTH_BOUNDARY.md`](docs/CANONICAL_ONLY_AUTH_BOUNDARY.md) for the required replacement provider. [`docs/V5_CORE_ACCOUNT_AND_DATA_PLAN_V1.md`](docs/V5_CORE_ACCOUNT_AND_DATA_PLAN_V1.md) defines the shared SQL handoff. Customer authentication does not use the optional ChatGPT helpers below. SMS/email, MFA and private family records are not connected; this candidate has not been deployed.
 
 ## Optional platform authentication reference
 
@@ -93,7 +91,6 @@ Use SIWC only for separately scoped features explicitly tied to a ChatGPT identi
 - `npm run build`: build the deployable Sites artifact
 - `npm run start`: start the built Vinext application
 - `npm test`: build and verify the rendered development-preview metadata
-- `npm run db:generate`: generate Drizzle migrations after schema changes
 
 Use build commands for targeted diagnosis after a remote failure, not as part of the normal checkpoint path.
 
@@ -102,7 +99,6 @@ The timeout defaults can be overridden for a controlled canary with `SITES_INSTA
 ## Learn More
 
 - [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
 
 ## PR #38 runtime upgrade validation
 
@@ -123,10 +119,10 @@ upstream residual risk visible before adding any font/archive or OG input.
 
 The V5 PR workflow now blocks high/critical audit findings and uploads its JSON.
 Remaining moderate development-tool findings (minimatch amplification and the
-legacy Drizzle Kit esbuild server) are recorded separately; a passing severity
+historical Drizzle Kit esbuild server, now removed) were recorded separately; a passing severity
 gate is not a claim of zero vulnerabilities. Do not force incompatible major
 versions into those dependency trees or downgrade the lint rules.
 
 Miniflare 5 test fixtures use the package's official `convertV4MiniflareOptions`
-adapter to preserve bindings, isolated D1, and all existing assertions. Linux
+adapter to preserve existing frontend bindings and its regression assertions. Linux
 Worker CI and frontend-only Windows browser previews remain distinct evidence.
