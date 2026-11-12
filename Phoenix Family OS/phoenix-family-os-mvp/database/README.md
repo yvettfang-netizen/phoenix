@@ -1,5 +1,5 @@
-# 数据库层
+# 唯一数据权威
 
-当前 SQLite 入口为 [backend/database.js](../backend/database.js)，执行源为 [现有迁移](../backend/migrations/001_questionnaire_submissions.sql)。
+Family OS 的家庭、成员、学生、问卷及服务项目不得在本模块创建第二套持久化数据库。唯一生产数据库与迁移权威为主仓库的 `database/canonical/`，应用写入必须走其受控接口与授权。
 
-此目录仅建立 schema、migrations、seeds、docs 的归属。未运行或生成新 SQL。
+旧 SQLite 后端及迁移已从源码删除。原微信本地存储只供历史演示与测试，不得作为生产主数据。正式小程序提交要求已验证的 Canonical 会话及服务端接口；未配置时明确失败。

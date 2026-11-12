@@ -5,7 +5,6 @@ import { wealthEdgeRequest, wealthEdgeResponse } from "../lib/wealth-edge";
 
 interface Env {
   ASSETS: Fetcher;
-  DB: D1Database;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {

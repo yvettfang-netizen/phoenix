@@ -19,9 +19,7 @@ import { AuthService } from '../src/services/auth-service'
 import { OrderService, seedProducts } from '../src/services/order-service'
 import { ProfileService } from '../src/services/profile-service'
 import { ReportService } from '../src/services/report-service'
-import { FileStore } from '../src/store/file-store'
 import { InMemoryStore } from '../src/store/memory-store'
-import { PostgresStore } from '../src/store/postgres-store'
 import { Store, StoreTransaction } from '../src/store/store'
 import { Clock, randomId } from '../src/utils/runtime'
 
@@ -710,34 +708,9 @@ test('refund reconciliation replays an intent after a crash before the provider 
   assert.equal((await context.reports.get(context.session.user.id, submitted.reportId)).access, 'preview')
 })
 
-test('file adapter persists isolated state and migration matches production model', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'phoenix-server-test-'))
-  try {
-    const path = join(directory, 'state.json')
-    const first = await FileStore.open(path)
-    await first.transaction(async (tx) => {
-      await tx.insert('users', { id: 'usr_file', role: 'family_user', createdAt: clock().toISOString() })
-    })
-    const reopened = await FileStore.open(path)
-    assert.equal((await reopened.read((tx) => tx.findById('users', 'usr_file')))?.id, 'usr_file')
-  } finally {
-    await rm(directory, { recursive: true, force: true })
-  }
-
-  const migration = await readFile(resolve(__dirname, '../../migrations/001_initial_schema.sql'), 'utf8')
-  assert.match(migration, /status IN \('CREATED', 'PENDING', 'PAID'/)
-  assert.doesNotMatch(migration, /'PAYING'|'EXPIRED'/)
-  assert.match(migration, /source_catalog_verified boolean NOT NULL/)
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS refunds[\s\S]+requested_by text NOT NULL[\s\S]+idempotency_key text NOT NULL/)
-  const feishuMigration = await readFile(resolve(__dirname, '../../migrations/002_feishu_bitable_integration.sql'), 'utf8')
-  assert.match(feishuMigration, /CREATE TABLE IF NOT EXISTS integration_links/)
-  assert.match(feishuMigration, /lease_token text/)
-  assert.match(feishuMigration, /operation_token text[\s\S]+operation_digest text[\s\S]+operation_body text/)
-  assert.match(feishuMigration, /'BLOCKED'/)
-  assert.match(feishuMigration, /UNIQUE \(provider, table_id, entity_type, entity_id\)/)
-  assert.match(feishuMigration, /UNIQUE \(provider, table_id, external_record_id\)/)
-  const postgres = new PostgresStore({ connectionString: 'postgresql://unused:unused@127.0.0.1:1/unused', connectionTimeoutMillis: 1 })
-  await postgres.close()
+test('retired independent SQL and JSON data files are not available for production', async () => {
+  await assert.rejects(readFile(resolve(__dirname, '../../migrations/001_initial_schema.sql'), 'utf8'), { code: 'ENOENT' })
+  await assert.rejects(readFile(resolve(__dirname, '../src/store/file-store.ts'), 'utf8'), { code: 'ENOENT' })
 })
 
 test('portable store does not expose a transaction whose durable commit hook failed', async () => {

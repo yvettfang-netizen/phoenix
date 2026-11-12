@@ -7,6 +7,6 @@
 当前来源：
 
 - [services/session.js](../../services/session.js)
-- [backend/auth.js](../../backend/auth.js)
+- [backend/server.js](../../backend/server.js)
 
 当前 Demo 会话不是完整 RBAC；不在这里新增共享 consent/assignment 真源。

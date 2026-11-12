@@ -13,6 +13,11 @@ global.wx = {
 }
 
 const store = require('../services/store')
+const previousRuntime = process.env.NODE_ENV
+process.env.NODE_ENV = 'production'
+assert.throws(() => store.load(), /CANONICAL_PROVIDER_REQUIRED/, 'production cannot read a local family DB')
+if (previousRuntime === undefined) delete process.env.NODE_ENV
+else process.env.NODE_ENV = previousRuntime
 const repository = require('../services/repository')
 const { isoNow } = require('../utils/date')
 

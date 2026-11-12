@@ -13,7 +13,6 @@
     "test:education-contracts": "node ../scripts/run-server-tests.js --test=education-contracts.test.js",
     "test:education-http": "node ../scripts/run-server-tests.js --test=education-http.test.js",
     "test:education-integrations": "node ../scripts/run-server-tests.js --test=education-integrations.test.js",
-    "db:migrate": "node scripts/migrate.js",
     "start": "node dist/index.js",
     "start:agent-worker": "node dist/services/agent-worker-main.js",
     "agent:worker:once": "node dist/services/agent-worker-main.js --once"

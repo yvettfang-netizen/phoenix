@@ -13,19 +13,9 @@ global.wx = {
   navigateBack: (options = {}) => navigationCalls.push({ method: 'navigateBack', ...options }),
   showToast: () => {},
   pageScrollTo: () => {},
+  getExtConfigSync: () => ({ phoenixCanonicalApiOrigin: 'https://canonical.example.invalid' }),
   request(options) {
     networkRequests.push(options)
-    if (options.url.endsWith('/v1/demo/sessions')) {
-      options.success({
-        statusCode: 201,
-        data: {
-          token: 'synthetic-page-session',
-          expiresAt: '2099-01-01T00:00:00.000Z',
-          authMode: 'local_demo'
-        }
-      })
-      return
-    }
     options.success({
       statusCode: 201,
       data: {
@@ -37,6 +27,7 @@ global.wx = {
   }
 }
 
+memory.set(require('../services/backend-api').SESSION_KEY, { token: 'v'.repeat(43), expiresAt: '2099-01-01T00:00:00.000Z' })
 const repository = require('../services/repository')
 const { isoNow } = require('../utils/date')
 const { OUTBOX_KEY, RECEIPTS_KEY } = require('../services/questionnaire-sync')

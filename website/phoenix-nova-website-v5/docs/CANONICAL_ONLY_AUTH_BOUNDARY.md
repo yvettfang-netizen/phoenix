@@ -1,0 +1,3 @@
+# Website V5 — Canonical-only authentication
+
+No D1 account data tables or Drizzle migration are present after this change. The website server obtains an authenticated Canonical principal through a trusted provider. The provider must implement verification, expiration, revocation and access audit, and refuse client-supplied actor/family IDs. No default provider is included, so the account API fails closed (503) rather than silently restoring D1. Service Project BFF remains default-off and requires both a trusted provider and authorized mapping. Do not enable production until these are available.

@@ -27,17 +27,20 @@ import { AgentRepository } from './store/agent-repository'
 import { InMemoryStore } from './store/memory-store'
 import { AccountService } from './services/account-service'
 import { ExportService } from './services/export-service'
-import { PostgresStore } from './store/postgres-store'
 import { Store } from './store/store'
 import { loadLearningCatalog } from './services/canonical-learning-catalog'
 import { loadFamilyProjection, loadApplicationSessionProjection } from './services/canonical-family-projection'
 
 async function main(): Promise<void> {
   const config = loadConfig()
+  if (config.databaseUrl || config.nodeEnv === 'production') {
+    throw new Error('LEGACY_EDUCATION_DATABASE_RETIRED: use the Canonical PostgreSQL service API, not an independent Education Store')
+  }
   const learningCatalog = await loadLearningCatalog()
   const familyProjection = process.env.CANONICAL_BROKER_SESSION_BRIDGE_ENABLED === 'true' ? undefined : await loadFamilyProjection()
   const sourceCatalog = await loadSourceCatalog(config.sourceCatalogMode, config.sourceCatalogPath)
-  const store: Store = config.databaseUrl ? new PostgresStore(config.databaseUrl) : new InMemoryStore()
+  // Volatile isolated development fixture only. Never persists customer, family, order or refund data.
+  const store: Store = new InMemoryStore()
   const authProvider = config.wechatAppId && config.wechatAppSecret
     ? new WechatApiAuthProvider(config.wechatAppId, config.wechatAppSecret)
     : new MockWechatAuthProvider()
