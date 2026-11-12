@@ -9,13 +9,11 @@ import {
   GraduationCap,
   HeartHandshake,
   Landmark,
-  Layers3,
   ShieldCheck,
   Sparkles,
-  UsersRound,
   type LucideIcon,
 } from "lucide-react";
-import { localizedHref } from "@/lib/locale-navigation";
+import { localeRouteMap, localizedHref } from "@/lib/locale-navigation";
 import { WEALTH_ORIGIN } from "@/lib/wealth-routing";
 import { SiteFooter, SiteHeader, type Locale } from "./v5-site";
 import styles from "./homepage-v6.module.css";
@@ -35,21 +33,18 @@ function homepageHref(locale: Locale, id: string, href: string) {
 }
 
 const compassCards: readonly {
-  id: string;
+  id: "education" | "identity" | "wealth" | "health";
   icon: LucideIcon;
   title: Bilingual;
-  label: Bilingual;
   description: Bilingual;
   cta: Bilingual;
   image: string;
   href: string;
-  tone: "education" | "identity" | "wealth" | "health";
 }[] = [
   {
     id: "education",
     icon: GraduationCap,
     title: ["教育", "Education"],
-    label: ["连接香港与全球教育资源", "Learning pathways from Hong Kong to the world"],
     description: [
       "从香港到全球，为下一代理清教育成长路径。",
       "Connecting families with clear education pathways in Hong Kong and beyond.",
@@ -57,13 +52,11 @@ const compassCards: readonly {
     cta: ["探索教育", "Explore Education"],
     image: "/images/education-v3/education-hero.png",
     href: "/education",
-    tone: "education",
   },
   {
     id: "identity",
     icon: Globe2,
     title: ["身份", "Identity"],
-    label: ["阳光下未雨绸缪，风雨中闲庭信步。", "Prepare in the sunshine. Move forward with confidence through every storm."],
     description: [
       "了解香港身份、全球居留及家庭长期生活安排。",
       "Plan Hong Kong and global residency options with confidence.",
@@ -71,13 +64,11 @@ const compassCards: readonly {
     cta: ["探索身份规划", "Explore Identity"],
     image: "/images/identity-v3/identity-hong-kong.png",
     href: "/identity",
-    tone: "identity",
   },
   {
     id: "wealth",
     icon: Landmark,
     title: ["财富", "Wealth"],
-    label: ["守护当下，传承未来。", "Preserve Today, Create a Lasting Tomorrow."],
     description: [
       "家庭保障与代际传承。受控预览。",
       "Family protection and legacy. Controlled preview.",
@@ -85,13 +76,11 @@ const compassCards: readonly {
     cta: ["了解财富规划", "Explore Wealth"],
     image: "/images/identity-v3/identity-family.png",
     href: "/compass#wealth",
-    tone: "wealth",
   },
   {
     id: "health",
     icon: HeartHandshake,
     title: ["健康", "Health"],
-    label: ["让医疗资源更清晰、更可及。", "Healthcare coordination for families across the Greater Bay Area."],
     description: [
       "连接大湾区医疗资源与家庭健康协调。",
       "Find coordinated healthcare support across the Greater Bay Area.",
@@ -99,7 +88,6 @@ const compassCards: readonly {
     cta: ["探索健康服务", "Explore Health"],
     image: "/images/health-v21-communication.jpg",
     href: "/health",
-    tone: "health",
   },
 ];
 
@@ -118,26 +106,70 @@ const journeyItems: readonly {
   { id: "family-legacy", icon: Landmark, title: ["家族传承", "Family Legacy"], description: ["以共识连接代际未来。", "Connect the generations."], href: "/compass#wealth" },
 ];
 
-const connectionItems: readonly { icon: LucideIcon; title: Bilingual; body: Bilingual }[] = [
-  { icon: Sparkles, title: ["智能赋能", "AI Insights"], body: ["理解复杂信息，保留人的判断。", "Clearer information, with human judgement."] },
-  { icon: Globe2, title: ["全球资源", "Global Resources"], body: ["连接四大领域的专业资源。", "Professional resources across four fields."] },
-  { icon: UsersRound, title: ["专业服务", "Expert Support"], body: ["在明确范围内协调专业支持。", "Coordinated support within an agreed scope."] },
-  { icon: Layers3, title: ["持续管理", "Continuity"], body: ["有序记录规划、进度与后续。", "Organise plans, progress and next steps."] },
-];
-
-const familyOsItems: readonly Bilingual[] = [
-  ["我的家庭", "My Family"],
-  ["我的规划", "My Plans"],
-  ["我的服务", "My Services"],
-  ["我的成长", "My Growth"],
-];
-
 const insightTopics: readonly { id: string; title: Bilingual; href: string }[] = [
   { id: "education", title: ["教育与升学", "Education & Admissions"], href: "/education" },
   { id: "identity", title: ["香港身份与全球规划", "Hong Kong Identity & Global Planning"], href: "/identity" },
   { id: "wealth", title: ["家庭财富与家族传承", "Family Wealth & Legacy"], href: "/compass#wealth" },
   { id: "health", title: ["全球健康与跨境医疗", "Global Health & Cross-border Healthcare"], href: "/health" },
 ];
+
+function CompassHub({ locale }: { locale: Locale }) {
+  const zh = locale === "zh";
+
+  return (
+    <section className={styles.compassHub} aria-labelledby="compass-hub-heading">
+      <div className={styles.container}>
+        <header className={styles.compassHubIntro}>
+          <p className={styles.eyebrow} lang="en">Phoenix Compass™</p>
+          <h2 id="compass-hub-heading">{copy(locale, ["四大罗盘 · 全链协同", "Four Compasses, One Family Center"])}</h2>
+          <p className={styles.sectionLead}>{copy(locale, [
+            "教育、身份、财富与健康，协同支持家庭的长期规划。",
+            "Education, identity, wealth and health come together to support long-term family planning.",
+          ])}</p>
+        </header>
+
+        <div className={styles.compassMap}>
+          <svg className={styles.compassArcs} viewBox="0 0 600 320" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <path
+              className={styles.desktopArcs}
+              vectorEffect="non-scaling-stroke"
+              d="M100 73 C180 73 194 151 300 160 M100 247 C180 247 194 169 300 160 M500 73 C420 73 406 151 300 160 M500 247 C420 247 406 169 300 160"
+            />
+            <path
+              className={styles.mobileArcs}
+              vectorEffect="non-scaling-stroke"
+              d="M150 49 C150 104 234 111 300 160 M450 49 C450 104 366 111 300 160 M150 271 C150 216 234 209 300 160 M450 271 C450 216 366 209 300 160"
+            />
+          </svg>
+
+          {compassCards.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                className={`${styles.compassDial} ${styles[`domain--${item.id}`]}`}
+                style={{ gridArea: item.id }}
+                href={homepageHref(locale, item.id, item.href)}
+                key={item.id}
+                data-v6-dial={item.id}
+              >
+                <span className={styles.dialContent}>
+                  <Icon aria-hidden="true" strokeWidth={1.4} />
+                  <strong>{zh ? `${item.title[0]}罗盘` : item.title[1]}</strong>
+                  <span lang="en">{zh ? `${item.title[1]} Compass` : "Compass"}</span>
+                </span>
+              </Link>
+            );
+          })}
+
+          <Link className={styles.familyHouse} href={localizedHref(locale, localeRouteMap.family)} data-v6-family-os>
+            <strong>{copy(locale, ["家庭中心", "Family Center"])}</strong>
+            <span lang="en">Family OS <ArrowUpRight aria-hidden="true" size={12} /></span>
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function HomepageV6({ locale }: { locale: Locale }) {
   const zh = locale === "zh";
@@ -192,7 +224,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
               {compassCards.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link className={`${styles.compassCard} ${styles[`compassCard--${item.tone}`]}`} href={homepageHref(locale, item.id, item.href)} key={item.id} data-v6-compass={item.id}>
+                  <Link className={`${styles.compassCard} ${styles[`domain--${item.id}`]}`} href={homepageHref(locale, item.id, item.href)} key={item.id} data-v6-compass={item.id}>
                     <div className={styles.compassVisual}>
                       <Image src={item.image} alt="" fill sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 25vw" unoptimized />
                       <span className={styles.compassBadge}><Icon aria-hidden="true" size={22} strokeWidth={1.5} />{copy(locale, item.title)}</span>
@@ -232,38 +264,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section className={styles.connections} aria-labelledby="connections-heading">
-          <div className={styles.container}>
-            <div className={styles.connectionsIntro}>
-              <h2 id="connections-heading">{copy(locale, ["凤启如何连接全球资源", "How Phoenix Connects Global Resources"])}</h2>
-            </div>
-            <div className={styles.connectionGrid}>
-              {connectionItems.map((item) => {
-                const Icon = item.icon;
-                return <article className={styles.connectionItem} key={item.title[0]}><Icon aria-hidden="true" size={30} strokeWidth={1.25} /><h3>{copy(locale, item.title)}</h3><p>{copy(locale, item.body)}</p></article>;
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section className={`${styles.section} ${styles.familySection}`} aria-labelledby="family-os-heading">
-          <div className={`${styles.container} ${styles.familyGrid}`}>
-            <div className={styles.familyVisual} aria-hidden="true"><span>{copy(locale, ["凤启家序", "PHOENIX FAMILY OS"])}</span><div className={styles.familyOrb} /></div>
-            <div className={styles.familyCopy}>
-              <h2 id="family-os-heading">{copy(locale, ["凤启家序｜家庭成长中心", "One Family. One Connected Growth Journey."])}</h2>
-              <p>{copy(locale, ["从家庭目标、重要节点到已授权的服务进度，为家庭协作保留统一入口。", "Phoenix Family OS provides a dedicated space to organise family goals, plans and authorised service progress."])}</p>
-              <ul className={styles.familyMiniNav} aria-label={copy(locale, ["家庭中心预览栏目", "Family Center preview areas"])}>
-                {familyOsItems.map((item) => <li key={item[0]}>{copy(locale, item)}</li>)}
-              </ul>
-              <div className={styles.familyActions}>
-              <span className={styles.previewNotice}>{copy(locale, ["预览／即将开放", "Preview / Coming Soon"])}</span>
-              <Link className={styles.textLink} href={localizedHref(locale, "/account")}>
-                {copy(locale, ["进入家庭中心", "Enter Family Center"])} <Arrow />
-              </Link>
-              </div>
-            </div>
-          </div>
-        </section>
+        <CompassHub locale={locale} />
 
         <section className={`${styles.section} ${styles.ecosystemSection}`} aria-labelledby="learning-heading">
           <div className={`${styles.container} ${styles.ecosystemGrid}`}>

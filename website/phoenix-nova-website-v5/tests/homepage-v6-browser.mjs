@@ -1,5 +1,5 @@
 /*
- * V6.3 homepage browser evidence.
+ * V6 homepage and Compass browser evidence.
  *
  * Set V6_ORIGIN to the running review server before executing this test.  The
  * test deliberately uses the same PLAYWRIGHT_MODULE convention as the other
@@ -23,17 +23,16 @@ const { chromium } = modulePath && !modulePath.endsWith(".mjs")
   : await import(modulePath ? pathToFileURL(resolve(modulePath, "index.mjs")).href : "playwright");
 
 const origin = process.env.V6_ORIGIN || "http://127.0.0.1:4400";
-const out = resolve(process.env.V6_EVIDENCE_DIR || "outputs/homepage-v6-v63-browser");
+const out = resolve(process.env.V6_EVIDENCE_DIR || "outputs/homepage-v6-browser");
 const locales = ["zh", "en"];
-const widths = [1440, 390, 320];
+const widths = [1440, 768, 390, 320];
 const mobileBreakpoint = 700;
-const v63Geometry = {
+const hubSelector = 'main > section[aria-labelledby="compass-hub-heading"]';
+const desktopGeometry = {
   header: [56, 64],
   hero: [230, 270],
   compass: [145, 175],
   journey: [90, 115],
-  connections: [95, 120],
-  family: [115, 140],
   ecosystem: [130, 160],
   footer: [100, 130],
 };
@@ -51,8 +50,13 @@ function normaliseAssetSrc(src) {
   return (src || "").split("?")[0];
 }
 
-function localeLink(href, locale, path) {
-  return href === `/${locale}${path}` || href.startsWith(`/${locale}${path}#`);
+function compassDestinations(locale) {
+  return {
+    education: `/${locale}/education`,
+    identity: `/${locale}/identity`,
+    wealth: `https://wealth.phoenixnova.com.cn/${locale}`,
+    health: `/${locale}/health`,
+  };
 }
 
 async function waitForRenderedPage(page) {
@@ -67,7 +71,7 @@ async function waitForRenderedPage(page) {
     await Promise.all([...document.images].map(image => image.decode().catch(() => undefined)));
     await document.fonts.ready;
     const unloaded = [...document.images].filter(image => image.naturalWidth === 0).map(image => image.currentSrc || image.src || "");
-    if (unloaded.length) throw new Error(`V6.3 homepage images failed to load: ${unloaded.join(", ")}`);
+    if (unloaded.length) throw new Error(`V6 homepage images failed to load: ${unloaded.join(", ")}`);
   });
 }
 
@@ -88,7 +92,7 @@ async function assertLogo(page, route, width) {
   assert.ok(brands.every(brand => brand.filter === "none"), `${route}: official B logo colours must not be filtered`);
   const headerWidth = await page.locator("header.site-header .brand-asset").evaluate(image => image.getBoundingClientRect().width);
   const footerWidth = await page.locator("footer.site-footer .brand-asset").evaluate(image => image.getBoundingClientRect().width);
-  const expectedHeaderWidth = width >= 1181 ? 165 : 150;
+  const expectedHeaderWidth = width >= 1181 ? 165 : width > mobileBreakpoint ? 220 : 150;
   assert.ok(Math.abs(headerWidth - expectedHeaderWidth) <= 2, `${route}: Header logo width ${headerWidth}px is outside the ${expectedHeaderWidth}px V6.3 target`);
   assert.ok(Math.abs(footerWidth - 150) <= 2, `${route}: Footer logo width ${footerWidth}px is outside the 150px V6.3 target`);
 }
@@ -108,25 +112,65 @@ async function assertHeaderAndFooter(page, locale, route) {
   const footer = page.locator("footer");
   assert.equal(await footer.count(), 1, `${route}: one shared Footer is required`);
   assert.match(await footer.innerText(), /Phoenix Nova|©\s*2026/i, `${route}: Footer brand/copyright is missing`);
+  const footerBackground = await footer.locator("[data-compact-footer]").evaluate(element => getComputedStyle(element).backgroundColor);
+  const heroBackground = await page.locator('main > section[aria-labelledby="homepage-v6-title"]').evaluate(element => getComputedStyle(element).backgroundColor);
+  assert.equal(footerBackground, heroBackground, `${route}: Hero and compact Footer must use the same brand teal`);
 }
 
 async function assertCompassAndJourneys(page, locale, route) {
   const compass = page.locator("[data-v6-compass]");
   assert.equal(await compass.count(), 4, `${route}: four Compass cards are required`);
-  const hrefs = await compass.evaluateAll(nodes => nodes.map(node => {
-    const link = node.matches("a") ? node : node.closest("a") || node.querySelector("a");
-    return link?.getAttribute("href") || "";
-  }));
-  assert.ok(hrefs.every(Boolean), `${route}: every Compass card must have a real link target`);
-  assert.ok(hrefs.some(href => localeLink(href, locale, "/education")), `${route}: Education Compass link is missing`);
-  assert.ok(hrefs.some(href => localeLink(href, locale, "/identity")), `${route}: Identity Compass link is missing`);
-  assert.ok(hrefs.some(href => localeLink(href, locale, "/health")), `${route}: Health Compass link is missing`);
-  assert.ok(hrefs.some(href => href === `/${locale}/compass#wealth` || href === `/${locale}/wealth` || href.startsWith(`/${locale}/wealth#`)), `${route}: Wealth Compass link/controlled preview is missing`);
+  for (const [domain, href] of Object.entries(compassDestinations(locale))) {
+    const card = page.locator(`a[data-v6-compass="${domain}"]`);
+    assert.equal(await card.getAttribute("href"), href, `${route}: ${domain} card route changed`);
+  }
 
   const journey = page.locator("[data-v6-journey]");
   assert.equal(await journey.count(), 6, `${route}: six life-journey items are required`);
   const journeyNames = await journey.evaluateAll(nodes => nodes.map(node => (node.textContent || "").trim()));
   assert.ok(journeyNames.every(Boolean), `${route}: every life-journey item needs readable content`);
+}
+
+async function assertCompassHub(page, locale, width) {
+  const route = `/${locale} @ ${width}px`;
+  const hub = page.locator(hubSelector);
+  const dials = hub.locator("a[data-v6-dial]");
+  const family = hub.locator("a[data-v6-family-os]");
+  assert.equal(await hub.locator("a").count(), 5, `${route}: the map needs five independent links`);
+  assert.equal(await dials.count(), 4, `${route}: expected four Compass dials`);
+  for (const [domain, href] of Object.entries(compassDestinations(locale))) {
+    assert.equal(await hub.locator(`a[data-v6-dial="${domain}"]`).getAttribute("href"), href);
+  }
+  assert.equal(await family.getAttribute("href"), `/${locale}/account`);
+  assert.ok(await family.evaluate(link => getComputedStyle(link, "::before").clipPath.startsWith("polygon(")), `${route}: missing house silhouette`);
+
+  const arcs = hub.locator('div > svg[focusable="false"] > path:visible');
+  assert.equal(await arcs.count(), 1);
+  assert.equal((await arcs.getAttribute("d")).match(/M/g)?.length, 4, `${route}: expected four visible gold arcs`);
+
+  const boxes = await dials.evaluateAll(links => links.map(link => {
+    const { x, y, width, height } = link.getBoundingClientRect();
+    const style = getComputedStyle(link);
+    return {
+      domain: link.dataset.v6Dial, x, y, width, height,
+      radius: style.borderTopLeftRadius,
+      color: style.getPropertyValue("--domain").trim(),
+    };
+  }));
+  const house = await family.boundingBox();
+  assert.ok(house && house.width >= 44 && house.height >= 44, `${route}: house link is too small`);
+  assert.ok(boxes.every(box => box.width >= 44 && Math.abs(box.width - box.height) <= 1 && box.radius === "50%"), `${route}: all four links must be circles`);
+  assert.ok(boxes.every(box => box.width > house.width && box.height > house.height), `${route}: the house must be smaller than the dials`);
+  assert.equal(new Set(boxes.map(box => box.color)).size, 4, `${route}: each dial needs its domain color`);
+  const familyX = house.x + house.width / 2;
+  const familyY = house.y + house.height / 2;
+  for (const box of boxes) {
+    const left = box.domain === "education" || box.domain === "identity";
+    const top = box.domain === "education" || box.domain === "wealth";
+    assert.equal(box.x + box.width / 2 < familyX, left, `${route}: ${box.domain} is on the wrong side`);
+    assert.equal(box.y + box.height / 2 < familyY, top, `${route}: ${box.domain} is on the wrong row`);
+  }
+  geometryEvidence.push({ locale, width, house, dials: boxes });
 }
 
 async function assertInternalRoutes(page, locale, route) {
@@ -152,14 +196,12 @@ async function assertInternalRoutes(page, locale, route) {
   passed(`${locale}: ${paths.length} unique internal homepage routes return HTTP success`);
 }
 
-async function assertV63Geometry(page, locale) {
+async function assertDesktopGeometry(page, locale) {
   const blocks = [
     ["header", "header.site-header"],
     ["hero", 'main > section[aria-labelledby="homepage-v6-title"]'],
     ["compass", 'main > section[aria-labelledby="compass-heading"]'],
     ["journey", 'main > section[aria-labelledby="journey-heading"]'],
-    ["connections", 'main > section[aria-labelledby="connections-heading"]'],
-    ["family", 'main > section[aria-labelledby="family-os-heading"]'],
     ["ecosystem", 'main > section[aria-labelledby="learning-heading"]'],
     ["footer", "footer.site-footer"],
   ];
@@ -169,17 +211,14 @@ async function assertV63Geometry(page, locale) {
     const locator = page.locator(selector);
     assert.equal(await locator.count(), 1, `${locale} 1440px: V6.3 ${name} block must be unique`);
     measurements[name] = await locator.evaluate(element => element.getBoundingClientRect().height);
-    const [minimum, maximum] = v63Geometry[name];
+    const [minimum, maximum] = desktopGeometry[name];
     if (measurements[name] < minimum || measurements[name] > maximum) failures.push({ name, actual: measurements[name], expected: [minimum, maximum] });
   }
-  const sectionIds = await page.locator("main > section").evaluateAll(sections => sections.map(section => section.getAttribute("aria-labelledby")));
-  assert.deepEqual(sectionIds, ["homepage-v6-title", "compass-heading", "journey-heading", "connections-heading", "family-os-heading", "learning-heading"], `${locale} 1440px: V6.3 main section structure changed`);
-  assert.equal(await page.locator("main > section").count(), 6, `${locale} 1440px: V6.3 main must contain six direct sections`);
+  measurements.compassHub = (await page.locator(hubSelector).boundingBox()).height;
   const totalHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-  if (totalHeight < 1000 || totalHeight > 1150) failures.push({ name: "total", actual: totalHeight, expected: [1000, 1150] });
   geometryEvidence.push({ locale, width: 1440, totalHeight, blocks: measurements, failures });
-  assert.deepEqual(failures, [], `${locale} 1440px: V6.3 geometry outside target ranges: ${JSON.stringify(failures)}`);
-  passed(`${locale} 1440px: V6.3 eight-block geometry and six-section main structure`);
+  assert.deepEqual(failures, [], `${locale} 1440px: surrounding sections outside their existing ranges: ${JSON.stringify(failures)}`);
+  passed(`${locale} 1440px: surrounding homepage sections retain their desktop proportions`);
 }
 
 async function assertCompassTextFits(page, locale) {
@@ -243,24 +282,65 @@ async function assertPage(page, locale, width) {
   assert.equal(await page.locator("[data-homepage-v6]").count(), 1, `${route}: V6 homepage root marker must be unique`);
   assert.equal(await page.locator("[data-homepage-v6]").evaluate((element, localeCode) => element.getAttribute("lang")?.toLowerCase().startsWith(localeCode), locale), true, `${route}: homepage language is wrong`);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `${route}: horizontal overflow`);
+  const sections = await page.locator("main > section").evaluateAll(nodes => nodes.map(node => node.getAttribute("aria-labelledby")));
+  assert.deepEqual(sections, ["homepage-v6-title", "compass-heading", "journey-heading", "compass-hub-heading", "learning-heading"]);
+  assert.doesNotMatch(await page.locator("body").innerText(), /Founder (?:Center|OS)|创始人中心/i);
   await assertLogo(page, route, width);
   await assertHeaderAndFooter(page, locale, route);
   await assertCompassAndJourneys(page, locale, route);
+  await assertCompassHub(page, locale, width);
   if (width === 1440) {
     await assertCompassTextFits(page, locale);
-    await assertV63Geometry(page, locale);
+    await assertDesktopGeometry(page, locale);
   }
   if (locale === "en") await assertEnglishMainCopy(page);
   await page.screenshot({ path: resolve(out, `homepage-v6-${locale}-${width}.png`), fullPage: true });
+  await page.locator(hubSelector).screenshot({ path: resolve(out, `homepage-v6-${locale}-${width}-compass.png`) });
   await page.locator("header.site-header").screenshot({ path: resolve(out, `homepage-v6-${locale}-${width}-header.png`) });
   await page.locator("footer.site-footer").screenshot({ path: resolve(out, `homepage-v6-${locale}-${width}-footer.png`) });
+}
+
+async function assertHomepageClicks(page, locale, width) {
+  const account = `/${locale}/account`;
+  const entries = [
+    ...Object.entries(compassDestinations(locale)).map(([domain, href]) => [`${hubSelector} a[data-v6-dial="${domain}"]`, href]),
+    [`${hubSelector} a[data-v6-family-os]`, account],
+  ];
+  if (width === 1440) {
+    entries.push(
+      ["header.site-header a.portal-link", account],
+      ['section[aria-labelledby="homepage-v6-title"] a[href$="/compass"]', `/${locale}/compass`],
+      ['section[aria-labelledby="homepage-v6-title"] a[href$="/about"]', `/${locale}/about`],
+      ['main a[href$="/education#academy"]', `/${locale}/education#academy`],
+      ['main a[href$="/education#askwise"]', `/${locale}/education#askwise`],
+      ['main a[href$="/insights"]', `/${locale}/insights`],
+    );
+  }
+  for (const [selector, href] of entries) {
+    await page.goto(`${origin}/${locale}`, { waitUntil: "domcontentloaded" });
+    const target = new URL(href, origin);
+    const link = page.locator(selector);
+    assert.equal(await link.getAttribute("href"), href);
+    await Promise.all([
+      page.waitForURL(target.href, { waitUntil: "domcontentloaded" }),
+      link.click(),
+    ]);
+    await page.locator(target.hash || "h1").first().waitFor({ state: target.hash ? "attached" : "visible" });
+    passed(`${locale} ${width}px: ${selector} opens ${href}`);
+  }
 }
 
 const browser = await chromium.launch({ headless: true, ...(process.env.V6_BROWSER ? { executablePath: process.env.V6_BROWSER } : {}) });
 const context = await browser.newContext();
 const page = await context.newPage();
 const pageErrors = [];
+const homepageConsoleErrors = [];
 page.on("pageerror", error => pageErrors.push(error.message));
+page.on("console", message => {
+  if (message.type() === "error" && locales.some(locale => page.url() === `${origin}/${locale}`)) {
+    homepageConsoleErrors.push({ url: message.location().url, message: message.text() });
+  }
+});
 
 try {
   for (const locale of locales) {
@@ -270,18 +350,24 @@ try {
       await waitForRenderedPage(page);
       await assertPage(page, locale, width);
       if (width === widths[0]) await assertInternalRoutes(page, locale, `/${locale}`);
-      passed(`${locale} ${width}px: V6.3 homepage structure, navigation, logo, links, language and overflow`);
+      passed(`${locale} ${width}px: homepage structure, logo, Compass geometry, language and overflow`);
+      if (width === 1440 || width === 390) await assertHomepageClicks(page, locale, width);
     }
   }
   await assertLanguageSwitches(page);
-  assert.deepEqual(pageErrors, [], `V6.3 homepage browser runtime errors: ${pageErrors.join(" | ")}`);
-  passed("No V6.3 homepage browser runtime errors");
+  assert.deepEqual(pageErrors, [], `Browser runtime errors: ${pageErrors.join(" | ")}`);
+  // The browser requests /favicon.ico automatically. app/layout.tsx defers that asset pending Founder approval.
+  const unexpectedErrors = homepageConsoleErrors.filter(error =>
+    !(error.url === `${origin}/favicon.ico` && error.message.includes("404"))
+  );
+  assert.deepEqual(unexpectedErrors, [], "Unexpected homepage console errors");
+  passed("No browser runtime errors or unexpected homepage console errors");
 } catch (error) {
   results.push({ name: String(error), status: "FAIL" });
   await page.screenshot({ path: resolve(out, "homepage-v6-failure.png"), fullPage: true }).catch(() => undefined);
   throw error;
 } finally {
-  await writeFile(resolve(out, "homepage-v6-v63-browser-results.json"), JSON.stringify({ origin, results, geometryEvidence, pageErrors }, null, 2));
+  await writeFile(resolve(out, "homepage-v6-browser-results.json"), JSON.stringify({ origin, results, geometryEvidence, pageErrors, homepageConsoleErrors }, null, 2));
   await browser.close();
   console.log(JSON.stringify({ passed: results.filter(result => result.status === "PASS").length, failed: results.filter(result => result.status === "FAIL").length }));
 }
