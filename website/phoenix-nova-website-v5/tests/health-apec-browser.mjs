@@ -13,18 +13,40 @@ try {
  const after=readFileSync('components/health-landing.tsx','utf8');
  for(const token of before.match(/id="[^"]+"|heading\("\d+"/g)||[])assert.ok(after.includes(token),'preserved anchor/number '+token);
  for(const locale of ['zh','en'])for(const width of [390,768,1440]){
-  const p=await b.newPage({viewport:{width,height:1000}});await p.goto(origin+`/${locale}/health`,{waitUntil:'networkidle'});
-  const region=p.locator('#brand-origin');assert.equal(await region.count(),1);
-  const text=await region.innerText();assert.match(text,/2026/);assert.match(text,/18/);assert.match(text,/19/);assert.match(text,/APEC/);
-  assert.match(text,locale==='zh'?/无关|不.*官方/:/not affiliated|no affiliation|independent/i);
-  assert.equal(await region.locator('img,form,input').count(),0);
-  assert.ok(await region.locator('a[href="https://www.szns.gov.cn/english/apec2026shenzhen/"]').count());
-  assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-  assert.ok((await p.locator('meta[name=robots]').getAttribute('content')).includes('noindex'));
-  const scripts=await p.locator('script[type="application/ld+json"]').allTextContents();for(const s of scripts)assert.doesNotMatch(s,/"@type"\s*:\s*"Event"/);
-  await region.screenshot({path:`${out}/${locale}-${width}-origin.png`});await p.screenshot({path:`${out}/${locale}-${width}-full.png`,fullPage:true});
+  const p=await b.newPage({viewport:{width,height:1000}});
+  const timing = locale === 'zh' ? /会后开始/ : /after the meeting/i;
+  const pending = locale === 'zh'
+    ? /具体机构、服务范围及可用性仍待逐项核实/
+    : /specific providers, service scope and availability are still to be verified individually/i;
+  const disclosure = locale === 'zh'
+    ? /与APEC会议官方组织、授权、指定医疗服务或赞助无关/
+    : /independent of the official APEC organisers, authorisations, designated medical services and sponsorship/i;
+  const pages = [
+    { path: `/${locale}/health/family`, region: '#family-brand-origin', image: 'health-claims.jpg', screenshot: 'family-origin' },
+    { path: `/${locale}/health`, region: '#brand-origin', image: 'health-v31-gba-family.png', screenshot: 'origin' },
+  ];
+  for (const { path, region: selector, image, screenshot } of pages) {
+    const response = await p.goto(origin + path, { waitUntil: 'networkidle' });
+    assert.equal(response?.status(), 200, path);
+    const region = p.locator(selector);
+    assert.equal(await region.count(), 1, path);
+    const text = await region.innerText();
+    for (const token of [/2026/, /18/, /19/, /APEC/, timing, pending, disclosure]) assert.match(text, token, path);
+    assert.equal(await region.locator('img,form,input').count(), 0, path);
+    assert.ok(await region.locator('a[href="https://www.szns.gov.cn/english/apec2026shenzhen/"]').count(), path);
+    assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), path);
+    assert.match(await p.locator('meta[name="robots"]').getAttribute('content'), /noindex/, path);
+    const shareImage = `https://health.phoenixnova.com.cn/images/${image}`;
+    assert.equal(await p.locator('meta[property="og:image"]').getAttribute('content'), shareImage, path);
+    assert.equal(await p.locator('meta[name="twitter:image"]').getAttribute('content'), shareImage, path);
+    const scripts = await p.locator('script[type="application/ld+json"]').allTextContents();
+    for (const script of scripts) assert.doesNotMatch(script, /"@type"\s*:\s*"Event"/, path);
+    await region.screenshot({ path: `${out}/${locale}-${width}-${screenshot}.png` });
+  }
+  await p.screenshot({path:`${out}/${locale}-${width}-full.png`,fullPage:true});
+  const region = p.locator('#brand-origin');
   await region.locator(`a[href="/${locale}/health/shenzhen-international-medical"]`).click();await p.waitForURL('**/health/shenzhen-international-medical');
   await p.locator('#consultation a').click();await p.waitForURL(`**/${locale}/health#consultation`);assert.equal(await p.locator('#consultation').count(),1);
-  results.push({locale,width,status:'PASS',checks:'origin, disclosure, source, responsive, noindex, preserved anchors, journey to existing consultation'});await p.close();
+  results.push({locale,width,status:'PASS',checks:'Health and Family post-meeting wording, pending verification, disclosure, share images, source, responsive, noindex, preserved anchors, journey to existing consultation'});await p.close();
  }
 }catch(e){results.push({status:'FAIL',error:String(e)});throw e;}finally{await b.close();writeFileSync(`${out}/results.json`,JSON.stringify(results,null,2));console.log(results);}
