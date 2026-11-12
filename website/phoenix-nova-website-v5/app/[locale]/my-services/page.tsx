@@ -13,7 +13,7 @@ export default async function Page({ params }: { params: Promise<{ locale: strin
   const values = env as unknown as Record<string, unknown>;
   if (privateWorkbenchRequested(values)) {
     await requirePrivateWorkbenchSession(values, locale);
-    return <ServiceWorkbench locale={locale} readOnly />;
+    return <ServiceWorkbench locale={locale} readOnly requireDeliveryReceipt />;
   }
   if (!workbenchEnabled(values, process.env.NODE_ENV)) notFound();
   const synthetic = !customerBridgeEnabled(values, process.env.NODE_ENV) && values.SERVICE_WORKBENCH_SYNTHETIC_PREVIEW === "true";

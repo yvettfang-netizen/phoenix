@@ -2,6 +2,7 @@ import {readCustomerSession,type AuthConfig} from "./customer-auth";
 import {handlePrivateWorkbench,handleServiceWorkbench,type WorkbenchEnv,workbenchEnabled} from "./service-workbench-bff";
 import {summarySearch} from "./family-service-summary";
 import {PrivateWorkbenchAccessDenied,privateCustomerProvider,privateWorkbenchConfig,privateWorkbenchRequested,privateWorkbenchResource} from "./private-customer-workbench";
+import {createPrivateDeliveryReceipt,DELIVERY_RECEIPT_HEADER} from "./private-delivery-receipt";
 
 /** Server-owned adapter only. Never deserialize this capability from request data.
  * assertCurrent must recheck the bound source account and session as well as
@@ -41,13 +42,16 @@ export async function handleCustomerServices(request:Request,env:WorkbenchEnv,mo
  const provider=privateConfig?privateCustomerProvider(privateConfig.authority):developmentProvider;
  try{
   const session=await readCustomerSession(request,auth,{touch:!privateConfig});
-  if(!session)return fail(401,"SIGN_IN_REQUIRED");
   const requestId=crypto.randomUUID();
-  const audit=async(phase:"attempt"|"prepared"|"outcome",action:string)=>{
+  const audit=async(phase:"attempt"|"prepared"|"outcome"|"session-rejected",action:string)=>{
    const result=await auditDb.prepare("INSERT INTO core_auth_audit (id,actor_user_id,action,created_at) VALUES (?,?,?,?)")
-    .bind(requestId+":"+phase,session.id,action,Date.now()).run();
+    .bind(requestId+":"+phase,session?.id??null,action,Date.now()).run();
    if(result.meta?.changes!==1)throw new Error("Canonical audit write failed");
   };
+  if(!session){
+   if(privateConfig)await audit("session-rejected","CANONICAL_SESSION_REJECTED");
+   return fail(401,"SIGN_IN_REQUIRED");
+  }
   await audit("attempt","CANONICAL_ACCESS_ATTEMPT");
   const recordFailure=async(response:Response)=>{
    try{
@@ -73,6 +77,11 @@ export async function handleCustomerServices(request:Request,env:WorkbenchEnv,mo
     return recordFailure(fail(401,"SIGN_IN_REQUIRED"));
    await mapped.assertCurrent();
    if(!(current.valid_until>Date.now()))return recordFailure(fail(401,"SIGN_IN_REQUIRED"));
+    if(privateConfig){
+     const receipt=createPrivateDeliveryReceipt(privateConfig.deliverySecret,requestId,privateConfig.auth.origin,current);
+     if(!receipt)return recordFailure(fail(401,"SIGN_IN_REQUIRED"));
+     response.headers.set(DELIVERY_RECEIPT_HEADER,receipt);
+    }
    return response;
   }catch(error){return recordFailure(error instanceof PrivateWorkbenchAccessDenied?fail(403,"ACCESS_DENIED"):unavailable());}
  }catch{return unavailable();}

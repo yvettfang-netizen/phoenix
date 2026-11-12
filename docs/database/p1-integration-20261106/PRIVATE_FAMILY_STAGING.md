@@ -23,6 +23,10 @@ binding. Missing bindings fail closed and never fall back to development mode.
 Configure two distinct service bindings. `PRIVATE_WORKBENCH_AUTHORITY` is the
 trusted identity authority, and `PRIVATE_WORKBENCH_GATEWAY` is the authenticated
 private relay to the loopback backend. These bindings are server-only.
+Set `PRIVATE_WORKBENCH_DELIVERY_SECRET` through the private runtime secret
+store to a random 32-byte base64url value. It authenticates short-lived
+receipts bound to the current session. Keep the key, receipts, cookies and
+session hashes out of logs.
 The gateway receives only the scoped opaque bearer, without a browser cookie
 or a development transport marker. Public routes, shared cookies and existing
 development previews use their existing configuration.
@@ -55,6 +59,21 @@ The website and gateway accept only GET for summary, project list, project
 details and catalogue. Commands, uploads, downloads and development login
 are closed. The private workbench does not show mutation controls. Gateway
 reads use the scoped customer projection and retain the security audit.
+
+The same-origin POST `/api/family-services/delivery-receipt` writes only to the
+audit binding. The private UI sends this confirmation after parsing and
+validating the response and waits for an acknowledgement before rendering
+the data. The delivery event records an authenticated application receipt.
+Access preparation and browser receipt have separate events. A receipt can
+be accepted once for its request, and it expires with the bound session or
+its own short deadline.
+
+The audit D1 records first-check session rejections and pairs the request,
+preparation, denial and delivery events by their request ID. The synthetic
+staging controller writes requested and applied or failed events before and
+after revoke and forced idle or absolute expiry operations. These events use
+the existing audit table. Retain the audit store across runtime restarts and
+verify its history during staging acceptance.
 The dedicated entry point does not provision a database or run migrations.
 The real environment requires its own review of least-privilege credentials,
 binding IDs, access, audit retention, alerting and rollback.

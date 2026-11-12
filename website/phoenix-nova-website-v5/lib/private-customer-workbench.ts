@@ -23,15 +23,18 @@ export function privateWorkbenchConfig(env: Bindings) {
   const audit = env.PRIVATE_WORKBENCH_AUDIT;
   const authority = env.PRIVATE_WORKBENCH_AUTHORITY;
   const gateway = env.PRIVATE_WORKBENCH_GATEWAY;
+  const deliverySecret = env.PRIVATE_WORKBENCH_DELIVERY_SECRET;
   if (!privateWorkbenchRequested(env) || env.SERVICE_WORKBENCH_ENABLED !== "true"
     || env.CUSTOMER_CANONICAL_BRIDGE_ENABLED !== "true" || env.CUSTOMER_AUTH_ENABLED !== "1"
     || typeof origin !== "string" || !origin.startsWith("https://") || !validAuthOrigin(origin)
     || origin === env.CUSTOMER_AUTH_ORIGIN
     || !database(db) || typeof (db as AuthDatabase).batch !== "function"
     || !database(audit) || audit === db || db === env.DB || audit === env.DB
-    || !service(authority) || !service(gateway) || authority === gateway) return null;
+    || !service(authority) || !service(gateway) || authority === gateway
+    || typeof deliverySecret !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(deliverySecret)
+    || Buffer.from(deliverySecret, "base64url").toString("base64url") !== deliverySecret) return null;
   const auth: AuthConfig = { db: db as AuthDatabase, origin, registration: false };
-  return { auth, audit, authority, gateway };
+  return { auth, audit, authority, gateway, deliverySecret };
 }
 
 export function privateWorkbenchResource(resource: string) {

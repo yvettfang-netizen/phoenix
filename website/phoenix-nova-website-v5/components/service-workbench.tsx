@@ -3,9 +3,10 @@ import {useCallback,useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {onCustomerSessionEnded} from "@/lib/customer-session-event";
-import type {CatalogueItem,ServiceProjectListItem,WorkbenchSnapshot} from "@/lib/service-workbench-contract";
+import {confirmPrivateDelivery} from "@/lib/confirm-private-delivery";
+import {validWorkbenchResponse,type CatalogueItem,type ServiceProjectListItem,type WorkbenchSnapshot} from "@/lib/service-workbench-contract";
 import "./service-workbench.css";
-type Props={locale:"zh"|"en";projectId?:string;synthetic?:boolean;readOnly?:boolean};
+type Props={locale:"zh"|"en";projectId?:string;synthetic?:boolean;readOnly?:boolean;requireDeliveryReceipt?:boolean};
 type Payload=Record<string,unknown>;
 const statuses:Record<string,[string,string]>={DRAFT:["草拟","Draft"],PLANNED:["待开通","Planned"],ACTIVE:["服务中","Active"],ON_HOLD:["已暂停","On hold"],COMPLETED:["已结案","Closed"],CANCELLED:["已终止","Terminated"],PENDING:["待处理","Pending"],IN_PROGRESS:["进行中","In progress"],BLOCKED:["待协调","Blocked"],READY:["可递交","Ready"],SUBMITTED:["已递交","Submitted"],DECIDED:["已有决定","Decided"],WITHDRAWN:["已撤回","Withdrawn"],OFFER:["录取","Offer"],REJECTED:["拒录","Rejected"],WAITLISTED:["候补","Waitlisted"],APPROVED:["审核通过","Approved"],CHANGES_REQUESTED:["需补件","Changes requested"],UNDER_REVIEW:["审核中","Under review"],REVIEW_APPROVED:["交付审核通过","Review approved"],ACCEPTED:["交付已验收","Accepted"],ACHIEVED:["已达成","Achieved"],DISCOVERY:["服务启动","Discovery"],SCHOOL_SELECTION:["选校与专业","School selection"],MATERIALS:["材料准备","Materials"],SUBMISSION:["申请递交","Submission"],INTERVIEW:["面试与补件","Interview"],DECISION:["申请结果","Decisions"],DEPOSIT:["留位与后续","Deposit & next steps"],CLOSED:["结案","Closed"],CONTRACT_SIGNED:["合同已签署","Contract signed"],PAYMENT_CONFIRMED:["付款已确认","Payment confirmed"],PAYMENT_WAIVED:["依规则豁免付款","Payment waived"],OPENING_APPROVED:["已批准开通","Opening approved"],OPENING_REVOKED:["开通已撤销","Opening revoked"],PAYMENT_REVERSED:["付款已冲回","Payment reversed"],CONTRACT_CANCELLED:["合同已取消","Contract cancelled"]};
 function localTime(value:string|null){if(!value)return "";const d=new Date(value);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
@@ -14,9 +15,24 @@ function Form({title,children,submit,onSubmit,disabled=false}:{title:string;chil
 function time(value:string|null,locale:string){return value?new Intl.DateTimeFormat(locale==="zh"?"zh-CN":"en-GB",{dateStyle:"medium",timeStyle:"short"}).format(new Date(value)):"—";}
 const value=(f:FormData,key:string)=>String(f.get(key)??"");
 const dateValue=(f:FormData,key:string)=>value(f,key)?new Date(value(f,key)).toISOString():null;
-async function api<T>(path:string,body?:unknown,key?:string,cancel?:AbortSignal):Promise<T>{const timeout=AbortSignal.timeout(15000);const r=await fetch("/api/service-workbench/"+path,{method:body?"POST":"GET",credentials:"same-origin",cache:"no-store",headers:body?{"Content-Type":"application/json",...(key?{"Idempotency-Key":key}:{})}:undefined,body:body?JSON.stringify(body):undefined,signal:cancel?AbortSignal.any([cancel,timeout]):timeout});if(!r.ok)throw Object.assign(new Error("REQUEST_FAILED"),{status:r.status});return r.json();}
+async function api<T>(path:string,body?:unknown,key?:string,cancel?:AbortSignal,requireDeliveryReceipt=false):Promise<T>{
+ const timeout=AbortSignal.timeout(15000);
+ const signal=cancel?AbortSignal.any([cancel,timeout]):timeout;
+ const response=await fetch("/api/service-workbench/"+path,{
+  method:body?"POST":"GET",credentials:"same-origin",cache:"no-store",
+  headers:body?{"Content-Type":"application/json",...(key?{"Idempotency-Key":key}:{})}:undefined,
+  body:body?JSON.stringify(body):undefined,signal,
+ });
+ if(!response.ok)throw Object.assign(new Error("REQUEST_FAILED"),{status:response.status});
+ const result=await response.json();
+ if(requireDeliveryReceipt){
+  if(!validWorkbenchResponse(path,result))throw new Error("Invalid private workbench response");
+  await confirmPrivateDelivery(response,signal);
+ }
+ return result;
+}
 export function ServiceProjectCards({locale}:{locale:"zh"|"en"}){const [items,setItems]=useState<ServiceProjectListItem[]|null>(null);useEffect(()=>{let active=true;let timer:ReturnType<typeof setTimeout>;const refresh=async()=>{try{const x=await api<{items:ServiceProjectListItem[]}>("projects");if(active)setItems(x.items)}catch{if(active)setItems(null)}finally{if(active)timer=setTimeout(()=>void refresh(),5000)}};void refresh();const clear=()=>setItems(null);window.addEventListener("pagehide",clear);return()=>{active=false;clearTimeout(timer);window.removeEventListener("pagehide",clear)};},[]);return <section className="sw-home-cards"><h2>{locale==="zh"?"我的服务项目":"My service projects"}</h2>{items?.length?items.map(p=><Link key={p.id} href={"/"+locale+"/my-services/"+p.id}><strong>{p.title}</strong><span>{(statuses[p.status]??[p.status,p.status])[locale==="zh"?0:1]}</span></Link>):<p>{locale==="zh"?"登录后查看实际已开通项目；未购买服务不会显示为进行中。":"Sign in to view opened projects. Unpurchased services are not shown as active."}</p>}<Link href={"/"+locale+"/my-services"}>{locale==="zh"?"进入服务工作台":"Open service workbench"} →</Link></section>;}
-export function ServiceWorkbench({locale,projectId,synthetic=false,readOnly=false}:Props){
+export function ServiceWorkbench({locale,projectId,synthetic=false,readOnly=false,requireDeliveryReceipt=false}:Props){
  const en=locale==="en",t=(zh:string,english:string)=>en?english:zh,st=(s:string)=>(statuses[s]??[s,s])[en?1:0];
  const [projects,setProjects]=useState<ServiceProjectListItem[]>([]),[data,setData]=useState<WorkbenchSnapshot|null>(null),[catalogue,setCatalogue]=useState<CatalogueItem[]>([]);
  const [error,setError]=useState<string|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[tab,setTab]=useState("overview"),[refresh,setRefresh]=useState(0),[filter,setFilter]=useState("ALL");
@@ -32,7 +48,7 @@ export function ServiceWorkbench({locale,projectId,synthetic=false,readOnly=fals
   if(!canRead())return;
   if(projectId){
    const [snapshot,cat]=await Promise.all([
-    api<WorkbenchSnapshot>("projects/"+projectId,undefined,undefined,signal),
+    api<WorkbenchSnapshot>("projects/"+projectId,undefined,undefined,signal,requireDeliveryReceipt),
     readOnly?{items:[]}:api<{items:CatalogueItem[]}>("catalogue",undefined,undefined,signal),
    ]);
    if(!canRead())return;
@@ -40,13 +56,13 @@ export function ServiceWorkbench({locale,projectId,synthetic=false,readOnly=fals
    setData(snapshot);
    setCatalogue(cat.items);
   }else{
-   const result=await api<{items:ServiceProjectListItem[]}>("projects",undefined,undefined,signal);
+   const result=await api<{items:ServiceProjectListItem[]}>("projects",undefined,undefined,signal,requireDeliveryReceipt);
    if(!canRead())return;
    setProjects(result.items);
   }
   setObservedAt(Date.now());
   setError(null);
- },[projectId,readOnly]);
+ },[projectId,readOnly,requireDeliveryReceipt]);
  useEffect(()=>{
   let poll:ReturnType<typeof setTimeout>;
   let running:AbortSignal|null=null;

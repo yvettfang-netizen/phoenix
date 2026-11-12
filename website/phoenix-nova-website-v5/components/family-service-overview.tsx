@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CalendarClock, CheckCircle2, CircleAlert, Compass, RefreshCw, UserRound } from "lucide-react";
 import { onCustomerSessionEnded } from "@/lib/customer-session-event";
+import { confirmPrivateDelivery } from "@/lib/confirm-private-delivery";
 import { validFamilyServiceSummary } from "@/lib/family-service-summary";
 import "./family-service-overview.css";
 
@@ -155,7 +156,7 @@ function ProjectCard({ locale, project, history = false }: { locale: Locale; pro
   </article>;
 }
 
-export function FamilyServiceOverview({ locale }: { locale: Locale }) {
+export function FamilyServiceOverview({ locale, requireDeliveryReceipt = false }: { locale: Locale; requireDeliveryReceipt?: boolean }) {
   const [projects, setProjects] = useState<SummaryProject[]>([]);
   const [state, setState] = useState<SummaryState>("loading");
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
@@ -210,6 +211,11 @@ export function FamilyServiceOverview({ locale }: { locale: Locale }) {
       if (effectiveExpiry <= Date.now()) { clear("stale"); return; }
       const incomingIds = payload.projects.map(project => project.service_project_id);
       if (append && incomingIds.some(projectId => projectIdsRef.current.has(projectId))) { clear("error"); return; }
+      if (requireDeliveryReceipt) {
+        await confirmPrivateDelivery(response, controller.signal);
+        if (request !== generation.current || controller.signal.aborted) return;
+        if (effectiveExpiry <= Date.now()) { clear("stale"); return; }
+      }
       incomingIds.forEach(projectId => projectIdsRef.current.add(projectId));
       setProjects(previous => append ? [...previous, ...payload.projects] : payload.projects);
       expiryRef.current = effectiveExpiry;
@@ -222,12 +228,13 @@ export function FamilyServiceOverview({ locale }: { locale: Locale }) {
       projectIdsRef.current.clear();
       setProjects([]);
       setExpiresAt(null);
-      setState(error instanceof Error && error.message === "unavailable" ? "unavailable" : "error");
+      const status = (error as { status?: number } | null)?.status;
+      setState(status === 401 || status === 403 || error instanceof Error && error.message === "unavailable" ? "unavailable" : "error");
     } finally {
       clearTimeout(timeout);
       if (activeController.current === controller) activeController.current = null;
     }
-  }, [clear]);
+  }, [clear, requireDeliveryReceipt]);
 
   useEffect(() => {
     const mountedGeneration = generation.current;
