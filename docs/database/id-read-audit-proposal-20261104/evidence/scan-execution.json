@@ -1,0 +1,7 @@
+{
+  "command": "docker run --rm --mount 'type=bind,source=D:/CODEX/01_PHOENIX/01_NOVA/_worktrees/canonical-0035-premerge-audit-20261102/docs/database/id-read-audit-proposal-20261104,target=/scan,readonly' --mount 'type=bind,source=D:/CODEX/01_PHOENIX/01_NOVA/_worktrees/canonical-0035-premerge-audit-20261102/docs/database/id-read-audit-proposal-20261104/evidence,target=/out' ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f dir /scan --redact=100 --no-banner --exit-code=1 --report-format json --report-path /out/gitleaks-final.json",
+  "exitCode": 0,
+  "stdout": "\u001b[90m8:37AM\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mscanned ~81902 bytes (81.90 KB) in 44.9ms\u001b[0m\n\u001b[90m8:37AM\u001b[0m \u001b[32mINF\u001b[0m \u001b[1mno leaks found\u001b[0m\n",
+  "scope": "Only this new candidate directory. One explicit line-level allowance for approved public decision checksum; initial redacted finding retained.",
+  "newSqlTests": "NOT RUN"
+}

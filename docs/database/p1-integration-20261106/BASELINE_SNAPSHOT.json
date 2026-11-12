@@ -1,0 +1,524 @@
+{
+  "checkedAt": "2026-11-05T17:25:02.783Z",
+  "main": "9de1e8ddeecbd338d53230ef0ff3b3a82ac3e2fc",
+  "prs": [
+    {
+      "pr": {
+        "url": "https://github.com/yvettfang-netizen/phoenix/pull/55",
+        "number": 55,
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "draft": true,
+        "body": "The original pinned PR55 commit d1dd6e3b579bee90bce8dd25b97f0374c21ebb28 retained the preview DTO while the same component switched modes and awaited new authorization. Repair5414c18ca521d8b8eae1f650102485749e6ebd3a scopes component state by mode and ignores cancelled-request success. A permanent browser probe proves immediate reset, denial without stale data, and recovery when returning to the other mode. LOW developer-preview lifecycle finding; current pages use fixed modes, so this does not establish a production or cross-family database disclosure.\n\nPreserve the original combined candidate: inspected main9de1e8ddeecbd338d53230ef0ff3b3a82ac3e2fc, byte-exact0036 from PR41/3de5c99 and0037/bridge from PR54/c1b2f30. Historical0001–0035 and both forward migrations are unchanged. Combined manifest scopes37 files; fresh and restored clusters measure ledger37/tables93/policies83. The default-off opaque-session page/BFF/application seam remains separate from the old JWT preview and fails closed without an explicit trusted provider. Existing main business assets are preserved.\n\nValidation on the repair: backend typecheck/build146/146 tests; website typecheck/targeted lint8/8 BFF tests; full PG16+PG17 fresh/35→36→37/repeat/both-forward drift/atomicity/ACL/ticket/READ-audit/browser/backup-integrity/fresh-cluster restore. R55-UI1/UI2 and LATE-1 each run on fresh and restore in both versions. Exact repair HEAD has20/20 SUCCESS checks, including [combined PG16/PG17 CI](https://github.com/yvettfang-netizen/phoenix/actions/runs/41993404878); raw CI logs were checked for the new assertions and measured inventory. All owned local test fixtures cleaned.\n\n[Fixed-SHA technical review and execution report](https://github.com/yvettfang-netizen/phoenix/blob/5414c18ca521d8b8eae1f650102485749e6ebd3a/docs/database/combined-0036-0037-20261105/PR55_FORMAL_REVIEW.md).\n[Private original counterexample, commands, source hashes and new local PG16/17 outputs](https://github.com/yvettfang-netizen/phoenix-canonical-db/tree/47a00807a5a84c2d37b2f50af1ec7a74c4d5854c/canonical-db/evidence/pr55-formal-review-20261105). Initial combined-candidate failures and conflict provenance remain in their earlier immutable evidence package.\n\nReal provider/HTTPS JWKS transport/protected configuration, normal login and cookie lifecycle, single-student mapping, current F1–F5 facts, governance changes and formal independent GitHub approval remain HOLD. This is a Jimson-authorized Codex technical review, not an independent reviewer/Founder signature. No merge, deployment, Tencent/production connection, real identity/data import or rule/permission change. Keep this existing PR Draft.",
+        "title": "Canonical 0036/0037 isolated compatibility and default-off opaque-session BFF",
+        "base": "main",
+        "base_sha": "9de1e8ddeecbd338d53230ef0ff3b3a82ac3e2fc",
+        "head": "codex/canonical-combined-bff-20261105",
+        "head_sha": "5414c18ca521d8b8eae1f650102485749e6ebd3a",
+        "head_repo_id": 1346413559,
+        "head_repo_full_name": "yvettfang-netizen/phoenix",
+        "merge_commit_sha": "4ffe6135a4d62d01139b451f49ab8a5d791195b1",
+        "user": {
+          "login": "yvettfang-netizen",
+          "name": "yvettfang-netizen",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/316766453?v=4",
+          "id": 316766453
+        },
+        "requested_reviewers": null,
+        "requested_team_reviewers": null,
+        "diff": null,
+        "comments": null,
+        "created_at": "2026-11-05T07:47:33Z",
+        "updated_at": "2026-11-05T08:27:05Z",
+        "closed_at": null,
+        "merged_at": null,
+        "commits": 2,
+        "changed_files": 99,
+        "additions": 6394,
+        "deletions": 8,
+        "display_url": "https://github.com/yvettfang-netizen/phoenix/pull/55",
+        "display_title": "Canonical 0036/0037 isolated compatibility and default-off opaque-session BFF"
+      },
+      "ci": {
+        "workflow_runs": [
+          {
+            "id": 41993404835,
+            "name": "Health Compass V5 validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 87,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404835/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404835/logs",
+            "workflow_id": 351627919
+          },
+          {
+            "id": 41993404923,
+            "name": "Website PR checks",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 93,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404923/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404923/logs",
+            "workflow_id": 349995668
+          },
+          {
+            "id": 41993404836,
+            "name": "Family Student synthetic projection E2E",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 8,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404836/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404836/logs",
+            "workflow_id": 406666206
+          },
+          {
+            "id": 41993404832,
+            "name": "Identity V3 landing validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 72,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404832/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404832/logs",
+            "workflow_id": 402782791
+          },
+          {
+            "id": 41993404864,
+            "name": "P0 learning catalog synthetic E2E",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 9,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404864/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404864/logs",
+            "workflow_id": 406607317
+          },
+          {
+            "id": 41993404833,
+            "name": "Canonical 0035 pre-merge smoke",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 85,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404833/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404833/logs",
+            "workflow_id": 404196590
+          },
+          {
+            "id": 41993404878,
+            "name": "Canonical 0037 public ID and read audit",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 7,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404878/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993404878/logs",
+            "workflow_id": 406725722
+          },
+          {
+            "id": 41993405119,
+            "name": "Education V3 landing validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 70,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993405119/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/41993405119/logs",
+            "workflow_id": 402996511
+          }
+        ]
+      },
+      "reviews": {
+        "reviews": []
+      }
+    },
+    {
+      "pr": {
+        "url": "https://github.com/yvettfang-netizen/phoenix/pull/57",
+        "number": 57,
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "draft": true,
+        "body": "The Family Center gains a default-off, bilingual V2 dashboard with the approved official logo, existing landscape/Qilin artwork, five navigation items, four service cards and six explicitly synthetic customer scenarios. Authenticated customer accounts retain their current server session guard and never receive a fictional family. The development Canonical mode reuses the existing session BFF and audited family/student DTOs; service/report/date APIs, persistent preferences, live identity and HARMONY remain closed pending their contracts.\n\nStacked on the existing Draft PR #55; no changes to that branch or to Migration0001–0037. No merge or deployment is requested by this PR. The main authority remains database/canonical/.\n\nValidation: new/related contracts8/8, typecheck and targeted lint pass; existing build script passes via Git Bash. Actual browser checks cover zh/en at1440/1024/768/390, A–F scenarios, selection/pin reset and dialog keyboard behavior. Full PG16/17 fresh/upgrade/drift/atomicity/ACL/ticket/audit/backup/fresh-restore suites pass, with the new /en/family-center page using the real synthetic DB chain on fresh and restored clusters.\n\nLocal full-site tests remain FAIL:95 pass,8 fail,4 skip (107 total). Seven Worker test modules cannot load the installed Miniflare export; one Satori test lacks harfbuzzjs/hb.wasm. The local installed graph differs from the lockfile. Preserve those failures and require clean npm-ci CI; do not inherit PR55's earlier green checks. No real identity, patient data, production keys or Tencent connection was used.\n\nSee docs/database/family-center-v2-20261105/EXECUTION_REPORT.md, SCHEMA_API_GAP_AUDIT.md, PROJECTED_API_CONTRACT.md and ACCEPTANCE_AND_ROLLBACK.md. Founder visual sign-off and independent review remain pending.\n",
+        "title": "Family Center V2: default-off bilingual dashboard and Canonical summary candidate",
+        "base": "codex/canonical-combined-bff-20261105",
+        "base_sha": "5414c18ca521d8b8eae1f650102485749e6ebd3a",
+        "head": "codex/family-center-v2-20261105",
+        "head_sha": "fb2f49cdc55ba57ec43e5c08ab561ee7bbe0f683",
+        "head_repo_id": 1346413559,
+        "head_repo_full_name": "yvettfang-netizen/phoenix",
+        "merge_commit_sha": "0cbb64d663a10a11d04faee6a72698b2ee5b2516",
+        "user": {
+          "login": "yvettfang-netizen",
+          "name": "yvettfang-netizen",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/316766453?v=4",
+          "id": 316766453
+        },
+        "requested_reviewers": null,
+        "requested_team_reviewers": null,
+        "diff": null,
+        "comments": null,
+        "created_at": "2026-11-05T10:55:35Z",
+        "updated_at": "2026-11-05T10:55:35Z",
+        "closed_at": null,
+        "merged_at": null,
+        "commits": 1,
+        "changed_files": 14,
+        "additions": 433,
+        "deletions": 5,
+        "display_url": "https://github.com/yvettfang-netizen/phoenix/pull/57",
+        "display_title": "Family Center V2: default-off bilingual dashboard and Canonical summary candidate"
+      },
+      "ci": {
+        "workflow_runs": [
+          {
+            "id": 42014725855,
+            "name": "Canonical 0037 public ID and read audit",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 8,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725855/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725855/logs",
+            "workflow_id": 406725722
+          },
+          {
+            "id": 42014725649,
+            "name": "Education V3 landing validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 73,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725649/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725649/logs",
+            "workflow_id": 402996511
+          },
+          {
+            "id": 42014725621,
+            "name": "Website PR checks",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 96,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725621/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725621/logs",
+            "workflow_id": 349995668
+          },
+          {
+            "id": 42014725679,
+            "name": "Canonical 0035 pre-merge smoke",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 88,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725679/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725679/logs",
+            "workflow_id": 404196590
+          },
+          {
+            "id": 42014725849,
+            "name": "P0 learning catalog synthetic E2E",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 10,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725849/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725849/logs",
+            "workflow_id": 406607317
+          },
+          {
+            "id": 42014725754,
+            "name": "Family Student synthetic projection E2E",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 9,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725754/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725754/logs",
+            "workflow_id": 406666206
+          },
+          {
+            "id": 42014725897,
+            "name": "Identity V3 landing validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 75,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725897/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725897/logs",
+            "workflow_id": 402782791
+          },
+          {
+            "id": 42014725709,
+            "name": "Health Compass V5 validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 90,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725709/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42014725709/logs",
+            "workflow_id": 351627919
+          }
+        ]
+      },
+      "reviews": {
+        "reviews": []
+      }
+    },
+    {
+      "pr": {
+        "url": "https://github.com/yvettfang-netizen/phoenix/pull/58",
+        "number": 58,
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "draft": true,
+        "body": "Adds fail-closed maintenance recovery and isolated synthetic failure drills to the existing Family Center V2 candidate (stacked on Draft PR #57). Migrations0001–0037 are byte-exact; this PR does not create or deploy a new Canonical authority.\n\nFinal head: `a0123c7f39292274962b72b73c06828b85770599`. **20/20 checks SUCCESS**, including exact-head PG16/PG17 fault drills, fresh-cluster logical restore, separate LOGIN/tickets/RLS, audit failure refusal, business/ledger fingerprints and actual browser/BFF tests. [Exact-head drill CI](https://github.com/yvettfang-netizen/phoenix/actions/runs/42045813241). [All current checks](https://github.com/yvettfang-netizen/phoenix/pull/58/checks).\n\n**R01/R03/R07/R12 PASS only within the documented local synthetic scope; ten scenarios remain HOLD.** Every R01–R14 has an independent record. Partial service/context/contract/Consent/flags/freshness checks do not satisfy unimplemented Agent/patient/file-link coverage. Logical restore preserves37 ledger entries,93 tables and83 policies; observed restore intervals4.975s/3.359s are measurements, not approved RTO. WAL/PITR, approved RPO/RTO, nonempty CRM/Service restoration, Staging and independent signatures remain HOLD.\n\nThe stricter navigation check found a maintenance contact404; fixed to the existing consultation route. Initial harness failures and locale/hot-reload corrections are retained. A legacy Family/Student PG16 CI attempt stalled installing the browser; cancellation is preserved and its single-job rerun passed at the same head. No check was bypassed or marked PASS while cancelled.\n\n[Seven reports](https://github.com/yvettfang-netizen/phoenix/blob/a0123c7f39292274962b72b73c06828b85770599/docs/database/family-center-v2-20261105/drills/FAMILY_CENTER_FAILURE_DRILL_MATRIX.md), [final release gate](https://github.com/yvettfang-netizen/phoenix/blob/a0123c7f39292274962b72b73c06828b85770599/docs/database/family-center-v2-20261105/drills/FAMILY_CENTER_FINAL_RELEASE_GATE.md), [private raw evidence and exact-SHA receipt](https://github.com/yvettfang-netizen/phoenix-canonical-db/blob/a29e547e34baa12e20b0ff8d1e7b4e01e0afa524/canonical-db/evidence/family-center-drills-20261105/FINAL_VERIFICATION.json), [unsigned integrity manifest](https://github.com/yvettfang-netizen/phoenix-canonical-db/blob/a29e547e34baa12e20b0ff8d1e7b4e01e0afa524/canonical-db/evidence/family-center-drills-20261105/MANIFEST.json). Private evidence commit `a29e547e34baa12e20b0ff8d1e7b4e01e0afa524`; both changed source and private evidence passed pinned Gitleaks scans. An unsigned manifest is not an independent signature.\n\n**FULL ROLLBACK READY = HOLD / MERGE HOLD / PRODUCTION HOLD.** No merge, deployment, Tencent connection, production migration, real data, patient API or Agent capability activation.",
+        "title": "Family Center V2 controlled failure drills and recovery evidence",
+        "base": "codex/family-center-v2-20261105",
+        "base_sha": "fb2f49cdc55ba57ec43e5c08ab561ee7bbe0f683",
+        "head": "codex/family-center-drills-20261105",
+        "head_sha": "a0123c7f39292274962b72b73c06828b85770599",
+        "head_repo_id": 1346413559,
+        "head_repo_full_name": "yvettfang-netizen/phoenix",
+        "merge_commit_sha": "59cd3740a1dcb5cbaaba41270f585ca862413ce9",
+        "user": {
+          "login": "yvettfang-netizen",
+          "name": "yvettfang-netizen",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/316766453?v=4",
+          "id": 316766453
+        },
+        "requested_reviewers": null,
+        "requested_team_reviewers": null,
+        "diff": null,
+        "comments": null,
+        "created_at": "2026-11-05T14:24:30Z",
+        "updated_at": "2026-11-05T14:49:45Z",
+        "closed_at": null,
+        "merged_at": null,
+        "commits": 10,
+        "changed_files": 14,
+        "additions": 300,
+        "deletions": 2,
+        "display_url": "https://github.com/yvettfang-netizen/phoenix/pull/58",
+        "display_title": "Family Center V2 controlled failure drills and recovery evidence"
+      },
+      "ci": {
+        "workflow_runs": [
+          {
+            "id": 42045813012,
+            "name": "Website PR checks",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 100,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813012/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813012/logs",
+            "workflow_id": 349995668
+          },
+          {
+            "id": 42045813146,
+            "name": "Identity V3 landing validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 79,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813146/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813146/logs",
+            "workflow_id": 402782791
+          },
+          {
+            "id": 42045813000,
+            "name": "Education V3 landing validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 77,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813000/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813000/logs",
+            "workflow_id": 402996511
+          },
+          {
+            "id": 42045813241,
+            "name": "Canonical 0037 public ID and read audit",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 11,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813241/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813241/logs",
+            "workflow_id": 406725722
+          },
+          {
+            "id": 42045813145,
+            "name": "Health Compass V5 validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 94,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813145/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813145/logs",
+            "workflow_id": 351627919
+          },
+          {
+            "id": 42045813032,
+            "name": "Canonical 0035 pre-merge smoke",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 92,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813032/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813032/logs",
+            "workflow_id": 404196590
+          },
+          {
+            "id": 42045813039,
+            "name": "P0 learning catalog synthetic E2E",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 13,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813039/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813039/logs",
+            "workflow_id": 406607317
+          },
+          {
+            "id": 42045813187,
+            "name": "Family Student synthetic projection E2E",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 12,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813187/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42045813187/logs",
+            "workflow_id": 406666206
+          }
+        ]
+      },
+      "reviews": {
+        "reviews": []
+      }
+    },
+    {
+      "pr": {
+        "url": "https://github.com/yvettfang-netizen/phoenix/pull/59",
+        "number": 59,
+        "state": "open",
+        "merged": false,
+        "mergeable": true,
+        "draft": true,
+        "body": "## Result\nThe existing V5 Family Center now has a default-off, PostgreSQL-backed Service Project Workbench development candidate. HK master's projects support authorized client/adviser/manager views, tasks, stages/milestones, private immutable upload/review/download, multiple canonical school/programme applications, distinct official outcomes, messages, deliverables and lifecycle/linked compensation. Contract signing, payment and opening are separate source-reference events; the web UI cannot modify finances.\n\n## Fixed source and boundaries\n- HEAD: `3ceac97abe5503583e5cc179b98293814d1e1b4d`.\n- Candidate0038 SHA-256: `4b82dc15b86b5936258a3d32a1b91ccbaf756e8ca76cd11a609bb6373c934ecf`.\n- Draft stack on PR #58; not main. Inspected main remains0001–0035. Inherited0036/0037 and new0038 are unmerged candidates.\n- Existing0001–0037 bytes unchanged.0038 stays outside active migrations. Reuses existing people/family/student/client/project/docs/application/task masters; no contract/payment master copy.\n- No merge, deployment, Tencent, production migration, real data or provider activation.\n\n## Actual final verification\n[All22 checks](https://github.com/yvettfang-netizen/phoenix/pull/59/checks): **22/22 SUCCESS** at the exact HEAD.\n[New PG16/17 workbench CI](https://github.com/yvettfang-netizen/phoenix/actions/runs/42067680966): fresh/repeat, exact drift/atomic-failure diagnostics, separated LOGIN/RLS/API, nonempty fresh-cluster restore and full replay, then actual browser→BFF→API→PostgreSQL workflow PASS. Isolated inventory38 ledger/100 tables/90 policies. The observer principal, using the real separated app/binder LOGINs, can read but cannot borrow client upload/message paths.\nBackend146 tests PASS; targeted website14 PASS; clean V5 full suite129 PASS/0 FAIL/4 SKIP. Existing page/Canonical checks also pass.\nLocal full-suite dependency failures, earlier browser selector failures, earlier unrelated Identity prefetch failure/retest and superseded-SHA cancellations are preserved, not counted as final PASS. No unrelated product code or existing test assertion was weakened.\nScoped pinned Gitleaks scans: zero findings.\n\n## Deliveries and review\n[Source audit/contracts/permissions/rollback/Founder gate](https://github.com/yvettfang-netizen/phoenix/tree/3ceac97abe5503583e5cc179b98293814d1e1b4d/docs/database/service-project-workbench-v1)\n[Final execution report](https://github.com/yvettfang-netizen/phoenix-canonical-db/blob/2ab84cbaaffbf5bb661059d22d0c68283fa6e45e/canonical-db/evidence/service-project-workbench-v1-20261106/FINAL_EXECUTION_REPORT.md)\n[Raw commands, CI logs, screenshots, restore fingerprints and checksums](https://github.com/yvettfang-netizen/phoenix-canonical-db/blob/2ab84cbaaffbf5bb661059d22d0c68283fa6e45e/canonical-db/evidence/service-project-workbench-v1-20261106/FINAL_VERIFICATION.json)\nPrivate evidence commit: `2ab84cbaaffbf5bb661059d22d0c68283fa6e45e` (99 files with unsigned integrity manifest; no dumps or credentials).\nLocal synthetic preview retained: `http://127.0.0.1:4688/zh/my-services`; see Founder gate for test accounts and shutdown instructions. This is a local review environment, not a hosted deployment.\n\n## HOLD\nReal provider/staff/subject mapping; actual commercial source verification; real catalogue/document classification/Consent/retention/private storage/malware controls; Identity/Wealth complete templates; Health clinical APIs; WAL/PITR and approved RPO/RTO; independent signatures and Founder acceptance. Synthetic identities and seven-day fixture retention are not real policy decisions. Production/default application bootstrap remain closed. Do not merge or deploy.",
+        "title": "Service Project Workbench V1: Canonical-backed HK masters development candidate",
+        "base": "codex/family-center-drills-20261105",
+        "base_sha": "a0123c7f39292274962b72b73c06828b85770599",
+        "head": "codex/service-project-workbench-20261105",
+        "head_sha": "3ceac97abe5503583e5cc179b98293814d1e1b4d",
+        "head_repo_id": 1346413559,
+        "head_repo_full_name": "yvettfang-netizen/phoenix",
+        "merge_commit_sha": "eb59332645015c7ad0f7d0f2892dd1c9a5efc63e",
+        "user": {
+          "login": "yvettfang-netizen",
+          "name": "yvettfang-netizen",
+          "email": null,
+          "avatar_url": "https://avatars.githubusercontent.com/u/316766453?v=4",
+          "id": 316766453
+        },
+        "requested_reviewers": null,
+        "requested_team_reviewers": null,
+        "diff": null,
+        "comments": null,
+        "created_at": "2026-11-05T16:27:13Z",
+        "updated_at": "2026-11-05T16:58:34Z",
+        "closed_at": null,
+        "merged_at": null,
+        "commits": 4,
+        "changed_files": 35,
+        "additions": 1889,
+        "deletions": 5,
+        "display_url": "https://github.com/yvettfang-netizen/phoenix/pull/59",
+        "display_title": "Service Project Workbench V1: Canonical-backed HK masters development candidate"
+      },
+      "ci": {
+        "workflow_runs": [
+          {
+            "id": 42067689264,
+            "name": "Health Compass V5 validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 99,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067689264/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067689264/logs",
+            "workflow_id": 351627919
+          },
+          {
+            "id": 42067688852,
+            "name": "P0 learning catalog synthetic E2E",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 18,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067688852/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067688852/logs",
+            "workflow_id": 406607317
+          },
+          {
+            "id": 42067681454,
+            "name": "Identity V3 landing validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 83,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067681454/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067681454/logs",
+            "workflow_id": 402782791
+          },
+          {
+            "id": 42067680781,
+            "name": "Canonical 0037 public ID and read audit",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 15,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680781/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680781/logs",
+            "workflow_id": 406725722
+          },
+          {
+            "id": 42067680635,
+            "name": "Education V3 landing validation",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 81,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680635/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680635/logs",
+            "workflow_id": 402996511
+          },
+          {
+            "id": 42067680966,
+            "name": "Service Project Workbench candidate",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 4,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680966/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680966/logs",
+            "workflow_id": 408377588
+          },
+          {
+            "id": 42067680605,
+            "name": "Family Student synthetic projection E2E",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 16,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680605/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680605/logs",
+            "workflow_id": 406666206
+          },
+          {
+            "id": 42067680854,
+            "name": "Canonical 0035 pre-merge smoke",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 96,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680854/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680854/logs",
+            "workflow_id": 404196590
+          },
+          {
+            "id": 42067680437,
+            "name": "Website PR checks",
+            "status": "completed",
+            "conclusion": "success",
+            "run_number": 104,
+            "jobs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680437/jobs",
+            "logs_url": "https://api.github.com/repos/yvettfang-netizen/phoenix/actions/runs/42067680437/logs",
+            "workflow_id": 349995668
+          }
+        ]
+      },
+      "reviews": {
+        "reviews": []
+      }
+    }
+  ]
+}

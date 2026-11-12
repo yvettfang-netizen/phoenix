@@ -1,0 +1,16 @@
+{
+  "state": "ISOLATED_COMPATIBILITY_CANDIDATE_NOT_MERGE_OR_RUNTIME_APPROVAL",
+  "main_base": "9de1e8ddeecbd338d53230ef0ff3b3a82ac3e2fc",
+  "source_0036": "3de5c99fcc1974ca542db587fcb01494ffe3dc58",
+  "source_0037_and_bridge": "c1b2f30ea8d85aa402c9c3b0c2ac23421b55b44e",
+  "approval_source_sha256": "f100e6156eb24912b0cb6cbca102ecdfb2a3d3537f06bb8ef4e1a6e8860f9b6c",
+  "historical_files": 35,
+  "candidate_files": 37,
+  "expected_tables": 93,
+  "expected_policies": 83,
+  "forwards": [
+    { "file": "0036_crm_acquisition_provenance_and_need_facts.sql", "sha256": "2c977cb44e3ec01f7ad00d4c0d8f32c5e2cd8e8fd2fed796340a919dfd0b7719" },
+    { "file": "0037_scoped_public_id_projection_read_audit.sql", "sha256": "29c153177b4177cc279fe2494e2be563bd6250f6564c57fc62e381df1c7decb2" }
+  ],
+  "note": "Independent0036/0037 manifests remain historical source snapshots. This manifest scopes only the combined candidate; actual fresh/restored counts are measured by its acceptance."
+}
