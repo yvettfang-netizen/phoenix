@@ -185,7 +185,7 @@ async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
   const hrefs = await links.evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute("href")));
   assert.deepEqual(hrefs.slice(0, expected.length), expected, `${locale}: primary navigation hrefs changed`);
   if (mobile) {
-    assert.equal(hrefs[7], `/${locale}/account`, `${locale}: mobile Family Center must use the controlled account entry`);
+    assert.equal(hrefs[7], `/${locale}/family-center`, `${locale}: mobile Family Center must use its localized route`);
     assert.equal(hrefs[8], '#partners');
     assert.equal(hrefs[9], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
     await page.locator(".mobile-menu summary").click();

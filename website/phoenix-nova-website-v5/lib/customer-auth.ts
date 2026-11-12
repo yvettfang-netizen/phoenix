@@ -129,12 +129,12 @@ async function body(request: Request): Promise<Record<string, unknown>> {
   } catch { throw new AuthError("INVALID_REQUEST"); }
 }
 
-export async function handleCustomerAuth(request: Request, config: AuthConfig): Promise<Response> {
+export async function handleCustomerAuth(request: Request, config: AuthConfig, { touchSession = true } = {}): Promise<Response> {
   try {
     if (!validAuthOrigin(config.origin)) return authUnavailable();
     const action = new URL(request.url).pathname.split("/").at(-1);
     if (request.method === "GET" && action === "session") {
-      const user = await readCustomerSession(request, config);
+      const user = await readCustomerSession(request, config, { touch: touchSession });
       return json({ user: user ? publicUser(user) : null, registration: config.registration });
     }
     if (request.method !== "POST") return json({error: "METHOD_NOT_ALLOWED"}, 405);

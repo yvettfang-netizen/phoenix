@@ -21,6 +21,7 @@ const record={
  harness:'isolated esbuild React component harness; not the built Worker/Sites runtime',
  syntheticOnly:true,
  routeMocking:false,
+ delayedResponse:'Cross-tab tests hold and release an actual authorized HTTP response without changing its content.',
  transport:'browser -> isolated UI proxy -> server-owned customer bridge -> P0 BFF -> real PostgreSQL; D1 cookie is a real Miniflare D1 session',
  checks:[],
  screenshots:[],
@@ -36,18 +37,22 @@ export async function bundleComponents(){
  const esbuild=require('esbuild')
  const familyPath=path.resolve(website,'components/family-service-overview.tsx').replaceAll('\\','/')
  const centerPath=path.resolve(website,'components/family-center-v2.tsx').replaceAll('\\','/')
+ const accountPath=path.resolve(website,'components/customer-account.tsx').replaceAll('\\','/')
  const workbenchPath=path.resolve(website,'components/service-workbench.tsx').replaceAll('\\','/')
  const entry=[
   'import React from "react";',
   'import {createRoot} from "react-dom/client";',
   'import {FamilyCenterV2} from "'+centerPath+'";',
+  'import {CustomerAccount} from "'+accountPath+'";',
   'import {ServiceWorkbench} from "'+workbenchPath+'";',
   'const root=document.getElementById("root");',
   'const match=location.pathname.match(new RegExp("^/(en|zh)/my-services(?:/([0-9a-f-]{36}))?$"));',
   'const locale=location.pathname.startsWith("/zh")?"zh":"en";',
   'document.documentElement.lang=locale;',
   'root.replaceChildren();',
-  'createRoot(root).render(match?React.createElement(ServiceWorkbench,{locale,projectId:match[2]}):React.createElement(FamilyCenterV2,{locale,account:true,workbench:true}));'
+  'const readOnly=new URLSearchParams(location.search).get("readOnly")==="1";',
+  'const page=match?React.createElement(ServiceWorkbench,{locale,projectId:match[2],readOnly}):location.pathname.endsWith("/account")?React.createElement(CustomerAccount,{locale}):React.createElement(FamilyCenterV2,{locale,account:true,workbench:true});',
+  'createRoot(root).render(page);'
  ].join('\n')
  const stubPlugin={
   name:'p1-browser-stubs',
@@ -83,7 +88,7 @@ async function startUiServer(bundle){
     const type=asset.endsWith('.png')?'image/png':asset.endsWith('.jpg')||asset.endsWith('.jpeg')?'image/jpeg':asset.endsWith('.svg')?'image/svg+xml':'application/octet-stream'
     res.writeHead(200,{'content-type':type,'cache-control':'no-store'});res.end(bytes);return
    }
-   if(url.pathname.startsWith('/api/family-services/')||url.pathname.startsWith('/api/service-workbench/')){
+   if(url.pathname.startsWith('/api/customer-auth/')||url.pathname.startsWith('/api/family-services/')||url.pathname.startsWith('/api/service-workbench/')){
     const chunks=[]
     for await(const chunk of req)chunks.push(Buffer.from(chunk))
     const headers={}
@@ -150,6 +155,69 @@ async function main(){
   record.screenshots.push(file)
  }
 
+ const assertCrossTabSignOut=async({alias,number,title,action,label})=>{
+  const context=await contextFor(alias)
+  // Keep the other document's visibility path open to test the logout signal
+  // separately from the guard which already clears a hidden document.
+  await context.addInitScript(()=>Object.defineProperty(document,'visibilityState',{get:()=> 'visible'}))
+  const account=await context.newPage()
+  const workbench=await context.newPage()
+  lastPage=workbench
+  const projectUrl=uiOrigin+'/api/service-workbench/projects/'+fixture.project(number)
+  const ready=Promise.withResolvers()
+  const release=Promise.withResolvers()
+  const finished=Promise.withResolvers()
+  const network=Promise.withResolvers()
+  let heldRequest
+  try{
+   await Promise.all([account.goto(uiOrigin+'/en/account'),workbench.goto(uiOrigin+'/en/my-services/'+fixture.project(number)+'?readOnly=1')])
+   const projectTitle=workbench.getByRole('heading',{name:title,exact:true})
+   await projectTitle.waitFor()
+   const logout=account.getByRole('button',{name:label,exact:true})
+   await logout.waitFor()
+   const timeOrigin=await workbench.evaluate(()=>performance.timeOrigin)
+   workbench.on('requestfailed',request=>{if(request===heldRequest)network.resolve('aborted')})
+   workbench.on('response',response=>{
+    if(response.request()===heldRequest)void response.finished().then(()=>network.resolve('delivered'))
+   })
+   await workbench.route(projectUrl,async route=>{
+    try{
+     heldRequest=route.request()
+     const response=await route.fetch({maxRedirects:0,timeout:10000})
+     const body=await response.body()
+     ready.resolve(response.status())
+     await release.promise
+     // Cancellation is a valid outcome for the already authorized response.
+     await route.fulfill({response,body}).catch(()=>{})
+    }catch(error){ready.reject(error)}
+    finally{finished.resolve()}
+   },{times:1})
+   await workbench.getByRole('button',{name:'Refresh',exact:true}).click()
+   const status=await Promise.race([ready.promise,new Promise(resolve=>setTimeout(()=>resolve(0),11000).unref())])
+   assert.equal(status,200,'The held response must have been authorized before logout')
+   assert.equal(await projectTitle.count(),1,'Workbench still shows the loaded project before logout')
+   const [response]=await Promise.all([
+    account.waitForResponse(response=>response.url()===uiOrigin+'/api/customer-auth/'+action),
+    logout.click(),
+   ])
+   assert.equal(response.status(),200)
+   await projectTitle.waitFor({state:'detached',timeout:1500})
+   assert.equal(await workbench.evaluate(()=>performance.timeOrigin),timeOrigin,'Workbench must clear without document navigation')
+   release.resolve()
+   await finished.promise
+   const delivery=await Promise.race([network.promise,new Promise(resolve=>setTimeout(()=>resolve('timeout'),3000).unref())])
+   assert.notEqual(delivery,'timeout','Expected a delivered response or browser cancellation')
+   await workbench.evaluate(()=>new Promise(resolve=>setTimeout(resolve,0)))
+   assert.equal(await projectTitle.count(),0,'A late response must not repopulate the workbench')
+   const oldCookie=fixture.accounts[alias].cookie.split(';')[0]
+   assert.equal((await context.request.get(projectUrl,{headers:{cookie:oldCookie}})).status(),401)
+   check(action+' clears a second workbench tab and suppresses a late authorized response',{delivery})
+  }finally{
+   release.resolve()
+   await context.close()
+  }
+ }
+
  let view=await pageFor('client-a','en',1440)
  await view.page.locator('[data-family-service-overview]').waitFor()
  await view.page.getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).waitFor()
@@ -176,6 +244,11 @@ async function main(){
  await view.page.locator('.fso-next-list a[href$="/'+fixture.project(310)+'#tasks"]').click()
  await view.page.getByRole('heading',{name:'Project tasks',exact:true}).waitFor()
  const taskRow=view.page.locator('article').filter({hasText:'Synthetic client: upload transcript'})
+ await view.page.goto(uiOrigin+'/en/my-services/'+fixture.project(310)+'?readOnly=1#tasks',{waitUntil:'networkidle'})
+ await taskRow.getByText('Synthetic client: upload transcript',{exact:true}).waitFor()
+ assert.equal(await taskRow.getByRole('button').count(),0)
+ check('read-only workbench displays a customer task without mutation controls')
+ await view.page.goto(uiOrigin+'/en/my-services/'+fixture.project(310)+'#tasks',{waitUntil:'networkidle'})
  await taskRow.getByText('Synthetic client: upload transcript',{exact:true}).waitFor()
  await taskRow.getByRole('button',{name:'In progress',exact:true}).click()
  await view.page.getByText('Saved. Showing the latest database records.',{exact:true}).waitFor()
@@ -257,6 +330,9 @@ async function main(){
  await noOverflow(view.page,'revoked-en-1440')
  check('revoked project disappears and the UI does not retain stale progress')
  await view.context.close()
+
+ await assertCrossTabSignOut({alias:'client-identity',number:319,title:'Synthetic Identity Hong Kong 319',action:'logout',label:'Sign out'})
+ await assertCrossTabSignOut({alias:'client-c',number:318,title:'Synthetic Identity Planning 318',action:'logout-all',label:'Sign out all devices'})
 
  record.status='PASS_SYNTHETIC_ISOLATED_BROWSER_COMPONENT'
  record.finished=new Date().toISOString()

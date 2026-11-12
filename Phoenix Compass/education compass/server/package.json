@@ -15,6 +15,7 @@
     "test:education-integrations": "node ../scripts/run-server-tests.js --test=education-integrations.test.js",
     "db:migrate": "node scripts/migrate.js",
     "start": "node dist/index.js",
+    "start:private-workbench": "node dist/private-family-workbench-main.js",
     "start:agent-worker": "node dist/services/agent-worker-main.js",
     "agent:worker:once": "node dist/services/agent-worker-main.js --once"
   },

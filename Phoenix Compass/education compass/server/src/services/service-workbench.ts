@@ -67,7 +67,7 @@ export interface WorkbenchDependencies {
  syntheticLogin?:(alias:string)=>Promise<string>
  /** The private staging composition installs the 0040 staff safety gate. */
  projectSafetyGuard?:(client:PoolClient,identity:WorkbenchIdentity,project?:string)=>Promise<void>
- mode:'test'|'development'|'private-staging'
+ mode:'test'|'development'|'private-staging'|'private-family'
 }
 const workbenchRole='phoenix_canonical_service_workbench'
 const roleFunctions={
@@ -130,9 +130,12 @@ async function guard(client:PoolClient,role:keyof typeof roleFunctions):Promise<
  if(result.rows[0]?.ok!==true)throw failure()
 }
 export function createServiceWorkbench(deps:WorkbenchDependencies){
- if(!['test','development','private-staging'].includes(deps.mode))throw failure()
+ if(!['test','development','private-staging','private-family'].includes(deps.mode))throw failure()
  const privateStaging=deps.mode==='private-staging'
+ const privateFamily=deps.mode==='private-family'
+ const privateIdentity=privateStaging||privateFamily
  if(privateStaging&&(!deps.projectSafetyGuard||deps.syntheticLogin))throw failure()
+ if(privateFamily&&(deps.syntheticLogin||deps.projectSafetyGuard))throw failure()
  for(const pool of [deps.app,deps.binder]){pool.on('error',()=>{});pool.on('connect',client=>client.on('error',()=>{}))}
  async function run(authorization:string|undefined,customerRoute:boolean,
   operation:(client:PoolClient,identity:WorkbenchIdentity)=>Promise<Record<string,unknown>>,guardProject?:string){
@@ -140,9 +143,9 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
   const customer=identity.profile==='CUSTOMER'
   const allowedProfile=customer?identity.channel==='FAMILY':
    identity.profile==='STAFF'?privateStaging&&identity.channel==='ADVISOR':
-   identity.profile==='SYNTHETIC'&&!privateStaging&&!!deps.syntheticLogin&&['FAMILY','ADVISOR'].includes(identity.channel)
+   identity.profile==='SYNTHETIC'&&!privateIdentity&&!!deps.syntheticLogin&&['FAMILY','ADVISOR'].includes(identity.channel)
   if(![identity.principalId,identity.actorPersonId,identity.familyId].every(v=>uuid.test(v))||
-   !allowedProfile||customerRoute!==(customer&&!privateStaging))throw failure(403,'ACCESS_DENIED')
+   !allowedProfile||customerRoute!==(customer&&!privateIdentity))throw failure(403,'ACCESS_DENIED')
   await identity.assertCurrent()
   let app:PoolClient|undefined,binder:PoolClient|undefined,transaction=false,result:Record<string,unknown>|undefined,error:unknown,appClean=false,binderClean=false
   try{
@@ -171,22 +174,32 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
   await identity.assertCurrent()
   return result!
  }
- const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize,customerRoute=false)=>run(authorization,customerRoute,async(c,identity)=>{
-  const customer=identity.profile==='CUSTOMER'
-  if(resource==='summary'&&!customer)return {status:'DENY'}
-  if(customer&&resource==='download'){
-   const gate=(await c.query('SELECT service.workbench_customer_snapshot($1) AS result',[project])).rows[0].result
-   if(gate.status!=='ALLOW')return gate
-  }
-  const query=resource==='list'?(customer?'SELECT service.workbench_customer_list() AS result':'SELECT service.workbench_list() AS result'):resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
-   resource==='summary'?'SELECT service.workbench_summary($1,$2::timestamptz,$3::uuid) AS result':
-   resource==='download'?'SELECT service.workbench_download($1,$2) AS result':customer?'SELECT service.workbench_customer_snapshot($1) AS result':'SELECT service.workbench_snapshot($1) AS result'
-  const params:(string|number|null)[]=resource==='list'||resource==='catalogue'?[]:
-   resource==='summary'?[limit,cursor?.at??null,cursor?.project??null]:
-   resource==='download'?[project??null,version??null]:[project??null]
-  return (await c.query(query,params)).rows[0].result
- },project)
+ const read=async(authorization:string|undefined,resource:string,project?:string,version?:string,cursor?:SummaryCursor|null,limit=summaryPageSize,customerRoute=false)=>{
+  if(privateFamily&&!['list','summary','project','catalogue'].includes(resource))throw failure(405,'METHOD_NOT_ALLOWED')
+  return run(authorization,customerRoute,async(c,identity)=>{
+   const customer=identity.profile==='CUSTOMER'
+   if(resource==='summary'&&!customer)return {status:'DENY'}
+   if(customer&&resource==='download'){
+    const gate=(await c.query('SELECT service.workbench_customer_snapshot($1) AS result',[project])).rows[0].result
+    if(gate.status!=='ALLOW')return gate
+   }
+   const query=resource==='list'?(customer?'SELECT service.workbench_customer_list() AS result':'SELECT service.workbench_list() AS result'):resource==='catalogue'?'SELECT service.workbench_catalogue() AS result':
+    resource==='summary'?'SELECT service.workbench_summary($1,$2::timestamptz,$3::uuid) AS result':
+    resource==='download'?'SELECT service.workbench_download($1,$2) AS result':customer?'SELECT service.workbench_customer_snapshot($1) AS result':'SELECT service.workbench_snapshot($1) AS result'
+   const params:(string|number|null)[]=resource==='list'||resource==='catalogue'?[]:
+    resource==='summary'?[limit,cursor?.at??null,cursor?.project??null]:
+    resource==='download'?[project??null,version??null]:[project??null]
+   const result=(await c.query(query,params)).rows[0].result
+   if(privateFamily&&resource==='project'&&result.status==='ALLOW'){
+    const snapshot=result.data
+    if(snapshot?.schemaVersion!=='service-workbench.v1'||!snapshot.project)throw failure()
+    return {...result,data:{...snapshot,project:{...snapshot.project,write:false,manage:false}}}
+   }
+   return result
+  },project)
+ }
  async function command(authorization:string|undefined,project:string,body:Record<string,unknown>,key:string,upload:boolean,customerRoute=false){
+  if(privateFamily)throw failure(405,'METHOD_NOT_ALLOWED')
   if(!/^[A-Za-z0-9_-]{16,100}$/.test(key))throw failure(400,'IDEMPOTENCY_KEY_REQUIRED')
   return run(authorization,customerRoute,async(c,identity)=>{
    if(identity.profile==='CUSTOMER'){
@@ -225,6 +238,12 @@ export function createServiceWorkbench(deps:WorkbenchDependencies){
     ['x-family-id','x-principal-id','x-role','x-channel','x-source-system'].some(h=>request.headers[h]))throw failure(403,'ACCESS_DENIED')
    const url=new URL(request.url??'','http://127.0.0.1')
    const route=url.pathname.slice('/v1/service-workbench/'.length),method=request.method??'GET'
+   if(privateFamily){
+    if(!url.pathname.startsWith('/v1/service-workbench/'))throw failure(404,'NOT_FOUND')
+    if(['origin','cookie','x-customer-id','x-actor-person-id','x-project-id','x-phoenix-customer-bridge']
+     .some(h=>request.headers[h]!==undefined))throw failure(403,'ACCESS_DENIED')
+    if(method!=='GET')throw failure(405,'METHOD_NOT_ALLOWED')
+   }
    const summaryQuery=route==='summary'&&method==='GET'
    if(url.search&&!summaryQuery)throw failure(400,'QUERY_NOT_ALLOWED')
    let summaryLimit=summaryPageSize,summaryCursor:SummaryCursor|null=null
