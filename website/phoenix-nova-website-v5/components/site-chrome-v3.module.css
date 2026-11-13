@@ -22,7 +22,7 @@
 .footer{padding:0;background:var(--surface-ivory);color:var(--brand-ink)}
 .compactFooter {
   --footer-inset: max(48px, calc((100% - 1280px) / 2));
-  background: #244e4a url("/images/homepage-optimized/v1/ink-landscape.svg") center bottom / max(100%, 960px) auto no-repeat;
+  background: var(--nova-home-ink-teal, var(--brand-deepsea)) url("/images/homepage-optimized/v1/ink-landscape.svg") center bottom / max(100%, 960px) auto no-repeat;
   color: var(--surface-ivory);
   font-size: 12px;
 }
