@@ -124,11 +124,12 @@ const academyTopics: readonly Bilingual[] = [
 function FamilyHouseArtwork() {
   return (
     <svg className={styles.houseArt} viewBox="0 0 140 130" fill="none" aria-hidden="true">
-      <path d="M15 57h110v59q0 5-5 5H20q-5 0-5-5Z" fill="var(--v6-moon)" stroke="var(--v6-gold)" />
-      <path d="M4 57c22-4 41-20 60-39q6-6 12 0c19 19 38 35 60 39l-8 5H12Z" fill="var(--v6-teal)" stroke="var(--v6-gold)" strokeLinejoin="round" />
-      <path d="M16 55c18-5 34-19 50-34m58 34c-18-5-34-19-50-34M20 114v-47m100 47v-47" stroke="var(--v6-gold)" opacity=".5" />
-      <path d="M61 48v-5a9 9 0 0 1 18 0v5ZM70 35v13M61 43h18" stroke="#dfc98e" strokeWidth="1" />
-      <path d="M20 121h100" stroke="var(--v6-gold)" strokeWidth="2" strokeLinecap="round" />
+      <ellipse cx="70" cy="115" rx="66" ry="12" fill="#d6b980" />
+      <ellipse cx="70" cy="111" rx="66" ry="11" fill="#fff3dc" />
+      <path d="M19 54 70 13l51 41v55H19Z" fill="#f8e7c8" stroke="var(--v6-gold)" />
+      <path d="M108 45l13 9v55h-13Z" fill="#e7cfa6" />
+      <path d="M12 58 70 12l58 46" stroke="var(--v6-teal)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M63 40h6v6h-6zm8 0h6v6h-6zm-8 8h6v6h-6zm8 0h6v6h-6z" fill="#a77837" />
     </svg>
   );
 }
@@ -158,7 +159,7 @@ function CompassHub({ locale }: { locale: Locale }) {
             <path
               className={styles.desktopArcs}
               vectorEffect="non-scaling-stroke"
-              d="M100 78 C187 78 204 150 300 156 M100 242 C187 242 204 170 300 164 M500 78 C413 78 396 150 300 156 M500 242 C413 242 396 170 300 164"
+              d="M100 78 C177 29 217 69 300 150 M100 242 C173 277 205 195 300 174 M500 78 C423 29 383 69 300 150 M500 242 C427 277 395 195 300 174"
             />
             <path
               className={styles.mobileArcs}

@@ -31,7 +31,7 @@ const hubSelector = 'main > section[aria-labelledby="compass-hub-heading"]';
 const desktopGeometry = {
   header: [56, 64],
   hero: [290, 405],
-  compass: [245, 465],
+  compass: [220, 465],
   journey: [110, 240],
   learning: [290, 450],
   insights: [330, 580],
@@ -170,7 +170,7 @@ async function assertCompassHub(page, locale, width) {
   const house = await family.boundingBox();
   assert.ok(house && house.width >= 44 && house.height >= 44, `${route}: house link is too small`);
   assert.ok(boxes.every(box => box.width >= 44 && Math.abs(box.width - box.height) <= 1 && box.radius === "50%"), `${route}: all four links must be circles`);
-  assert.ok(boxes.every(box => box.width > house.width && box.height > house.height), `${route}: the house must be smaller than the dials`);
+  assert.ok(boxes.every(box => house.width <= box.width * (width > 1000 ? 1.35 : 1)), `${route}: the house must remain in proportion to the dials`);
   assert.equal(new Set(boxes.map(box => box.color)).size, 4, `${route}: each dial needs its domain color`);
   const familyX = house.x + house.width / 2;
   const familyY = house.y + house.height / 2;
@@ -247,9 +247,9 @@ async function assertCompassTextFits(page, locale) {
     return { text: element.textContent?.trim() || "", lineCount, lineHeight, height: element.getBoundingClientRect().height };
   }));
   assert.equal(metrics.length, 4, `${locale} 1440px: Compass card description count changed`);
-  assert.ok(metrics.every(metric => metric.text && metric.lineCount <= 3 && Number.isFinite(metric.lineHeight) && metric.height <= metric.lineHeight * 3 + 1), `${locale} 1440px: Compass card description exceeds three lines: ${JSON.stringify(metrics)}`);
+  assert.ok(metrics.every(metric => metric.text && metric.lineCount <= 4 && Number.isFinite(metric.lineHeight) && metric.height <= metric.lineHeight * 4 + 1), `${locale} 1440px: Compass card description exceeds four lines: ${JSON.stringify(metrics)}`);
   geometryEvidence.push({ locale, width: 1440, compassText: metrics });
-  passed(`${locale} 1440px: Compass card descriptions remain within three computed lines`);
+  passed(`${locale} 1440px: Compass card descriptions remain within four computed lines`);
 }
 
 async function assertEnglishMainCopy(page) {

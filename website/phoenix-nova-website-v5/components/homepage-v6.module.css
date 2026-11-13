@@ -270,12 +270,27 @@
 }
 .compassCard, .learningCard, .insightCard a { box-shadow: 0 4px 12px rgb(75 61 36 / .06); }
 .compassVisual::after { content: ""; position: absolute; inset: 0; background: var(--domain-face); opacity: .18; pointer-events: none; }
+.compassCard { position: relative; isolation: isolate; min-height: 154px; background: var(--domain-face); }
+.compassCard .compassVisual { position: absolute; z-index: -1; inset: 0; aspect-ratio: auto; }
+.compassVisual img { opacity: .54; filter: saturate(.55); }
+.compassCard .compassVisual::after {
+  opacity: 1;
+  background: linear-gradient(90deg, var(--domain-face) 10%, color-mix(in srgb, var(--domain-face) 90%, transparent) 44%, transparent 100%);
+}
+.compassCard .compassBody { min-height: 154px; justify-content: center; padding: 15px; }
+.compassBody p { max-width: 19ch; color: var(--domain-ink); }
+.compassCardCta { margin-top: 0; }
 .compassDial { box-shadow: inset 0 0 0 3px rgb(255 253 243 / .6), 0 3px 8px rgb(75 61 36 / .07); }
 .compassDial::after { inset: 9px; border-style: double; border-width: 3px; }
 .familyHouse { width: min(100%, 105px); }
-.houseArt { filter: drop-shadow(0 4px 4px rgb(93 70 39 / .13)); }
+.houseArt { filter: drop-shadow(0 6px 5px rgb(93 70 39 / .24)); }
+.houseLabel { margin-top: 29%; }
 
 @media (min-width: 1001px) {
+  .compassMap { width: min(100%, 520px); height: 284px; }
+  .familyHouse { width: min(100%, 161px); }
+  .houseLabel strong { font-size: 19px; }
+  .houseLabel > span { font-size: 12px; }
   .compassSection > .container, .journeySection > .container {
     display: grid;
     grid-template-columns: minmax(145px, .18fr) minmax(0, 1fr);
