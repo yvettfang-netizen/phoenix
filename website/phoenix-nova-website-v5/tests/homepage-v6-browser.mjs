@@ -52,8 +52,8 @@ function normaliseAssetSrc(src) {
 
 function compassDestinations(locale) {
   return {
-    education: `/${locale}/education`,
-    identity: `/${locale}/identity`,
+    education: `https://edu.phoenixnova.com.cn/${locale}/education`,
+    identity: `https://identity.phoenixnova.com.cn/${locale}/identity`,
     wealth: `https://wealth.phoenixnova.com.cn/${locale}`,
     health: `/${locale}/health`,
   };
@@ -79,6 +79,7 @@ async function assertLogo(page, route, width) {
   await page.locator("footer").scrollIntoViewIfNeeded();
   const brands = await page.locator(".brand-asset").evaluateAll(images => images.map(image => ({
     src: image.getAttribute("src") || image.currentSrc || "",
+    currentSrc: new URL(image.currentSrc).pathname,
     naturalWidth: image.naturalWidth,
     naturalHeight: image.naturalHeight,
     width: image.getBoundingClientRect().width,
@@ -87,7 +88,15 @@ async function assertLogo(page, route, width) {
   })));
   assert.equal(brands.length, 2, `${route}: shared Header/Footer must render exactly two brand assets`);
   assert.ok(brands.every(brand => normaliseAssetSrc(brand.src) === BRAND_HEADER_URL), `${route}: every shared brand image must use the approved B logo`);
-  assert.ok(brands.every(brand => brand.naturalWidth === BRAND_HEADER_SIZE.width && brand.naturalHeight === BRAND_HEADER_SIZE.height), `${route}: B logo natural dimensions changed`);
+  for (const brand of brands) {
+    assert.ok(brand.naturalWidth > 0 && brand.naturalHeight > 0, `${route}: brand image must load`);
+    if (brand.currentSrc === BRAND_HEADER_URL) {
+      assert.equal(brand.naturalWidth, BRAND_HEADER_SIZE.width);
+      assert.equal(brand.naturalHeight, BRAND_HEADER_SIZE.height);
+    } else {
+      assert.match(brand.currentSrc, /^\/images\/homepage-optimized\/v1\/brand-bilingual-(222|444|666)\.webp$/);
+    }
+  }
   assert.ok(brands.every(brand => brand.width > 0 && brand.height > 0 && Math.abs((brand.width / brand.height) - 3) < 0.002), `${route}: B logo must retain its exact 3:1 rendered ratio`);
   assert.ok(brands.every(brand => brand.filter === "none"), `${route}: official B logo colours must not be filtered`);
   const headerWidth = await page.locator("header.site-header .brand-asset").evaluate(image => image.getBoundingClientRect().width);
@@ -311,8 +320,8 @@ async function assertHomepageClicks(page, locale, width) {
       ["header.site-header a.portal-link", account],
       ['section[aria-labelledby="homepage-v6-title"] a[href$="/compass"]', `/${locale}/compass`],
       ['section[aria-labelledby="homepage-v6-title"] a[href$="/about"]', `/${locale}/about`],
-      ['main a[href$="/education#academy"]', `/${locale}/education#academy`],
-      ['main a[href$="/education#askwise"]', `/${locale}/education#askwise`],
+      ['main a[href$="/education#academy"]', `${compassDestinations(locale).education}#academy`],
+      ['main a[href$="/education#askwise"]', `${compassDestinations(locale).education}#askwise`],
       ['main a[href$="/insights"]', `/${locale}/insights`],
     );
   }
@@ -325,13 +334,20 @@ async function assertHomepageClicks(page, locale, width) {
       page.waitForURL(target.href, { waitUntil: "domcontentloaded" }),
       link.click(),
     ]);
-    await page.locator(target.hash || "h1").first().waitFor({ state: target.hash ? "attached" : "visible" });
+    if (target.origin === new URL(origin).origin) {
+      await page.locator(target.hash || "h1").first().waitFor({ state: target.hash ? "attached" : "visible" });
+    }
     passed(`${locale} ${width}px: ${selector} opens ${href}`);
   }
 }
 
 const browser = await chromium.launch({ headless: true, ...(process.env.V6_BROWSER ? { executablePath: process.env.V6_BROWSER } : {}) });
 const context = await browser.newContext();
+// Verify navigation to the exact public product URL without making local QA depend on the public sites.
+const productPaths = new Set(locales.flatMap(locale => Object.values(compassDestinations(locale)).filter(href => href.startsWith("https://"))));
+await context.route(url => productPaths.has(url.href.split("#")[0]), route =>
+  route.fulfill({ status: 200, contentType: "text/html", body: "<title>Compass product navigation</title>" })
+);
 const page = await context.newPage();
 const pageErrors = [];
 const homepageConsoleErrors = [];

@@ -1,7 +1,7 @@
 import type { Locale } from "@/components/v5-site";
 
 type Label = readonly [string, string];
-export type DirectoryItem = { label: Label; path?: string; status?: Label };
+export type DirectoryItem = { label: Label; path?: string; status?: Label; familyCenterEntry?: true };
 export const directoryGroups: readonly { title: Label; items: readonly DirectoryItem[] }[] = [
   { title: ["规划与专业服务", "Planning & professional services"], items: [
     { label: ["凤启罗盘 Phoenix Compass", "Phoenix Compass"], path: "/compass" },
@@ -19,7 +19,7 @@ export const directoryGroups: readonly { title: Label; items: readonly Directory
   ] },
   { title: ["家庭与会员服务", "Family & membership"], items: [
     { label: ["凤启家序 Family OS", "Family OS"] },
-    { label: ["家庭中心", "Family Center"], path: "/account", status: ["受控账户入口", "Controlled account entry"] },
+    { label: ["家庭中心", "Family Center"], path: "/account", status: ["受控账户入口", "Controlled account entry"], familyCenterEntry: true },
     { label: ["家庭档案", "Family profile"] },
     { label: ["家庭成长与服务进度", "Growth & service progress"] },
   ] },

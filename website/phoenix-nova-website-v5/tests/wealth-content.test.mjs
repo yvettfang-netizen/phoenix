@@ -230,7 +230,7 @@ test("Shared navigation presents Wealth as 财富 and links to the real route", 
   );
   assert.match(
     directoryComponentSource,
-    /item\.path\s*===\s*"\/wealth"\s*\?\s*`\$\{mainOrigin\s*\?\s*""\s*:\s*WEALTH_ORIGIN\}\/\$\{locale\}`/,
+    /path\s*===\s*"\/wealth"\s*\?\s*`\$\{mainOrigin\s*\?\s*""\s*:\s*WEALTH_ORIGIN\}\/\$\{locale\}`/,
     "shared directory must resolve Wealth through the dedicated origin",
   );
   assert.match(

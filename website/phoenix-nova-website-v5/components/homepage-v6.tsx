@@ -13,12 +13,16 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { localeRouteMap, localizedHref } from "@/lib/locale-navigation";
+import { familyCenterEntryPath, localizedHref, publicProductHref } from "@/lib/locale-navigation";
+import { publicFamilyDemoEnabled } from "@/lib/public-family-demo";
 import { WEALTH_ORIGIN } from "@/lib/wealth-routing";
 import { SiteFooter, SiteHeader, type Locale } from "./v5-site";
 import styles from "./homepage-v6.module.css";
 
 type Bilingual = readonly [string, string];
+
+const heroAssets = "/images/homepage-optimized/v1";
+const heroSrcSet = [690, 960, 1440, 1920].map((width) => `${heroAssets}/hero-${width}.webp ${width}w`).join(", ");
 
 function copy(locale: Locale, value: Bilingual) {
   return value[locale === "zh" ? 0 : 1];
@@ -29,7 +33,7 @@ function Arrow() {
 }
 
 function homepageHref(locale: Locale, id: string, href: string) {
-  return id === "wealth" || id === "family-legacy" ? `${WEALTH_ORIGIN}/${locale}` : localizedHref(locale, href);
+  return id === "wealth" || id === "family-legacy" ? `${WEALTH_ORIGIN}/${locale}` : publicProductHref(locale, href);
 }
 
 const compassCards: readonly {
@@ -115,6 +119,8 @@ const insightTopics: readonly { id: string; title: Bilingual; href: string }[] =
 
 function CompassHub({ locale }: { locale: Locale }) {
   const zh = locale === "zh";
+  const familyDemo = publicFamilyDemoEnabled();
+  const FamilyCenterLink = familyDemo ? "a" : Link;
 
   return (
     <section className={styles.compassHub} aria-labelledby="compass-hub-heading">
@@ -161,10 +167,15 @@ function CompassHub({ locale }: { locale: Locale }) {
             );
           })}
 
-          <Link className={styles.familyHouse} href={localizedHref(locale, localeRouteMap.family)} data-v6-family-os>
+          <FamilyCenterLink
+            className={styles.familyHouse}
+            href={localizedHref(locale, familyCenterEntryPath(familyDemo))}
+            aria-label={copy(locale, familyDemo ? ["体验家庭中心 · Family OS", "Explore the Family Center Demo · Family OS"] : ["进入家庭中心 · Family OS", "Enter Family Center · Family OS"])}
+            data-v6-family-os
+          >
             <strong>{copy(locale, ["家庭中心", "Family Center"])}</strong>
             <span lang="en">Family OS <ArrowUpRight aria-hidden="true" size={12} /></span>
-          </Link>
+          </FamilyCenterLink>
         </div>
       </div>
     </section>
@@ -173,21 +184,24 @@ function CompassHub({ locale }: { locale: Locale }) {
 
 export function HomepageV6({ locale }: { locale: Locale }) {
   const zh = locale === "zh";
-
   return (
     <div className={styles.page} lang={zh ? "zh-CN" : "en"} data-homepage-v6>
-      <SiteHeader locale={locale} page="home" appearance="v3" />
+      <SiteHeader locale={locale} page="home" appearance="v3" optimizedBrand />
 
       <main>
         <section className={styles.hero} aria-labelledby="homepage-v6-title">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             className={styles.heroImage}
-            src="/images/homepage-v6-family.png"
+            src={`${heroAssets}/hero-960.webp`}
+            srcSet={heroSrcSet}
+            sizes="(max-width: 700px) 690px, (max-width: 1180px) 100vw, 64vw"
+            width={960}
+            height={320}
             alt={copy(locale, ["夕阳下的海湾城市与跨代家庭", "A multigenerational family beside a harbour city at sunset"])}
-            fill
-            priority
-            sizes="100vw"
-            unoptimized
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
           />
           <div className={styles.heroShade} />
           <div className={`${styles.container} ${styles.heroInner}`}>
@@ -273,11 +287,11 @@ export function HomepageV6({ locale }: { locale: Locale }) {
                 <div><h2 id="learning-heading">{copy(locale, ["教育与学习生态", "Education & Learning"])}</h2></div>
               </header>
               <div className={styles.learningGrid}>
-                <Link className={`${styles.learningCard} ${styles.learningCardAcademy}`} href={localizedHref(locale, "/education#academy")}>
+                <Link className={`${styles.learningCard} ${styles.learningCardAcademy}`} href={publicProductHref(locale, "/education#academy")}>
                   <BookOpen aria-hidden="true" size={30} strokeWidth={1.2} />
                   <div><span>{copy(locale, ["课程与导师", "PHOENIX ACADEMY™"])}</span><h3>{copy(locale, ["凤启学苑", "Phoenix Academy"])}</h3><p>{copy(locale, ["课程、导师与持续学习支持。预览／即将开放。", "Courses, mentors and continuous learning support. Preview / Coming Soon."])}</p></div><Arrow />
                 </Link>
-                <Link className={`${styles.learningCard} ${styles.learningCardAskwise}`} href={localizedHref(locale, "/education#askwise")}>
+                <Link className={`${styles.learningCard} ${styles.learningCardAskwise}`} href={publicProductHref(locale, "/education#askwise")}>
                   <Sparkles aria-hidden="true" size={30} strokeWidth={1.2} />
                   <div><span>ASKWISE™</span><h3>{copy(locale, ["智能学习支持", "ASKWISE™"])} </h3><p>{copy(locale, ["帮助学生理解、练习与复盘。预览／即将开放。", "AI-assisted structured learning, practice and reflection. Preview / Coming Soon."])}</p></div><Arrow />
                 </Link>
@@ -305,7 +319,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
         </section>
       </main>
 
-      <SiteFooter locale={locale} appearance="v3" compact consultationPath="/education#consultation" />
+      <SiteFooter locale={locale} appearance="v3" compact optimizedBrand consultationPath="/education#consultation" />
     </div>
   );
 }
