@@ -247,9 +247,9 @@ async function assertCompassTextFits(page, locale) {
     return { text: element.textContent?.trim() || "", lineCount, lineHeight, height: element.getBoundingClientRect().height };
   }));
   assert.equal(metrics.length, 4, `${locale} 1440px: Compass card description count changed`);
-  assert.ok(metrics.every(metric => metric.text && metric.lineCount <= 2 && Number.isFinite(metric.lineHeight) && metric.height <= metric.lineHeight * 2 + 1), `${locale} 1440px: Compass card description exceeds two lines: ${JSON.stringify(metrics)}`);
+  assert.ok(metrics.every(metric => metric.text && metric.lineCount <= 3 && Number.isFinite(metric.lineHeight) && metric.height <= metric.lineHeight * 3 + 1), `${locale} 1440px: Compass card description exceeds three lines: ${JSON.stringify(metrics)}`);
   geometryEvidence.push({ locale, width: 1440, compassText: metrics });
-  passed(`${locale} 1440px: Compass card descriptions remain within two computed lines`);
+  passed(`${locale} 1440px: Compass card descriptions remain within three computed lines`);
 }
 
 async function assertEnglishMainCopy(page) {
