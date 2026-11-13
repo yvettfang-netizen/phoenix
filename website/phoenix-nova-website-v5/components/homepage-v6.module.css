@@ -1,11 +1,11 @@
 .page {
-  --v6-ivory: var(--surface-ivory);
-  --v6-moon: #fcfbf7;
+  --v6-ivory: #f7f3eb;
+  --v6-moon: #faf6ee;
   --v6-navy: var(--navy);
-  --v6-teal: var(--brand-deepsea);
-  --v6-ink: var(--brand-ink);
-  --v6-muted: #526769;
-  --v6-gold: #c8a24a;
+  --v6-teal: #244e4a;
+  --v6-ink: #203d38;
+  --v6-muted: #4f625b;
+  --v6-gold: #c8a66a;
   --v6-gold-ink: #755b30;
   --v6-line: rgba(13, 27, 42, .14);
   background: var(--v6-ivory);
@@ -137,7 +137,7 @@
   text-underline-offset: 4px;
 }
 
-.journeySection { padding-block: 26px; background: var(--v6-moon); border-block: 1px solid var(--v6-line); }
+.journeySection { padding-block: 26px; border-block: 1px solid var(--v6-line); }
 .journeyGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .journeyItem {
   display: flex;
@@ -156,7 +156,7 @@
 
 .compassHub {
   padding-block: 20px;
-  background: color-mix(in srgb, var(--surface-moon) 66%, var(--v6-ivory));
+  background: url("/images/homepage-optimized/v1/ink-landscape.svg") center bottom / max(100%, 960px) auto no-repeat;
   border-bottom: 1px solid var(--v6-line);
 }
 .compassHubLayout { display: grid; grid-template-columns: minmax(0, 28fr) minmax(0, 72fr); align-items: center; gap: clamp(20px, 4vw, 60px); }
@@ -218,7 +218,7 @@
 .houseLabel svg { color: var(--v6-gold-ink); }
 .familyHouse:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 
-.learningSection { background: var(--v6-moon); }
+.learningSection { background: rgb(255 251 241 / .48); }
 .learningGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .learningCard { display: grid; grid-template-columns: minmax(110px, .7fr) minmax(0, 1fr); min-height: 208px; border: 1px solid var(--v6-line); border-radius: 12px; overflow: hidden; color: var(--v6-ink); background: var(--v6-ivory); }
 .learningPhoto { position: relative; min-height: 120px; background: var(--surface-moon); }
@@ -229,7 +229,7 @@
 .learningCopy li::before { content: "·"; margin-inline-end: 4px; color: var(--v6-gold-ink); }
 .learningCta { color: var(--v6-gold-ink); }
 
-.insightsSection { background: var(--surface-moon); }
+.insightsSection { background: #e9eee5 url("/images/homepage-optimized/v1/paper-grain.svg"); }
 .insightTopics { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 16px; }
 .insightTopics a { display: inline-flex; align-items: center; min-height: 36px; padding-inline: 10px; border-bottom: 1px solid var(--v6-line); color: var(--v6-ink); font-size: 12px; }
 .insightTopics a:hover { border-color: var(--v6-gold-ink); }
@@ -243,6 +243,41 @@
 .insightMeta time { color: var(--v6-muted); }
 .insightCopy h3 { margin: 7px 0 15px; font: 500 17px/1.4 var(--serif); }
 .insightSource { justify-content: space-between; color: var(--v6-muted); font-size: 11px; }
+
+.page, .page > :global(.site-header) {
+  background-color: var(--v6-ivory);
+  background-image: url("/images/homepage-optimized/v1/paper-grain.svg");
+}
+.heroShade {
+  background: linear-gradient(90deg, var(--v6-teal), rgb(71 103 91 / .72) 29%, rgb(71 103 91 / .18) 70%, transparent);
+}
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 22px;
+  background: var(--v6-ivory);
+  clip-path: polygon(0 57%, 9% 81%, 22% 57%, 34% 44%, 48% 67%, 61% 83%, 75% 68%, 88% 39%, 100% 0, 100% 100%, 0 100%);
+  pointer-events: none;
+}
+.compassCard, .learningCard, .insightCard a { box-shadow: 0 4px 12px rgb(75 61 36 / .06); }
+.compassVisual::after { content: ""; position: absolute; inset: 0; background: var(--domain-face); opacity: .18; pointer-events: none; }
+.compassDial { box-shadow: inset 0 0 0 3px rgb(255 253 243 / .6), 0 3px 8px rgb(75 61 36 / .07); }
+.compassDial::after { inset: 9px; border-style: double; border-width: 3px; }
+.familyHouse { width: min(100%, 105px); }
+.houseArt { filter: drop-shadow(0 4px 4px rgb(93 70 39 / .13)); }
+
+@media (min-width: 1001px) {
+  .compassSection > .container, .journeySection > .container {
+    display: grid;
+    grid-template-columns: minmax(145px, .18fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 26px;
+  }
+  .compassSection .sectionHeader, .journeySection .sectionHeaderCompact { display: block; margin: 0; }
+  .compassSection .sectionHeader h2, .journeySection .sectionHeaderCompact h2 { font-size: clamp(22px, 2vw, 30px); }
+  .journeySection .sectionHeaderCompact > p { margin-top: 8px; }
+}
 
 @media (max-width: 1000px) {
   .container { width: calc(100% - 56px); }

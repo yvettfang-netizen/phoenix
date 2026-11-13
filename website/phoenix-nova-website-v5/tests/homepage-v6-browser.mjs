@@ -8,7 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createRequire } from "node:module";
 import {
@@ -31,8 +31,8 @@ const hubSelector = 'main > section[aria-labelledby="compass-hub-heading"]';
 const desktopGeometry = {
   header: [56, 64],
   hero: [290, 405],
-  compass: [280, 465],
-  journey: [140, 240],
+  compass: [245, 465],
+  journey: [110, 240],
   learning: [290, 450],
   insights: [330, 580],
   footer: [190, 330],
@@ -371,6 +371,14 @@ async function assertHomepageClicks(page, locale, width) {
 
 const browser = await chromium.launch({ headless: true, ...(process.env.V6_BROWSER ? { executablePath: process.env.V6_BROWSER } : {}) });
 const context = await browser.newContext();
+if (process.env.V6_INSIGHTS_PHOTOS) {
+  await context.route(/^https:\/\/gia\.info\.gov\.hk\/general\/[^?]+\.jpg$/, route =>
+    route.fulfill({
+      path: resolve(process.env.V6_INSIGHTS_PHOTOS, basename(new URL(route.request().url()).pathname)),
+      contentType: "image/jpeg",
+    })
+  );
+}
 // Verify navigation to the exact public product URL without making local QA depend on the public sites.
 const productPaths = new Set(locales.flatMap(locale => Object.values(compassDestinations(locale)).filter(href => href.startsWith("https://"))));
 await context.route(url => productPaths.has(url.href.split("#")[0]), route =>
