@@ -120,6 +120,13 @@ const academyTopics: readonly Bilingual[] = [
   ["AI 与未来素养", "AI & future skills"],
   ["家庭与成长课堂", "Family learning"],
 ];
+const academyImages = [
+  "/images/education-v3/education-academy.png",
+  "/images/education-v3/education-hero.png",
+  "/images/education-v3/education-tutoring.png",
+  null,
+  "/images/identity-v3/identity-family.png",
+];
 
 function FamilyHouseArtwork() {
   return (
@@ -304,52 +311,52 @@ export function HomepageV6({ locale }: { locale: Locale }) {
         <CompassHub locale={locale} />
 
         <section className={`${styles.section} ${styles.learningSection}`} aria-labelledby="learning-heading">
-          <div className={styles.container}>
+          <div className={`${styles.container} ${styles.editorialLayout}`}>
             <header className={styles.sectionHeader}>
               <div>
-                {zh && <p className={styles.eyebrow} lang="en">Phoenix Academy</p>}
                 <h2 id="learning-heading">{copy(locale, ["启明堂 · 凤启学苑", "Phoenix Academy · Qiming Hall"])}</h2>
+                {zh && <p className={styles.academyEnglish} lang="en">Phoenix Academy</p>}
+                <p className={styles.sectionLead}>{copy(locale, ["面向家庭每个人的成长学堂，连接国际教育、学术发展与未来素养。", "Learning for the whole family, from international education to future skills."])}</p>
+                <Link className={styles.textLink} href={publicProductHref(locale, "/education#academy")} data-v6-learning="academy">{copy(locale, ["进入学苑", "Explore the Academy"])} <Arrow /></Link>
               </div>
             </header>
             <div className={styles.learningGrid}>
-              <Link className={styles.learningCard} href={publicProductHref(locale, "/education#academy")} data-v6-learning="academy">
-                <div className={styles.learningPhoto}><Image src="/images/education-v3/education-academy.png" alt="" fill unoptimized sizes="(max-width: 700px) 94vw, 25vw" /></div>
-                <div className={styles.learningCopy}>
-                  <h3><BookOpen aria-hidden="true" strokeWidth={1.35} />{copy(locale, ["课程、导师与长期学习", "Courses, tutors & lifelong learning"])}</h3>
-                  <ul>{academyTopics.map((topic) => <li key={topic[1]}>{copy(locale, topic)}</li>)}</ul>
-                  <span className={styles.learningCta}>{copy(locale, ["了解凤启学苑", "Explore the Academy"])} <Arrow /></span>
-                </div>
-              </Link>
-              <Link className={styles.learningCard} href={publicProductHref(locale, "/education#askwise")} data-v6-learning="askwise">
-                <div className={styles.learningPhoto}><Image src="/images/education-v3/education-tutoring.png" alt="" fill unoptimized sizes="(max-width: 700px) 94vw, 25vw" /></div>
-                <div className={styles.learningCopy}>
-                  <h3><Sparkles aria-hidden="true" strokeWidth={1.35} />ASKWISE™</h3>
-                  <p>{copy(locale, ["智能学习支持，帮助学生理解、练习与复盘。", "AI-assisted learning support for understanding, practice and reflection."])}</p>
-                  <span className={styles.learningCta}>{copy(locale, ["了解智能学习支持", "Explore learning support"])} <Arrow /></span>
-                </div>
-              </Link>
+              {academyTopics.map((topic, index) => {
+                const image = academyImages[index];
+                return <Link className={styles.learningCard} key={topic[1]} href={publicProductHref(locale, image ? "/education#academy" : "/education#askwise")} data-v6-learning={image ? undefined : "askwise"}>
+                  <div className={styles.learningPhoto}>
+                    {image ? <Image src={image} alt="" fill unoptimized sizes="(max-width: 700px) 45vw, 15vw" /> : <div className={styles.academyAi}><Sparkles aria-hidden="true" strokeWidth={1.2} /></div>}
+                  </div>
+                  <div className={styles.learningCopy}>
+                    <h3>{image && <BookOpen aria-hidden="true" strokeWidth={1.35} />}{copy(locale, topic)}</h3>
+                    {!image && <small>ASKWISE™</small>}
+                  </div>
+                </Link>;
+              })}
             </div>
           </div>
         </section>
 
         <section className={`${styles.section} ${styles.insightsSection}`} aria-labelledby="insights-heading">
-          <div className={styles.container}>
+          <div className={`${styles.container} ${styles.editorialLayout}`}>
             <header className={styles.sectionHeader}>
               <div>
                 {zh && <p className={styles.eyebrow} lang="en">Phoenix Insights</p>}
-                <h2 id="insights-heading">{copy(locale, ["资讯洞察", "Phoenix Insights"])}</h2>
+                <h2 id="insights-heading">{copy(locale, ["资讯洞察", "Phoenix Insights"])} <small>(GEO)</small></h2>
                 <p className={styles.sectionLead}>{copy(locale, ["全球视野 · 政策动态 · 深度解读", "Global perspectives, policy updates and deeper analysis."])}</p>
               </div>
               <Link className={styles.textLink} href={localizedHref(locale, "/insights")}>
                 {copy(locale, ["进入凤启洞察内容中心", "Explore Phoenix Insights"])} <Arrow />
               </Link>
             </header>
+            <div className={styles.insightEditorial}>
             <nav className={styles.insightTopics} aria-label={copy(locale, ["洞察分类", "Insights topics"])}>
+              <a className={styles.allInsights} href="#featured-insights">{copy(locale, ["全部", "All"])}</a>
               {homepageInsights.map((item) => (
                 <a key={item.release} href={`#insight-${item.photo}`} data-v6-insight-topic>{copy(locale, item.category)}</a>
               ))}
             </nav>
-            <div className={styles.insightGrid}>
+            <div className={styles.insightGrid} id="featured-insights">
               {homepageInsights.map((item) => (
                 <article className={styles.insightCard} id={`insight-${item.photo}`} key={item.release}>
                   <a href={`https://www.info.gov.hk/gia/general/${item.release}.htm`} data-v6-insight-article>
@@ -363,6 +370,7 @@ export function HomepageV6({ locale }: { locale: Locale }) {
                   </a>
                 </article>
               ))}
+            </div>
             </div>
           </div>
         </section>

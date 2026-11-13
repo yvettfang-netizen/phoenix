@@ -26,11 +26,17 @@
   color: var(--surface-ivory);
   font-size: 12px;
 }
-.compactPromise { display: flex; justify-content: space-between; align-items: end; gap: 18px; padding: 42px var(--footer-inset) 28px; }
+.compactPromise {
+  display: flex; justify-content: space-between; align-items: end; gap: 18px;
+  padding: 42px var(--footer-inset) 28px;
+  background: linear-gradient(90deg, transparent 3%, var(--nova-home-ink-teal, #244748) 37%) left center / 100% 100% no-repeat,
+    url("/images/identity-v3/identity-hong-kong.png") left 54% / 39% auto no-repeat;
+}
 .compactPromise > div { display: grid; gap: 7px; }
 .compactPromise strong { font: 400 clamp(24px, 3vw, 39px)/1.2 var(--serif); max-width: 760px; }
 .compactPromise span { color: #e2c58c; font: italic 17px/1.45 var(--serif); }
-.compactPromise > a { color: #e2c58c; white-space: nowrap; }
+.compactPromise > a { color: #263e36; background: #e9cda1; border-radius: 999px; padding: 11px 17px; white-space: normal; font-weight: 600; }
+@media (min-width: 1001px) { .compactPromise > div { margin-left: min(16vw, 210px); } }
 .compactLinks {
   display: flex;
   align-items: center;
@@ -76,7 +82,7 @@
 @media (max-width: 1000px) { .compactFooter { --footer-inset: 28px; } }
 @media (max-width: 700px) {
   .compactFooter { --footer-inset: 16px; }
-  .compactPromise { flex-direction: column; align-items: start; gap: 11px; padding-block: 30px 17px; }
+  .compactPromise { flex-direction: column; align-items: start; gap: 11px; padding-block: 30px 17px; background: none; }
   .compactLinks { flex-direction: column; align-items: start; gap: 10px; }
   .compactLinks nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   .compactCopyright { flex-wrap: wrap; gap: 0 10px; }

@@ -21,7 +21,7 @@ export function SiteEcosystemContent({ locale, consultationPath, localized = fal
         <strong>{zh ? "让科技更有温度，让家庭成长更有方向。" : "Technology with warmth. A clearer direction for every family."}</strong>
         <span lang="en">For Every Beginning.</span>
       </div>
-      <Link href={`${mainOrigin ?? ""}${localizedHref(locale, "/about")}`}>{zh ? "了解我们的故事 →" : "Our Story →"}</Link>
+      <Link href={`${mainOrigin ?? ""}${localizedHref(locale, "/compass")}`}>{zh ? "立即开启您的家庭成长规划 ↗" : "Start your family growth plan ↗"}</Link>
     </div>
     <div className={styles.compactLinks}><BrandMark optimized={optimizedBrand} href={`${mainOrigin ?? ""}${localizedHref(locale, "")}`} label={zh ? "凤启环球首页" : "Phoenix Nova home"} /><nav aria-label={zh ? "页脚导航" : "Footer navigation"}>
       {[["专业服务", "Services", "/compass"], ["教育生态", "Learning", "/education#academy"], familyEntry, ["凤启洞察", "Insights", "/insights"], ["关于凤启", "About", "/about"], ["联系我们", "Contact", "/identity#consultation"]].map(([cn, en, path]) => {

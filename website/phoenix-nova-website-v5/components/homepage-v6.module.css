@@ -355,3 +355,42 @@
   .insightCopy { padding: 9px; }
   .insightCopy h3 { font-size: 15px; }
 }
+
+.editorialLayout > header { display: block; }
+.academyEnglish { margin: 3px 0 0; color: var(--v6-gold-ink); font: 500 18px var(--serif); }
+.learningGrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.learningGrid .learningCard { display: flex; min-height: 0; flex-direction: column; background: #fcf4e8; }
+.learningGrid .learningPhoto { min-height: 0; aspect-ratio: 2 / 1; }
+.learningGrid .learningCopy { padding: 10px; }
+.learningGrid .learningCopy h3 { font-size: 15px; line-height: 1.25; gap: 4px; }
+.learningGrid .learningCopy svg { width: 15px; color: var(--v6-gold-ink); }
+.learningCopy small { font-size: 10px; color: var(--v6-muted); margin-top: 3px; }
+.academyAi {
+  display: grid;
+  height: 100%;
+  place-items: center;
+  color: #dceae2;
+  background: radial-gradient(ellipse at 50% 64%, #547b78, #244748 72%);
+}
+.academyAi svg { width: 30%; height: 72%; }
+.insightEditorial { min-width: 0; }
+.insightsSection { background-color: #f4ede2; }
+.insightsSection h2 small { font-size: .62em; }
+.insightTopics .allInsights {
+  border-radius: 999px;
+  background: var(--v6-teal);
+  color: var(--v6-moon);
+  padding-inline: 17px;
+}
+.insightGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (min-width: 1001px) {
+  .editorialLayout { display: grid; grid-template-columns: minmax(0, 24fr) minmax(0, 76fr); gap: 26px; align-items: start; }
+  .editorialLayout > header { margin: 0; }
+  .page main .editorialLayout h2 { font-size: clamp(22px, 2.2vw, 32px); }
+  .insightGrid { grid-auto-columns: calc((100% - 28px) / 3); grid-template-columns: none; grid-auto-flow: column; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 4px 9px; }
+  .insightCard { scroll-snap-align: start; scroll-margin-inline: 4px; }
+  .learningSection { padding-block: 30px; }
+}
+@media (max-width: 700px) {
+  .learningGrid, .insightGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

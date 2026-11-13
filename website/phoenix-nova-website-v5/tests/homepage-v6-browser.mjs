@@ -33,8 +33,8 @@ const desktopGeometry = {
   hero: [290, 405],
   compass: [220, 465],
   journey: [110, 240],
-  learning: [290, 450],
-  insights: [330, 580],
+  learning: [185, 450],
+  insights: [285, 580],
   footer: [190, 330],
 };
 
