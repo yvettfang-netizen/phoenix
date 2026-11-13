@@ -9,7 +9,8 @@ import { PatternMedallion } from "./pattern-medallion";
 import { SiteEcosystemContent } from "./site-ecosystem-content";
 import chromeStyles from "./site-chrome-v3.module.css";
 import { HealthLocaleLink, HealthPartnerSectionLink } from "./health-locale-link";
-import { localizedHref } from "@/lib/locale-navigation";
+import { familyCenterEntryPath, localizedHref, publicProductHref } from "@/lib/locale-navigation";
+import { publicFamilyDemoEnabled } from "@/lib/public-family-demo";
 import { WEALTH_ORIGIN } from "@/lib/wealth-routing";
 
 export const pageIds = [
@@ -208,19 +209,28 @@ function SectionIntro({
   );
 }
 
-export function SiteHeader({ locale, page, inverse = false, appearance = "v3", localePath, localeHref: explicitLocaleHref, mainOrigin, localized = false, partnersHref = "#partners", brandLocale }: { locale: Locale; page: SitePage; inverse?: boolean; appearance?: "classic" | "v3"; localePath?: string; localeHref?: string; mainOrigin?: string; localized?: boolean; partnersHref?: string; brandLocale?: Locale }) {
+export function SiteHeader({ locale, page, inverse = false, appearance = "v3", localePath, localeHref: explicitLocaleHref, mainOrigin, localized = false, partnersHref = "#partners", brandLocale, optimizedBrand = false }: { locale: Locale; page: SitePage; inverse?: boolean; appearance?: "classic" | "v3"; localePath?: string; localeHref?: string; mainOrigin?: string; localized?: boolean; partnersHref?: string; brandLocale?: Locale; optimizedBrand?: boolean }) {
   const otherLocale: Locale = locale === "zh" ? "en" : "zh";
   const navHref = (item: (typeof primaryNavigation)[number]) => {
     if (mainOrigin) return item.id === "wealth" ? `/${locale}` : `${mainOrigin}${hrefFor(locale, item.page)}`;
+    if (page === "home" && (item.id === "identity" || item.id === "education")) {
+      return publicProductHref(locale, `/${item.id}`);
+    }
     return appearance === "v3" && (item.id === "identity" || item.id === "education") ? hrefFor(locale, item.id) : navigationHref(locale, item);
   };
   const localeHref = explicitLocaleHref ?? (localePath !== undefined ? `/${otherLocale}${localePath}` : hrefFor(otherLocale, page));
-  const portalHref = `${mainOrigin ?? ""}/${locale}/account`;
+  const familyDemo = publicFamilyDemoEnabled();
+  const FamilyCenterLink = familyDemo ? "a" : Link;
+  const portalHref = `${mainOrigin ?? ""}${localizedHref(locale, familyCenterEntryPath(familyDemo))}`;
+  const portalLabel = familyDemo
+    ? pick(locale, "家庭中心演示", "Family Center Demo")
+    : routeLabels["family-center"][locale === "zh" ? 0 : 1];
   return (
     <header className={`site-header ${inverse ? "site-header--inverse" : ""}${appearance === "v3" ? ` ${chromeStyles.header}` : ""}`}>
       <div className="site-header__inner shell">
         <BrandMark
           compact
+          optimized={optimizedBrand}
           inverse={inverse && appearance === "classic"}
           href={`${mainOrigin ?? ""}/${locale}`}
           label={pick(locale, localized || brandLocale === "zh" ? "凤启环球首页" : "Phoenix Nova 首页", "Phoenix Nova home")}
@@ -238,9 +248,9 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3", l
           </HealthLocaleLink> : <Link className="locale-switch" href={localeHref} aria-label={pick(locale, "切换至英文", "Switch to Chinese")}>
             {locale === "zh" ? "EN" : "中文"}
           </Link>}
-          <Link className="portal-link" href={portalHref}>
-            {routeLabels["family-center"][locale === "zh" ? 0 : 1]} <Arrow />
-          </Link>
+          <FamilyCenterLink className="portal-link" href={portalHref}>
+            {portalLabel} <Arrow />
+          </FamilyCenterLink>
           {localized && <a className={chromeStyles.partnerLink} href={partnersHref}>{pick(locale, "合作伙伴", "Partners")}</a>}
           <details className="mobile-menu">
             <summary aria-label={pick(locale, "打开导航", "Open navigation")}><span /><span /></summary>
@@ -250,9 +260,9 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3", l
                   <span>{String(index + 1).padStart(2, "0")}</span>{navigationLabel(locale, item)}
                 </Link>
               ))}
-              <Link href={portalHref}>
-                <span>08</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
-              </Link>
+              <FamilyCenterLink href={portalHref}>
+                <span>08</span>{portalLabel}
+              </FamilyCenterLink>
               {localized && <HealthPartnerSectionLink href={partnersHref}><span>09</span>{pick(locale, "合作伙伴工作台 · 受控预览", "Partner workspace · Controlled preview")}</HealthPartnerSectionLink>}
               {localized ? <HealthLocaleLink className="mobile-locale" href={localeHref}>{locale === "zh" ? "English" : "中文"}</HealthLocaleLink> : <Link className="mobile-locale" href={localeHref}>{locale === "zh" ? "English" : "中文"}</Link>}
             </nav>
@@ -263,13 +273,13 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3", l
   );
 }
 
-export function SiteFooter({ locale, appearance = "v3", consultationPath = "/identity#consultation", localized = false, brandLocale, compact = false, mainOrigin }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; localized?: boolean; brandLocale?: Locale; compact?: boolean; mainOrigin?: string }) {
-  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} localized={localized} brandLocale={brandLocale} compact={compact} mainOrigin={mainOrigin} /></footer>;
+export function SiteFooter({ locale, appearance = "v3", consultationPath = "/identity#consultation", localized = false, brandLocale, compact = false, mainOrigin, optimizedBrand = false }: { locale: Locale; appearance?: "classic" | "v3"; consultationPath?: string; localized?: boolean; brandLocale?: Locale; compact?: boolean; mainOrigin?: string; optimizedBrand?: boolean }) {
+  if (appearance === "v3") return <footer className={`site-footer ${chromeStyles.footer}`}><SiteEcosystemContent locale={locale} consultationPath={consultationPath} localized={localized} brandLocale={brandLocale} compact={compact} mainOrigin={mainOrigin} optimizedBrand={optimizedBrand} /></footer>;
   return (
     <footer className="site-footer">
       <div className="shell site-footer__top">
         <div className="site-footer__brand">
-          <BrandMark href={`/${locale}`} label={pick(locale, brandLocale === "zh" ? "凤启环球首页" : "Phoenix Nova 首页", "Phoenix Nova home")} />
+          <BrandMark optimized={optimizedBrand} href={`/${locale}`} label={pick(locale, brandLocale === "zh" ? "凤启环球首页" : "Phoenix Nova 首页", "Phoenix Nova home")} />
           <p>For Every Beginning.</p>
           <span>{pick(locale, "每一次启程，都值得更好的未来。", "Every beginning deserves a better future.")}</span>
         </div>

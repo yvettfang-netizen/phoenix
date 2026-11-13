@@ -24,6 +24,8 @@ const BRAND_ASSETS = {
 };
 const FOOTER_SURFACE = IVORY_SURFACE;
 const TRANSPARENT = new Set(["transparent", "rgba(0, 0, 0, 0)"]);
+const HOMEPAGE_PATH = /^\/(zh|en)$/;
+const HOMEPAGE_BRAND_WEBP = /^\/images\/homepage-optimized\/v1\/brand-bilingual-(222|444|666)\.webp$/;
 await mkdir(out, { recursive: true });
 const browser = await chromium.launch({ headless: true, ...(process.env.HEALTH_BROWSER_PATH ? { executablePath: process.env.HEALTH_BROWSER_PATH } : {}) });
 const results = [];
@@ -97,7 +99,8 @@ async function inspectBrandImage(locator, route, role, width, wrapperBackground 
     const wrapper = element.closest(".brand-asset-wrap");
     const wrapperStyle = wrapper ? getComputedStyle(wrapper) : null;
     return {
-      src: element.currentSrc || element.getAttribute("src") || "",
+      src: element.getAttribute("src"),
+      currentSrc: new URL(element.currentSrc).pathname,
       naturalWidth: element.naturalWidth,
       naturalHeight: element.naturalHeight,
       width: rect.width,
@@ -118,13 +121,18 @@ async function inspectBrandImage(locator, route, role, width, wrapperBackground 
     };
   });
   const expected = { ...BRAND_ASSETS[role], wrapperBackground };
-  assert.ok(details.src.includes(expected.url), `${route}: ${role} must use ${expected.url}`);
+  assert.equal(details.src, expected.url, `${route}: ${role} must keep the approved PNG as its source`);
   assert.ok(!/phoenix-nova-(?:logo-master|mark-official|logo-official|official-logo-system-v1)\.png/i.test(details.src), `${route}: legacy mark/logo is still rendered`);
-  assert.equal(details.naturalWidth, expected.width, `${route}: ${role} asset width changed`);
-  assert.equal(details.naturalHeight, expected.height, `${route}: ${role} asset height changed`);
+  if (HOMEPAGE_PATH.test(route) && HOMEPAGE_BRAND_WEBP.test(details.currentSrc)) {
+    assert.ok(details.naturalWidth > 0 && details.naturalHeight > 0, `${route}: ${role} WebP did not load`);
+  } else {
+    assert.equal(details.currentSrc, expected.url, `${route}: ${role} must load the approved PNG`);
+    assert.equal(details.naturalWidth, expected.width, `${route}: ${role} asset width changed`);
+    assert.equal(details.naturalHeight, expected.height, `${route}: ${role} asset height changed`);
+  }
   assert.ok(details.width > 0 && details.height > 0, `${route}: ${role} image has no rendered box`);
   assert.equal(details.objectFit, "contain", `${route}: ${role} must use object-fit: contain`);
-  assert.ok(Math.abs((details.width / details.height) - (details.naturalWidth / details.naturalHeight)) < 0.01, `${route}: ${role} image is cropped or distorted`);
+  assert.ok(Math.abs((details.width / details.height) - (expected.width / expected.height)) < 0.01, `${route}: ${role} image is cropped or distorted`);
   if (expected.wrapperBackground === "transparent") {
     assert.ok(TRANSPARENT.has(details.wrapperBackground), `${route}: ${role} wrapper must remain transparent`);
   } else {
