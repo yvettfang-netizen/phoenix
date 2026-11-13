@@ -4,10 +4,12 @@ import {
   ArrowUpRight,
   BookOpen,
   Building2,
+  Coins,
   Compass,
   Globe2,
   GraduationCap,
-  HeartHandshake,
+  HeartPulse,
+  IdCard,
   Landmark,
   ShieldCheck,
   Sparkles,
@@ -17,6 +19,7 @@ import { familyCenterEntryPath, localizedHref, publicProductHref } from "@/lib/l
 import { publicFamilyDemoEnabled } from "@/lib/public-family-demo";
 import { WEALTH_ORIGIN } from "@/lib/wealth-routing";
 import { SiteFooter, SiteHeader, type Locale } from "./v5-site";
+import { homepageInsights } from "./homepage-insights";
 import styles from "./homepage-v6.module.css";
 
 type Bilingual = readonly [string, string];
@@ -59,7 +62,7 @@ const compassCards: readonly {
   },
   {
     id: "identity",
-    icon: Globe2,
+    icon: IdCard,
     title: ["身份", "Identity"],
     description: [
       "了解香港身份、全球居留及家庭长期生活安排。",
@@ -71,7 +74,7 @@ const compassCards: readonly {
   },
   {
     id: "wealth",
-    icon: Landmark,
+    icon: Coins,
     title: ["财富", "Wealth"],
     description: [
       "家庭保障与代际传承。受控预览。",
@@ -83,7 +86,7 @@ const compassCards: readonly {
   },
   {
     id: "health",
-    icon: HeartHandshake,
+    icon: HeartPulse,
     title: ["健康", "Health"],
     description: [
       "连接大湾区医疗资源与家庭健康协调。",
@@ -110,12 +113,25 @@ const journeyItems: readonly {
   { id: "family-legacy", icon: Landmark, title: ["家族传承", "Family Legacy"], description: ["以共识连接代际未来。", "Connect the generations."], href: "/compass#wealth" },
 ];
 
-const insightTopics: readonly { id: string; title: Bilingual; href: string }[] = [
-  { id: "education", title: ["教育与升学", "Education & Admissions"], href: "/education" },
-  { id: "identity", title: ["香港身份与全球规划", "Hong Kong Identity & Global Planning"], href: "/identity" },
-  { id: "wealth", title: ["家庭财富与家族传承", "Family Wealth & Legacy"], href: "/compass#wealth" },
-  { id: "health", title: ["全球健康与跨境医疗", "Global Health & Cross-border Healthcare"], href: "/health" },
+const academyTopics: readonly Bilingual[] = [
+  ["学习规划", "Learning planning"],
+  ["全球升学", "Global admissions"],
+  ["学术能力提升", "Academic development"],
+  ["AI 与未来素养", "AI & future skills"],
+  ["家庭与成长课堂", "Family learning"],
 ];
+
+function FamilyHouseArtwork() {
+  return (
+    <svg className={styles.houseArt} viewBox="0 0 140 130" fill="none" aria-hidden="true">
+      <path d="M15 57h110v59q0 5-5 5H20q-5 0-5-5Z" fill="var(--v6-moon)" stroke="var(--v6-gold)" />
+      <path d="M4 57c22-4 41-20 60-39q6-6 12 0c19 19 38 35 60 39l-8 5H12Z" fill="var(--v6-teal)" stroke="var(--v6-gold)" strokeLinejoin="round" />
+      <path d="M16 55c18-5 34-19 50-34m58 34c-18-5-34-19-50-34M20 114v-47m100 47v-47" stroke="var(--v6-gold)" opacity=".5" />
+      <path d="M61 48v-5a9 9 0 0 1 18 0v5ZM70 35v13M61 43h18" stroke="#dfc98e" strokeWidth="1" />
+      <path d="M20 121h100" stroke="var(--v6-gold)" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 function CompassHub({ locale }: { locale: Locale }) {
   const zh = locale === "zh";
@@ -124,14 +140,17 @@ function CompassHub({ locale }: { locale: Locale }) {
 
   return (
     <section className={styles.compassHub} aria-labelledby="compass-hub-heading">
-      <div className={styles.container}>
+      <div className={`${styles.container} ${styles.compassHubLayout}`}>
         <header className={styles.compassHubIntro}>
           <p className={styles.eyebrow} lang="en">Phoenix Compass™</p>
-          <h2 id="compass-hub-heading">{copy(locale, ["四大罗盘 · 全链协同", "Four Compasses, One Family Center"])}</h2>
+          <h2 id="compass-hub-heading">{zh
+            ? <><span>四大罗盘</span>{" "}<span className={styles.hubTitleDot}>·</span>{" "}<span>全链协同</span></>
+            : "Four Compasses, One Family Center"}</h2>
           <p className={styles.sectionLead}>{copy(locale, [
-            "教育、身份、财富与健康，协同支持家庭的长期规划。",
-            "Education, identity, wealth and health come together to support long-term family planning.",
+            "教育、身份、财富与健康，协同支持家庭的长期规划与成长。",
+            "Education, identity, wealth and health come together to support long-term family planning and growth.",
           ])}</p>
+          <p className={styles.hubFamilyNote}>{copy(locale, ["在家庭中心统筹目标、服务授权和进度。", "Manage goals, service permissions and progress in Family OS."])}</p>
         </header>
 
         <div className={styles.compassMap}>
@@ -139,12 +158,12 @@ function CompassHub({ locale }: { locale: Locale }) {
             <path
               className={styles.desktopArcs}
               vectorEffect="non-scaling-stroke"
-              d="M100 73 C180 73 194 151 300 160 M100 247 C180 247 194 169 300 160 M500 73 C420 73 406 151 300 160 M500 247 C420 247 406 169 300 160"
+              d="M100 78 C187 78 204 150 300 156 M100 242 C187 242 204 170 300 164 M500 78 C413 78 396 150 300 156 M500 242 C413 242 396 170 300 164"
             />
             <path
               className={styles.mobileArcs}
               vectorEffect="non-scaling-stroke"
-              d="M150 49 C150 104 234 111 300 160 M450 49 C450 104 366 111 300 160 M150 271 C150 216 234 209 300 160 M450 271 C450 216 366 209 300 160"
+              d="M100 78 C174 78 210 146 300 155 M500 78 C426 78 390 146 300 155 M100 242 C174 242 210 174 300 165 M500 242 C426 242 390 174 300 165"
             />
           </svg>
 
@@ -158,8 +177,9 @@ function CompassHub({ locale }: { locale: Locale }) {
                 key={item.id}
                 data-v6-dial={item.id}
               >
+                <span className={styles.dialNorth} aria-hidden="true" />
                 <span className={styles.dialContent}>
-                  <Icon aria-hidden="true" strokeWidth={1.4} />
+                  <Icon aria-hidden="true" strokeWidth={1.35} />
                   <strong>{zh ? `${item.title[0]}罗盘` : item.title[1]}</strong>
                   <span lang="en">{zh ? `${item.title[1]} Compass` : "Compass"}</span>
                 </span>
@@ -173,8 +193,11 @@ function CompassHub({ locale }: { locale: Locale }) {
             aria-label={copy(locale, familyDemo ? ["体验家庭中心 · Family OS", "Explore the Family Center Demo · Family OS"] : ["进入家庭中心 · Family OS", "Enter Family Center · Family OS"])}
             data-v6-family-os
           >
-            <strong>{copy(locale, ["家庭中心", "Family Center"])}</strong>
-            <span lang="en">Family OS <ArrowUpRight aria-hidden="true" size={12} /></span>
+            <FamilyHouseArtwork />
+            <span className={styles.houseLabel}>
+              <strong>{copy(locale, ["家庭中心", "Family Center"])}</strong>
+              <span lang="en">Family OS <ArrowUpRight aria-hidden="true" size={12} /></span>
+            </span>
           </FamilyCenterLink>
         </div>
       </div>
@@ -241,10 +264,9 @@ export function HomepageV6({ locale }: { locale: Locale }) {
                   <Link className={`${styles.compassCard} ${styles[`domain--${item.id}`]}`} href={homepageHref(locale, item.id, item.href)} key={item.id} data-v6-compass={item.id}>
                     <div className={styles.compassVisual}>
                       <Image src={item.image} alt="" fill sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 25vw" unoptimized />
-                      <span className={styles.compassBadge}><Icon aria-hidden="true" size={22} strokeWidth={1.5} />{copy(locale, item.title)}</span>
-                      <span className={styles.compassArrow}><Arrow /></span>
                     </div>
                     <div className={styles.compassBody}>
+                      <h3><Icon aria-hidden="true" size={21} strokeWidth={1.35} />{copy(locale, item.title)}</h3>
                       <p>{copy(locale, item.description)}</p>
                       <span className={styles.compassCardCta}>{copy(locale, item.cta)} <Arrow /></span>
                     </div>
@@ -280,40 +302,66 @@ export function HomepageV6({ locale }: { locale: Locale }) {
 
         <CompassHub locale={locale} />
 
-        <section className={`${styles.section} ${styles.ecosystemSection}`} aria-labelledby="learning-heading">
-          <div className={`${styles.container} ${styles.ecosystemGrid}`}>
-            <div className={styles.learningPanel}>
-              <header className={styles.sectionHeaderCompact}>
-                <div><h2 id="learning-heading">{copy(locale, ["教育与学习生态", "Education & Learning"])}</h2></div>
-              </header>
-              <div className={styles.learningGrid}>
-                <Link className={`${styles.learningCard} ${styles.learningCardAcademy}`} href={publicProductHref(locale, "/education#academy")}>
-                  <BookOpen aria-hidden="true" size={30} strokeWidth={1.2} />
-                  <div><span>{copy(locale, ["课程与导师", "PHOENIX ACADEMY™"])}</span><h3>{copy(locale, ["凤启学苑", "Phoenix Academy"])}</h3><p>{copy(locale, ["课程、导师与持续学习支持。预览／即将开放。", "Courses, mentors and continuous learning support. Preview / Coming Soon."])}</p></div><Arrow />
-                </Link>
-                <Link className={`${styles.learningCard} ${styles.learningCardAskwise}`} href={publicProductHref(locale, "/education#askwise")}>
-                  <Sparkles aria-hidden="true" size={30} strokeWidth={1.2} />
-                  <div><span>ASKWISE™</span><h3>{copy(locale, ["智能学习支持", "ASKWISE™"])} </h3><p>{copy(locale, ["帮助学生理解、练习与复盘。预览／即将开放。", "AI-assisted structured learning, practice and reflection. Preview / Coming Soon."])}</p></div><Arrow />
-                </Link>
+        <section className={`${styles.section} ${styles.learningSection}`} aria-labelledby="learning-heading">
+          <div className={styles.container}>
+            <header className={styles.sectionHeader}>
+              <div>
+                {zh && <p className={styles.eyebrow} lang="en">Phoenix Academy</p>}
+                <h2 id="learning-heading">{copy(locale, ["启明堂 · 凤启学苑", "Phoenix Academy · Qiming Hall"])}</h2>
               </div>
-            </div>
-
-            <div className={styles.insightsPanel}>
-              <header className={styles.sectionHeaderCompact}>
-                <div><h2 id="insights-heading">{copy(locale, ["凤启洞察", "Phoenix Insights"])}</h2></div>
-                <p>{copy(locale, ["全球视野 · 政策动态 · 深度解读。", "Global Perspectives. Policy Updates. In-depth Knowledge."])}</p>
-              </header>
-              <nav className={styles.insightTopicList} aria-label={copy(locale, ["凤启洞察内容方向", "Phoenix Insights topics"])}>
-                {insightTopics.map((topic) => (
-                  <Link className={styles.insightTopic} href={homepageHref(locale, topic.id, topic.href)} key={topic.id}>
-                    {copy(locale, topic.title)} <Arrow />
-                  </Link>
-                ))}
-              </nav>
-              <p className={styles.insightComingSoon}>{copy(locale, ["精选内容即将上线。", "Editorial selection coming soon."])}</p>
-              <Link className={styles.textLink} href={localizedHref(locale, "/insights")}>
-                {copy(locale, ["进入凤启洞察", "Explore Phoenix Insights"])} <Arrow />
+            </header>
+            <div className={styles.learningGrid}>
+              <Link className={styles.learningCard} href={publicProductHref(locale, "/education#academy")} data-v6-learning="academy">
+                <div className={styles.learningPhoto}><Image src="/images/education-v3/education-academy.png" alt="" fill unoptimized sizes="(max-width: 700px) 94vw, 25vw" /></div>
+                <div className={styles.learningCopy}>
+                  <h3><BookOpen aria-hidden="true" strokeWidth={1.35} />{copy(locale, ["课程、导师与长期学习", "Courses, tutors & lifelong learning"])}</h3>
+                  <ul>{academyTopics.map((topic) => <li key={topic[1]}>{copy(locale, topic)}</li>)}</ul>
+                  <span className={styles.learningCta}>{copy(locale, ["了解凤启学苑", "Explore the Academy"])} <Arrow /></span>
+                </div>
               </Link>
+              <Link className={styles.learningCard} href={publicProductHref(locale, "/education#askwise")} data-v6-learning="askwise">
+                <div className={styles.learningPhoto}><Image src="/images/education-v3/education-tutoring.png" alt="" fill unoptimized sizes="(max-width: 700px) 94vw, 25vw" /></div>
+                <div className={styles.learningCopy}>
+                  <h3><Sparkles aria-hidden="true" strokeWidth={1.35} />ASKWISE™</h3>
+                  <p>{copy(locale, ["智能学习支持，帮助学生理解、练习与复盘。", "AI-assisted learning support for understanding, practice and reflection."])}</p>
+                  <span className={styles.learningCta}>{copy(locale, ["了解智能学习支持", "Explore learning support"])} <Arrow /></span>
+                </div>
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className={`${styles.section} ${styles.insightsSection}`} aria-labelledby="insights-heading">
+          <div className={styles.container}>
+            <header className={styles.sectionHeader}>
+              <div>
+                {zh && <p className={styles.eyebrow} lang="en">Phoenix Insights</p>}
+                <h2 id="insights-heading">{copy(locale, ["资讯洞察", "Phoenix Insights"])}</h2>
+                <p className={styles.sectionLead}>{copy(locale, ["全球视野 · 政策动态 · 深度解读", "Global perspectives, policy updates and deeper analysis."])}</p>
+              </div>
+              <Link className={styles.textLink} href={localizedHref(locale, "/insights")}>
+                {copy(locale, ["进入凤启洞察内容中心", "Explore Phoenix Insights"])} <Arrow />
+              </Link>
+            </header>
+            <nav className={styles.insightTopics} aria-label={copy(locale, ["洞察分类", "Insights topics"])}>
+              {homepageInsights.map((item) => (
+                <a key={item.release} href={`#insight-${item.photo}`} data-v6-insight-topic>{copy(locale, item.category)}</a>
+              ))}
+            </nav>
+            <div className={styles.insightGrid}>
+              {homepageInsights.map((item) => (
+                <article className={styles.insightCard} id={`insight-${item.photo}`} key={item.release}>
+                  <a href={`https://www.info.gov.hk/gia/general/${item.release}.htm`} data-v6-insight-article>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`https://gia.info.gov.hk/general/${item.release}_photo_${item.photo}.jpg`} alt="" width={320} height={180} loading="lazy" decoding="async" referrerPolicy="no-referrer" />
+                    <div className={styles.insightCopy}>
+                      <p className={styles.insightMeta}><span>{copy(locale, item.category)}</span><time dateTime={item.date}>{item.date}</time></p>
+                      <h3>{copy(locale, item.title)}</h3>
+                      <span className={styles.insightSource}>{copy(locale, item.publisher)} <Arrow /></span>
+                    </div>
+                  </a>
+                </article>
+              ))}
             </div>
           </div>
         </section>

@@ -16,8 +16,15 @@ export function SiteEcosystemContent({ locale, consultationPath, localized = fal
     familyCenterEntryPath(publicFamilyDemo),
   ];
   if (compact) return <div className={styles.compactFooter} data-compact-footer>
+    <div className={styles.compactPromise}>
+      <div>
+        <strong>{zh ? "让科技更有温度，让家庭成长更有方向。" : "Technology with warmth. A clearer direction for every family."}</strong>
+        <span lang="en">For Every Beginning.</span>
+      </div>
+      <Link href={`${mainOrigin ?? ""}${localizedHref(locale, "/about")}`}>{zh ? "了解我们的故事 →" : "Our Story →"}</Link>
+    </div>
     <div className={styles.compactLinks}><BrandMark optimized={optimizedBrand} href={`${mainOrigin ?? ""}${localizedHref(locale, "")}`} label={zh ? "凤启环球首页" : "Phoenix Nova home"} /><nav aria-label={zh ? "页脚导航" : "Footer navigation"}>
-      {[["专业服务", "Services", "/compass"], ["教育生态", "Learning", "/education#academy"], familyEntry, ["凤启洞察", "Insights", "/insights"], ["关于凤启", "About", "/about"]].map(([cn, en, path]) => {
+      {[["专业服务", "Services", "/compass"], ["教育生态", "Learning", "/education#academy"], familyEntry, ["凤启洞察", "Insights", "/insights"], ["关于凤启", "About", "/about"], ["联系我们", "Contact", "/identity#consultation"]].map(([cn, en, path]) => {
         const FooterLink = publicFamilyDemo && path === "/family-center" ? "a" : Link;
         const href = mainOrigin ? `${mainOrigin}${localizedHref(locale, path)}` : publicProductHref(locale, path);
         return <FooterLink key={path} href={href}>{zh ? cn : en}</FooterLink>;
@@ -25,14 +32,16 @@ export function SiteEcosystemContent({ locale, consultationPath, localized = fal
       <a href="https://fengqi-research-institute.yvettfang.chatgpt.site">{zh ? "数字凤启 · 进入仙兽图" : "Digital Phoenix"}</a>
       {healthPreviewEnabled() && <Link href={localizedHref(locale,"/compass/health")} data-testid="health-entry">{zh ? "健康评估预览" : "Health assessment preview"}</Link>}
     </nav></div>
-    <div className={styles.compactPromise}>
-      <div>
-        <strong>{zh ? "每一次启程，都值得更好的未来。" : "Every Beginning Deserves a Better Future."}</strong>
-        <span>{zh ? "连接世界资源，陪伴家庭成长。" : "Connecting Global Resources. Growing with Families."}</span>
-      </div>
-      <Link href={`${mainOrigin ?? ""}${localizedHref(locale, "/about")}`}>{zh ? "了解我们的故事 →" : "Our Story →"}</Link>
+    <div className={styles.compactCopyright}>
+      <span>© 2026 Phoenix Nova™</span>
+      <details>
+        <summary>{zh ? "隐私及服务声明" : "Privacy & service notice"}</summary>
+        <p>{zh
+          ? "凤启环球信息科技（深圳）有限公司。首页不接收家庭档案或敏感文件。进入账户或服务后，请按对应页面的说明操作。公开信息不构成录取、身份、医疗、法律或收益保证。"
+          : "Phoenix Nova™. The homepage does not collect family records or sensitive documents. Follow the relevant account or service instructions. Public information does not guarantee admission, immigration, medical, legal or financial outcomes."}</p>
+      </details>
+      <Link href={`${mainOrigin ?? ""}${localizedHref(locale === "zh" ? "en" : "zh", "")}`}>{zh ? "EN" : "中文"}</Link>
     </div>
-    <div className={styles.compactCopyright}><span>© 2026 Phoenix Nova™</span><details><summary>{zh ? "公司与服务声明" : "Company & service notice"}</summary><p>{zh ? "凤启环球信息科技（深圳）有限公司。公开信息不构成录取、身份、医疗、法律或收益保证。" : "Phoenix Nova™. Public information does not guarantee admission, immigration, medical, legal or financial outcomes."}</p></details><Link href={`${mainOrigin ?? ""}${localizedHref(locale === "zh" ? "en" : "zh", "")}`}>{zh ? "EN" : "中文"}</Link></div>
   </div>;
   return <div className={styles.inner}>
     <div className={styles.top}>

@@ -1,313 +1,198 @@
 .page {
-  --v6-ivory: #f8f6f1;
-  --v6-moon: #fbfaf6;
-  --v6-navy: #081f2c;
-  --v6-teal: #003b46;
-  --v6-ink: #143c49;
-  --v6-muted: #617476;
-  --v6-gold: #c99b50;
+  --v6-ivory: var(--surface-ivory);
+  --v6-moon: #fcfbf7;
+  --v6-navy: var(--navy);
+  --v6-teal: var(--brand-deepsea);
+  --v6-ink: var(--brand-ink);
+  --v6-muted: #526769;
+  --v6-gold: #c8a24a;
+  --v6-gold-ink: #755b30;
   --v6-line: rgba(13, 27, 42, .14);
-  color: var(--v6-ink);
   background: var(--v6-ivory);
-  overflow-x: clip;
+  color: var(--v6-ink);
 }
-.container {
-  width: min(1440px, calc(100% - 80px));
-  margin-inline: auto;
-}
-
-/* Hero: compact editorial proportion, with the family image carrying the visual weight. */
-.hero {
-  position: relative;
-  min-height: 250px;
-  isolation: isolate;
-  overflow: hidden;
-  color: #fff;
-  background: var(--v6-teal);
-}
-
-.heroImage {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: -2;
-  object-fit: cover;
-  object-position: center top;
-}
-
-.heroShade {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(90deg, rgba(0, 49, 58, .94) 0%, rgba(0, 49, 58, .72) 34%, rgba(0, 49, 58, .18) 72%, rgba(0, 49, 58, .08) 100%);
-}
-
-.heroInner {
-  min-height: 250px;
+.container { width: min(1280px, calc(100% - 96px)); margin-inline: auto; }
+.section { padding-block: clamp(32px, 3.5vw, 50px); }
+.sectionHeader, .sectionHeaderCompact {
   display: flex;
-  align-items: center;
-  padding: 30px 0;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px 32px;
+  margin-bottom: 22px;
 }
-
-.heroCopy { width: min(620px, 48%); }
-.heroEyebrow,
-.eyebrow {
-  margin: 0 0 8px;
-  color: var(--v6-gold);
-  font-size: 10px;
-  letter-spacing: .19em;
-  line-height: 1.5;
+.page main h2 { margin: 0; font: 400 clamp(26px, 2.6vw, 38px)/1.23 var(--serif); }
+.sectionLead { margin: 8px 0 0; color: var(--v6-muted); font-size: 14px; line-height: 1.65; }
+.sectionHeaderCompact > p { margin: 0; color: var(--v6-muted); font-size: 14px; }
+.eyebrow, .heroEyebrow {
+  margin: 0 0 10px;
+  color: var(--v6-gold-ink);
+  font: 600 11px/1.5 var(--sans);
+  letter-spacing: .17em;
   text-transform: uppercase;
 }
-
-.hero h1 {
-  max-width: 620px;
-  margin: 0;
-  font-family: var(--serif);
-  font-size: clamp(40px, 3.2vw, 48px);
-  font-weight: 400;
-  letter-spacing: .01em;
-  line-height: 1.18;
-}
-
-.heroSubtitle {
-  max-width: 590px;
-  margin: 8px 0 0;
-  font-family: var(--serif);
-  font-size: clamp(17px, 1.35vw, 21px);
-  line-height: 1.4;
-}
-
-.heroTagline {
-  max-width: 520px;
-  margin: 7px 0 0;
-  color: rgba(255, 255, 255, .84);
+.page main a:focus-visible { outline: 2px solid var(--v6-teal); outline-offset: 4px; }
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  color: var(--v6-ink);
+  font-weight: 600;
   font-size: 13px;
-  line-height: 1.65;
 }
+.textLink:hover { text-decoration: underline; text-underline-offset: 4px; }
+.textLink svg { flex: none; color: var(--v6-gold-ink); }
 
-.heroActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 16px;
+.hero {
+  --hero-seam: 31%;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--v6-teal);
+  color: var(--v6-moon);
 }
-
-.buttonPrimary,
-.buttonSecondary,
-.buttonGold {
-  min-height: 36px;
+.heroImage {
+  position: absolute;
+  z-index: -2;
+  inset: 0 0 0 auto;
+  width: calc(100% - var(--hero-seam));
+  height: 100%;
+  object-fit: cover;
+  object-position: right 28%;
+}
+.heroShade {
+  position: absolute;
+  z-index: -1;
+  inset: 0 auto 0 var(--hero-seam);
+  width: 35%;
+  background: linear-gradient(90deg, var(--v6-teal), rgb(0 59 70 / .7) 24%, rgb(0 59 70 / .14) 68%, transparent);
+  pointer-events: none;
+}
+.heroInner { min-height: clamp(295px, 26vw, 405px); display: flex; align-items: center; padding-block: 28px; }
+.heroCopy { max-width: min(555px, 48%); }
+.heroEyebrow { color: #e2c58c; }
+.hero h1 { margin: 0; font: 400 clamp(34px, 4vw, 58px)/1.08 var(--serif); letter-spacing: -.018em; }
+.heroSubtitle { max-width: 455px; margin: 13px 0 0; font: 400 clamp(16px, 1.5vw, 20px)/1.46 var(--serif); }
+.heroTagline { margin: 8px 0 0; color: #e1ece8; font-size: 13px; line-height: 1.6; }
+.heroActions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 21px; }
+.buttonPrimary, .buttonSecondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 0 17px;
+  min-height: 44px;
+  padding-inline: 16px;
+  border: 1px solid transparent;
   border-radius: 999px;
   font-size: 12px;
-  line-height: 1.3;
-  text-decoration: none;
-  transition: transform .2s ease, background .2s ease, color .2s ease;
+  font-weight: 600;
 }
+.buttonPrimary { color: var(--v6-navy); background: #d7b770; }
+.buttonPrimary:hover { background: #e3c789; }
+.buttonSecondary { border-color: rgb(248 246 241 / .62); color: var(--v6-moon); }
+.buttonSecondary:hover { background: rgb(248 246 241 / .1); }
+.page main .hero a:focus-visible { outline-color: #e2c58c; }
 
-.buttonPrimary,
-.buttonGold { color: var(--v6-navy); background: var(--v6-gold); }
-.buttonSecondary { border: 1px solid rgba(255, 255, 255, .68); color: #fff; background: rgba(0, 52, 62, .18); }
-.buttonPrimary:hover,
-.buttonSecondary:hover,
-.buttonGold:hover,
-.textLink:hover,
-.compassCard:hover,
-.journeyItem:hover,
-.learningCard:hover { transform: translateY(-2px); }
-
-.buttonPrimary:focus-visible,
-.buttonSecondary:focus-visible,
-.buttonGold:focus-visible,
-.textLink:focus-visible,
-.compassCard:focus-visible,
-.journeyItem:focus-visible,
-.learningCard:focus-visible {
-  outline: 3px solid #7eb2c0;
-  outline-offset: 3px;
-}
-
-/* Shared section rhythm stays compact without removing meaningful content. */
-.section { padding: 34px 0; }
-.compassSection { background: var(--v6-ivory); }
-.sectionHeader,
-.sectionHeaderCompact {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 20px;
-}
-
-.sectionHeader h2,
-.sectionHeaderCompact h2,
-.compassHubIntro h2,
-.learningSection h2,
-.insightsLayout h2,
-.ecosystemSection h2,
-.story h2 {
-  max-width: 760px;
-  margin: 0;
-  color: var(--v6-ink);
-  font-family: var(--serif);
-  font-size: clamp(24px, 2.2vw, 32px);
-  font-weight: 400;
-  letter-spacing: .02em;
-  line-height: 1.28;
-}
-
-.sectionLead,
-.sectionHeaderCompact > p {
-  max-width: 620px;
-  margin: 8px 0 0;
-  color: var(--v6-muted);
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.sectionHeaderCompact { align-items: start; }
-.sectionHeaderCompact > p { max-width: 360px; margin: 4px 0 0; }
-.textLink { display: inline-flex; align-items: center; gap: 7px; color: var(--v6-ink); font-size: 12px; text-decoration: none; transition: transform .2s ease, color .2s ease; }
-.textLink:hover { color: #7b5d2a; }
-
-/* Four Compass cards: equal photo/body rhythm, no text clipping. */
-.compassGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+/* The domain accents and inks follow their respective Education, Identity, Wealth and Health pages. */
+.domain--education { --domain-accent: #8faf96; --domain-face: #dce8dc; --domain-ink: #164d42; }
+.domain--identity { --domain-accent: #416f91; --domain-face: #eaf0f5; --domain-ink: #173e55; }
+.domain--wealth { --domain-accent: #a77b4a; --domain-face: #f2ede5; --domain-ink: #372f27; }
+.domain--health { --domain-accent: var(--compass-health, #427c75); --domain-face: var(--surface-moon, #edf3f0); --domain-ink: var(--brand-ink, #123f48); }
+.compassGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .compassCard {
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--domain-accent) 33%, var(--v6-ivory));
+  border-radius: 12px;
+  overflow: hidden;
+  color: var(--domain-ink);
+  background: color-mix(in srgb, var(--domain-face) 48%, var(--v6-moon));
+}
+.compassCard:hover { border-color: var(--domain-accent); }
+.compassVisual { position: relative; aspect-ratio: 2.7; overflow: hidden; background: var(--domain-face); }
+.compassVisual img, .learningPhoto img { object-fit: cover; filter: saturate(.78); }
+.domain--health .compassVisual img { object-position: center 75%; }
+.compassBody { display: flex; flex: 1; flex-direction: column; align-items: start; padding: 14px 16px 15px; }
+.compassBody h3, .learningCopy h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 500 20px/1.25 var(--serif);
+}
+.compassBody h3 svg, .learningCopy h3 svg { flex: none; width: 21px; height: 21px; }
+.compassBody p { margin: 7px 0 12px; color: var(--v6-muted); font-size: 13px; line-height: 1.55; }
+.compassCardCta, .learningCta, .insightSource {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  font-size: 12px;
+  font-weight: 600;
+}
+.compassCardCta svg, .learningCta svg, .insightSource svg { flex: none; width: 14px; height: 14px; }
+.compassCard:hover .compassCardCta, .learningCard:hover .learningCta, .insightCard a:hover h3 {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.journeySection { padding-block: 26px; background: var(--v6-moon); border-block: 1px solid var(--v6-line); }
+.journeyGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.journeyItem {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  border: 1px solid var(--v6-line);
-  border-radius: 12px;
-  color: inherit;
-  background: rgba(255, 255, 255, .54);
-  text-decoration: none;
-  transition: transform .2s ease, box-shadow .2s ease;
-}
-
-.compassCard:hover { box-shadow: 0 14px 26px rgba(13, 27, 42, .1); }
-.compassVisual { position: relative; aspect-ratio: 1.72; overflow: hidden; }
-.compassVisual::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 34, 42, .04), rgba(10, 34, 42, .6)); }
-.compassVisual img { object-fit: cover; transition: transform .5s ease; }
-.compassCard:hover .compassVisual img { transform: scale(1.04); }
-.compassBadge { position: absolute; z-index: 1; top: 10px; left: 11px; display: inline-flex; align-items: center; gap: 6px; color: #fff; font-family: var(--serif); font-size: 16px; }
-.compassArrow { position: absolute; z-index: 1; right: 10px; bottom: 9px; display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid rgba(255, 255, 255, .75); border-radius: 50%; color: #fff; }
-.compassBody { padding: 13px 15px 15px; }
-.compassBody > span { display: block; font-family: var(--serif); font-size: 17px; line-height: 1.38; }
-.compassBody p { margin: 6px 0 0; color: var(--v6-muted); font-size: 12px; line-height: 1.65; }
-.compassCardCta { display: inline-flex !important; align-items: center; gap: 5px; margin-top: 8px; color: #7b5d2a; font-family: var(--sans) !important; font-size: 11px !important; }
-/* Domain colors follow education-landing, identity-landing, wealth and health-landing. */
-.domain--education {
-  --domain: #8faf96;
-  --domain-soft: #a8bca6;
-  --domain-face: #dce8dc;
-  --domain-ink: #164d42;
-}
-.domain--identity {
-  --domain: #416f91;
-  --domain-soft: #094768;
-  --domain-face: #eaf0f5;
-  --domain-ink: #094768;
-}
-.domain--wealth {
-  --domain: #a77b4a;
-  --domain-soft: #c9b598;
-  --domain-face: #f2ede5;
-  --domain-ink: #805b31;
-}
-.domain--health {
-  --domain: var(--compass-health);
-  --domain-soft: var(--brand-celadon);
-  --domain-face: color-mix(in srgb, var(--brand-celadon) 36%, var(--v6-ivory));
-  --domain-ink: var(--brand-ink);
-}
-.compassCard { border-bottom:3px solid var(--domain); }
-.compassVisual img { filter:saturate(.7); }
-.domain--health .compassVisual img { object-position:50% 84%; }
-.compassVisual::after { background:linear-gradient(180deg,transparent,var(--domain-soft));opacity:.65; }
-.domain--education .compassBody { background: #edf3ea; }
-.domain--identity .compassBody,
-.domain--wealth .compassBody { background: var(--domain-face); }
-.domain--health .compassBody { background: #e3efea; }
-
-/* Six journeys: one compact row on desktop, three/two columns as space narrows. */
-.journeySection { padding: 28px 0; background: var(--v6-moon); border-top: 1px solid rgba(13, 27, 42, .08); }
-.journeyGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-top: 1px solid var(--v6-line); border-bottom: 1px solid var(--v6-line); }
-.journeyItem { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 13px 9px 14px; color: var(--v6-ink); text-align: center; text-decoration: none; transition: transform .2s ease, color .2s ease; }
-.journeyItem:not(:last-child)::after { content: ""; position: absolute; top: 12px; right: 0; height: calc(100% - 24px); border-right: 1px solid var(--v6-line); }
-.journeyItem > svg { color: #b48435; }
-.journeyItem strong { font-family: var(--serif); font-size: 15px; font-weight: 400; line-height: 1.3; }
-.journeyItem span { color: var(--v6-muted); font-size: 10px; line-height: 1.45; }
-.journeyItem > svg:last-child { width: 13px; margin-top: 1px; color: #7b5d2a; }
-
-/* Four domain links connect to the existing Family OS entrance. */
-.compassHub {
-  padding: clamp(36px, 4vw, 56px) 0;
-  border-block: 1px solid var(--v6-line);
-  background:
-    radial-gradient(ellipse at 50% 56%, var(--v6-moon) 20%, transparent 75%),
-    linear-gradient(120deg, color-mix(in srgb, var(--brand-celadon) 22%, var(--v6-ivory)), var(--v6-ivory) 85%);
-}
-.compassHubIntro {
-  max-width: 620px;
-  margin-inline: auto;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 8px;
+  color: var(--v6-ink);
   text-align: center;
 }
-.compassHubIntro .sectionLead { margin-inline: auto; }
+.journeyItem + .journeyItem { border-inline-start: 1px solid var(--v6-line); }
+.journeyItem > svg { width: 23px; height: 23px; color: #8b6934; }
+.journeyItem strong { font: 500 16px/1.25 var(--serif); }
+.journeyItem span { color: var(--v6-muted); font-size: 11px; line-height: 1.4; }
+.journeyItem:hover { background: var(--v6-ivory); }
+
+.compassHub {
+  padding-block: 20px;
+  background: color-mix(in srgb, var(--surface-moon) 66%, var(--v6-ivory));
+  border-bottom: 1px solid var(--v6-line);
+}
+.compassHubLayout { display: grid; grid-template-columns: minmax(0, 28fr) minmax(0, 72fr); align-items: center; gap: clamp(20px, 4vw, 60px); }
+.page main .compassHubIntro h2 { font-size: clamp(26px, 2.2vw, 34px); text-wrap: balance; }
+.compassHubIntro h2 span { white-space: nowrap; }
+.compassHubIntro h2 .hubTitleDot { color: var(--v6-gold-ink); margin-inline: .12em; }
+.compassHubIntro::before { content: ""; display: block; width: 34px; height: 1px; margin-bottom: 13px; background: var(--v6-gold); }
+.hubFamilyNote { margin: 10px 0 0; font-size: 12px; color: var(--v6-ink); line-height: 1.55; }
 .compassMap {
-  position: relative;
   isolation: isolate;
+  position: relative;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-areas:
-    "education family wealth"
-    "identity  family health";
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-template-areas: "education family wealth" "identity family health";
   place-items: center;
-  row-gap: clamp(20px, 2.5vw, 28px);
-  width: min(100%, 740px);
-  margin: clamp(24px, 3vw, 34px) auto 0;
+  width: min(100%, 620px);
+  height: 286px;
+  margin-inline: auto;
 }
-.compassArcs {
-  position: absolute;
-  z-index: -1;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  fill: none;
-  stroke: var(--v6-gold);
-  stroke-width: 1;
-  opacity: .8;
-  pointer-events: none;
-}
+.compassArcs { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; pointer-events: none; fill: none; stroke: var(--v6-gold); stroke-width: 1px; opacity: .85; }
 .mobileArcs { display: none; }
 .compassDial {
-  --dial-line: color-mix(in srgb, var(--domain) 54%, var(--v6-ivory));
-  --dial-mark: linear-gradient(var(--v6-gold), var(--v6-gold));
+  --dial-line: color-mix(in srgb, var(--domain-accent) 64%, var(--v6-ivory));
   position: relative;
   display: grid;
   place-items: center;
-  width: min(100%, clamp(132px, 13vw, 154px));
+  width: min(100%, 123px);
   aspect-ratio: 1;
   border: 1px solid var(--dial-line);
   border-radius: 50%;
-  background:
-    var(--dial-mark) center top / 1px 11px no-repeat,
-    var(--dial-mark) center bottom / 1px 11px no-repeat,
-    var(--dial-mark) left center / 11px 1px no-repeat,
-    var(--dial-mark) right center / 11px 1px no-repeat,
-    linear-gradient(145deg, color-mix(in srgb, var(--v6-moon) 45%, var(--domain-face)), var(--domain-face));
+  background: color-mix(in srgb, var(--domain-face) 70%, var(--v6-moon));
   color: var(--domain-ink);
   text-align: center;
-  text-decoration: none;
-  box-shadow: 0 4px 12px rgba(13, 27, 42, .05);
 }
-.compassDial::before,
-.compassDial::after {
+.compassDial::before, .compassDial::after {
   content: "";
   position: absolute;
   border-radius: 50%;
@@ -315,298 +200,100 @@
 }
 .compassDial::before {
   inset: 4px;
-  background: repeating-conic-gradient(from -1deg, var(--dial-line) 0deg 2deg, transparent 2deg 15deg);
-  mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 3px));
+  background: repeating-conic-gradient(from -1deg, var(--dial-line) 0deg 2deg, transparent 2deg 30deg);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
 }
-.compassDial::after {
-  inset: 10px;
-  border: 1px solid var(--dial-line);
-}
-.dialContent {
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-  line-height: 1.25;
-}
-.dialContent svg {
-  width: clamp(23px, 3.5vw, 31px);
-  height: auto;
-  margin-bottom: 3px;
-}
-.dialContent strong {
-  font: 600 clamp(16px, 2vw, 22px)/1.2 var(--serif);
-}
-.dialContent > span {
-  font-size: clamp(10px, 1.1vw, 11px);
-}
-.familyHouse {
-  --house-shape: polygon(50% 0, 100% 43%, 94% 43%, 94% 98%, 92% 100%, 8% 100%, 6% 98%, 6% 43%, 0 43%);
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  grid-area: family;
-  width: clamp(112px, 12vw, 125px);
-  aspect-ratio: 1.15;
-  padding-bottom: 15px;
-  color: var(--v6-ink);
-  text-align: center;
-  text-decoration: none;
-}
-.familyHouse::before,
-.familyHouse::after {
-  content: "";
-  position: absolute;
-  clip-path: var(--house-shape);
-  pointer-events: none;
-}
-.familyHouse::before {
-  z-index: -2;
-  inset: 0;
-  background: var(--v6-gold);
-}
-.familyHouse::after {
-  z-index: -1;
-  inset: 1px;
-  background: linear-gradient(
-    color-mix(in srgb, var(--v6-teal) 78%, var(--brand-celadon)) 0 43%,
-    var(--v6-moon) 43%
-  );
-}
-.familyHouse strong { font: 600 clamp(13px, 1.2vw, 17px)/1.25 var(--serif); }
-.page[lang="en"] .familyHouse strong {
-  font-size: clamp(12px, 1.05vw, 15px);
-  letter-spacing: -.02em;
-}
-.familyHouse > span {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 3px;
-  font-size: 11px;
-  line-height: 1.2;
-}
-.compassDial:hover { border-color: var(--domain); }
-.compassDial:hover strong,
-.familyHouse:hover strong {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.compassDial:focus-visible,
-.familyHouse:focus-visible {
-  outline: 2px solid var(--v6-teal);
-  outline-offset: 4px;
-}
+.compassDial::after { inset: 10px; border: 1px solid var(--dial-line); opacity: .8; }
+.dialNorth { position: absolute; z-index: 1; top: 4px; left: calc(50% - 2px); width: 4px; height: 7px; background: var(--v6-gold); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.dialContent { display: grid; justify-items: center; gap: 3px; padding-inline: 10px; }
+.dialContent svg { width: 27px; height: 27px; }
+.dialContent strong { font: 600 16px/1.2 var(--serif); }
+.dialContent > span { font: 400 9px/1.3 var(--sans); }
+.compassDial:hover { border-color: var(--domain-accent); background: var(--domain-face); }
+.familyHouse { grid-area: family; position: relative; display: grid; place-items: center; width: min(100%, 111px); aspect-ratio: 140 / 130; color: var(--v6-ink); text-align: center; border-radius: 9px; }
+.houseArt { position: absolute; inset: 0; width: 100%; height: 100%; }
+.houseLabel { position: relative; margin-top: 35%; display: grid; gap: 2px; }
+.houseLabel strong { font: 600 13px/1.1 var(--serif); }
+.houseLabel > span { display: inline-flex; align-items: center; justify-content: center; gap: 3px; font-size: 9px; line-height: 1.2; }
+.houseLabel svg { color: var(--v6-gold-ink); }
+.familyHouse:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 
-/* Education + Insights can be rendered as one compact ecosystem section by the content worker. */
-.ecosystemSection { background: #edf2e9; }
-.ecosystemGrid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(260px, .65fr); gap: 18px; align-items: stretch; }
-.learningPanel,
-.insightsPanel { min-width: 0; }
-.learningGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.learningCard { min-width: 0; min-height: 145px; display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 18px; border: 1px solid rgba(13, 27, 42, .12); border-radius: 12px; color: var(--v6-ink); text-decoration: none; transition: transform .2s ease, box-shadow .2s ease; }
-.learningCard:hover { box-shadow: 0 12px 24px rgba(13, 27, 42, .1); }
-.learningCard > svg { color: #356a5e; }
-.learningCard > div > span { color: #826235; font-size: 9px; letter-spacing: .12em; }
-.learningCard h3 { margin: 5px 0 3px; font-family: var(--serif); font-size: 19px; font-weight: 400; line-height: 1.3; }
-.learningCard p { margin: 0; color: var(--v6-muted); font-size: 12px; line-height: 1.55; }
-.learningCard > svg:last-child { color: #7b5d2a; }
-.learningCardAcademy { background: #fbf8ee; }
-.learningCardAskwise { background: #deebee; }
-.insightsSection { background: var(--v6-ivory); }
-.insightsLayout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .75fr); gap: 24px; align-items: center; }
-.insightsCard,
-.insightsPanel { min-width: 0; }
-.insightsCard { padding: 16px 18px; border-left: 1px solid var(--v6-gold); background: rgba(255, 255, 255, .46); }
-.insightsCard > span { color: #826235; font-size: 10px; letter-spacing: .08em; }
-.insightsCard p { margin: 8px 0 10px; color: var(--v6-muted); font-size: 12px; line-height: 1.6; }
-.insightTopicGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; margin: 0 0 8px; }
-.insightTopic { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 5px; padding: 7px 0; border-bottom: 1px solid var(--v6-line); color: var(--v6-ink); text-decoration: none; }
-.insightTopic > span { min-width: 0; font-family: var(--serif); font-size: 13px; line-height: 1.35; }
-.insightTopic > small { grid-column: 1; color: var(--v6-muted); font-size: 10px; line-height: 1.35; }
-.insightTopic > svg { grid-column: 2; grid-row: 1 / span 2; align-self: center; color: #7b5d2a; }
+.learningSection { background: var(--v6-moon); }
+.learningGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.learningCard { display: grid; grid-template-columns: minmax(110px, .7fr) minmax(0, 1fr); min-height: 208px; border: 1px solid var(--v6-line); border-radius: 12px; overflow: hidden; color: var(--v6-ink); background: var(--v6-ivory); }
+.learningPhoto { position: relative; min-height: 120px; background: var(--surface-moon); }
+.learningCopy { display: flex; flex-direction: column; align-items: start; padding: 20px; }
+.learningCopy h3 { font-size: 19px; }
+.learningCopy p, .learningCopy ul { margin: 10px 0 13px; color: var(--v6-muted); font-size: 13px; line-height: 1.55; }
+.learningCopy ul { display: flex; flex-wrap: wrap; gap: 3px 11px; padding: 0; list-style: none; }
+.learningCopy li::before { content: "·"; margin-inline-end: 4px; color: var(--v6-gold-ink); }
+.learningCta { color: var(--v6-gold-ink); }
 
-/* Kept intentionally small until the shared footer owns the brand-story strip. */
-.story { padding: 34px 0; color: #fff; background: linear-gradient(110deg, #06434e, #012e3a 55%, #0a5660); }
-.storyInner { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-.story .eyebrow { margin-bottom: 5px; }
-.story h2 { color: #fff; font-size: clamp(24px, 2.4vw, 36px); }
-.story .buttonGold { flex: 0 0 auto; }
+.insightsSection { background: var(--surface-moon); }
+.insightTopics { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 0 0 16px; }
+.insightTopics a { display: inline-flex; align-items: center; min-height: 36px; padding-inline: 10px; border-bottom: 1px solid var(--v6-line); color: var(--v6-ink); font-size: 12px; }
+.insightTopics a:hover { border-color: var(--v6-gold-ink); }
+.insightGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.insightCard { min-width: 0; scroll-margin-top: 24px; }
+.insightCard:target { outline: 2px solid var(--v6-gold-ink); outline-offset: 3px; border-radius: 10px; }
+.insightCard a { display: flex; height: 100%; flex-direction: column; border: 1px solid var(--v6-line); border-radius: 10px; overflow: hidden; color: var(--v6-ink); background: var(--v6-moon); }
+.insightCard img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: var(--v6-ivory); filter: saturate(.83); }
+.insightCopy { display: flex; flex: 1; flex-direction: column; padding: 13px; }
+.insightMeta { display: flex; flex-wrap: wrap; gap: 4px 9px; margin: 0; color: var(--v6-gold-ink); font-size: 11px; }
+.insightMeta time { color: var(--v6-muted); }
+.insightCopy h3 { margin: 7px 0 15px; font: 500 17px/1.4 var(--serif); }
+.insightSource { justify-content: space-between; color: var(--v6-muted); font-size: 11px; }
 
-/* The existing Health Compass candidate entry remains controlled by its gate. */
-
-@media (max-width: 1180px) {
-  .container { width: min(calc(100% - 64px), 1020px); }
-  .heroCopy { width: min(600px, 62%); }
-  .heroImage { object-position: right center; }
-  .heroShade { background: linear-gradient(90deg, rgba(0, 49, 58, .94) 0%, rgba(0, 49, 58, .74) 44%, rgba(0, 49, 58, .16) 100%); }
+@media (max-width: 1000px) {
+  .container { width: calc(100% - 56px); }
+  .hero { --hero-seam: 38%; }
+  .heroCopy { max-width: 54%; }
   .compassGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .journeyGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .journeyItem:nth-child(3)::after,
-  .journeyItem:nth-child(6)::after { border-right: 0; }
+  .journeyItem:nth-child(4) { border-inline-start: 0; }
   .journeyItem:nth-child(-n + 3) { border-bottom: 1px solid var(--v6-line); }
-  .ecosystemGrid { grid-template-columns: 1fr; }
+  .compassHubLayout { grid-template-columns: minmax(0, 30fr) minmax(0, 70fr); }
+  .insightGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-
 @media (max-width: 700px) {
-  .container { width: calc(100% - 36px); }
-  .hero { min-height: 420px; }
-  .heroImage { height: 230px !important; object-position: 66% center; }
-  .heroShade { background: linear-gradient(180deg, rgba(0, 49, 58, .12) 0, rgba(0, 49, 58, .14) 200px, #003b46 320px); }
-  .heroInner { min-height: 420px; align-items: flex-start; padding-top: 248px; padding-bottom: 28px; }
-  .heroCopy { width: 100%; }
-  .hero h1 { font-size: clamp(30px, 8.8vw, 34px); }
-  .heroSubtitle { font-size: 18px; }
-  .heroTagline { font-size: 13px; }
-  .heroActions { display: grid; grid-template-columns: 1fr; max-width: 290px; margin-top: 14px; }
-  .buttonPrimary,
-  .buttonSecondary,
-  .buttonGold { width: 100%; min-height: 42px; padding-inline: 16px; }
-  .section { padding: 32px 0; }
-  .sectionHeader,
-  .sectionHeaderCompact { display: block; margin-bottom: 16px; }
-  .sectionHeader h2,
-  .sectionHeaderCompact h2,
-  .compassHubIntro h2,
-  .learningSection h2,
-  .insightsLayout h2,
-  .ecosystemSection h2,
-  .story h2 { font-size: clamp(26px, 7.5vw, 30px); }
-  .sectionHeader .textLink { margin-top: 10px; }
-  .sectionHeaderCompact > p { margin-top: 8px; }
-  .compassGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .compassCard { border-radius: 10px; }
-  .compassVisual { aspect-ratio: 1.35; }
-  .compassBadge { top: 8px; left: 8px; font-size: 14px; }
-  .compassBody { padding: 12px 12px 14px; }
-  .compassBody > span { font-size: 16px; }
+  .container { width: calc(100% - 32px); }
+  .sectionHeader, .sectionHeaderCompact { display: block; margin-bottom: 16px; }
+  .sectionHeaderCompact > p { margin-top: 7px; }
+  .hero { --hero-photo: clamp(190px, 53vw, 310px); }
+  .heroImage { inset: 0; width: 100%; height: var(--hero-photo); object-position: 81% 37%; }
+  .heroShade { inset: calc(var(--hero-photo) - 42px) 0 auto; width: auto; height: 42px; background: linear-gradient(transparent, var(--v6-teal)); }
+  .heroInner { min-height: 0; padding-block: calc(var(--hero-photo) + 10px) 27px; }
+  .heroCopy { max-width: 100%; }
+  .hero h1 { font-size: clamp(31px, 9vw, 43px); }
+  .compassGrid, .learningGrid, .insightGrid { gap: 10px; }
+  .compassVisual { aspect-ratio: 1.75; }
+  .compassBody { padding: 11px; }
+  .compassBody h3 { font-size: 18px; }
   .compassBody p { font-size: 12px; }
-  .journeySection { padding: 24px 0; }
+  .compassCardCta { font-size: 11px; }
   .journeyGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .journeyItem { padding: 12px 8px 13px; }
-  .journeyItem:nth-child(odd)::after { border-right: 1px solid var(--v6-line); }
-  .journeyItem:nth-child(even)::after { border-right: 0; }
-  .journeyItem:nth-child(-n + 3) { border-bottom: 0; }
+  .journeyItem:nth-child(4) { border-inline-start: 1px solid var(--v6-line); }
+  .journeyItem:nth-child(odd) { border-inline-start: 0; }
   .journeyItem:nth-child(-n + 4) { border-bottom: 1px solid var(--v6-line); }
-  .journeyItem strong { font-size: 14px; }
-  .journeyItem span { font-size: 10px; }
-  .learningGrid { grid-template-columns: 1fr; gap: 10px; }
-  .learningCard { min-height: 125px; grid-template-columns: auto 1fr; gap: 12px; padding: 15px; }
-  .learningCard > svg:last-child { grid-column: 2; grid-row: 1; justify-self: end; }
-  .learningCard h3 { font-size: 18px; }
-  .learningCard p { font-size: 12px; }
-  .insightTopicGrid { grid-template-columns: 1fr; }
-  .insightsLayout { grid-template-columns: 1fr; gap: 14px; }
-  .insightsCard { padding: 14px 15px; }
-  .story { padding: 30px 0; }
-  .storyInner { display: block; }
-  .story .buttonGold { margin-top: 16px; }
-}
-
-@media (max-width: 600px) {
-  .compassMap {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      "education wealth"
-      "family    family"
-      "identity  health";
-    width: min(100%, 368px);
-  }
+  .compassHub { padding-block: 26px 19px; }
+  .compassHubLayout { display: block; }
+  .compassMap { width: min(100%, 430px); height: 259px; margin-top: 11px; }
   .desktopArcs { display: none; }
   .mobileArcs { display: inline; }
-  .compassDial { width: min(100%, clamp(113px, 32vw, 135px)); }
-  .familyHouse {
-    width: clamp(97px, 26vw, 112px);
-    padding-bottom: 12px;
-  }
-}
-
-@media (max-width: 420px) {
-  .container { width: calc(100% - 28px); }
-  .compassGrid { grid-template-columns: 1fr; }
-  .compassVisual { aspect-ratio: 1.65; }
-}
-
-/* Compact desktop layout for the surrounding homepage sections. */
-@media (min-width: 1181px) {
-  .hero,
-  .heroInner { min-height: 250px; }
-  .heroImage {
-    left: auto !important;
-    right: 0 !important;
-    width: 64% !important;
-    object-position: right top;
-  }
-  .heroShade {
-    background: linear-gradient(90deg, var(--v6-teal) 36%, rgba(0, 59, 70, .52) 55%, rgba(0, 59, 70, .08) 100%);
-  }
-  .heroInner { padding: 10px 0; }
-  .heroCopy { width: min(620px, 48%); }
-  .hero h1 { font-size: 38px; line-height: 1.16; }
-  .heroSubtitle { margin-top: 5px; font-size: 16px; line-height: 1.4; }
-  .heroTagline { margin-top: 4px; font-size: 12px; line-height: 1.5; }
-  .heroActions { margin-top: 10px; }
-
-  .compassSection { padding: 10px 0; }
-  .compassSection > .container {
-    display: grid;
-    grid-template-columns: 180px minmax(0, 1fr);
-    gap: 18px;
-    align-items: start;
-  }
-  .compassSection .sectionHeader {
-    display: block;
-    grid-column: 1;
-    grid-row: 1;
-    margin: 0;
-  }
-  .compassSection .sectionHeader h2 { font-size: 22px; line-height: 1.25; }
-  .compassSection .sectionLead { margin-top: 7px; font-size: 12px; line-height: 1.55; }
-  .compassSection .sectionHeader .textLink { margin-top: 10px; }
-  .compassSection .compassGrid { grid-column: 2; grid-row: 1; gap: 12px; }
-  .compassCard { min-height: 140px; }
-  .compassVisual { height: 72px; aspect-ratio: auto; }
-  .compassBadge { top: 7px; left: 8px; font-size: 14px; }
-  .compassBadge svg { width: 18px; height: 18px; }
-  .compassArrow { right: 8px; bottom: 7px; width: 26px; height: 26px; }
-  .compassBody { min-height: 64px; padding: 8px 10px; }
-  .compassBody p { margin-top: 0; font-size: 13px; line-height: 1.4; }
-  .compassCardCta { margin-top: 3px; font-size: 10px !important; }
-
-  .journeySection { padding: 8px 0; }
-  .journeySection > .container {
-    display: grid;
-    grid-template-columns: 180px minmax(0, 1fr);
-    gap: 18px;
-    align-items: center;
-  }
-  .journeySection .sectionHeaderCompact { display: block; margin: 0; }
-  .journeySection .sectionHeaderCompact h2 { font-size: 22px; line-height: 1.25; }
-  .journeySection .sectionHeaderCompact > p { margin-top: 5px; font-size: 12px; line-height: 1.45; }
-  .journeyGrid { grid-column: 2; grid-row: 1; }
-  .journeyItem { gap: 3px; padding: 9px 7px 10px; }
-  .journeyItem > svg { width: 22px; height: 22px; }
-  .journeyItem strong { font-size: 14px; }
-  .journeyItem span { font-size: 10px; line-height: 1.35; }
-  .journeyItem > svg:last-child { width: 12px; height: 12px; }
-
-  .ecosystemSection { padding: 6px 0; }
-  .ecosystemGrid { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 18px; }
-  .ecosystemGrid .sectionHeaderCompact { display: block; margin-bottom: 7px; }
-  .ecosystemGrid .sectionHeaderCompact h2 { font-size: 20px; line-height: 1.2; }
-  .ecosystemGrid .sectionHeaderCompact > p { margin-top: 3px; font-size: 11px; line-height: 1.35; }
-  .learningGrid { gap: 8px; }
-  .learningCard { min-height: 75px; padding: 9px 11px; gap: 9px; }
-  .learningCard > svg { width: 22px; height: 22px; }
-  .learningCard > div > span { font-size: 8px; }
-  .learningCard h3 { margin: 3px 0 2px; font-size: 16px; line-height: 1.2; }
-  .learningCard p { font-size: 11px; line-height: 1.35; }
-  .learningCard > svg:last-child { width: 14px; height: 14px; }
-  .insightTopicList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin-bottom: 5px; }
-  .insightTopicList .insightTopic { display: inline-flex; align-items: center; justify-content: space-between; gap: 5px; padding: 4px 0; border-bottom: 1px solid var(--v6-line); color: var(--v6-ink); font-family: var(--serif); font-size: 11px; line-height: 1.3; text-decoration: none; }
-  .insightTopicList .insightTopic svg { width: 13px; height: 13px; flex: 0 0 auto; color: #7b5d2a; }
-  .insightComingSoon { margin: 3px 0 5px; color: var(--v6-muted); font-size: 10px; line-height: 1.35; }
-  .insightsPanel .textLink { font-size: 11px; }
+  .compassDial { width: min(100%, 108px); }
+  .dialContent { gap: 2px; padding-inline: 7px; }
+  .dialContent svg { width: 23px; height: 23px; }
+  .dialContent strong { font-size: 14px; }
+  .dialContent > span { font-size: 8px; }
+  .familyHouse { width: min(93%, 91px); }
+  .houseLabel strong { font-size: 11px; }
+  .houseLabel > span { font-size: 8px; }
+  .learningGrid { grid-template-columns: 1fr; }
+  .learningCard { min-height: 162px; grid-template-columns: minmax(90px, .6fr) minmax(0, 1fr); }
+  .learningCopy { padding: 12px; }
+  .learningCopy h3 { font-size: 17px; }
+  .learningCopy p, .learningCopy ul { font-size: 12px; }
+  .insightGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .insightCopy { padding: 9px; }
+  .insightCopy h3 { font-size: 15px; }
 }

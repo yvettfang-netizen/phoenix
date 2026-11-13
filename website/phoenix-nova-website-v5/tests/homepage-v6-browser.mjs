@@ -30,11 +30,12 @@ const mobileBreakpoint = 700;
 const hubSelector = 'main > section[aria-labelledby="compass-hub-heading"]';
 const desktopGeometry = {
   header: [56, 64],
-  hero: [230, 270],
-  compass: [145, 175],
-  journey: [90, 115],
-  ecosystem: [130, 160],
-  footer: [100, 130],
+  hero: [290, 405],
+  compass: [280, 465],
+  journey: [140, 240],
+  learning: [290, 450],
+  insights: [330, 580],
+  footer: [190, 330],
 };
 
 await mkdir(out, { recursive: true });
@@ -151,7 +152,7 @@ async function assertCompassHub(page, locale, width) {
     assert.equal(await hub.locator(`a[data-v6-dial="${domain}"]`).getAttribute("href"), href);
   }
   assert.equal(await family.getAttribute("href"), `/${locale}/account`);
-  assert.ok(await family.evaluate(link => getComputedStyle(link, "::before").clipPath.startsWith("polygon(")), `${route}: missing house silhouette`);
+  assert.ok(await family.locator("svg path").count() >= 4, `${route}: missing architectural house artwork`);
 
   const arcs = hub.locator('div > svg[focusable="false"] > path:visible');
   assert.equal(await arcs.count(), 1);
@@ -163,7 +164,7 @@ async function assertCompassHub(page, locale, width) {
     return {
       domain: link.dataset.v6Dial, x, y, width, height,
       radius: style.borderTopLeftRadius,
-      color: style.getPropertyValue("--domain").trim(),
+      color: style.getPropertyValue("--domain-accent").trim(),
     };
   }));
   const house = await family.boundingBox();
@@ -211,7 +212,8 @@ async function assertDesktopGeometry(page, locale) {
     ["hero", 'main > section[aria-labelledby="homepage-v6-title"]'],
     ["compass", 'main > section[aria-labelledby="compass-heading"]'],
     ["journey", 'main > section[aria-labelledby="journey-heading"]'],
-    ["ecosystem", 'main > section[aria-labelledby="learning-heading"]'],
+    ["learning", 'main > section[aria-labelledby="learning-heading"]'],
+    ["insights", 'main > section[aria-labelledby="insights-heading"]'],
     ["footer", "footer.site-footer"],
   ];
   const measurements = {};
@@ -224,6 +226,10 @@ async function assertDesktopGeometry(page, locale) {
     if (measurements[name] < minimum || measurements[name] > maximum) failures.push({ name, actual: measurements[name], expected: [minimum, maximum] });
   }
   measurements.compassHub = (await page.locator(hubSelector).boundingBox()).height;
+  assert.ok(measurements.compassHub <= 345, "Desktop Compass should stay compact");
+  const intro = await page.locator(`${hubSelector} header`).boundingBox();
+  const map = await page.locator(`${hubSelector} > div > div`).boundingBox();
+  assert.ok(intro.x + intro.width < map.x, "Desktop Compass needs a separate left introduction");
   const totalHeight = await page.evaluate(() => document.documentElement.scrollHeight);
   geometryEvidence.push({ locale, width: 1440, totalHeight, blocks: measurements, failures });
   assert.deepEqual(failures, [], `${locale} 1440px: surrounding sections outside their existing ranges: ${JSON.stringify(failures)}`);
@@ -292,7 +298,7 @@ async function assertPage(page, locale, width) {
   assert.equal(await page.locator("[data-homepage-v6]").evaluate((element, localeCode) => element.getAttribute("lang")?.toLowerCase().startsWith(localeCode), locale), true, `${route}: homepage language is wrong`);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, `${route}: horizontal overflow`);
   const sections = await page.locator("main > section").evaluateAll(nodes => nodes.map(node => node.getAttribute("aria-labelledby")));
-  assert.deepEqual(sections, ["homepage-v6-title", "compass-heading", "journey-heading", "compass-hub-heading", "learning-heading"]);
+  assert.deepEqual(sections, ["homepage-v6-title", "compass-heading", "journey-heading", "compass-hub-heading", "learning-heading", "insights-heading"]);
   assert.doesNotMatch(await page.locator("body").innerText(), /Founder (?:Center|OS)|创始人中心/i);
   await assertLogo(page, route, width);
   await assertHeaderAndFooter(page, locale, route);
@@ -309,6 +315,28 @@ async function assertPage(page, locale, width) {
   await page.locator("footer.site-footer").screenshot({ path: resolve(out, `homepage-v6-${locale}-${width}-footer.png`) });
 }
 
+async function assertInsights(page, locale) {
+  const base = `${origin}/${locale}`;
+  await page.goto(base, { waitUntil: "domcontentloaded" });
+  const topics = page.locator("[data-v6-insight-topic]");
+  assert.equal(await topics.count(), 5);
+  const fragments = await topics.evaluateAll(links => links.map(link => link.getAttribute("href")));
+  assert.equal(new Set(fragments).size, 5);
+  for (const [index, fragment] of fragments.entries()) {
+    await topics.nth(index).click();
+    assert.equal(new URL(page.url()).hash, fragment);
+    const card = page.locator(fragment);
+    assert.equal(await card.locator("time[datetime]").count(), 1);
+    const article = card.locator("[data-v6-insight-article]");
+    const url = await article.getAttribute("href");
+    assert.match(url, /^https:\/\/www\.info\.gov\.hk\/gia\/general\//);
+    await Promise.all([page.waitForURL(url), article.click()]);
+    assert.equal(page.url(), url);
+    await page.goto(base, { waitUntil: "domcontentloaded" });
+  }
+  passed(`${locale}: five Insights topics reach their dated cards and original articles`);
+}
+
 async function assertHomepageClicks(page, locale, width) {
   const account = `/${locale}/account`;
   const entries = [
@@ -320,8 +348,8 @@ async function assertHomepageClicks(page, locale, width) {
       ["header.site-header a.portal-link", account],
       ['section[aria-labelledby="homepage-v6-title"] a[href$="/compass"]', `/${locale}/compass`],
       ['section[aria-labelledby="homepage-v6-title"] a[href$="/about"]', `/${locale}/about`],
-      ['main a[href$="/education#academy"]', `${compassDestinations(locale).education}#academy`],
-      ['main a[href$="/education#askwise"]', `${compassDestinations(locale).education}#askwise`],
+      ['[data-v6-learning="academy"]', `${compassDestinations(locale).education}#academy`],
+      ['[data-v6-learning="askwise"]', `${compassDestinations(locale).education}#askwise`],
       ['main a[href$="/insights"]', `/${locale}/insights`],
     );
   }
@@ -348,6 +376,9 @@ const productPaths = new Set(locales.flatMap(locale => Object.values(compassDest
 await context.route(url => productPaths.has(url.href.split("#")[0]), route =>
   route.fulfill({ status: 200, contentType: "text/html", body: "<title>Compass product navigation</title>" })
 );
+await context.route(url => url.hostname === "www.info.gov.hk" && url.pathname.startsWith("/gia/general/"), route =>
+  route.fulfill({ status: 200, contentType: "text/html", body: "<title>Official article navigation</title>" })
+);
 const page = await context.newPage();
 const pageErrors = [];
 const homepageConsoleErrors = [];
@@ -368,6 +399,7 @@ try {
       if (width === widths[0]) await assertInternalRoutes(page, locale, `/${locale}`);
       passed(`${locale} ${width}px: homepage structure, logo, Compass geometry, language and overflow`);
       if (width === 1440 || width === 390) await assertHomepageClicks(page, locale, width);
+      if (width === 1440) await assertInsights(page, locale);
     }
   }
   await assertLanguageSwitches(page);
