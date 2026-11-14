@@ -1,8 +1,8 @@
 # Phoenix Insights CMS 交接说明
 
-状态：P1 设计与接入准备，Candidate / Private Review
+状态：P1 设计审查，Candidate / Private Review
 
-本文件记录凤启洞察的内容系统边界、未来数据契约与发布治理。它不是数据库迁移，也不是已上线 CMS 的能力声明。
+本文件记录凤启洞察的初始审计及交接边界。2026-11-14 的 Founder 决策、最新仓库核验与 P1 设计以 [架构决策与数据库审查稿](PHOENIX_INSIGHTS_P1_ARCHITECTURE.md) 为准。
 
 ## 1. 现状核验
 
@@ -17,18 +17,18 @@
 
 Canonical PostgreSQL 当前 active migrations 为 0001–0037。它已提供身份、家庭、成员、学生、监护授权、Consent、Docs、CRM Lead/Consultation/Deal、审计及内容归因字段，但没有 Article、Category、Topic、FAQ 或 Policy Update 内容对象。0038/0039 位于 `forward-candidates/service-workbench`，明确是未批准候选，不可作为 CMS 依赖。
 
-因此本阶段页面可以使用明确标记的本地候选内容；正式运营前必须由 Founder / GPT Pro 确定内容数据归属、存储与审批责任。
+本阶段页面可以使用明确标记的本地候选内容。Founder 已确认 Canonical 数据归属与按领域审核机制，供应商与具体人员仍待确认。
 
 ## 2. 逻辑内容模型（待批准）
 
-以下是逻辑模型，不代表已创建表。每个实体都应有 `id`、`created_at`、`updated_at`、`version`、`status` 和变更审计引用；公开 slug 在同一语言和发布面内必须唯一。
+以下为初始模型。已批准纳入的 ArticleVersion、TranslationGroup 及版本关系见 P1 审查稿，具体表结构待数据库评审。
 
 | 实体 | 核心字段 | 约束与关系 |
 |---|---|---|
 | Article | `id`, `slug`, `language`, `title`, `subtitle`, `summary`, `content_blocks`, `cover_asset_ref`, `author_principal_id`, `reviewer_principal_id`, `status`, `published_at`, `last_verified_at` | 版本化；必须关联至少一个 Category；政策、医疗、财富、身份内容必须有来源和专业审核记录 |
 | Category | `id`, `slug`, `name`, `parent_id`, `compass_kind`, `status` | 层级自引用；`compass_kind` 只能映射既有 Education / Identity / Wealth / Health / Cross-domain，不创建第二套 Compass |
 | Article Source | `id`, `article_id`, `source_name`, `source_url`, `source_type`, `source_published_at`, `verified_at`, `verification_note` | URL 必须可访问且由编辑核验；一篇政策文章可以有多个来源；来源版本不可静默覆盖 |
-| Policy Update | `id`, `category_id`, `title`, `issuing_authority`, `published_at`, `effective_at`, `status`, `official_url`, `impact_summary`, `expert_analysis`, `last_verified_at` | `status` 使用 `UNVERIFIED`, `PUBLISHED`, `UPCOMING`, `EFFECTIVE`, `EXPIRED`；状态由核验记录决定，不由文章日期自动推断 |
+| Policy Update | `id`, `category_id`, `title`, `issuing_authority`, `published_at`, `effective_at`, `verification_status`, `lifecycle_status`, `official_url`, `impact_summary`, `expert_analysis`, `last_verified_at` | 核验状态为 `UNVERIFIED`、`VERIFIED`。生命周期为 `ANNOUNCED`、`UPCOMING`、`EFFECTIVE`、`EXPIRED`、`WITHDRAWN`，由核验记录确定 |
 | Topic | `id`, `slug`, `title`, `description`, `cover_asset_ref`, `status` | 通过 ArticleTopic 关联多篇文章；不得用专题页承诺服务结果 |
 | ArticleTopic | `article_id`, `topic_id` | 复合唯一键；删除采用受控撤销，不破坏历史版本 |
 | FAQ | `id`, `category_id`, `related_article_id`, `question`, `answer`, `status`, `last_verified_at` | 只展示已审核内容；医疗、法律、财富问题需明确边界和官方来源 |
@@ -94,11 +94,11 @@ Canonical 继续是唯一业务数据权威。文章内容不能伪装成 `casew
 
 ## 8. 当前未完成与待决策
 
-已证实缺失：正式 CMS/API、内容表、媒体库、发布权限、审核记录、文章详情 SEO、Insights→CRM 交接和内容专用 consent/RLS。
+仍待实施：正式 CMS/API、内容表、媒体库、数据库发布权限和审核记录、正式公开文章索引、Insights→CRM 交接和内容专用 consent/RLS。
 
-需要 Founder / GPT Pro 决定：
+后续待决事项：
 
-1. 内容数据最终归属（独立 CMS、代码仓库候选层，或未来 Canonical content schema）。
+1. Canonical 内容域的具体 schema、迁移编号及权限实现，由数据库负责人设计并评审。
 2. 各频道的专业审核责任人、发布时间和复核频率。
 3. 公开域名、index/noindex 解除条件、sitemap/RSS 发布策略。
 4. 第三方图片版权、作者展示和引用规范。
