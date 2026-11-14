@@ -48,7 +48,7 @@ const worker = {
     // This display hint is derived from the post-routing URL by the Worker,
     // never trusted from a client header. It has no authentication meaning.
     const headers = new Headers(request.headers);
-    const healthLocale = /^\/(zh|en)\/(?:health(?:\/|$)|compass\/health(?:\/|$))/.exec(url.pathname)?.[1];
+    const healthLocale = /^\/(zh|en)\/(?:health(?:\/|$)|compass\/health(?:\/|$)|insights(?:\/|$))/.exec(url.pathname)?.[1];
     headers.delete("x-phoenix-health-locale");
     if (healthLocale) headers.set("x-phoenix-health-locale", healthLocale);
     return wealthEdgeResponse(await handler.fetch(new Request(request, { headers }), env, ctx), original);
