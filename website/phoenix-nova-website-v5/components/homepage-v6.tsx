@@ -25,6 +25,7 @@ import styles from "./homepage-v6.module.css";
 type Bilingual = readonly [string, string];
 
 const heroAssets = "/images/homepage-optimized/v1";
+const homepageCardAssets = "/images/homepage-optimized/v2";
 const heroSrcSet = [690, 960, 1440, 1920].map((width) => `${heroAssets}/hero-${width}.webp ${width}w`).join(", ");
 
 function copy(locale: Locale, value: Bilingual) {
@@ -57,7 +58,7 @@ const compassCards: readonly {
       "Connecting families with clear education pathways in Hong Kong and beyond.",
     ],
     cta: ["探索教育", "Explore Education"],
-    image: "/images/education-v3/education-hero.png",
+    image: `${homepageCardAssets}/education-pathways.webp`,
     href: "/education",
   },
   {
@@ -69,7 +70,7 @@ const compassCards: readonly {
       "Plan Hong Kong and global residency options with confidence.",
     ],
     cta: ["探索身份规划", "Explore Identity"],
-    image: "/images/identity-v3/identity-hong-kong.png",
+    image: `${homepageCardAssets}/identity-hong-kong.webp`,
     href: "/identity",
   },
   {
@@ -81,7 +82,7 @@ const compassCards: readonly {
       "Family protection and legacy. Controlled preview.",
     ],
     cta: ["了解财富规划", "Explore Wealth"],
-    image: "/images/identity-v3/identity-family.png",
+    image: `${homepageCardAssets}/family-legacy.webp`,
     href: "/compass#wealth",
   },
   {
@@ -93,7 +94,7 @@ const compassCards: readonly {
       "Find coordinated healthcare support across the Greater Bay Area.",
     ],
     cta: ["探索健康服务", "Explore Health"],
-    image: "/images/health-v21-communication.jpg",
+    image: `${homepageCardAssets}/health-coordination.webp`,
     href: "/health",
   },
 ];
@@ -121,11 +122,11 @@ const academyTopics: readonly Bilingual[] = [
   ["家庭与成长课堂", "Family learning"],
 ];
 const academyImages = [
-  "/images/education-v3/education-academy.png",
-  "/images/education-v3/education-hero.png",
-  "/images/education-v3/education-tutoring.png",
+  `${homepageCardAssets}/academy-learning.webp`,
+  `${homepageCardAssets}/education-pathways.webp`,
+  `${homepageCardAssets}/academy-skills.webp`,
   null,
-  "/images/identity-v3/identity-family.png",
+  `${homepageCardAssets}/family-legacy.webp`,
 ];
 
 function FamilyHouseArtwork() {
