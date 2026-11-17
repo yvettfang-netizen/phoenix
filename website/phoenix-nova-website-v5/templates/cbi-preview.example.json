@@ -1,0 +1,35 @@
+{
+  "kind": "CBI_IMPORT_PREVIEW",
+  "batch_id": "cbi_batch_example_only",
+  "filename": "cbi-country-record.template.json",
+  "format": "JSON",
+  "file_hash": "<sha256-of-original-file>",
+  "status": "IMPORT_REVIEW",
+  "gate": "IMPORT_REVIEW",
+  "records": [],
+  "audit": {
+    "import_batch_id": "cbi_batch_example_only",
+    "source_file": "cbi-country-record.template.json",
+    "source_document": null,
+    "data_version": null,
+    "imported_at": "<server-generated timestamp>",
+    "imported_by": null,
+    "approval_status": "IMPORT_REVIEW",
+    "verification_status": "UNVERIFIED",
+    "provenance": "UNKNOWN",
+    "append_only": true
+  },
+  "issues": [
+    {
+      "code": "COUNTRY_NOT_ALLOWLISTED",
+      "path": "row[1].country_code",
+      "severity": "error",
+      "message": "Fill one of KN, AR, VU or ST from an approved source."
+    }
+  ],
+  "approval": {
+    "eligible": false,
+    "reason": "IMPORT_REVIEW_ONLY"
+  },
+  "note": "Example only; no country or programme policy is asserted."
+}

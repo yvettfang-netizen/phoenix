@@ -1,0 +1,2 @@
+batch_id,file_hash,row_number,path,code,severity,message
+cbi_batch_example_only,<sha256-of-original-file>,1,row[1].country_code,COUNTRY_NOT_ALLOWLISTED,error,"Fill one of KN, AR, VU or ST from an approved source."

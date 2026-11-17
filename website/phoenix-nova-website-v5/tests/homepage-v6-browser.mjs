@@ -121,7 +121,7 @@ async function assertCompassAndJourneys(page, locale, route) {
   assert.ok(hrefs.some(href => localeLink(href, locale, "/education")), `${route}: Education Compass link is missing`);
   assert.ok(hrefs.some(href => localeLink(href, locale, "/identity")), `${route}: Identity Compass link is missing`);
   assert.ok(hrefs.some(href => localeLink(href, locale, "/health")), `${route}: Health Compass link is missing`);
-  assert.ok(hrefs.some(href => href === `/${locale}/compass#wealth` || href === `/${locale}/wealth` || href.startsWith(`/${locale}/wealth#`)), `${route}: Wealth Compass link/controlled preview is missing`);
+  assert.ok(hrefs.includes(`https://wealth.phoenixnova.com.cn/${locale}`), `${route}: Wealth card must link to the dedicated locale-specific Wealth origin`);
 
   const journey = page.locator("[data-v6-journey]");
   assert.equal(await journey.count(), 6, `${route}: six life-journey items are required`);
