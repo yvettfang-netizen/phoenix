@@ -1,6 +1,7 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
+import { getDocumentLocale } from "../lib/locale-navigation";
 import { wealthEdgeRequest, wealthEdgeResponse } from "../lib/wealth-edge";
 
 interface Env {
@@ -48,9 +49,9 @@ const worker = {
     // This display hint is derived from the post-routing URL by the Worker,
     // never trusted from a client header. It has no authentication meaning.
     const headers = new Headers(request.headers);
-    const healthLocale = /^\/(zh|en)\/(?:health(?:\/|$)|compass\/health(?:\/|$)|insights(?:\/|$))/.exec(url.pathname)?.[1];
+    const documentLocale = getDocumentLocale(url.pathname);
     headers.delete("x-phoenix-health-locale");
-    if (healthLocale) headers.set("x-phoenix-health-locale", healthLocale);
+    if (documentLocale) headers.set("x-phoenix-health-locale", documentLocale);
     return wealthEdgeResponse(await handler.fetch(new Request(request, { headers }), env, ctx), original);
   },
 };
