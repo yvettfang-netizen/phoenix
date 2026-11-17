@@ -1,0 +1,2 @@
+// No draft or preview content is sent to RSS subscribers.
+export function GET() { return new Response('<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Phoenix Insights</title><description>Private review; no published articles</description></channel></rss>', { headers: { "content-type": "application/rss+xml; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex" } }); }
