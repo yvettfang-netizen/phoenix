@@ -86,6 +86,18 @@ SIWC establishes identity only; it does not prove workspace membership. Use the 
 
 Use SIWC only for separately scoped features explicitly tied to a ChatGPT identity. Phoenix customer account pages use the customer authentication implementation above.
 
+## Phoenix Insights preview origin
+
+Set `PHOENIX_INSIGHTS_ORIGIN` in the dedicated preview's server runtime to its
+HTTPS origin, for example `https://insights-preview.example.test`. The local
+Node preview reads the same variable from its environment. A missing or invalid
+value uses the existing V5 review origin.
+
+Insight pages use that origin for canonical, alternate-language, Open Graph and
+breadcrumb URLs. Both RSS channels link to their corresponding Insights home
+page. Candidate pages retain `noindex`, and the Insights sitemap and RSS
+entries remain empty.
+
 ## Diagnostic Commands
 
 - `npm run install:ci`: perform the one bounded lockfile install

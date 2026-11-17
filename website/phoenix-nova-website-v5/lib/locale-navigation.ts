@@ -20,3 +20,9 @@ export function getCurrentLocale(path: string): SiteLocale | null {
   const match = path.match(/^\/(zh|en)(?:\/|#|\?|$)/);
   return match ? match[1] as SiteLocale : null;
 }
+
+/** Health and Insights share the same document language on the server and in the browser. */
+export function getDocumentLocale(pathname: string): SiteLocale | null {
+  const match = /^\/(zh|en)\/(?:health|compass\/health|insights)(?:\/|$)/.exec(pathname);
+  return match ? match[1] as SiteLocale : null;
+}

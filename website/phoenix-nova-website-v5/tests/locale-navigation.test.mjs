@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 const source = readFileSync(new URL("../lib/locale-navigation.ts", import.meta.url), "utf8");
 const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ES2022 } }).outputText;
-const { localizedHref, resolveLocaleSwitch, getCurrentLocale } = await import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
+const { localizedHref, resolveLocaleSwitch, getCurrentLocale, getDocumentLocale } = await import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
 
 test("locale links preserve business paths, explicit locales, queries and fragments", () => {
   for (const page of ["", "/education", "/identity", "/health", "/account"]) {
@@ -16,4 +16,15 @@ test("locale links preserve business paths, explicit locales, queries and fragme
   assert.equal(getCurrentLocale("/en/education"), "en");
   assert.equal(getCurrentLocale("/zh/identity"), "zh");
   assert.equal(getCurrentLocale("/fr/identity"), null);
+});
+
+test("document language follows the locale on Insights and Health routes", () => {
+  for (const locale of ["zh", "en"]) {
+    for (const path of ["/health", "/health/providers", "/compass/health", "/insights", "/insights/articles/sample"]) {
+      assert.equal(getDocumentLocale(`/${locale}${path}`), locale);
+    }
+  }
+  assert.equal(getDocumentLocale("/en/insights-archive"), null);
+  assert.equal(getDocumentLocale("/en/identity"), null);
+  assert.equal(getDocumentLocale("/fr/insights"), null);
 });

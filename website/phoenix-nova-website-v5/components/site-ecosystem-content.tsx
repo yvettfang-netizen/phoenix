@@ -6,7 +6,7 @@ import Link from "next/link";
 import { localizedHref } from "@/lib/locale-navigation";
 import { healthPreviewEnabled } from "@/lib/health-compass-gate";
 
-export function SiteEcosystemContent({ locale, consultationPath, localized = false, brandLocale, compact = false, mainOrigin }: { locale: Locale; consultationPath?: string; localized?: boolean; brandLocale?: Locale; compact?: boolean; mainOrigin?: string }) {
+export function SiteEcosystemContent({ locale, consultationPath, localized = false, brandLocale, compact = false, mainOrigin, localeHref }: { locale: Locale; consultationPath?: string; localized?: boolean; brandLocale?: Locale; compact?: boolean; mainOrigin?: string; localeHref?: string }) {
   const zh = locale === "zh";
   if (compact) return <div className={styles.compactFooter} data-compact-footer>
     <div className={styles.compactPromise}><div><strong>{zh ? "每一次启程，都值得更好的未来。" : "Every Beginning Deserves a Better Future."}</strong><span>{zh ? "连接世界资源，陪伴家庭成长。" : "Connecting Global Resources. Growing with Families."}</span></div><Link href={`${mainOrigin ?? ""}${localizedHref(locale, "/about")}`}>{zh ? "了解我们的故事 →" : "Our Story →"}</Link></div>
@@ -15,7 +15,7 @@ export function SiteEcosystemContent({ locale, consultationPath, localized = fal
       <a href="https://fengqi-research-institute.yvettfang.chatgpt.site">{zh ? "数字凤启 · 进入仙兽图" : "Digital Phoenix"}</a>
       {healthPreviewEnabled() && <Link href={localizedHref(locale,"/compass/health")} data-testid="health-entry">{zh ? "健康评估预览" : "Health assessment preview"}</Link>}
     </nav></div>
-    <div className={styles.compactCopyright}><span>© 2026 Phoenix Nova™</span><details><summary>{zh ? "公司与服务声明" : "Company & service notice"}</summary><p>{zh ? "凤启环球信息科技（深圳）有限公司。公开信息不构成录取、身份、医疗、法律或收益保证。" : "Phoenix Nova™. Public information does not guarantee admission, immigration, medical, legal or financial outcomes."}</p></details><Link href={`${mainOrigin ?? ""}${localizedHref(locale === "zh" ? "en" : "zh", "")}`}>{zh ? "EN" : "中文"}</Link></div>
+    <div className={styles.compactCopyright}><span>© 2026 Phoenix Nova™</span><details><summary>{zh ? "公司与服务声明" : "Company & service notice"}</summary><p>{zh ? "凤启环球信息科技（深圳）有限公司。公开信息不构成录取、身份、医疗、法律或收益保证。" : "Phoenix Nova™. Public information does not guarantee admission, immigration, medical, legal or financial outcomes."}</p></details><Link href={localeHref ?? `${mainOrigin ?? ""}${localizedHref(zh ? "en" : "zh", "")}`}>{zh ? "EN" : "中文"}</Link></div>
   </div>;
   return <div className={styles.inner}>
     <div className={styles.top}>

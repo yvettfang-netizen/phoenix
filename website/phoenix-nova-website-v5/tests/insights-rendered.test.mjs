@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test, { after } from "node:test";
 import { createV5Worker } from "./worker-fixture.mjs";
-const worker = createV5Worker();
+const previewOrigin = "https://insights-preview.example.test";
+const worker = createV5Worker({ PHOENIX_INSIGHTS_ORIGIN: previewOrigin });
 after(() => worker.dispose());
 async function get(path) { return worker.dispatchFetch(`http://localhost${path}`, { headers: { accept: "text/html" }, redirect: "manual" }); }
 test("Insights routes render bilingual pages with noindex and correct language", async () => {
@@ -12,7 +13,8 @@ test("Insights routes render bilingual pages with noindex and correct language",
       const html = await response.text();
       assert.match(html, /noindex/i);
       assert.match(html, /Editorial preview|编辑预览/);
-      assert.match(html, new RegExp(`lang="${locale === "zh" ? "zh-Hans" : "en"}"`));
+      assert.match(html, new RegExp(`<html\\b[^>]*\\blang="${locale === "zh" ? "zh-Hans" : "en"}"`));
+      assert.ok(html.includes(`rel="canonical" href="${previewOrigin}/${locale}${path}"`));
     }
   }
 });
@@ -31,6 +33,11 @@ test("nonexistent content is not presented as real", async () => {
   assert.equal((await get("/en/insights/unknown-channel")).status, 404);
   const sitemap = await (await get("/sitemap-insights.xml")).text();
   assert.doesNotMatch(sitemap, /<url>/);
-  const rss = await (await get("/en/insights/feed.xml")).text();
-  assert.doesNotMatch(rss, /<item>/);
+  for (const locale of ["zh", "en"]) {
+    const response = await get(`/${locale}/insights/feed.xml`);
+    assert.equal(response.status, 200);
+    const rss = await response.text();
+    assert.ok(rss.includes(`<link>${previewOrigin}/${locale}/insights</link>`));
+    assert.doesNotMatch(rss, /<item\b/);
+  }
 });

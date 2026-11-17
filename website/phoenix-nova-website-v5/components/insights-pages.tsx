@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowUpRight, BookOpen, Coins, Globe2, GraduationCap, HeartPulse, Search, ShieldCheck } from "lucide-react";
 import { SiteHeader, SiteFooter } from "./v5-site";
 import { articles, channelById, channels, faqs, phrase, policies, searchArticles, topics, type Article, type ChannelId, type ContentBlock, type InsightLocale } from "@/lib/insights-content";
+import { resolveLocaleSwitch } from "@/lib/locale-navigation";
 import styles from "./insights-pages.module.css";
 
 const label = (locale: InsightLocale, zh: string, en: string) => locale === "zh" ? zh : en;
@@ -13,10 +14,11 @@ const checked = (locale: InsightLocale, date: string) => label(locale, `来源�
 const imageAlt = (locale: InsightLocale, channel: ChannelId) => label(locale, `${phrase(locale, channelById(channel)!.title)}专题配图`, `Illustration for ${phrase(locale, channelById(channel)!.title)}`);
 const searchLink = (locale: InsightLocale, query: string) => href(locale, `?q=${encodeURIComponent(query)}#results`);
 function Frame({ locale, children, localePath }: { locale: InsightLocale; children: React.ReactNode; localePath: string }) {
+  const localeHref = resolveLocaleSwitch(localePath, locale === "zh" ? "en" : "zh");
   return <div className={styles.site} lang={locale === "zh" ? "zh-Hans" : "en"}>
-    <SiteHeader locale={locale} page="insights" localePath={localePath} />
+    <SiteHeader locale={locale} page="insights" localeHref={localeHref} />
     <main id="main-content">{children}</main>
-    <SiteFooter locale={locale} compact />
+    <SiteFooter locale={locale} compact localeHref={localeHref} />
   </div>;
 }
 function Kicker({ children }: { children: React.ReactNode }) { return <span className={styles.kicker}>{children}</span>; }
@@ -61,7 +63,8 @@ export function InsightsHome({ locale, query = "" }: { locale: InsightLocale; qu
   const result = searchArticles({ query, pageSize: 20 });
   const featured = articles.find(a => a.featured)!;
   const side = articles.filter(a => a !== featured).slice(0, 3);
-  return <Frame locale={locale} localePath="/insights">
+  const localePath = query ? `/insights?${new URLSearchParams({ q: query })}` : "/insights";
+  return <Frame locale={locale} localePath={localePath}>
     <section className={styles.hero}><div className={styles.heroInner}><Kicker>PHOENIX INSIGHTS · GEO</Kicker><h1>{label(locale, "凤启洞察", "Phoenix Insights")}</h1><p className={styles.heroEnglish}>{label(locale, "Phoenix Insights", "Global Perspectives · Policy Intelligence · Family Growth")}</p><p className={styles.heroTagline}>{label(locale, "全球视野 · 政策动态 · 深度解读", "Global perspectives · Policy intelligence · Deeper understanding")}</p><p className={styles.heroBody}>{label(locale, "聚焦教育、身份、财富与健康，以官方资料为依据，帮助家庭看清长期规划中的重要变化。", "Explore education, identity, wealth and health through primary sources and thoughtful family planning context.")}</p></div></section>
     <div className={styles.container}>
       <form className={styles.searchBox} action={href(locale)} method="get" role="search"><Search size={23} aria-hidden="true"/><input name="q" defaultValue={query} aria-label={label(locale, "搜索洞察内容", "Search insights")} placeholder={label(locale, "搜索政策、院校、身份、医疗等…", "Search policy, education, identity, healthcare…")} /><button type="submit">{label(locale, "搜索", "Search")}</button></form>
@@ -86,8 +89,12 @@ export function InsightsChannel({ locale, channel, tag = "", page = 1 }: { local
   const chosen = tag === "all" ? "" : tag;
   const result = searchArticles({ channel, tag: chosen, page, pageSize: 4 });
   const tags = channelTags[channel] ?? [];
-  const tagHref = (t: string, n = 1) => href(locale, `/${channel}?${new URLSearchParams({ ...(t ? { tag: t } : {}), ...(n > 1 ? { page: String(n) } : {}) }).toString()}`);
-  return <Frame locale={locale} localePath={`/insights/${channel}`}>
+  const channelPath = (tag: string, page = 1) => {
+    const params = new URLSearchParams({ ...(tag ? { tag } : {}), ...(page > 1 ? { page: String(page) } : {}) });
+    return `/insights/${channel}${params.size ? `?${params}` : ""}`;
+  };
+  const tagHref = (tag: string, page = 1) => `/${locale}${channelPath(tag, page)}`;
+  return <Frame locale={locale} localePath={channelPath(chosen, result.page)}>
     <section className={styles.channelHero}><div className={styles.channelHeroImage} style={{ backgroundImage: `url("${c.image}")` }} /><div className={styles.channelHeroCopy}><Kicker>PHOENIX INSIGHTS / {channel.toUpperCase()}</Kicker><h1>{phrase(locale, c.title)}</h1><p className={styles.heroEnglish}>{phrase(locale, c.subtitle)}</p><p>{phrase(locale, c.description)}</p></div></section>
     <div className={styles.container}><nav className={styles.breadcrumb} aria-label={label(locale, "面包屑", "Breadcrumb")}><Link href={href(locale)}>{label(locale, "凤启洞察", "Insights")}</Link><span>/</span><span aria-current="page">{phrase(locale, c.title)}</span></nav>
     <div className={styles.filterBar} aria-label={label(locale, "分类筛选", "Category filters")}><Link className={!chosen ? styles.filterActive : ""} href={tagHref("")}>{label(locale, "全部", "All")}</Link>{tags.map(t => { const english = articles.flatMap(a => a.tags).find(x => x.zh === t)?.en ?? ({ 本地生: "Local applicants", 国际升学: "International study" } as Record<string,string>)[t] ?? t; return <Link key={t} className={chosen === t || chosen === english ? styles.filterActive : ""} href={tagHref(locale === "zh" ? t : english)}>{locale === "zh" ? t : english}</Link>; })}</div>
