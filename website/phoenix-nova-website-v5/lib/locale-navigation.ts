@@ -1,7 +1,7 @@
 export type SiteLocale = "zh" | "en";
 export const localeRouteMap = {
   home: "", education: "/education", identity: "/identity", health: "/health",
-  wealth: "/compass#wealth", family: "/account", insights: "/insights", about: "/about",
+  wealth: "/compass#wealth", family: "/family-center", insights: "/insights", about: "/about",
 } as const;
 
 /** Explicit URL locale is authoritative. No cookie or browser-language override. */

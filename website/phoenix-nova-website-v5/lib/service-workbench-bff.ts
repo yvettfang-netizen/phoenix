@@ -1,10 +1,27 @@
 import {validWorkbenchResponse} from "./service-workbench-contract";
 import {validFamilyServiceSummary,summarySearch} from "./family-service-summary";
+import {privateWorkbenchResource, type PrivateWorkbenchServiceBinding} from "./private-customer-workbench";
 export type WorkbenchEnv=Record<string,unknown>;
 export function workbenchEnabled(env:WorkbenchEnv,mode:string|undefined){return mode==="development"&&env.SERVICE_WORKBENCH_ENABLED==="true";}
+const headers={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"};
+const reply=(status:number,code:string)=>Response.json({error:{code}},{status,headers});
+
+export async function handlePrivateWorkbench(request:Request,gateway:PrivateWorkbenchServiceBinding,resource:string,token:string):Promise<Response>{
+ if(request.method!=="GET")return reply(405,"METHOD_NOT_ALLOWED");
+ if(!privateWorkbenchResource(resource))return reply(404,"NOT_FOUND");
+ if(!/^[A-Za-z0-9_-]{32,256}$/.test(token))return reply(401,"SIGN_IN_REQUIRED");
+ const url=new URL(request.url);
+ if(resource==="summary"?summarySearch(url)===null:!!url.search)return reply(403,"ACCESS_DENIED");
+ try{
+  const response=await gateway.fetch(new Request("https://private-workbench-gateway.internal/v1/service-workbench/"+resource+(resource==="summary"?url.search:""),{
+   headers:{Authorization:"Bearer "+token,"Cache-Control":"no-store"},
+   redirect:"manual",signal:AbortSignal.timeout(12000),
+  }));
+  return await decodeResponse(response,resource);
+ }catch{return reply(503,"WORKBENCH_UNAVAILABLE");}
+}
+
 export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mode:string|undefined,resource:string,trustedToken?:string):Promise<Response>{
- const headers={"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff","Referrer-Policy":"no-referrer"};
- const reply=(status:number,code:string)=>Response.json({error:{code}},{status,headers});
  if(!workbenchEnabled(env,mode))return reply(404,"NOT_FOUND");
  const url=new URL(request.url);
  if(!["127.0.0.1","localhost"].includes(url.hostname)||(resource==="summary"?summarySearch(url)===null:!!url.search)||["x-family-id","x-role","x-principal-id","x-channel","x-source-system","authorization","x-phoenix-customer-bridge"].some(h=>request.headers.has(h))||
@@ -39,6 +56,11 @@ export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mo
   if(body)h["Content-Type"]="application/json";
   const key=request.headers.get("idempotency-key");if(key)h["Idempotency-Key"]=key;
   const response=await fetch(new URL("/v1/service-workbench/"+resource+(resource==="summary"?url.search:""),upstream),{method:request.method,headers:h,body,redirect:"manual",signal:AbortSignal.timeout(12000)});
+  return await decodeResponse(response,resource,login);
+ }catch{return reply(503,"WORKBENCH_UNAVAILABLE");}
+}
+
+async function decodeResponse(response:Response,resource:string,login=false):Promise<Response>{
   if(!response.ok)return reply([400,401,403,404,405,409,413,415,422,429].includes(response.status)?response.status:503,response.status===409?"REVISION_OR_IDEMPOTENCY_CONFLICT":response.status===422?"INVALID_COMMAND":response.status===403?"ACCESS_DENIED":"WORKBENCH_UNAVAILABLE");
   const reader=response.body?.getReader();if(!reader)return reply(503,"WORKBENCH_UNAVAILABLE");
   const chunks:Uint8Array[]=[];let size=0;
@@ -56,5 +78,4 @@ export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mo
   }
   if(!(resource==="summary"?validFamilyServiceSummary(data):validWorkbenchResponse(resource,data)))return reply(503,"WORKBENCH_UNAVAILABLE");
   return Response.json(data,{status:200,headers});
- }catch{return reply(503,"WORKBENCH_UNAVAILABLE");}
 }

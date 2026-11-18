@@ -33,7 +33,7 @@ test("P1 Family Service Overview uses a strict, no-store authorized summary cont
 
 test("P1 Family Center selects the real summary only for authenticated workbench accounts", () => {
   assert.match(center, /const p1AccountWorkbench=workbench&&account&&!demo/);
-  assert.match(center, /p1AccountWorkbench\?<FamilyServiceOverview locale=\{locale\}\/>/);
+  assert.match(center, /p1AccountWorkbench\?<FamilyServiceOverview locale=\{locale\} requireDeliveryReceipt=\{requireDeliveryReceipt\}\/>/);
   assert.match(center, /workbench&&!account&&!demo\?<ServiceProjectCards locale=\{locale\}\/>/);
   assert.match(center, /!p1AccountWorkbench&&view==='overview'.*fc-priority/);
   assert.match(center, /!p1AccountWorkbench&&<div className="fc-lower">/);

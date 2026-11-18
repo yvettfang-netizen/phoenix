@@ -9,7 +9,7 @@ import { PatternMedallion } from "./pattern-medallion";
 import { SiteEcosystemContent } from "./site-ecosystem-content";
 import chromeStyles from "./site-chrome-v3.module.css";
 import { HealthLocaleLink, HealthPartnerSectionLink } from "./health-locale-link";
-import { localizedHref } from "@/lib/locale-navigation";
+import { localeRouteMap, localizedHref } from "@/lib/locale-navigation";
 import { WEALTH_ORIGIN } from "@/lib/wealth-routing";
 
 export const pageIds = [
@@ -215,7 +215,7 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3", l
     return appearance === "v3" && (item.id === "identity" || item.id === "education") ? hrefFor(locale, item.id) : navigationHref(locale, item);
   };
   const localeHref = explicitLocaleHref ?? (localePath !== undefined ? `/${otherLocale}${localePath}` : hrefFor(otherLocale, page));
-  const portalHref = `${mainOrigin ?? ""}/${locale}/account`;
+  const portalHref = `${mainOrigin ?? ""}${localizedHref(locale, localeRouteMap.family)}`;
   return (
     <header className={`site-header ${inverse ? "site-header--inverse" : ""}${appearance === "v3" ? ` ${chromeStyles.header}` : ""}`}>
       <div className="site-header__inner shell">
@@ -238,7 +238,7 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3", l
           </HealthLocaleLink> : <Link className="locale-switch" href={localeHref} aria-label={pick(locale, "切换至英文", "Switch to Chinese")}>
             {locale === "zh" ? "EN" : "中文"}
           </Link>}
-          <Link className="portal-link" href={portalHref}>
+          <Link className="portal-link" href={portalHref} prefetch={false}>
             {routeLabels["family-center"][locale === "zh" ? 0 : 1]} <Arrow />
           </Link>
           {localized && <a className={chromeStyles.partnerLink} href={partnersHref}>{pick(locale, "合作伙伴", "Partners")}</a>}
@@ -250,7 +250,7 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3", l
                   <span>{String(index + 1).padStart(2, "0")}</span>{navigationLabel(locale, item)}
                 </Link>
               ))}
-              <Link href={portalHref}>
+              <Link href={portalHref} prefetch={false}>
                 <span>08</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
               </Link>
               {localized && <HealthPartnerSectionLink href={partnersHref}><span>09</span>{pick(locale, "合作伙伴工作台 · 受控预览", "Partner workspace · Controlled preview")}</HealthPartnerSectionLink>}
