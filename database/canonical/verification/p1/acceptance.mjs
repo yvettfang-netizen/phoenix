@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import {createHash} from 'node:crypto'
 import {execFileSync} from 'node:child_process'
-import {mkdirSync,readFileSync,readdirSync,writeFileSync} from 'node:fs'
+import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {createServer} from 'node:http'
 import path from 'node:path'
 import {pathToFileURL} from 'node:url'
@@ -10,6 +10,7 @@ import {seedWorkbench} from '../v0038/fixtures.mjs'
 import {startWorkbench} from '../v0038/runtime.mjs'
 import {seedIdentityProject} from './fixture.mjs'
 import {verifyBridgeSecurity,verifyGatewaySecurity} from './security-regression.mjs'
+import {createSyntheticAuthFixture} from './canonical-auth-fixture.mjs'
 
 const version=process.argv[2]||'16'
 assert(['16','17'].includes(version),'PostgreSQL matrix version must be 16 or 17')
@@ -40,7 +41,7 @@ const record={
  },
  status:'BLOCKED'
 }
-let db,rt,mf,bridgeServer
+let db,rt,authFixture,bridgeServer
 const check=(name,details={})=>{record.synthetic.checks.push({name,status:'PASS',at:new Date().toISOString(),...details});console.log('PASS '+name)}
 const expectStatus=(value,expected)=>{assert.equal(value.status,expected,JSON.stringify(value.data));return value.data}
 const summaryData=value=>value?.projects?value:(value?.data??value)
@@ -66,22 +67,6 @@ const validateSummary=value=>{
 }
 const snapshotData=value=>value?.project?value:(value?.data??value)
 
-async function createD1(){
- const fixture=await import(pathToFileURL(path.resolve(root,'website/phoenix-nova-website-v5/tests/worker-fixture.mjs')).href)
- const worker=fixture.createV5Worker({
-  CUSTOMER_AUTH_ENABLED:'1',
-  CUSTOMER_AUTH_REGISTRATION_ENABLED:'1',
-  CUSTOMER_AUTH_ORIGIN:rt.origin
- })
- const database=await worker.getD1Database('DB')
- const migrations=path.resolve(root,'website/phoenix-nova-website-v5/drizzle')
- for(const name of readdirSync(migrations).filter(x=>x.endsWith('.sql')).sort()){
-  const statements=readFileSync(path.join(migrations,name),'utf8').split('--> statement-breakpoint').filter(x=>x.trim())
-  for(const statement of statements)await database.prepare(statement).run()
- }
- return{worker,database}
-}
-
 async function run(){
  const candidate=path.resolve(root,'database/canonical/forward-candidates/service-workbench/0038_service_project_workbench.sql')
  const manifest=JSON.parse(readFileSync(path.resolve(root,'database/canonical/forward-candidates/service-workbench/manifest.json'),'utf8'))
@@ -105,7 +90,6 @@ async function run(){
  }
  const bridge=await import(pathToFileURL(path.resolve(root,'website/phoenix-nova-website-v5/lib/customer-canonical-bridge.ts')).href)
  const auth=await import(pathToFileURL(path.resolve(root,'website/phoenix-nova-website-v5/lib/customer-auth.ts')).href)
- mf=await createD1()
  const accounts={}
  const mappings=new Map()
  let config
@@ -150,26 +134,26 @@ async function run(){
  })
  await new Promise(resolve=>bridgeServer.listen(0,'127.0.0.1',resolve))
  const bridgeOrigin='http://127.0.0.1:'+bridgeServer.address().port
- config={db:mf.database,origin:bridgeOrigin,registration:true}
- record.synthetic.transport={customerAuth:'HTTP -> real Miniflare D1',customerBff:'HTTP -> server bridge -> HTTP BFF -> PostgreSQL API',canonicalMapping:'synthetic server-owned provider',browserUI:'NOT_CLAIMED'}
+ authFixture=createSyntheticAuthFixture({origin:bridgeOrigin})
+ config=authFixture.config
+ record.synthetic.transport={customerAuth:'server-owned synthetic trusted Canonical identity verifier',customerBff:'HTTP -> server bridge -> HTTP BFF -> PostgreSQL API',canonicalMapping:'synthetic server-owned provider',browserUI:'NOT_CLAIMED'}
+ for(const action of ['register','login']){
+  const response=await fetch(bridgeOrigin+'/api/customer-auth/'+action,{method:'POST',headers:{origin:bridgeOrigin,'content-type':'application/json'},body:JSON.stringify({synthetic:true}),signal:AbortSignal.timeout(10000)})
+  record.synthetic.authRequests.push({action,status:response.status})
+  assert.equal(response.status,503)
+  assert.equal(response.headers.has('set-cookie'),false)
+  assert.equal((await response.json()).error,'CANONICAL_AUTH_NOT_CONFIGURED')
+ }
+ check('retired local registration and password login stay unavailable without creating sessions')
  const register=async(alias,routeAlias)=>{
-  const username='p1_'+alias.replace(/[^a-z0-9]/g,'_')
-  const password='P1-synthetic-'+alias+'-passphrase-2026'
-  const response=await fetch(bridgeOrigin+'/api/customer-auth/register',{method:'POST',headers:{origin:bridgeOrigin,'content-type':'application/json'},body:JSON.stringify({username,password,testAccount:true})})
-  record.synthetic.authRequests.push({alias,action:'register',status:response.status})
-  assert.equal(response.status,201,await response.clone().text())
-  const created=await response.json()
-  const loginResponse=await fetch(bridgeOrigin+'/api/customer-auth/login',{method:'POST',headers:{origin:bridgeOrigin,'content-type':'application/json'},body:JSON.stringify({username,password})})
-  record.synthetic.authRequests.push({alias,action:'login',status:loginResponse.status})
-  assert.equal(loginResponse.status,200,await loginResponse.clone().text())
-  const cookie=loginResponse.headers.get('set-cookie')
-  assert.ok(cookie&&cookie.includes('phoenix-local-session='))
+  const account=authFixture.register(alias,routeAlias)
+  const {cookie}=account
   const sessionRequest=new Request(bridgeOrigin+'/api/customer-auth/session',{headers:{cookie}})
   const session=await auth.readCustomerSession(sessionRequest,config)
-  assert.equal(session?.id,created.user.id)
-  accounts[alias]={id:created.user.id,cookie,sessionHash:session.token_hash,routeAlias}
-  mappings.set(created.user.id,{token:rt.issueCustomerSession(routeAlias),sessionHash:session.token_hash,active:true})
-  record.synthetic.identities.push({alias,customerId:created.user.id,canonicalAlias:routeAlias,synthetic:true})
+  assert.equal(session?.id,account.id)
+  accounts[alias]=account
+  mappings.set(account.id,{token:rt.issueCustomerSession(routeAlias),sessionHash:session.token_hash,active:true})
+  record.synthetic.identities.push({alias,customerId:account.id,canonicalAlias:routeAlias,synthetic:true})
  }
  await register('client-a','client-a')
  await register('client-b','client-b')
@@ -206,19 +190,19 @@ async function run(){
  assert.equal(data.projects.find(x=>x.service_project_id===project(310)).overdue_count,1)
  assert.ok(!data.projects.some(x=>x.service_project_id===project(312)||x.service_project_id===project(315)))
  assert.equal(data.projects.some(x=>x.service_project_id===project(313)),false,'Unopened projects must not appear purchased')
- check('D1 client A summary is limited to authorized project subject')
+ check('trusted synthetic client A summary is limited to authorized project subject')
  response=await summary('client-b');data=validateSummary(expectStatus(response,200))
  assert.ok(data.projects.some(x=>x.service_project_id===project(312)))
  assert.ok(!data.projects.some(x=>x.service_project_id===project(310)))
- check('D1 client B same-family subject isolation')
+ check('trusted synthetic client B same-family subject isolation')
  response=await summary('client-identity')
  data=validateSummary(expectStatus(response,200))
  assert.ok(data.projects.length===1&&data.projects[0].compass==='IDENTITY')
- check('D1 synthetic Identity customer sees only the authorized Identity project')
+ check('trusted synthetic Identity customer sees only the authorized Identity project')
  response=await summary('client-c')
  data=validateSummary(expectStatus(response,200))
  assert.ok(data.projects.length>=2,'Synthetic client C must have multiple authorized projects')
- check('D1 client C receives multiple authorized projects through the same server mapping contract')
+ check('trusted synthetic client C receives multiple authorized projects through the same server mapping contract')
  const authorizedIds=validateSummary(expectStatus(await summary('client-a'),200)).projects.map(p=>p.service_project_id).sort()
  response=await summary('client-a','?limit=1');data=validateSummary(expectStatus(response,200));assert.equal(data.projects.length,1)
  const pagedIds=data.projects.map(p=>p.service_project_id)
@@ -265,7 +249,7 @@ async function run(){
  assert.equal(stageUpdate.status,200,JSON.stringify(stageUpdate.body))
  response=await call('client-a','projects/'+project(310));detail=snapshotData(expectStatus(response,200))
  assert.equal(detail.project.stage,'SCHOOL_SELECTION')
- check('synthetic P0 adviser fixture updates stage; D1 customer bridge sees it after refresh')
+ check('synthetic P0 adviser fixture updates stage; Canonical customer bridge sees it after refresh')
  // A non-Health primary domain cannot conceal a secondary clinical domain.
  db.sql("INSERT INTO service.project_domains(project_domain_id,service_project_id,business_domain,created_by_principal_id) VALUES('"+id(5318)+"','"+project(318)+"','HEALTH','"+id(900)+"')")
  const mixed=validateSummary(expectStatus(await summary('client-c'),200))
@@ -276,7 +260,7 @@ async function run(){
  assert.equal(db.sql("SELECT count(*) FROM service.workbench_messages WHERE service_project_id='"+project(318)+"'"),'0')
  check('secondary Health domain refuses customer summary, direct detail and commands')
  await verifyGatewaySecurity(db,rt,mappings.get(accounts['client-c'].id).token,check)
- await verifyBridgeSecurity({db,rt,bridge,env,config,provider,account:accounts['client-a'],
+ await verifyBridgeSecurity({db,rt,bridge,env,config,provider,authFixture,account:accounts['client-a'],
   mapping:mappings.get(accounts['client-a'].id),check})
 
  const health=await call('client-b','projects/'+project(314))
@@ -298,31 +282,30 @@ async function run(){
  mappings.get(accounts['client-a'].id).active=true
  check('missing or revoked Canonical mapping fails closed')
 
- await mf.database.prepare('UPDATE core_auth_sessions SET expires_at=? WHERE token_hash=?').bind(Date.now()-1000,accounts['client-b'].sessionHash).run()
+ authFixture.sessions.get(accounts['client-b'].sessionHash).valid_until=Date.now()-1000
  const expiredResponse=await summary('client-b')
  expectStatus(expiredResponse,401)
- check('expired D1 customer session is refused before Canonical resolution')
+ check('expired trusted Canonical identity session is refused before project resolution')
 
- const faultConfig={db:{prepare(){throw Error('synthetic D1 outage')}},origin:bridgeOrigin,registration:true}
+ const faultConfig={...config,async verifySession(){throw Error('synthetic trusted identity authority outage')}}
  const dbFault=await bridge.handleCustomerServices(new Request(bridgeOrigin+'/api/family-services/summary',{headers:{cookie:accounts['client-a'].cookie}}),env,'development','summary',faultConfig,provider)
  assert.equal(dbFault.status,503)
  env.SERVICE_WORKBENCH_API_ORIGIN='http://127.0.0.1:1'
  const gatewayFault=await summary('client-a')
  assert.equal(gatewayFault.status,503)
- check('D1/database and gateway failures fail closed without a false progress payload')
+ check('identity authority and gateway failures fail closed without a false progress payload')
  const auditRows=[]
  for(const action of ['CANONICAL_ACCESS_ATTEMPT','CANONICAL_ACCESS_PREPARED','CANONICAL_ACCESS_DENIED','CANONICAL_ACCESS_UNAVAILABLE']){
-  const row=await mf.database.prepare('SELECT count(*) AS count FROM core_auth_audit WHERE action=?').bind(action).first()
-  auditRows.push({action,count:Number(row?.count||0)})
+  auditRows.push({action,count:authFixture.events.filter(row=>row.action===action).length})
  }
  record.synthetic.audit=auditRows
  assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_ATTEMPT')?.count>0)
  assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_PREPARED')?.count>0)
  assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_DENIED')?.count>0)
  assert.ok(auditRows.find(x=>x.action==='CANONICAL_ACCESS_UNAVAILABLE')?.count>0)
- check('D1 bridge audit records attempts and outcomes')
+ check('trusted audit callback records attempts and outcomes')
  // Stop only this harness's owned Canonical container, after other assertions.
- // D1 availability alone must never make a failed Canonical read look empty.
+ // Identity availability alone must never make a failed Canonical read look empty.
  env.SERVICE_WORKBENCH_API_ORIGIN=rt.origin
  db.call(['stop',db.container])
  const canonicalFault=await summary('outsider')
@@ -331,7 +314,7 @@ async function run(){
  check('actual Canonical PostgreSQL outage returns an error without cached or empty project facts')
  record.synthetic.status='PASS'
  record.status='SYNTHETIC_PASS_REAL_IDENTITY_BLOCKED'
- console.log('PASS P1 synthetic D1 -> bridge -> PostgreSQL acceptance on PG'+version)
+ console.log('PASS P1 synthetic trusted identity -> bridge -> PostgreSQL acceptance on PG'+version)
 }
 
 try{await run()}
@@ -343,7 +326,6 @@ catch(error){
  process.exitCode=1
 }
 finally{
- try{await mf?.worker?.dispose()}catch{}
  try{if(bridgeServer){bridgeServer.closeAllConnections();await new Promise(resolve=>bridgeServer.close(()=>resolve()))}}catch{}
  try{await rt?.close()}catch{}
  try{db?.cleanup()}catch{}
