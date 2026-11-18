@@ -31,8 +31,13 @@ import { PostgresStore } from './store/postgres-store'
 import { Store } from './store/store'
 import { loadLearningCatalog } from './services/canonical-learning-catalog'
 import { loadFamilyProjection, loadApplicationSessionProjection } from './services/canonical-family-projection'
+import { startIsolatedCanonicalEducation } from './services/canonical-education-runtime'
 
 async function main(): Promise<void> {
+  if (process.env.CANONICAL_EDUCATION_ISOLATED === 'true') {
+    await startIsolatedCanonicalEducation(process.env)
+    return
+  }
   const config = loadConfig()
   const learningCatalog = await loadLearningCatalog()
   const familyProjection = process.env.CANONICAL_BROKER_SESSION_BRIDGE_ENABLED === 'true' ? undefined : await loadFamilyProjection()

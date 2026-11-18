@@ -18,7 +18,16 @@ import { LearningCatalog } from '../services/canonical-learning-catalog'
 import { FamilyProjection } from '../services/canonical-family-projection'
 import { randomUUID } from 'node:crypto'
 
-export interface AppDependencies {
+interface CanonicalRoutes {
+  rateLimiter?: RateLimiter
+  readiness?: () => Promise<void>
+  learningCatalog?: LearningCatalog
+  familyProjection?: FamilyProjection
+  logger?: { error(message: string, context?: Record<string, unknown>): void }
+}
+
+export interface AppDependencies extends CanonicalRoutes {
+  isolatedCanonical?: false
   auth: AuthService
   profiles: ProfileService
   assessments: AssessmentService
@@ -31,14 +40,16 @@ export interface AppDependencies {
   exports?: ExportService
   agent?: AgentService
   feishu?: FeishuSyncService
-  rateLimiter?: RateLimiter
-  readiness?: () => Promise<void>
-  learningCatalog?: LearningCatalog
-  familyProjection?: FamilyProjection
   sessionFamilyProjection?: FamilyProjection
   /** Explicit composition only. No production or legacy identity fallback. */
   serviceWorkbench?: { handle(request: IncomingMessage, response: ServerResponse): Promise<void> }
-  logger?: { error(message: string, context?: Record<string, unknown>): void }
+}
+
+type IsolatedCanonicalDependencies = CanonicalRoutes & {
+  isolatedCanonical: true
+  learningCatalog: LearningCatalog
+  familyProjection: FamilyProjection
+  readiness: () => Promise<void>
 }
 
 const MAX_BODY_BYTES = 1_100_000
@@ -185,7 +196,7 @@ function checkWebhookLength(request: IncomingMessage): void {
   invariant(Number.isInteger(contentLength) && contentLength >= 0 && contentLength <= MAX_WEBHOOK_BODY_BYTES, 413, 'BODY_TOO_LARGE', '消息推送内容过大')
 }
 
-export function createHttpHandler(deps: AppDependencies): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
+export function createHttpHandler(deps: AppDependencies | IsolatedCanonicalDependencies): (request: IncomingMessage, response: ServerResponse) => Promise<void> {
   const logger = deps.logger ?? console
   const rateLimiter = deps.rateLimiter ?? new InMemoryRateLimiter()
   let activeWebhooks = 0
@@ -196,24 +207,26 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
       const url = new URL(request.url ?? '/', 'http://localhost')
       route = url.pathname
       if (route.startsWith('/v1/service-workbench/')) {
-        invariant(deps.serviceWorkbench, 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        invariant(!deps.isolatedCanonical && deps.serviceWorkbench, 404, 'ROUTE_NOT_FOUND', '接口不存在')
         return deps.serviceWorkbench.handle(request, response)
       }
       if (url.pathname.startsWith('/v1/canonical/projections/') || url.pathname.startsWith('/v1/canonical/session-projections/')) {
         const sessionMode = url.pathname.startsWith('/v1/canonical/session-projections/')
-        const projection = sessionMode ? deps.sessionFamilyProjection : deps.familyProjection
+        const projection = sessionMode ? (deps.isolatedCanonical ? undefined : deps.sessionFamilyProjection) : deps.familyProjection
         invariant(projection, 404, 'ROUTE_NOT_FOUND', '接口不存在')
         invariant(method === 'GET', 405, 'METHOD_NOT_ALLOWED', '请求方式不受支持')
         exactQuery(url)
+        const entitlement = deps.isolatedCanonical && route === '/v1/canonical/projections/education-service-entitlement'
         const match = url.pathname.match(/^\/v1\/canonical\/(?:projections|session-projections)\/(family|students)(?:\/([a-f0-9-]{36}|stu_[a-f0-9]{32}))?$/)
-        invariant(match && !(match[1] === 'family' && match[2]), 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        invariant(entitlement || (match && !(match[1] === 'family' && match[2])), 404, 'ROUTE_NOT_FOUND', '接口不存在')
         invariant(!['x-family-id','x-principal-id','x-role','x-channel','x-source-system'].some(h => request.headers[h]),
           403, 'FAMILY_SCOPE_REQUIRED', '家庭资料访问未授权')
         invariant(await rateLimiter.consume('canonical-family-projection', 120, 60_000), 429, 'RATE_LIMITED', '请求过于频繁')
         const requestId = randomUUID()
         response.setHeader('X-Request-ID', requestId)
-        return json(response, 200, await projection.read(request.headers.authorization,
-          match[1] === 'family' ? 'family' : match[2] ? 'student' : 'students', match[2], requestId))
+        const operation = entitlement ? 'education-service-entitlement'
+          : match?.[1] === 'family' ? 'family' : match?.[2] ? 'student' : 'students'
+        return json(response, 200, await projection.read(request.headers.authorization, operation, match?.[2], requestId))
       }
       if (url.pathname === '/v1/learning/catalog') {
         invariant(deps.learningCatalog, 404, 'ROUTE_NOT_FOUND', '接口不存在')
@@ -231,6 +244,12 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
           throw new AppError(503, 'SERVICE_NOT_READY', '服务暂未就绪')
         }
         return json(response, 200, { ok: true })
+      }
+      if (deps.isolatedCanonical) {
+        if (/^\/v1\/(?:auth|education-compass|students|assessments|reports|orders|payments)(?:\/|$)/.test(route)) {
+          throw new AppError(503, 'CANONICAL_CONTRACT_HOLD', '该接口暂未开放')
+        }
+        throw new AppError(404, 'ROUTE_NOT_FOUND', '接口不存在')
       }
 
       if (method === 'POST' && url.pathname === '/v1/auth/wechat/session') {
@@ -684,7 +703,7 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
   }
 }
 
-export function createAppServer(deps: AppDependencies): Server {
+export function createAppServer(deps: AppDependencies | IsolatedCanonicalDependencies): Server {
   const handler = createHttpHandler(deps)
   const server = createServer((request, response) => { void handler(request, response) })
   server.requestTimeout = 10_000

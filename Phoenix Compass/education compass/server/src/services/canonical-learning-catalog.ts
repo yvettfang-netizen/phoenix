@@ -21,7 +21,7 @@ const unavailable = () => new AppError(503, 'CATALOG_UNAVAILABLE', '课程目录
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 /** A dedicated local synthetic preview. Never resolves a customer or family identity. */
-export async function loadLearningCatalog(env: NodeJS.ProcessEnv = process.env): Promise<LearningCatalog | undefined> {
+export async function loadLearningCatalog(env: NodeJS.ProcessEnv = process.env, expectedPort?: number): Promise<LearningCatalog | undefined> {
   if (env.CANONICAL_LEARNING_CATALOG_ENABLED !== 'true') return undefined
   if (!['development', 'test'].includes(env.NODE_ENV ?? 'development') ||
       (env.LISTEN_HOST ?? '127.0.0.1') !== '127.0.0.1') throw unavailable()
@@ -40,6 +40,7 @@ export async function loadLearningCatalog(env: NodeJS.ProcessEnv = process.env):
   if (Object.keys(config).sort().join(',') !== 'database,host,password,port,serviceToken,user' ||
       config.host !== '127.0.0.1' || config.database !== 'phoenix_canonical_dev' ||
       !Number.isInteger(config.port) || Number(config.port) < 1 || Number(config.port) > 65535 ||
+      (expectedPort !== undefined && config.port !== expectedPort) ||
       typeof config.user !== 'string' || !/^[a-z][a-z0-9_]{0,62}$/.test(config.user) ||
       typeof config.password !== 'string' || config.password.length < 32 ||
       typeof config.serviceToken !== 'string' || !/^[a-f0-9]{64}$/.test(config.serviceToken)) throw unavailable()
