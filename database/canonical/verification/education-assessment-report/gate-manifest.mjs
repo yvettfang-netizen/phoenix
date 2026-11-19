@@ -14,6 +14,10 @@ const runtimePath = path.join(root,
   'Phoenix Compass/education compass/server/src/services/canonical-education-runtime.ts')
 const handlerPath = path.join(root,
   'Phoenix Compass/education compass/server/src/http/app.ts')
+const evidenceTemplatePath = path.join(root,
+  'docs/database/education-assessment-report-20261118/live-evidence/LIVE_EVIDENCE_INTAKE_TEMPLATE.json')
+const evidenceGatePath = path.join(root,
+  'database/canonical/verification/education-assessment-report/live-evidence-gate.mjs')
 
 const read = file => readFileSync(file, 'utf8')
 const json = file => JSON.parse(read(file))
@@ -71,7 +75,26 @@ for (const gate of facts.gates) {
   assert(gate.requiredReferences.length > 0)
 }
 
+const evidenceTemplate = json(evidenceTemplatePath)
+assert.equal(evidenceTemplate.status, 'HOLD')
+assert.equal(evidenceTemplate.testOnly, false)
+assert.equal(evidenceTemplate.candidate.proposedMigration, manifest.proposedMigration)
+assert.equal(evidenceTemplate.candidate.sourceSha256Lf, manifest.sourceSha256Lf)
+assert.deepEqual(evidenceTemplate.gates.map(gate => gate.id), facts.gates.map(gate => gate.id))
+for (const [index, gate] of evidenceTemplate.gates.entries()) {
+  assert.equal(gate.status, 'HOLD')
+  assert.equal(gate.containsSecretsOrRealIdentifiers, false)
+  assert.deepEqual(Object.keys(gate.evidenceRefs).sort(), facts.gates[index].requiredReferences.sort())
+  assert(Object.values(gate.evidenceRefs).every(value => value === null))
+}
+assert.equal(evidenceTemplate.promotionDecision.status, 'HOLD')
+const evidenceGate = read(evidenceGatePath)
+assert.match(evidenceGate, /PROMOTION_FACTS=PASS/)
+assert.match(evidenceGate, /test-only evidence cannot satisfy promotion/)
+assert.match(evidenceGate, /packet contains credential or private-key material/)
+
 console.log('PASS active ledger=37 latest=0037; proposed Education candidate=0041 only')
 console.log('PASS candidate LF SHA-256=' + manifest.sourceSha256Lf)
 console.log('PASS isolation, PUBLIC revoke, pinned SECURITY DEFINER and default-off runtime gates')
 console.log('PASS external fact gates I-1/I-2/H-1/P-1 remain explicit HOLD with no fabricated evidence')
+console.log('PASS promotion evidence template and fail-closed validator are pinned to the candidate digest')

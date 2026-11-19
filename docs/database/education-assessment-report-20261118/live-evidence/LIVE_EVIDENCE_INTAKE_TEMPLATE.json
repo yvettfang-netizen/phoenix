@@ -1,0 +1,82 @@
+{
+  "packetVersion": "education-live-integration-evidence.v1",
+  "status": "HOLD",
+  "testOnly": false,
+  "candidate": {
+    "proposedMigration": "0041",
+    "sourceSha256Lf": "c02cd90ea37d800571772d54ac50bfb7597c919fc675c0ed3fe93b1d8e7692f6"
+  },
+  "target": {
+    "environment": "controlled-nonproduction",
+    "runtimeCommitSha": null,
+    "serviceBindingRef": null
+  },
+  "gates": [
+    {
+      "id": "I-1",
+      "status": "HOLD",
+      "observedAtUtc": null,
+      "reviewer": null,
+      "reportSha256": null,
+      "evidenceRefs": {
+        "provider_session_validation_ref": null,
+        "runtime_config_acl_ref": null,
+        "runtime_commit_sha": null,
+        "observed_at_utc": null,
+        "reviewer_and_result": null
+      },
+      "containsSecretsOrRealIdentifiers": false
+    },
+    {
+      "id": "I-2",
+      "status": "HOLD",
+      "observedAtUtc": null,
+      "reviewer": null,
+      "reportSha256": null,
+      "evidenceRefs": {
+        "controlled_account_mapping_sets_ref": null,
+        "mapping_contract_version": null,
+        "cross_family_negative_receipt": null,
+        "same_family_unauthorized_subject_negative_receipt": null,
+        "advisor_overreach_negative_receipt": null
+      },
+      "containsSecretsOrRealIdentifiers": false
+    },
+    {
+      "id": "H-1",
+      "status": "HOLD",
+      "observedAtUtc": null,
+      "reviewer": null,
+      "reportSha256": null,
+      "evidenceRefs": {
+        "device_handoff_and_assent_receipts_ref": null,
+        "consent_copy_version_and_sha256": null,
+        "assent_copy_version_and_sha256": null,
+        "withdrawal_expiry_and_replay_negative_receipts": null
+      },
+      "containsSecretsOrRealIdentifiers": false
+    },
+    {
+      "id": "P-1",
+      "status": "HOLD",
+      "observedAtUtc": null,
+      "reviewer": null,
+      "reportSha256": null,
+      "evidenceRefs": {
+        "settlement_refund_validation_ref": null,
+        "operations_reconciliation_ref": null,
+        "source_signature_validation_ref": null,
+        "paid_refunding_refunded_and_negative_event_receipts": null
+      },
+      "containsSecretsOrRealIdentifiers": false
+    }
+  ],
+  "promotionDecision": {
+    "status": "HOLD",
+    "finalMigration": null,
+    "targetEnvironment": null,
+    "approvedBy": null,
+    "approvedAtUtc": null,
+    "approvalRef": null
+  }
+}
