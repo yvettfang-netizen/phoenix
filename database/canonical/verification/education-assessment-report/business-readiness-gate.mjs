@@ -10,6 +10,7 @@ const lf = value => value.replaceAll('\r\n', '\n')
 const sha256 = value => createHash('sha256').update(value).digest('hex')
 
 const register = json('docs/database/education-assessment-report-20261118/BUSINESS_COMPLETION_REGISTER.json')
+const c2Approval = json('docs/database/education-assessment-report-20261118/C2_POLICY_APPROVAL_REGISTER_20261119.json')
 const facts = json('docs/database/education-assessment-report-20261118/EXTERNAL_FACT_EVIDENCE_REGISTER.json')
 const evidence = json('docs/database/education-assessment-report-20261118/live-evidence/LIVE_EVIDENCE_INTAKE_TEMPLATE.json')
 const manifest = json('database/canonical/forward-candidates/education-assessment-report/manifest-0041-education-assessment-report.json')
@@ -18,6 +19,7 @@ const config = read('Phoenix Compass/education compass/server/src/config.ts')
 const tests = read('Phoenix Compass/education compass/server/tests/domain.test.ts')
 const decisions = read('Phoenix Compass/education compass/docs/OPEN_DECISIONS.md')
 const acceptance = read('Phoenix Compass/education compass/docs/MVP_ACCEPTANCE.md')
+const sourceCatalogSpec = read('Phoenix Compass/education compass/docs/SOURCE_CATALOG.md')
 
 assert.equal(register.overallStatus, 'HOLD')
 assert.equal(register.engineeringCandidateStatus, 'PASS')
@@ -29,10 +31,30 @@ assert.equal(register.formalMigrationLedger, '0037')
 assert.equal(register.candidateMigration, manifest.proposedMigration)
 assert.equal(register.candidateSha256Lf, sha256(candidate))
 assert.deepEqual(register.requiredExternalGates, ['I-1', 'I-2', 'H-1', 'P-1'])
+assert.equal(register.c2PolicyApproval.status, 'PARTIAL_PASS')
+assert.equal(register.c2PolicyApproval.record,
+  'docs/database/education-assessment-report-20261118/C2_POLICY_APPROVAL_REGISTER_20261119.json')
 assert.deepEqual(register.phases.map(phase => phase.id),
   ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10', 'C11', 'C12', 'C13'])
 assert.deepEqual(register.phases.map(phase => phase.status),
   ['PASS', 'PASS', 'HOLD', 'HOLD', 'HOLD', 'HOLD', 'PASS', 'PASS', 'NOT_RUN', 'PARTIAL', 'NOT_RUN', 'NOT_RUN', 'NOT_RUN', 'NOT_RUN'])
+
+assert.equal(c2Approval.overallStatus, 'PARTIAL_PASS')
+assert.equal(c2Approval.productPolicyApprovalStatus, 'PASS')
+assert.equal(c2Approval.c2GateStatus, 'HOLD')
+assert.equal(c2Approval.unresolvedBindings[0].status, 'HOLD_MISSING_PAYLOAD')
+assert(c2Approval.holds.includes('formal verified Source Catalog payload is absent'))
+assert(c2Approval.prohibitedInferences.includes('C2 is not PASS'))
+for (const binding of c2Approval.approvedBindings) {
+  assert.equal(sha256(read(binding.path)), binding.sha256, `C2 approval SHA mismatch: ${binding.path}`)
+}
+assert.equal(sha256(sourceCatalogSpec), c2Approval.unresolvedBindings[0].specSha256)
+assert.equal(
+  sha256(read(c2Approval.unresolvedBindings[0].templatePath)),
+  c2Approval.unresolvedBindings[0].templateSha256
+)
+assert.match(sourceCatalogSpec, /SOURCE_CATALOG_MODE=placeholder/)
+assert.match(sourceCatalogSpec, /SOURCE_CATALOG_PATH` 为空/)
 
 assert.equal(facts.overallStatus, 'HOLD')
 assert.deepEqual(facts.gates.map(gate => gate.id), register.requiredExternalGates)
@@ -72,5 +94,6 @@ assert.match(acceptance, /当前最终判定：\*\*不允许生产开启购买�
 
 console.log('PASS engineering candidate controls, product invariants and PG acceptance prerequisites are pinned')
 console.log('PASS stale automated test gaps are closed by direct regression evidence')
+console.log('PASS C2 product-policy approval is hash-bound without claiming the missing Source Catalog or professional signatures')
 console.log('CONTROLLED_BUSINESS_USE=HOLD external gates=I-1,I-2,H-1,P-1')
 console.log('PRODUCTION_READY=HOLD P0 decisions, UAT, operational rehearsal and Founder go/no-go remain open')

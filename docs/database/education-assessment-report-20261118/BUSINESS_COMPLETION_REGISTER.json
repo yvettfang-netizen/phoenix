@@ -11,6 +11,22 @@
   "candidateMigration": "0041",
   "candidateSha256Lf": "c02cd90ea37d800571772d54ac50bfb7597c919fc675c0ed3fe93b1d8e7692f6",
   "requiredExternalGates": ["I-1", "I-2", "H-1", "P-1"],
+  "c2PolicyApproval": {
+    "status": "PARTIAL_PASS",
+    "record": "docs/database/education-assessment-report-20261118/C2_POLICY_APPROVAL_REGISTER_20261119.json",
+    "approved": [
+      "consent product copy",
+      "refund product policy",
+      "current retention and deletion behavior",
+      "support and third-party deletion SLA values"
+    ],
+    "holds": [
+      "formal verified Source Catalog payload",
+      "qualified privacy, legal and minor-protection signatures",
+      "maximum retention period for ordinary personal data",
+      "processor identity, contact details and guardian verification method"
+    ]
+  },
   "phases": [
     {
       "id": "C0",
@@ -28,7 +44,7 @@
       "id": "C2",
       "name": "final business, legal and education content contracts",
       "status": "HOLD",
-      "remaining": "OD-04, OD-05 and applicable commercial, retention and support decisions"
+      "remaining": "formal verified Source Catalog payload; qualified privacy, legal and minor-protection signatures; ordinary personal-data maximum retention; processor identity, contact details and guardian verification method"
     },
     {
       "id": "C3",
@@ -97,5 +113,5 @@
       "remaining": "observed zero dependency, retention approval, backup and reversible retirement receipt"
     }
   ],
-  "uniqueNextAction": "Complete and independently review I-1, I-2, H-1 and P-1 against the exact candidate digest; do not promote, deploy or retire legacy storage before they pass."
+  "uniqueNextAction": "First produce and independently sign the formal verified Source Catalog and exact Consent or retention legal package; then complete I-1, I-2, H-1 and P-1 against the exact candidate digest. Do not promote, deploy or retire legacy storage before they pass."
 }

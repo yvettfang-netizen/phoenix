@@ -1,0 +1,76 @@
+{
+  "registerVersion": "education-c2-policy-approval.v1",
+  "recordedAtUtc": "2026-11-19T09:15:44.6877050Z",
+  "approvalSource": "Founder current conversation",
+  "approvalStatement": "批准 Source Catalog、Consent 文本、退款、保留删除及 SLA。",
+  "overallStatus": "PARTIAL_PASS",
+  "productPolicyApprovalStatus": "PASS",
+  "c2GateStatus": "HOLD",
+  "approvedBindings": [
+    {
+      "topic": "consent_copy_product_policy",
+      "path": "Phoenix Compass/education compass/docs/product/freeze/education-compass-v1-rc1/CONSENT_PRIVACY_AGENT_FEISHU_POLICY_V1_RC1.md",
+      "sha256": "5aa484bdfbd717c1f4902a82a6f24b528da7f34b067ba7faf0fffab4fba774f1",
+      "status": "APPROVED_PRODUCT_POLICY_ONLY",
+      "limits": "Qualified privacy, legal and minor-protection review remains pending; this approval does not authorize real-student use or production activation."
+    },
+    {
+      "topic": "refund_product_policy",
+      "path": "Phoenix Compass/education compass/docs/product/freeze/education-compass-v1-rc1/COMMERCIAL_POLICY_V1_RC1.md",
+      "sha256": "46ff60fccd3ba0ccad98bc95378e4b882d5c03fc58acdd874fc1c36ae2ca25c5",
+      "status": "APPROVED_PRODUCT_POLICY_ONLY",
+      "limits": "Real payment activation and authoritative settlement evidence remain outside this approval."
+    },
+    {
+      "topic": "retention_and_deletion_current_implementation",
+      "path": "Phoenix Compass/education compass/docs/DATA_INVENTORY.md",
+      "sha256": "71244a32c032c92bb3957fc651ffc12cc8d3edc7f484b1380ce0e8b1d39d079e",
+      "status": "APPROVED_CURRENT_RULES_ONLY",
+      "limits": "The maximum retention period for ordinary personal data and the final legal or tax basis remain unresolved."
+    },
+    {
+      "topic": "support_sla_current_values",
+      "path": "Phoenix Compass/education compass/docs/decisions/COMMERCIAL_DECISIONS_DRAFT.md",
+      "sha256": "6f88b58b9a53af13bf0073381f37fe3a5b33ab062a6e0f7bee901ea3cf82da55",
+      "status": "APPROVED_VALUES_ONLY",
+      "values": [
+        "first response within 24 business hours",
+        "refund conclusion within 3 business days"
+      ],
+      "limits": "Invoice and tax treatment are not approved by this statement; the draft document as a whole remains a draft."
+    },
+    {
+      "topic": "third_party_deletion_minimization_sla",
+      "path": "Phoenix Compass/education compass/docs/product/freeze/education-compass-v1-rc1/CONSENT_PRIVACY_AGENT_FEISHU_POLICY_V1_RC1.md",
+      "sha256": "5aa484bdfbd717c1f4902a82a6f24b528da7f34b067ba7faf0fffab4fba774f1",
+      "status": "APPROVED_PRODUCT_VALUE_ONLY",
+      "values": [
+        "complete deletion or minimization within 30 days after a verified request"
+      ],
+      "limits": "Privacy-owner signature, provider contract and operational evidence remain pending."
+    }
+  ],
+  "unresolvedBindings": [
+    {
+      "topic": "verified_source_catalog_payload",
+      "specPath": "Phoenix Compass/education compass/docs/SOURCE_CATALOG.md",
+      "specSha256": "7282859245edc2f1c55478658d8edfe98fa26efaa2fe853e5d1981b93299c289",
+      "templatePath": "Phoenix Compass/education compass/docs/source-catalog.template.json",
+      "templateSha256": "92edfb893eca96752d63fb6bab7a69d1bc478d28816613779678c195c20d268d",
+      "status": "HOLD_MISSING_PAYLOAD",
+      "reason": "The repository contains only the format and template. No verified entries, applicable year, reviewer or approved manifest exists to bind."
+    }
+  ],
+  "holds": [
+    "formal verified Source Catalog payload is absent",
+    "qualified privacy, legal and minor-protection signatures are absent",
+    "maximum retention period for ordinary personal data is undefined",
+    "processor identity, contact details and guardian verification method remain unresolved",
+    "production activation, real-student processing and real payment are not authorized"
+  ],
+  "prohibitedInferences": [
+    "C2 is not PASS",
+    "the approval is not a qualified legal opinion",
+    "the approval does not enable payment, AI, deployment or production use"
+  ]
+}
