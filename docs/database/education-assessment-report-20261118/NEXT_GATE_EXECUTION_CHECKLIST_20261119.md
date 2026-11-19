@@ -11,9 +11,10 @@
 | 数据库与权限静态复审 | PASS | 候选要求显式隔离标记；PUBLIC 无表权限及函数执行权；APP、发布和结算角色分离；所有 SECURITY DEFINER 固定安全 `search_path`；运行时仅 `NODE_ENV=test`、回环监听且拒绝旧 DSN 和旧会话桥。未发现需要改写候选 SQL 的新缺陷。 |
 | 脱敏与秘密扫描 | PASS | 使用现有 GitHub 工作流固定摘要的 Gitleaks 镜像，对 Education 候选、验证程序及本轮文档三个范围逐一扫描，均为 `no leaks found`。 |
 | 外部事实门禁登记 | PASS（登记）／HOLD（事实） | I-1、I-2、H-1、P-1 已转为机器可读登记。合成机制均 PASS；真实 provider、逐人映射、设备交接及权威支付／退款回执均无引用，未伪造。 |
-| 自动化门禁 | PASS | `gate-manifest.mjs` 校验正式账本、候选摘要、0041 预留、权限边界、默认关闭与外部事实 HOLD。服务端 typecheck／build 通过，146／146 测试通过；PG16.15／PG17.11 的候选持久化与旧库关闭后的隔离应用链路均通过。原始结论见[本地门禁输出](LOCAL_GATE_VERIFICATION_20261119.md)。 |
+| 自动化门禁 | PASS | `gate-manifest.mjs` 校验正式账本、候选摘要、0041 预留、权限边界、默认关闭与外部事实 HOLD。全量 Web 50／50、工具链 28／28、服务端 147／147，typecheck／lint／build 均通过；PG16.15／PG17.11 的候选持久化与旧库关闭后的隔离应用链路均通过。原始结论见[本地门禁输出](LOCAL_GATE_VERIFICATION_20261119.md)。 |
 | 真实事实采集与晋升拒绝门禁 | PASS（机制）／HOLD（事实） | 新增[证据采集包](live-evidence/README.md)与 `live-evidence-gate.mjs`。模板、候选摘要、四组事实、最终编号与环境批准必须全部匹配；缺项、测试包、错误摘要、非 HTTPS 引用或敏感材料均拒绝。当前模板保持 HOLD，未生成虚假 PASS。 |
 | PR 自动复验 | PASS（本地）／PENDING（GitHub） | 新增 `education-assessment-candidate.yml`，在 PG16／PG17 独立 runner 上重跑候选清单、事实拒绝门禁、候选持久化及旧库关闭链路；推送后以准确 PR HEAD 的 Actions 结果为最终证据。 |
+| 业务完成总门禁 | PASS（机制）／HOLD（业务） | 新增[从当前状态到业务完成清单](BUSINESS_COMPLETION_CHECKLIST_20261119.md)、机器台账与 `business-readiness-gate.mjs`。工程候选可为 PASS，但 I-1／I-2／H-1／P-1、P0 决策、UAT、运维演练和 Founder Go／No-Go 未完成时，受控业务使用及生产状态固定为 HOLD。 |
 | GitHub 同步 | PASS | 修改继续同步现有 Draft PR #74，不创建重复 PR，不合并。 |
 | 腾讯 0041 部署 | NOT RUN / HOLD | 腾讯隔离非生产库继续停在正式 0037。未将候选 0041 载入现有运行数据库。 |
 | 生产、真实数据与旧库退役 | HOLD | 未执行生产切换、真实客户数据导入、旧库删除或 PR #68 合并。 |

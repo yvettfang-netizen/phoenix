@@ -43,6 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           node database/canonical/verification/education-assessment-report/gate-manifest.mjs
+          node database/canonical/verification/education-assessment-report/business-readiness-gate.mjs
           node database/canonical/verification/education-assessment-report/live-evidence-gate.mjs --template
           node database/canonical/verification/education-assessment-report/live-evidence-gate.mjs --self-test
           if node database/canonical/verification/education-assessment-report/live-evidence-gate.mjs \

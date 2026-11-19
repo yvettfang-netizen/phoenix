@@ -47,6 +47,25 @@ PASS promotion template rejected exit=1
 
 同一组命令已固化到 `.github/workflows/education-assessment-candidate.yml`，并与 PG16／PG17 候选持久化及旧库关闭链路组成独立矩阵检查。GitHub 结果只在推送后的准确 PR HEAD 上确认。
 
+## 业务完成总门禁
+
+命令：
+
+```text
+node database/canonical/verification/education-assessment-report/business-readiness-gate.mjs
+```
+
+原始结论输出：
+
+```text
+PASS engineering candidate controls, product invariants and PG acceptance prerequisites are pinned
+PASS stale automated test gaps are closed by direct regression evidence
+CONTROLLED_BUSINESS_USE=HOLD external gates=I-1,I-2,H-1,P-1
+PRODUCTION_READY=HOLD P0 decisions, UAT, operational rehearsal and Founder go/no-go remain open
+```
+
+该门禁将工程候选、受控业务使用和生产使用分开判断。代码级通过不能将缺少真实身份、授权映射、Consent／Assent、权威结算、UAT 或 Founder 决策的状态升级为 PASS。
+
 ## Education 服务端
 
 依次执行：
@@ -60,9 +79,9 @@ npm.cmd --prefix "Phoenix Compass/education compass/server" test
 原始结论输出：
 
 ```text
-tests 146
+tests 147
 suites 0
-pass 146
+pass 147
 fail 0
 cancelled 0
 skipped 0
@@ -70,6 +89,30 @@ todo 0
 ```
 
 三项退出码均为 0。
+
+其中本轮新增直接回归：取得可信支付参数后关闭购买开关并撤回 Source Catalog，已在途可信成功仍只交付一次；新创单继续以 `PAID_COMPASS_DISABLED` 拒绝。
+
+## 工程全量验证
+
+命令：
+
+```text
+npm.cmd run test:all
+pnpm.cmd lint
+pnpm.cmd build
+```
+
+原始结论摘要：
+
+```text
+Web Test Files 8 passed (8); Tests 50 passed (50)
+Tooling tests 28; pass 28; fail 0
+Server tests 147; pass 147; fail 0
+ESLint exit=0
+Next.js 16.3.1 production build compiled successfully; static pages 7/7
+```
+
+全量命令退出码均为 0。自动化只证明代码与合成边界，不替代真机、真实 provider、结算或生产验收。
 
 ## 脱敏与秘密扫描
 
@@ -91,6 +134,8 @@ no leaks found
 no leaks found
 PASS scoped secret scan
 ```
+
+本轮又对工作流、业务门禁、机器台账、完成清单、MVP 验收文档和新增回归测试七个实际变更文件逐一执行固定摘要镜像的文件扫描；每个范围均扫描了非零字节并返回 `no leaks found`。
 
 ## PG16／PG17 候选持久化
 
