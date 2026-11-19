@@ -10,28 +10,28 @@
     {
       "topic": "consent_copy_product_policy",
       "path": "Phoenix Compass/education compass/docs/product/freeze/education-compass-v1-rc1/CONSENT_PRIVACY_AGENT_FEISHU_POLICY_V1_RC1.md",
-      "sha256": "5aa484bdfbd717c1f4902a82a6f24b528da7f34b067ba7faf0fffab4fba774f1",
+      "sha256Lf": "47810bec41f9803f303aa89a3399f8c09c259cfc2f43f7a9287f0a3bc1a43445",
       "status": "APPROVED_PRODUCT_POLICY_ONLY",
       "limits": "Qualified privacy, legal and minor-protection review remains pending; this approval does not authorize real-student use or production activation."
     },
     {
       "topic": "refund_product_policy",
       "path": "Phoenix Compass/education compass/docs/product/freeze/education-compass-v1-rc1/COMMERCIAL_POLICY_V1_RC1.md",
-      "sha256": "46ff60fccd3ba0ccad98bc95378e4b882d5c03fc58acdd874fc1c36ae2ca25c5",
+      "sha256Lf": "c6a6a80046e4bca513938ab4845867148981d20c415e728f5bb516853a482df1",
       "status": "APPROVED_PRODUCT_POLICY_ONLY",
       "limits": "Real payment activation and authoritative settlement evidence remain outside this approval."
     },
     {
       "topic": "retention_and_deletion_current_implementation",
       "path": "Phoenix Compass/education compass/docs/DATA_INVENTORY.md",
-      "sha256": "71244a32c032c92bb3957fc651ffc12cc8d3edc7f484b1380ce0e8b1d39d079e",
+      "sha256Lf": "856339672663e8c541991999d08eaac6e61aed0a4f32c2fb4c75c1a8b06894c0",
       "status": "APPROVED_CURRENT_RULES_ONLY",
       "limits": "The maximum retention period for ordinary personal data and the final legal or tax basis remain unresolved."
     },
     {
       "topic": "support_sla_current_values",
       "path": "Phoenix Compass/education compass/docs/decisions/COMMERCIAL_DECISIONS_DRAFT.md",
-      "sha256": "6f88b58b9a53af13bf0073381f37fe3a5b33ab062a6e0f7bee901ea3cf82da55",
+      "sha256Lf": "29203bebb6c7c255714afa5748a146cd3ef4c58ab2503d8dcd008c431a95b9ee",
       "status": "APPROVED_VALUES_ONLY",
       "values": [
         "first response within 24 business hours",
@@ -42,7 +42,7 @@
     {
       "topic": "third_party_deletion_minimization_sla",
       "path": "Phoenix Compass/education compass/docs/product/freeze/education-compass-v1-rc1/CONSENT_PRIVACY_AGENT_FEISHU_POLICY_V1_RC1.md",
-      "sha256": "5aa484bdfbd717c1f4902a82a6f24b528da7f34b067ba7faf0fffab4fba774f1",
+      "sha256Lf": "47810bec41f9803f303aa89a3399f8c09c259cfc2f43f7a9287f0a3bc1a43445",
       "status": "APPROVED_PRODUCT_VALUE_ONLY",
       "values": [
         "complete deletion or minimization within 30 days after a verified request"
@@ -54,9 +54,9 @@
     {
       "topic": "verified_source_catalog_payload",
       "specPath": "Phoenix Compass/education compass/docs/SOURCE_CATALOG.md",
-      "specSha256": "7282859245edc2f1c55478658d8edfe98fa26efaa2fe853e5d1981b93299c289",
+      "specSha256Lf": "27f0c0d6669c3fd81a5fab98c6fe24f0a19defca1e4a75e4bfdffb3ae94e414e",
       "templatePath": "Phoenix Compass/education compass/docs/source-catalog.template.json",
-      "templateSha256": "92edfb893eca96752d63fb6bab7a69d1bc478d28816613779678c195c20d268d",
+      "templateSha256Lf": "2c902a6ec68cd36e23ef3f45ed8325b6b7fb83fa2c8eded59236258673174e9c",
       "status": "HOLD_MISSING_PAYLOAD",
       "reason": "The repository contains only the format and template. No verified entries, applicable year, reviewer or approved manifest exists to bind."
     }

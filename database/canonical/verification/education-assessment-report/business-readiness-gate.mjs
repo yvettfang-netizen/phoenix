@@ -46,12 +46,12 @@ assert.equal(c2Approval.unresolvedBindings[0].status, 'HOLD_MISSING_PAYLOAD')
 assert(c2Approval.holds.includes('formal verified Source Catalog payload is absent'))
 assert(c2Approval.prohibitedInferences.includes('C2 is not PASS'))
 for (const binding of c2Approval.approvedBindings) {
-  assert.equal(sha256(read(binding.path)), binding.sha256, `C2 approval SHA mismatch: ${binding.path}`)
+  assert.equal(sha256(lf(read(binding.path))), binding.sha256Lf, `C2 approval LF SHA mismatch: ${binding.path}`)
 }
-assert.equal(sha256(sourceCatalogSpec), c2Approval.unresolvedBindings[0].specSha256)
+assert.equal(sha256(lf(sourceCatalogSpec)), c2Approval.unresolvedBindings[0].specSha256Lf)
 assert.equal(
-  sha256(read(c2Approval.unresolvedBindings[0].templatePath)),
-  c2Approval.unresolvedBindings[0].templateSha256
+  sha256(lf(read(c2Approval.unresolvedBindings[0].templatePath))),
+  c2Approval.unresolvedBindings[0].templateSha256Lf
 )
 assert.match(sourceCatalogSpec, /SOURCE_CATALOG_MODE=placeholder/)
 assert.match(sourceCatalogSpec, /SOURCE_CATALOG_PATH` 为空/)
