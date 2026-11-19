@@ -1,0 +1,57 @@
+{
+  "checks": [
+    {
+      "name": "default-off-zh",
+      "result": "PASS",
+      "status": 404
+    },
+    {
+      "name": "default-off-en",
+      "result": "PASS",
+      "status": 404
+    },
+    {
+      "name": "rendered-public-six-navigation",
+      "result": "PASS",
+      "labels": [
+        "首页",
+        "教育",
+        "身份",
+        "健康",
+        "财富",
+        "洞察"
+      ]
+    },
+    {
+      "name": "rendered-about-route-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "synthetic-preview-zh",
+      "result": "PASS",
+      "status": 200,
+      "informationalWorkspaces": 3
+    },
+    {
+      "name": "synthetic-preview-en",
+      "result": "PASS",
+      "status": 200,
+      "informationalWorkspaces": 3
+    },
+    {
+      "name": "unsupported-locale-refused",
+      "result": "PASS",
+      "status": 404
+    },
+    {
+      "name": "foreign-host-refused",
+      "result": "PASS",
+      "status": 403,
+      "preview": false
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "Chromium visual checks blocked by sandbox socket permission; no screenshots, layout or browser-runtime PASS claimed."
+  ]
+}
