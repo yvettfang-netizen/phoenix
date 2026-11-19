@@ -15,7 +15,7 @@
 | 监护人报告范围 | 按最小权限验收当前测评的 Consent 签发人。数据库每次读取重新查同一家庭、相同学生、现行 `EDUCATION` 监护权限和该测评用途。作者另行持有只面向指定服务的发布权限，发布绑定摘要和 QA。 | 另一名监护人、顾问与历史报告继承规则暂不扩展。用户已批准的实际读取范围仍需真实绑定及撤回验收。 |
 | 权威结算与退款 | 独立 Settlement DB 角色及 D-8 Operations 服务标签同时匹配才可接收事件。只接受提交、订单和有效期一致的 `EDUCATION_GROWTH_DISCOVERY_SINGLE_V1`。校验 3990 分 CNY 及幂等。通用权益不解锁单份报告。退款进行中关闭，确认退款后终态拒绝迟到付款恢复。 | 权威订单与退款事件验签、订单到提交关联、允许时效、对账和补偿事件需提供脱敏引用后验收。数据库只保存权限状态和不透明引用。 |
 
-[候选 SQL](../../../database/canonical/forward-candidates/education-assessment-report/education_assessment_report.sql) 放在 `forward-candidates`。本地只对带测试标记的实例显式加载。0038、0039 已用于工作台方案，0040 已用于工作台身份候选。编号在合入评审时统一分配。本候选只依赖已合入的 0001–0037。
+[候选 SQL](../../../database/canonical/forward-candidates/education-assessment-report/education_assessment_report.sql) 放在 `forward-candidates`。本地只对带测试标记的实例显式加载。0038、0039 已用于工作台方案，0040 已用于工作台身份候选；本轮以[机器可读候选清单](../../../database/canonical/forward-candidates/education-assessment-report/manifest-0041-education-assessment-report.json)暂定 0041。该编号只有在 0038–0040 按现有顺序晋升时成立，否则合入前重新编号。本候选只依赖已合入的 0001–0037，未进入 Migration 账本。
 
 ## 当前数据库完成进度
 
@@ -26,7 +26,7 @@
 | 腾讯隔离实机 | PASS。11 月 19 日已将正式 `0001`–`0037` 同步到隔离非生产库。PG16.15，账本 37、表 93、RLS 83；升级前后备份及 0037 定时维护均完成无网络恢复。Education 未编号候选未部署。 |
 | 生产接管与旧库退役 | HOLD。实际旧数据库依赖待核验。PR #68 当前为 OPEN / Draft，核验头提交 `9ce484570ec5b9a494fba4da4e79e4f2f2582f81`。 [PR #68](https://github.com/yvettfang-netizen/phoenix/pull/68) |
 
-数据库机制和合成接线证据已经通过，详见[0037 受控证据与腾讯隔离环境同步报告](CONTROLLED_EVIDENCE_AND_NONPROD_DEPLOYMENT_20261119.md)。下一步是由权威外部系统提供真实 provider 会话、受控逐人映射、设备交接及支付／退款对账的脱敏回执；证据与真实申请、发布和撤权链路对应后，再评审 Education 编号迁移及应用切换。前置证据沿用既有[身份事实清单](../identity-evidence-packet-20261104/MISSING_FACTS_CHECKLIST.md)。
+数据库机制和合成接线证据已经通过，详见[0037 受控证据与腾讯隔离环境同步报告](CONTROLLED_EVIDENCE_AND_NONPROD_DEPLOYMENT_20261119.md)及[下一门禁执行清单](NEXT_GATE_EXECUTION_CHECKLIST_20261119.md)。下一步是由权威外部系统提供真实 provider 会话、受控逐人映射、设备交接及支付／退款对账的脱敏回执；证据与真实申请、发布和撤权链路对应后，再评审 Education 0041 候选晋升及应用切换。四组引用的机器可读空表见[外部事实登记](EXTERNAL_FACT_EVIDENCE_REGISTER.json)，前置证据沿用既有[身份事实清单](../identity-evidence-packet-20261104/MISSING_FACTS_CHECKLIST.md)。
 
 ## 复现
 
