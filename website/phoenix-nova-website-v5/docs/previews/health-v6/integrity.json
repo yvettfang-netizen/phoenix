@@ -1,0 +1,55 @@
+{
+  "base": "9de1e8ddeecbd338d53230ef0ff3b3a82ac3e2fc",
+  "protectedFiles": [
+    {
+      "path": "lib/health-compass.ts",
+      "baseSha256": "60d7658ac09ee3b88592f511353cd40ec767787eeb8d449e9288e05cc7c6e488",
+      "currentSha256": "60d7658ac09ee3b88592f511353cd40ec767787eeb8d449e9288e05cc7c6e488",
+      "match": true
+    },
+    {
+      "path": "components/health-compass.tsx",
+      "baseSha256": "a3439eb764a93eaa2aed6597f2e68154433ad62b4a1011b593df54a02f832903",
+      "currentSha256": "a3439eb764a93eaa2aed6597f2e68154433ad62b4a1011b593df54a02f832903",
+      "match": true
+    },
+    {
+      "path": "lib/health-compass-gate.ts",
+      "baseSha256": "99c28fc00de56612c08332d046fee772a2b3607785d5bf408450d97471b8acab",
+      "currentSha256": "99c28fc00de56612c08332d046fee772a2b3607785d5bf408450d97471b8acab",
+      "match": true
+    },
+    {
+      "path": "lib/health-integration-contract.ts",
+      "baseSha256": "d2cea6a525f3b477a520bd68c6d9975adb158857b90d4f487145a58d47a89b00",
+      "currentSha256": "d2cea6a525f3b477a520bd68c6d9975adb158857b90d4f487145a58d47a89b00",
+      "match": true
+    },
+    {
+      "path": "components/v5-site.tsx",
+      "baseSha256": "df00710ff244a340c4dda5ec9b242ca91edc4699441a368a67f7ff8e79533321",
+      "currentSha256": "df00710ff244a340c4dda5ec9b242ca91edc4699441a368a67f7ff8e79533321",
+      "match": true
+    },
+    {
+      "path": "components/homepage-v6.tsx",
+      "baseSha256": "1712ec7e63af9317827338f40895d89fce8cb47163d1bcf49e721f57a75eaccd",
+      "currentSha256": "1712ec7e63af9317827338f40895d89fce8cb47163d1bcf49e721f57a75eaccd",
+      "match": true
+    },
+    {
+      "path": "components/brand-mark.tsx",
+      "baseSha256": "7b83614802106deb76432b44099341866014126033fc848443faa30af02e5bac",
+      "currentSha256": "7b83614802106deb76432b44099341866014126033fc848443faa30af02e5bac",
+      "match": true
+    },
+    {
+      "path": "public/images/health-v31-gba-family.png",
+      "baseSha256": "38b015abc22b82bc3a934f6eba1b9579ed5339eb8b31eeea17242fbaeded1c9c",
+      "currentSha256": "38b015abc22b82bc3a934f6eba1b9579ed5339eb8b31eeea17242fbaeded1c9c",
+      "match": true
+    }
+  ],
+  "existingHealthCssPreserved": true,
+  "scope": "LF-normalized source equality; image byte equality; not visual or production approval"
+}

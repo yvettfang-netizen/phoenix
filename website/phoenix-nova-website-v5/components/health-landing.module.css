@@ -329,3 +329,8 @@
   .page,
   .page * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+.launchValues { display: grid; gap: 16px; margin-block: 24px; }
+.launchValues article { border-left: 1px solid var(--health-gold); padding-left: 16px; }
+.launchValues h3 { color: var(--health-gold); font-size: 18px; margin-bottom: 6px; }
+.launchValues p { color: #d3dfda; font-size: 13px; margin: 0; }

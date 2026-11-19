@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   if (locale !== "zh" && locale !== "en") return {};
-  const title = locale === "zh" ? "全球健康与跨境医疗" : "Global Health & Cross-Border Medical Services";
+  const title = locale === "zh" ? "健康罗盘 V6.0｜全球健康与跨境医疗" : "Health Compass V6.0 | Global Health & Cross-Border Medical Services";
   const description = locale === "zh"
     ? "连接香港、深圳及粤港澳大湾区医疗资源，了解医疗预约、语言沟通、跨境行程、在地支持与保险理赔行政协助。先了解家庭需要，再规划下一步。"
     : "Explore healthcare options across Hong Kong, Shenzhen and the Greater Bay Area, with appointment coordination, language support, travel, local arrangements and insurance claims administration.";
