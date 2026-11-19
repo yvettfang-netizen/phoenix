@@ -1,6 +1,12 @@
 # 真实联调证据核验与数据库完成进度
 
-2026-11-18（北京时间）· Jimson 授权，Codex 本会话只读复核。
+2026-11-19（北京时间）· Jimson 授权，Codex 受控复核与隔离环境收口。
+
+## 2026-11-19 收口更新
+
+数据库机制证据已补齐，外部真实事实继续 HOLD。PG16／PG17 已用分离 LOGIN、一次性票据和两组合成主体完成 broker → binder → APP → RLS／审计回归；Education 候选完成 Consent／Assent、监护人指定读取、单份报告付款与退款撤权回归。腾讯隔离非生产库已从正式账本 35 升级到 37，最终为 37 条 Migration、93 张表和 83 条 RLS 策略，升级前后备份均在无网络新实例恢复成功。
+
+本轮没有真实登录、真实逐人映射、真实设备交接或真实支付事件。因此 I-1、I-2、H-1、P-1 的“工程机制”部分为 PASS，“外部真实事实”部分仍为 HOLD。完整脱敏结果见[0037 受控证据与腾讯隔离环境同步报告](CONTROLLED_EVIDENCE_AND_NONPROD_DEPLOYMENT_20261119.md)。
 
 **已有审批已复用。真实联调准入 HOLD，受控联调 NOT RUN。** 工程源固定为本地 `9c50b9b074f0f6df37494ef8c0d5490207c9b4a1`。本轮完成已有证据的重新读取、来源与适用范围核验、原始输出归档及既有测试日志完整性复核。
 
@@ -18,11 +24,11 @@ GitHub 连接器对私有来源返回 404，已改用本机既有认证的 GitHu
 | --- | --- |
 | 审批与责任人 | PASS。此前已批准的 broker 方向、固定算法、300 秒上限、APP／binder 分离、Operations 权威和本会话规则批准均复用。实际服务、主体与事件需有当前证据。 |
 | B1 DNS／TLS／JWKS | 历史 PASS。原始 JSON 记录 2026-11-06T07:35:00.384Z–07:35:00.511Z 成功，运行 SHA `91f162f41d0d4ec5bd79bb5eea55fb49089c261b`。提前采集依据在原报告登记，保留原始批准窗口。该证据覆盖隔离测试公钥发布。 |
-| 正常登录与 Canonical 桥接 | HOLD。现有上游是微信 `code2Session` 和服务端 opaque session。B1 发布服务范围为 JWKS，真实身份绑定与令牌签发仍关闭。当前本地入口限定 `NODE_ENV=test`，默认使用合成身份验证器。未找到当前正常登录到 broker、APP／binder、Canonical 主体的受控运行回执。 |
-| 家庭／学生／监护／员工映射 | HOLD。已有接口与映射管理规则，既有 F1–F5 表记录当前事实待补。今天 Jimson 技术交付页仍列真实身份、客户／员工映射、受控账号及 Consent 缺项。PR #68 新身份测试文件明确为合成夹具。 |
-| 设备交接与用途证据 | HOLD。冻结件允许受控交接，当前候选可记录本人 Assent 和有效监护人 Consent。候选要求的 `evidence_receipt_id` 只构成关联字段。尚未找到真实会话交接、确认人、用途、到期、退出／撤回及防重放的签发和验证回执。 |
-| 权威结算及退款 | HOLD。规则、服务端微信支付适配器和本地合成回归已有依据。尚未找到受控沙箱中验签通过的 PAID／退款事件、订单与该提交和报告的精确关联，以及当前 Operations 事件接收服务的版本与对账回执。 |
-| 接口与运行版本 | HOLD。合成候选已通过本地数据库检查。现有隔离 HTTP 入口对问卷／报告／订单返回 `CANONICAL_CONTRACT_HOLD`。正常 session 桥仍需要显式可信 provider。当前运行版本与这些候选的一致性仍待受控运行收据。 |
+| 正常登录与 Canonical 桥接 | 受控机制 PASS／真实提供方 HOLD。PG16／PG17 已完成合成 JWT、APP／binder 分离、一次性票据、清理与撤权回归；未执行真实微信正常登录。 |
+| 家庭／学生／监护／员工映射 | 受控机制 PASS／真实账号 HOLD。两组合成主体已验证跨家庭、未授权学生及越权拒绝；未登记真实客户或员工。 |
+| 设备交接与用途证据 | 受控机制 PASS／真实交接 HOLD。Consent／Assent、用途版本、撤回、过期与重放拒绝已验收；未生成真实设备交接回执。 |
+| 权威结算及退款 | 受控机制 PASS／真实事件 HOLD。固定商品、金额、支付解锁、退款中锁定、全额退款撤权和错误事件拒绝已验收；未执行真实支付提供方事件。 |
+| 接口与运行版本 | 数据库 PASS／应用真实联调 HOLD。腾讯隔离库已运行正式 `0001`–`0037`；Education 候选仍未编号且未部署，真实 session/provider 接线未启用。 |
 
 相关原件均已实际读取。
 
@@ -50,8 +56,8 @@ GitHub 连接器对私有来源返回 404，已改用本机既有认证的 GitHu
 | --- | --- |
 | 唯一 Canonical 主线 | PASS。GitHub `main@9db147ac3a5d135d50b90bfea5a7316ce747d90b` 仍为 0001–0037。基线 93 表、83 条 RLS，PG16.15／PG17.11 的空库及重复验收已有实际输出。 |
 | Education 本地持久化候选 | PASS（已有合成执行，本轮校验来源与摘要）。固定 `9c50b9b`，两种用途登记／撤回、草稿提交封存、个别监护人报告读取、角色分离、付款及退款规则已验收。候选仍置于 `forward-candidates`。 |
-| 腾讯隔离运行与备份 | 最新已归档实机观测为 11 月 18 日 PG16.15／0035。当天 15:50 的实际恢复通过，账本 35/35，演练约 6 秒。本轮引用既有回执。 |
-| Education 真实身份与结算联调 | HOLD，执行 NOT RUN。I-1、I-2、H-1、P-1 当前证据未齐。 |
+| 腾讯隔离运行与备份 | PASS。11 月 19 日 PG16.15 正式升级到 0037；账本 37、表 93、RLS 83。升级前后备份均恢复通过，0037 最小权限定时维护已接管。 |
+| Education 真实身份与结算联调 | 机制 PASS／真实事实 HOLD。I-1、I-2、H-1、P-1 的合成工程证据齐备；真实 provider、账号、设备和支付回执未提供。 |
 | 生产接管与旧库退役 | HOLD。实际运行旧库依赖解除待验证。PR #68 为 OPEN／Draft，当前 HEAD `9ce484570ec5b9a494fba4da4e79e4f2f2582f81`，REVIEW_REQUIRED／BEHIND。 |
 
 [主线目录](https://github.com/yvettfang-netizen/phoenix/tree/9db147ac3a5d135d50b90bfea5a7316ce747d90b/database/canonical/migrations)及[PR #68](https://github.com/yvettfang-netizen/phoenix/pull/68)。11 月 18 日恢复原始回执归档于同仓库既有工作树的 `out/education-canonical-cutover-20261118/LATEST_BACKUP_RESTORE_RECEIPT.txt`。

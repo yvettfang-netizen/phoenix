@@ -1,6 +1,6 @@
 # Education Compass Canonical 实施与数据库进度
 
-2026-11-18 · Jimson 数据库台账 · 本地候选评审
+2026-11-19 · Jimson 数据库台账 · 受控候选及隔离环境复核
 
 当前真实身份、设备交接和结算退款证据的适用范围及四组缺项见[真实联调证据核验](LIVE_INTEGRATION_EVIDENCE_AUDIT.md)。
 
@@ -23,10 +23,10 @@
 | --- | --- |
 | Canonical 主线 | `main@9db147a` 已核对包含 0001–0037。PG16.15 / PG17.11 基线各成功应用 37 项，93 张表、83 条 RLS 策略。 [主线迁移目录](https://github.com/yvettfang-netizen/phoenix/tree/9db147ac3a5d135d50b90bfea5a7316ce747d90b/database/canonical/migrations) |
 | Education 本地切换 | 上轮已验证旧连接拒绝后可用 Canonical 读取课程、身份投影和既有 Operations 权益。本轮独立持久化候选通过 PG16/PG17。验收使用真实 SQL 函数、四个分离数据库登录及合成数据。 |
-| 腾讯隔离实机 | 11 月 18 日最近一次有据核验为 PG16.15 / 0035。15:50（北京时间）使用当日归档隔离恢复通过，账本 35/35，演练用时 6 秒。本轮沿用这份观测。 |
+| 腾讯隔离实机 | PASS。11 月 19 日已将正式 `0001`–`0037` 同步到隔离非生产库。PG16.15，账本 37、表 93、RLS 83；升级前后备份及 0037 定时维护均完成无网络恢复。Education 未编号候选未部署。 |
 | 生产接管与旧库退役 | HOLD。实际旧数据库依赖待核验。PR #68 当前为 OPEN / Draft，核验头提交 `9ce484570ec5b9a494fba4da4e79e4f2f2582f81`。 [PR #68](https://github.com/yvettfang-netizen/phoenix/pull/68) |
 
-下一步是在获准的隔离环境验收现行身份／监护与设备交接证明，以及权威结算和退款事件。证据与真实申请、发布和撤权链路对应后，再评审编号迁移并安排切换。前置证据用脱敏引用，沿用既有[身份事实清单](../identity-evidence-packet-20261104/MISSING_FACTS_CHECKLIST.md)。
+数据库机制和合成接线证据已经通过，详见[0037 受控证据与腾讯隔离环境同步报告](CONTROLLED_EVIDENCE_AND_NONPROD_DEPLOYMENT_20261119.md)。下一步是由权威外部系统提供真实 provider 会话、受控逐人映射、设备交接及支付／退款对账的脱敏回执；证据与真实申请、发布和撤权链路对应后，再评审 Education 编号迁移及应用切换。前置证据沿用既有[身份事实清单](../identity-evidence-packet-20261104/MISSING_FACTS_CHECKLIST.md)。
 
 ## 复现
 
