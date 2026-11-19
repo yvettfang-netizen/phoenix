@@ -218,6 +218,44 @@ Academy 管课程、教师、课节、课后任务和教学摘要；ASKWISE 管 
 
 逐包需要新建表时都明确 FK、唯一/排他约束、业务状态、RLS、ACL、审计和 rollback/补偿；不能仅在 JSON 字段里埋可绕过的组织/家庭关系。多家庭关联必须由后端与数据库共同核验；单个 FK 存在性不证明 subject 属于该 family。
 
+### 4.2.1 核心关系 ERD
+
+以下是范围明确的逻辑 ERD，采用下划线表示 schema 与表名之间的点；标注“新增”的节点仍是设计候选，不是当前已建表。
+
+**组织与同一自然人的多工作区。** `organization_memberships` 和 `workspace_role_bindings` 新增；其余沿用现有主实体。角色绑定中的 principal 与 membership 必须属于同一个人，不能只靠两条独立 FK。
+
+```mermaid
+erDiagram
+  core_organizations ||--o{ core_organization_memberships : "机构成员（新增）"
+  core_people ||--o{ core_organization_memberships : "同一自然人"
+  core_people ||--o| auth_principals : "人类登录主体"
+  core_organization_memberships ||--o{ auth_workspace_role_bindings : "角色绑定（新增）"
+  auth_principals ||--o{ auth_workspace_role_bindings : "选定工作上下文"
+```
+
+此图仅表示 Company 人类成员；非自然人的 SERVICE principal 不套用图中的 person 基数。角色绑定是能力依据，仍需额外通过每条资源的授权检查。
+
+**从大学在读到下一次服务。** `study_enrollments` 与 `lifecycle_occurrences` 新增；学生、CRM 跟进和 service task 均复用。
+
+```mermaid
+erDiagram
+  core_student_profiles ||--o{ education_study_enrollments : "在读关系（新增）"
+  education_study_enrollments ||--o{ crm_lifecycle_occurrences : "稳定周期提醒（新增）"
+  crm_lifecycle_occurrences o|--o| crm_follow_ups : "售前联系"
+  crm_lifecycle_occurrences o|--o| service_tasks : "签约后服务任务"
+```
+
+审核队列中的 occurrence 可暂不关联任务；正式派发后必须关联一条真实任务。follow_up 与 service_task 链接互斥，分别用唯一索引约束；从售前转交付按审计交接处理，不让两条任务同时承担同一次联系。
+
+**不可变文件版本跨项目使用。** 新关联按项目分别审核，避免复制原件或继承旧项目的批准。
+
+```mermaid
+erDiagram
+  docs_documents ||--o{ docs_document_versions : "不可变版本"
+  docs_document_versions ||--o{ service_project_document_links : "授权使用（新增）"
+  service_projects ||--o{ service_project_document_links : "独立用途与审核"
+```
+
 ### 4.3 身份兼容迁移的实现边界
 
 保留既有 `principal_id/person_id` 与旧 `principal_kind` 语义，不删除 person 唯一约束来创建多个相同自然人。新增工作区角色关联是权限信息，不是第二套登录主数据。
