@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# 配置飞书群机器人告警通道。
-#
-#   ~/set-feishu-alert.sh           录入 webhook 与 secret（隐藏输入），发测试消息，成功后安装每日巡检
-#   ~/set-feishu-alert.sh --test    用已保存的配置再发一条测试消息
-#
-# 当前仅保留主机证书和磁盘巡检；Education 独立 PG、UAT API/Agent、PM2 健康检查与旧数据库备份任务已退役。
+# 配置飞书群机器人告警通道；仅安装每日主机证书与磁盘巡检。
 set -euo pipefail
 umask 077
 
@@ -30,7 +25,7 @@ echo "安全设置建议勾选「签名校验」并复制 secret；如果用「�
 echo
 read -rsp "粘贴 webhook 地址（输入不显示），然后按 Enter: " WEBHOOK
 echo
-if [[ ! "$WEBHOOK" =~ ^https://open\\.(feishu\\.cn|larksuite\\.com)/open-apis/bot/v2/hook/[A-Za-z0-9-]+$ ]]; then
+if [[ ! "$WEBHOOK" =~ ^https://open[.](feishu[.]cn|larksuite[.]com)/open-apis/bot/v2/hook/[A-Za-z0-9-]+$ ]]; then
   echo "格式不对。没有做任何修改。"
   exit 1
 fi
@@ -39,7 +34,10 @@ echo
 
 mkdir -p "$CONFIG_DIR" && chmod 700 "$CONFIG_DIR"
 TMP=$(mktemp "$CONFIG_DIR/feishu.env.XXXXXX")
-printf 'FEISHU_ALERT_WEBHOOK=%s\\nFEISHU_ALERT_SECRET=%s\\n' "$WEBHOOK" "$SECRET" > "$TMP"
+cat > "$TMP" <<EOF
+FEISHU_ALERT_WEBHOOK=$WEBHOOK
+FEISHU_ALERT_SECRET=$SECRET
+EOF
 unset WEBHOOK SECRET
 chmod 600 "$TMP"
 
@@ -51,7 +49,6 @@ if ! PHOENIX_ALERT_CONFIG="$TMP" "$NODE" "$NOTIFY" test "告警通道已接通" 
 fi
 mv "$TMP" "$CONFIG"
 
-# 移除旧 Education 高频健康检查，只保留每日主机巡检；保留其他 crontab 项。
 ( crontab -l 2>/dev/null | grep -vF '/home/ubuntu/health-check.sh' | grep -vF '/home/ubuntu/daily-check.sh'
   echo "$CRON_DAILY" ) | crontab -
 
