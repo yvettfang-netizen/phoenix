@@ -59,6 +59,28 @@ sudo -u postgres psql -X -c "SELECT datname, pg_get_userbyid(datdba), pg_size_pr
 
 **STOP condition:** if the old Education URLs do not resolve exactly to `compass` and/or `phoenix_uat`, if either name is used by a Canonical service, or if Canonical database identity is ambiguous, do not drop anything. Return the sanitized inventory for direct resolution.
 
+### A.1 Public API uptime-monitor continuity — MANDATORY before stopping legacy services
+
+The retired `health-check.sh` was checking both Education UAT/production services **and the live public endpoint** `https://api.phoenixnova.com.cn/health`. Removing its cron before a replacement is running would silently disable the public API outage alert.
+
+1. Confirm which API paths and consumers still depend on the Education service. If live clients still depend on it and an approved Canonical service replacement is not active, **STOP**: do not disable the service or DROP its database merely because historical rows are not valuable. Founder has authorized data retirement, not an unreviewed public-service outage.
+2. Deploy the replacement monitor from reviewed repository path `ops/monitoring/public-api-health-check.sh` onto the host as `/home/ubuntu/public-api-health-check.sh` with mode 0755; use the accepted exact SHA, not an arbitrary local copy.
+3. In the existing Feishu environment, test the replacement endpoint/notification and verify the 2-minute cron is present. A sample cron line is shown below:
+
+```bash
+install -m 0755 ops/monitoring/public-api-health-check.sh /home/ubuntu/public-api-health-check.sh
+curl -fsS --max-time 10 https://api.phoenixnova.com.cn/health >/dev/null
+( crontab -l 2>/dev/null | grep -vF '/home/ubuntu/health-check.sh' | grep -vF '/home/ubuntu/public-api-health-check.sh'
+  echo '*/2 * * * * /home/ubuntu/public-api-health-check.sh >/dev/null 2>&1' ) | crontab -
+crontab -l | grep -F '/home/ubuntu/public-api-health-check.sh'
+```
+
+The `install` command assumes the current directory is the reviewed repository checkout. If this path is unavailable, stop; do not create an unverified substitute. The notifier's actual receipt and a controlled alert/recovery drill must be recorded without leaking webhook secrets. The new monitor must remain in place after the old Education health-check cron is removed.
+
+4. Keep the generic daily host check for certificate/disk as a separate cron. Canonical PostgreSQL backup/restore monitoring belongs to its own independent operations service.
+
+**STOP condition:** live public API still depends on a to-be-stopped service and no accepted replacement exists; public health monitor is missing, has no alert delivery or no verified scheduled execution. No service stop, database DROP or credential revocation until these checks pass.
+
 ### B. Stop the retired Education runtime
 
 Once the old service-to-database mapping is confirmed:
@@ -74,7 +96,7 @@ sudo systemctl daemon-reload
 crontab -l
 ```
 
-Verify both systemd units are inactive/disabled, both PM2 process names are absent, and no retired health-check cron remains. Remove only the two retired unit files from `/etc/systemd/system` if they remain there, then run `sudo systemctl daemon-reload` again.
+Verify both systemd units are inactive/disabled, both PM2 process names are absent, and no retired health-check cron remains. Verify the new public-api-health-check cron remains installed and delivers alerts. Remove only the two retired unit files from `/etc/systemd/system` if they remain there, then run `sudo systemctl daemon-reload` again.
 
 ### C. Drop only the confirmed legacy databases
 
@@ -136,6 +158,7 @@ Do not delete any D1 resource based only on a matching name or the Sites project
 Return a short sanitized execution receipt with:
 - host/environment and timestamp (UTC);
 - systemd and PM2 retired service states;
+- public API consumer/cutover check, replacement monitor deployment, 2-minute cron and actual alert/recovery receipt;
 - old PostgreSQL database names confirmed and dropped (or absent);
 - confirmation Canonical database name and connection remained untouched;
 - local SQLite exact paths found and removed (or absent);
