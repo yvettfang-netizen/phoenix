@@ -40,6 +40,7 @@ The follow-on contract package is prepared for Codex/Jimson review:
 - [Migration impact and negative acceptance matrix](P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md)
 - [P0.1 gate plan](P0_1_GATE_PLAN.md)
 - [P0.1 Technical Evidence Review — Codex source audit and direct Xuanwu security pass](P0_1_TECHNICAL_EVIDENCE_REVIEW.md)
+- [Founder P0.1 Decision Brief — remaining choices and recommended defaults](P0_1_FOUNDER_DECISIONS_REQUIRED.md)
 
 P0.1 status: **Codex source review and direct Xuanwu-style security pass complete; Founder contract decisions pending; no Jimson manual exception identified; no migration authorized**. The commercial rules remain HOLD.
 
