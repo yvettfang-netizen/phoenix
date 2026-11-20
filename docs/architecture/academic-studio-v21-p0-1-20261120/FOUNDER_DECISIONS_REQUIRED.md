@@ -25,6 +25,8 @@ This is needed because the current projection requires FAMILY context for studen
 
 ## 3. Administrator / Founder permissions
 
+**Privacy boundary:** the current Canonical consent helper is bound to `auth.current_family_id()`. A global STAFF context with no family must use a new subject-scoped consent check; Admin/Founder grants must not bypass the student's applicable Consent for sensitive learning/assessment records. This preserves the existing learning-consent boundary.
+
 **Recommended:**
 - Administrator: create/manage courses, classes, teachers, assignments, schedules, attendance corrections, and approve/publish learning outputs.
 - Founder: all Administrator permissions plus grant/revoke Academy Admin, global audit and policy oversight.
