@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 配置飞书群机器人告警通道；仅安装每日主机证书与磁盘巡检。
+# 配置飞书群机器人告警通道。保留公网 API 2 分钟健康检查和每日主机证书/磁盘巡检；不依赖旧 Education 数据库。
 set -euo pipefail
 umask 077
 
@@ -7,6 +7,7 @@ NODE=/home/ubuntu/.nvm/versions/node/v24.20.0/bin/node
 NOTIFY=/home/ubuntu/phoenix-alert-notify.mjs
 CONFIG_DIR="$HOME/.config/phoenix-alert"
 CONFIG="$CONFIG_DIR/feishu.env"
+CRON_HEALTH="*/2 * * * * /home/ubuntu/public-api-health-check.sh >/dev/null 2>&1"
 CRON_DAILY="0 5 * * * /home/ubuntu/daily-check.sh >/dev/null 2>&1"
 
 send_test() {
@@ -18,6 +19,11 @@ if [ "${1:-}" = "--test" ]; then
   [ -r "$CONFIG" ] || { echo "还没有配置，先不带参数运行一次。"; exit 1; }
   send_test && echo "测试消息已发送，去飞书群里看一眼。"
   exit
+fi
+
+if [ ! -x /home/ubuntu/public-api-health-check.sh ]; then
+  echo "公网 API 新健康检查尚未部署且不可执行。保留原 cron，不安装新的告警配置。"
+  exit 1
 fi
 
 echo "在飞书群里：设置 → 群机器人 → 添加机器人 → 自定义机器人。"
@@ -50,6 +56,7 @@ fi
 mv "$TMP" "$CONFIG"
 
 ( crontab -l 2>/dev/null | grep -vF '/home/ubuntu/health-check.sh' | grep -vF '/home/ubuntu/daily-check.sh'
+  echo "$CRON_HEALTH"
   echo "$CRON_DAILY" ) | crontab -
 
-echo "完成：告警通道已验证，每天 05:00 进行主机证书与磁盘巡检。"
+echo "完成：公网 API 每 2 分钟健康检查；每天 05:00 主机证书与磁盘巡检。"
