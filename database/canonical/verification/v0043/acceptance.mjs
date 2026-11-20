@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
@@ -28,6 +28,7 @@ const check = (name) => {
 const q = (value) => `'${String(value).replaceAll("'", "''")}'`
 let db
 let runtime
+let recovered
 
 function migrate39(cluster) {
   cluster.call(['cp', path.resolve(candidate), `${cluster.container}:/opt/canonical-migrations/0043_scoped_task_handoff.sql`])
@@ -259,6 +260,54 @@ async function run() {
   check('restricted LOGIN has no direct table write or read; narrow EXECUTE grants, FORCE RLS and audit denials')
 
   await runtime.close(); runtime = undefined
+  const backupPassword = randomBytes(32).toString('hex')
+  db.sql(`CREATE ROLE db02_backup LOGIN INHERIT BYPASSRLS PASSWORD ${q(backupPassword)};
+    GRANT CONNECT ON DATABASE phoenix_canonical_dev TO db02_backup;
+    GRANT pg_read_all_data TO db02_backup;`)
+  const backupPass = path.join(db.work, 'db02-backup.pgpass')
+  writeFileSync(backupPass, `127.0.0.1:5432:*:db02_backup:${backupPassword}\n`, { mode: 0o600, flag: 'wx' })
+  db.call(['cp', backupPass, `${db.container}:/tmp/db02-backup.pgpass`])
+  db.call(['exec', db.container, 'chmod', '600', '/tmp/db02-backup.pgpass'])
+  for (const [program, args] of [
+    ['pg_dump', ['-d', 'phoenix_canonical_dev', '-Fc', '-f', '/tmp/db02.dump']],
+    ['pg_dumpall', ['--roles-only', '--no-role-passwords', '-f', '/tmp/db02-roles.sql']]
+  ]) {
+    db.call(['exec', '-e', 'PGPASSFILE=/tmp/db02-backup.pgpass', db.container,
+      program, '-h', '127.0.0.1', '-U', 'db02_backup', ...args])
+  }
+  const dump = path.join(db.work, 'db02.dump')
+  const roles = path.join(db.work, 'db02-roles.sql')
+  db.call(['cp', `${db.container}:/tmp/db02.dump`, dump])
+  db.call(['cp', `${db.container}:/tmp/db02-roles.sql`, roles])
+  const dumpBytes = readFileSync(dump)
+  const dumpSha256 = digest(dumpBytes)
+  const rolesSha256 = digest(readFileSync(roles))
+  const altered = Buffer.from(dumpBytes)
+  altered[0] ^= 1
+  assert.notEqual(digest(altered), dumpSha256)
+  const expectedAudit = db.sql('SELECT count(*) FROM audit.access_events')
+  const expectedHandoffs = db.sql('SELECT count(*) FROM service.task_handoff_requests')
+  recovered = await createCluster(version, { initialize: false, suffix: 'db02-restore' })
+  assert.equal(digest(readFileSync(dump)), dumpSha256)
+  assert.equal(digest(readFileSync(roles)), rolesSha256)
+  recovered.sql(readFileSync(roles, 'utf8').replace(/^CREATE ROLE phoenix_bootstrap;\r?\n/m, ''))
+  recovered.call(['cp', dump, `${recovered.container}:/tmp/db02.dump`])
+  recovered.call(['exec', '-e', 'PGPASSFILE=/tmp/canonical-workspace.pgpass',
+    recovered.container, 'pg_restore', '--exit-on-error', '--no-owner',
+    '-h', '127.0.0.1', '-U', 'phoenix_bootstrap', '-d', 'phoenix_canonical_dev',
+    '/tmp/db02.dump'])
+  assert.equal(recovered.sql('SELECT count(*) FROM canonical_migrations.applied'), '39')
+  assert.equal(recovered.sql("SELECT count(*) FROM pg_tables WHERE schemaname IN ('auth','core','consent','audit','integration','docs','casework','education','identity','operations_ref','learning','crm','service')"), '102')
+  assert.equal(recovered.sql("SELECT count(*) FROM pg_policies WHERE schemaname IN ('auth','core','consent','audit','integration','docs','casework','education','identity','operations_ref','learning','crm','service')"), '92')
+  assert.equal(recovered.sql('SELECT count(*) FROM audit.access_events'), expectedAudit)
+  assert.equal(recovered.sql('SELECT count(*) FROM service.task_handoff_requests'), expectedHandoffs)
+  assert.equal(recovered.sql(`SELECT assigned_principal_id FROM service.tasks WHERE task_id='${id(2000)}'`), fixtureIds.principals.multi)
+  assert.equal(recovered.sql("SELECT has_table_privilege('phoenix_canonical_workspace_reader','service.task_handoff_requests','SELECT')"), 'f')
+  receipt.restore = { source: 'synthetic-disposable-cluster', dumpSha256,
+    rolesSha256, ledger: 39, tables: 102, policies: 92,
+    auditRows: Number(expectedAudit), handoffRows: Number(expectedHandoffs) }
+  recovered.cleanup(); recovered = undefined
+  check('dedicated backup LOGIN and manifest digest verified; fresh-cluster restore preserves ledger, data, ACL and audit')
   db.cleanup(); db = undefined
   db = await createCluster(version, { initialize: true, suffix: 'db02-upgrade' })
   assert(migrate39(db).includes('APPLIED 0043_scoped_task_handoff.sql'))
@@ -284,6 +333,7 @@ catch (error) {
 }
 finally {
   if (runtime) await runtime.close().catch(() => {})
+  if (recovered) recovered.cleanup()
   if (db) db.cleanup()
   receipt.finishedAt = new Date().toISOString()
   writeFileSync(path.join(output, 'acceptance.json'), JSON.stringify(receipt, null, 2) + '\n')

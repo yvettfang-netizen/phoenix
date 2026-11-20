@@ -20,13 +20,13 @@ The code review caught and removed a broad schema-wide function REVOKE before fi
 | Command | PG16 | PG17 | Evidence |
 |---|---|---|---|
 | `node database/canonical/verification/v0043/verify-source.mjs` | PASS | Same source | `PASS 0043 source guard sha256=6e043ffd… parent=0042 historical=37` |
-| `node database/canonical/verification/v0043/acceptance.mjs 16/17` | PASS 12 checks | PASS 12 checks | [PG16](evidence/pg16/acceptance.json), [PG17](evidence/pg17/acceptance.json) |
+| `node database/canonical/verification/v0043/acceptance.mjs 16/17` | PASS 13 checks | PASS 13 checks | [PG16](evidence/pg16/acceptance.json), [PG17](evidence/pg17/acceptance.json) |
 | `node database/canonical/verification/v0043/catalog.mjs 16/17` | PASS | PASS | [PG16 catalog](evidence/pg16/catalog.json), [PG17 catalog](evidence/pg17/catalog.json) |
 | Existing backend `npm run typecheck`, `npm run build`, `npm test` | PASS | Shared code | `npm test`: 148 pass, 0 fail, 0 skipped; no backend source changed in DB-02 |
 | Digest-pinned Gitleaks `dir /scan` on 0043 SQL, v0043 tests, package docs/evidence and workflow | PASS | Same tree | Four scans: `no leaks found`; local scan only, GitHub CI pending |
 | `git diff --check` | PASS | Same tree | No whitespace errors |
 
-The 12 acceptance groups include fresh install, 0037+0042 upgrade, repeat, checksum drift rejection, real app/binder LOGIN separation, cross-organization and Partner denial, Staff Viewer denial, recipient-only accept, inbox filtering, natural expiry, idempotent replay, task event exactly-once, two app-connection competition, failed transfer atomic rollback, role revocation, narrow EXECUTE grants, FORCE RLS and audit denial. Each test starts an owned disposable cluster, uses only synthetic data and removes its own containers. The catalog records **39 ledger rows, 102 tables, 315 functions, 92 policies** on both PG versions; these are candidate-cluster counts.
+The 13 acceptance groups include fresh install, 0037+0042 upgrade, repeat, checksum drift rejection, real app/binder LOGIN separation, cross-organization and Partner denial, Staff Viewer denial, recipient-only accept, inbox filtering, natural expiry, idempotent replay, task event exactly-once, two app-connection competition, failed transfer atomic rollback, role revocation, narrow EXECUTE grants, FORCE RLS and audit denial. A dedicated synthetic backup LOGIN exported a custom dump and password-free roles, manifest digests were checked before restore, and a **new disposable cluster** recovered all 39 ledger rows, 102 tables, 92 policies, 87 audit rows, five handoff rows and the transferred task assignee on PG16 and PG17. The manifest is unsigned and this is a logical restore, not WAL/PITR or an RPO/RTO claim. Each test starts owned disposable clusters, uses only synthetic data and removes its own containers. The catalog records **39 ledger rows, 102 tables, 315 functions, 92 policies** on both PG versions; these are candidate-cluster counts.
 
 ## Remaining gate status
 

@@ -5,69 +5,84 @@
     "number": "0043",
     "sha256": "6e043ffdeeb228dac59c605ba763e95f052bdedcdae37b652cba9b6666d18a3a"
   },
-  "startedAt": "2026-11-20T04:13:55.353Z",
+  "startedAt": "2026-11-20T04:29:47.301Z",
   "checks": [
     {
       "name": "PG fresh 0001-0037 plus isolated 0042/0043, ledger and repeat",
       "status": "PASS",
-      "at": "2026-11-20T04:14:03.160Z"
+      "at": "2026-11-20T04:29:55.074Z"
     },
     {
       "name": "recipient already holds same-project and same-organization authorization",
       "status": "PASS",
-      "at": "2026-11-20T04:14:03.793Z"
+      "at": "2026-11-20T04:29:55.699Z"
     },
     {
       "name": "cross-organization and Partner workspace proposals denied",
       "status": "PASS",
-      "at": "2026-11-20T04:14:04.062Z"
+      "at": "2026-11-20T04:29:55.974Z"
     },
     {
       "name": "eligible sender proposes one idempotent request; Staff Viewer denied",
       "status": "PASS",
-      "at": "2026-11-20T04:14:04.605Z"
+      "at": "2026-11-20T04:29:56.522Z"
     },
     {
       "name": "restricted inbox reveals only current same-organization Staff proposals",
       "status": "PASS",
-      "at": "2026-11-20T04:14:04.792Z"
+      "at": "2026-11-20T04:29:56.710Z"
     },
     {
       "name": "recipient-only accept, revision guard, exactly one transfer event and no new project grant",
       "status": "PASS",
-      "at": "2026-11-20T04:14:05.411Z"
+      "at": "2026-11-20T04:29:57.321Z"
     },
     {
       "name": "natural expiry releases open slot; rejection replay is idempotent and task unchanged",
       "status": "PASS",
-      "at": "2026-11-20T04:14:06.703Z"
+      "at": "2026-11-20T04:29:58.584Z"
     },
     {
       "name": "two real restricted app connections accept concurrently; one transfer event wins",
       "status": "PASS",
-      "at": "2026-11-20T04:14:07.000Z"
+      "at": "2026-11-20T04:29:58.876Z"
     },
     {
       "name": "failed transfer rolls back atomically; sender cancel and recipient role revocation deny reuse",
       "status": "PASS",
-      "at": "2026-11-20T04:14:07.565Z"
+      "at": "2026-11-20T04:29:59.454Z"
     },
     {
       "name": "restricted LOGIN has no direct table write or read; narrow EXECUTE grants, FORCE RLS and audit denials",
       "status": "PASS",
-      "at": "2026-11-20T04:14:08.178Z"
+      "at": "2026-11-20T04:30:00.063Z"
+    },
+    {
+      "name": "dedicated backup LOGIN and manifest digest verified; fresh-cluster restore preserves ledger, data, ACL and audit",
+      "status": "PASS",
+      "at": "2026-11-20T04:30:05.860Z"
     },
     {
       "name": "existing 0037+0042 baseline upgrades to 0043 without changing prior bytes",
       "status": "PASS",
-      "at": "2026-11-20T04:14:18.337Z"
+      "at": "2026-11-20T04:30:16.023Z"
     },
     {
       "name": "0043 drift rejected and original candidate remains repeat-safe",
       "status": "PASS",
-      "at": "2026-11-20T04:14:22.509Z"
+      "at": "2026-11-20T04:30:20.102Z"
     }
   ],
   "status": "PASS",
-  "finishedAt": "2026-11-20T04:14:22.874Z"
+  "restore": {
+    "source": "synthetic-disposable-cluster",
+    "dumpSha256": "2d11158970442f6e8aa24f0a2225d61360f437f4a4cad8ea6d0bbf6f7f641d9e",
+    "rolesSha256": "8122ed5aa3ee144d70035e4b2d844f10bea2d7a403cec4a3d7a3aa322d316221",
+    "ledger": 39,
+    "tables": 102,
+    "policies": 92,
+    "auditRows": 87,
+    "handoffRows": 5
+  },
+  "finishedAt": "2026-11-20T04:30:20.469Z"
 }
