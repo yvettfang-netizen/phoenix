@@ -1,6 +1,8 @@
 # P0.1 Shared Teaching Resource Contract
 
-**Status:** PROPOSED FOR JIMSON REVIEW · no SQL or runtime change authorized  
+**Status:** FOUNDER-CORRECTED CONTRACT PROPOSAL · no SQL or runtime change authorized
+
+**Founder correction (2026-11-20):** teaching mode is assigned by the teacher, not self-selected by the student. For a Hybrid session, the teacher assigns each student to online or onsite participation.  
 **Founder decision:** shared global teaching resources
 
 ## 1. Binding decisions
@@ -11,6 +13,9 @@
 - Physical rooms are distinct real-world resources with stable IDs and location attributes. Location is a resource property, not a tenant boundary.
 - Online meeting-provider integration remains replaceable. Meeting credentials/links are private to authorized participants and never public catalogue data.
 - A hybrid lesson reserves every applicable resource: teacher, enrolled student(s), physical room if used, and online session/provider capacity if that provider exposes such a constraint.
+- The teacher (or an explicitly authorized teaching administrator) determines the delivery mode for each scheduled session. A student/parent cannot self-select or change Online/Onsite participation.
+- For a Hybrid session, the teacher assigns each enrolled student to Online or Onsite participation. This is one lesson slot and one roster, not duplicate classes or student-selected attendance modes.
+- A mode/participation change is a teacher-controlled schedule change: record actor, time, prior value, new value and reason; notify affected students/parents; re-check resource conflicts and capacity atomically.
 
 ## 2. Existing Canonical model
 
@@ -34,6 +39,10 @@ The following is a proposed contract, not an approved enum or SQL:
 - One-to-one capacity must be 1 active student.
 - Small-group capacity is an explicit positive integer and active enrollment count must not exceed it.
 - Hybrid means both remote and onsite participation are supported for the same scheduled session; it does not imply duplicate course bookings.
+- The teacher assigns the participation mode (Online or Onsite) for each enrolled student in that Hybrid session. Students and parents have read-only visibility; they may request a change through the teacher but cannot mutate the assignment.
+- For an ONLINE or ONSITE session, the teacher sets the mode for the whole session. Students/parents cannot override it.
+- Only the assigned teacher or an explicitly authorized teaching administrator may create or change the session mode or an individual student's Hybrid participation assignment. Every change is audited and triggers a notice to affected participants.
+- A mode change must atomically re-check the applicable room/provider capacity and resource conflicts. If the new allocation cannot be satisfied, reject it and preserve the previous assignment.
 - Each scheduled session stores an explicit IANA timezone for presentation and local business rules while storing authoritative instants in timestamptz.
 - DST gaps/folds must be handled explicitly; do not silently shift or duplicate local times.
 - Buffer/travel/setup time is not assumed. Founder/Operations must decide whether it is required and the duration per resource type.
@@ -65,10 +74,11 @@ At reservation and lesson start, check current teacher assignment, active studen
 4. Check teacher overlap.
 5. Check each student's overlap across all classes.
 6. If ONSITE/HYBRID, check stable room identity and room overlap.
-7. If ONLINE/HYBRID, obtain a private meeting reference through replaceable provider adapter; no vendor lock-in.
-8. Create booking/reservation with idempotency key and expected revision.
-9. Commit all resource reservations atomically; on any failure, create no partial booking.
-10. On cancellation/reschedule/substitute teacher, release old reservations and acquire new ones atomically while retaining event history.
+7. Read the teacher-authorized delivery mode and, for HYBRID, each teacher-assigned student participation mode; reject any client-supplied override.
+8. If ONLINE/HYBRID, obtain a private meeting reference through replaceable provider adapter; no vendor lock-in.
+9. Create booking/reservation with idempotency key and expected revision.
+10. Commit all resource reservations atomically; on any failure, create no partial booking.
+11. On cancellation/reschedule/substitute teacher or teacher-directed mode change, release old reservations and acquire new ones atomically while retaining event history.
 
 ## 6. Negative and concurrency tests
 
@@ -77,7 +87,11 @@ At reservation and lesson start, check current teacher assignment, active studen
 - Same room receives two onsite/hybrid reservations concurrently → exactly one succeeds.
 - Two students compete for last small-group seat → exactly one succeeds.
 - Online lesson does not reserve a physical room.
-- Hybrid lesson reserves room and teacher plus each participant.
+- Hybrid lesson reserves room and teacher plus each participant; teacher assigns each student's Online/Onsite participation.
+- Student/parent attempts to change delivery mode or Hybrid participation directly → DENY; no state change.
+- Assigned teacher changes a student's Hybrid participation → ALLOW only after capacity/conflict checks; old and new values, actor, time and reason are audited and affected participants are notified.
+- Unassigned teacher attempts a mode/participation change → DENY.
+- Teacher-directed mode change that would overbook the room/provider or create a student/teacher conflict → DENY atomically; prior schedule remains intact.
 - Cancelled slot releases availability but retains cancellation history.
 - Reschedule is atomic; failure leaves old booking intact.
 - Teacher assignment revoked between preview and commit → booking denied.
@@ -89,7 +103,7 @@ At reservation and lesson start, check current teacher assignment, active studen
 ## 7. Unverified items and decisions still needed
 
 - Real room inventory, locations, capacities, access hours and maintenance blocks.
-- Whether one hybrid session permits both remote and onsite learners in one roster, or uses linked attendance modes.
+- Confirm actual online-provider capacity and whether a Hybrid session uses one provider meeting for all remote participants (recommended) or per-student meeting links.
 - Provider capability for online meeting creation, cancellation, recording and participant access.
 - Whether travel/setup buffers are needed.
 - Existing runtime writes and DB locking strategy for class capacity.
