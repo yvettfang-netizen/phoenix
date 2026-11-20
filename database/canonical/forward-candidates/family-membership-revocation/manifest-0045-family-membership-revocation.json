@@ -2,9 +2,9 @@
   "status": "DEVELOPMENT CANDIDATE; NOT APPROVED FOR INSTALLATION, MERGE OR DEPLOYMENT",
   "candidate": "0045",
   "file": "0045_family_membership_live_revocation.sql",
-  "sha256": "cccfd555e73b443be7557d08e41f43922ad46b175ebc5d351d061ab25f3ff6b1",
+  "sha256": "8172403b549abf18ef73a758f6a4eae6a76705f1b173be5f91617a4ff5a10bf8",
   "rollback_file": "rollback_0045_family_membership_live_revocation.sql",
-  "rollback_sha256": "e711e45a2bd64cbdf4a3e9547850327f3adeb908605897a36acabe739336fa47",
+  "rollback_sha256": "3dc54b8578b4bfb52725c41014a8d977a1d8b5e697cc29e06719c2ec0fd68e13",
   "formal_base": {
     "migrations": 37,
     "last": "0037_scoped_public_id_projection_read_audit.sql"

@@ -88,7 +88,7 @@ function seed(db){
   "INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from,valid_until) VALUES"+
    "('"+id(301)+"','"+id(100)+"','"+id(1)+"','PRIMARY',clock_timestamp()-interval '1 day',NULL),"+
    "('"+id(302)+"','"+id(100)+"','"+id(2)+"','MEMBER',clock_timestamp()-interval '1 day',NULL),"+
-   "('"+id(303)+"','"+id(100)+"','"+id(4)+"','MEMBER',clock_timestamp()-interval '1 day',clock_timestamp()+interval '4 seconds');"+
+   "('"+id(303)+"','"+id(100)+"','"+id(4)+"','MEMBER',clock_timestamp()-interval '1 day',clock_timestamp()+interval '12 seconds');"+
   "INSERT INTO core.guardian_authorities(authority_id,family_id,guardian_person_id,subject_person_id,evidence_level,scope,valid_from,valid_until) VALUES"+
    "('"+id(701)+"','"+id(100)+"','"+id(1)+"','"+id(2)+"','VERIFIED','LEARNING',clock_timestamp()-interval '1 day',clock_timestamp()+interval '1 day'),"+
    "('"+id(702)+"','"+id(100)+"','"+id(4)+"','"+id(2)+"','VERIFIED','LEARNING',clock_timestamp()-interval '1 day',clock_timestamp()+interval '1 day');"+
@@ -166,7 +166,7 @@ try{
  const naturalBefore=await readCounts(app,id(1007),id(1009));
  assert.equal(naturalBefore.card,'1','NOT_YET_EXPIRED_MEMBER_CARD_READ');
  assert.equal(naturalBefore.report,'1','NOT_YET_EXPIRED_MEMBER_REPORT_READ');
- await sleep(4500);
+ await sleep(13000);
  const naturalAfter=await readCounts(app,id(1007),id(1009));
  assert.equal(naturalAfter.pid,appPid,'SAME_APP_BACKEND_REQUIRED_FOR_NATURAL_EXPIRY');
  assert.equal(naturalAfter.card,'0','NATURALLY_EXPIRED_MEMBER_CARD_MUST_DENY');

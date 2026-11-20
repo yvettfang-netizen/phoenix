@@ -12,7 +12,7 @@ BEGIN
      AND n.nspname='learning';
   IF NOT FOUND THEN RAISE EXCEPTION 'S1_FUNCTION_MISSING'; END IF;
   IF v_language<>'sql' OR v_volatility<>'v' OR v_security_definer IS NOT TRUE
-     OR NOT (COALESCE(array_to_string(v_config,','),'') LIKE '%search_path=pg_catalog,auth,core,learning%') THEN
+     OR NOT (regexp_replace(COALESCE(array_to_string(v_config,','),''),'[[:space:]]','','g') LIKE '%search_path=pg_catalog,auth,core,learning%') THEN
     RAISE EXCEPTION 'S1_FUNCTION_ATTRIBUTES_DRIFT_REFUSED';
   END IF;
   v_source := regexp_replace(v_source,E'^[[:space:]]+|[[:space:]]+$','','g');
