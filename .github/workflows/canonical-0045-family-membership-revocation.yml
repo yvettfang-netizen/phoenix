@@ -24,6 +24,7 @@ jobs:
           node-version: '22.13.0'
       - name: Verify 0045 candidate, rollback and formal baseline
         run: |
+          node --check database/canonical/verification/v0045/acceptance.mjs
           node database/canonical/verification/v0045/verify-source.mjs
           node database/canonical/verification/v0037/verify-source.mjs
       - name: Scan candidate and verification sources

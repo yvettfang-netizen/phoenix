@@ -43,3 +43,11 @@ All data is synthetic. The test harness creates and removes only its own labelle
 ## Approval boundary
 
 This PR authorizes no shared non-production installation, no main merge, no production deployment and no real student data. After independent security review and successful PG16/17 CI, return the candidate to Founder for explicit installation/merge approval.
+
+## Additional negative regression coverage
+
+The PG16/17 disposable-cluster acceptance now also tests revoked Guardian Authority, withdrawn Learning Consent, a valid Family B context trying to read Family A records, Teacher assignment revocation and existing direct-table ACL denial. The candidate SQL and manifest hashes remain unchanged.
+
+**Important residual isolation risk:** These tests use bounded READ COMMITTED request transactions. A long-lived REPEATABLE READ snapshot could continue seeing a previously committed membership version, despite using clock_timestamp(). Shared environments must enforce short read transactions before promotion.
+
+**Rollback warning:** Restoring the pre-S1 function reintroduces the revocation vulnerability. Treat the rollback SQL as an emergency operation that requires explicit security risk acceptance and compensating access suspension.
