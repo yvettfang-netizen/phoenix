@@ -185,7 +185,7 @@ async function run() {
       (workspace_session_id IS NOT NULL)::text,'|',workspace_binding_id::text)
       FROM auth.session_contexts WHERE backend_pid=${Number(backendPid)}`)
     assert.equal(unifiedContext,
-      `STAFF|NULL|t|${fixtureIds.bindings.partnerBStaff}`)
+      `STAFF|NULL|true|${fixtureIds.bindings.partnerBStaff}`)
 
     const projection = (await appClient.query(
       'SELECT service.read_staff_workspace_projects() AS value'
