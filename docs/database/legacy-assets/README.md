@@ -8,3 +8,8 @@ Founder direction: remove all obsolete parallel database assets from the Phoenix
 4. Incomplete trusted identity and Canonical read/write adapters remain disabled with explicit errors. This PR does not claim complete production integration.
 5. Cloudflare asset/worker and test-only data fixtures are not an independent production database. Fixtures must not accept production mode.
 6. No database DROP, production migration, real customer records, DNS change or deployment is included. Review CI, identity authorization, and API coverage before merging.
+
+
+## 2026-11-20 Founder confirmation and physical cleanup
+
+Founder confirmed that legacy database contents contain no valid business information. **No legacy data migration/import is required.** PR #68 is merged; a follow-up branch removes the remaining Education UAT/PM2/systemd launch and old DB administration scripts. Remote database instances, SQLite files, V5 D1 resources and old COS dumps are physical resources and require the [Physical Retirement Runbook](PHYSICAL_RETIREMENT_RUNBOOK.md). Do not claim physical deletion until the sanitized host/Cloudflare receipt is recorded. Canonical PostgreSQL remains untouched.

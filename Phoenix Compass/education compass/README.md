@@ -1,6 +1,6 @@
 # Phoenix Family OS™ Mini Program MVP V0.5.0 本地验证工作副本
 
-> 2026-11-10 数据权威变更：旧 Education 独立 PostgreSQL schema、迁移、PostgresStore 以及 Agent 旧 Worker 已退役。以下关于原生产数据库、独立迁移和付款流程的描述均为历史行为记录，不再构成可执行的生产指令。业务库统一以主仓库 `database/canonical/` 为准；未接入受控 Canonical API 的服务必须拒绝生产启动。
+> 2026-11-20 Founder 退役确认：旧 Education 独立 PostgreSQL、Family SQLite、ASKWISE SQLite、V5 D1 均无有效业务资料，不做旧数据迁移。PR #68 已从主仓库删除旧存储实现；本次后续清理继续移除 Education UAT/PM2 启动脚本、独立 systemd 单元、旧支付/密钥脚本和旧数据库健康检查。线上数据库实例、旧 SQLite 文件、D1 资源及 COS 备份的物理清理另按 `docs/database/legacy-assets/PHYSICAL_RETIREMENT_RUNBOOK.md` 执行。Canonical PostgreSQL 是唯一数据权威；不得恢复旧库或建立兼容层。
 
 原生微信小程序 MVP。V0.5.0 在保留 V0.4.1 既有页面、Agent、支付与飞书能力的基础上，新增可填写、可退出恢复、可提交并查看结果的 Education Compass Level 1 免费家长问卷与 Level 2 学生成长发现闭环；Level 2 提交后以服务端商品目录的 ¥39.90 单次产品解锁完整报告。
 
