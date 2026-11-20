@@ -66,6 +66,8 @@ const extraLegacy = [
   'Phoenix Compass/education compass/ops/systemd/education-compass-agent-worker.service'
 ];
 for (const path of extraLegacy) assert(!existsSync(join(root,path)),'Retired Education database operation reappeared: '+path);
+const educationEnv=readFileSync(join(root,'Phoenix Compass/education compass/server/.env.example'),'utf8');
+assert(!educationEnv.split(/\\r?\\n/).some(line=>/^\\s*DATABASE_URL=/.test(line)),'Retired standalone Education DATABASE_URL remains in env example');
 const site=JSON.parse(readFileSync(join(root,'website/phoenix-nova-website-v5/.openai/hosting.json'),'utf8'));
 assert(site.d1===null,'V5 D1 binding is not retired');
 console.log('PASS — Canonical-only database assets, legacy Education DB runtime retired, non-Canonical SQL absent, D1/SQLite retired');
