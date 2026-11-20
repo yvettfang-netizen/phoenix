@@ -1,21 +1,62 @@
-# PR #77 / 0042 re-review
+# PR #77 / 0042 — current-head re-review for Academic Studio
 
-**Disposition: HOLD in present form.** Reviewed against `phoenix/main@9db147ac3a5d135d50b90bfea5a7316ce747d90b` and PR #77 head `7d1bc6bfea14348192ca549510fbc571fb978254`. Candidate SQL SHA-256: `bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea`. The SQL remains in `database/canonical/forward-candidates/workspace-authorization/`; it has not been installed here. PR #77's new `P0_REVIEW_DECISIONS.md` explicitly retains the persistent workspace session; the newer Founder Academic Studio P0 instruction forbids a second workspace-session lifecycle for this product.
+**Academic Studio disposition: HOLD / DO NOT DEPEND ON 0042.**  
+**Reviewed:** 2026-11-20  
+**main:** `9db147ac3a5d135d50b90bfea5a7316ce747d90b`  
+**Current PR #77 HEAD:** `380fec99da5151fd28b8a5d3a2acaaa7292d3c23`  
+**0042 Git blob SHA:** `de104ac742d9116cb3a1752651695854d871e75d`  
+**Current CI:** 19/21 passed; `workspace-authorization (16)` and `workspace-authorization (17)` failed.  
+The earlier 21/21 result belongs to a previous PR head and must not be reused.
 
-| Finding | Evidence in 0042 | P0 correction |
-| --- | --- | --- |
-| Product scope | `core.organization_workspace_profiles` accepts `REGIONAL_PARTNER`, `FRANCHISEE`, `CHANNEL_AGENT`, `SUB_PARTNER`. | Academic Studio has no multi-company tenant or franchise-school model. Channel partners stay in their separate channel workspace. Remove this dependency from Academy design. |
-| Session duplication | 0042 creates persistent `auth.workspace_sessions` and extends the pre-existing `auth.context_exchange_tickets` and `auth.session_contexts`. Latest SQL **does not create another ticket/context table**. | Founder P0 forbids a second workspace-session lifecycle as well. Reuse the trusted web session plus existing DB ticket/context; add only bounded capability metadata if a proof shows it necessary. |
-| Identity semantics | `auth.principals.person_id` is unique and `principal_kind` is singular; an actor can be parent, teacher and administrator over time. | Decide the active capability server-side from current family, guardian and teaching assignments. A user-selected view is a request, never an authorisation fact. |
-| Staff and service scope | 0042 adds generic org memberships, role bindings and project assignment organisation scopes. | Academy teacher access comes from active `learning.teacher_assignment` and specific class/student scope. Administrator needs reviewed explicit grant; project assignment alone does not confer teaching or child-record access. |
-| Candidate verification | PR #77 records local PG16/17 synthetic PASS at an older head; latest CI was still running at P0 capture. | Rerun exact new candidate after redesign, including simultaneous role, revoked guardian, stale teacher assignment, forged view/organisation, ticket replay and pool reuse. Old evidence cannot approve changed SQL. |
+## 1. Current candidate contents (not the earlier taxonomy)
 
-## Minimal identity proposal
+The latest candidate defines:
+- `core.organization_workspace_profiles` with `HEADQUARTERS` and `CHANNEL` only;
+- `core.organization_memberships`;
+- `auth.workspace_role_bindings` with FOUNDER, STAFF, CHANNEL and FAMILY workspace kinds and role codes including STAFF_ADMIN, STAFF_TEACHER, CHANNEL_ADMIN, FAMILY_PRIMARY and FAMILY_MEMBER;
+- persistent `auth.workspace_sessions`;
+- `service.project_assignment_organization_scopes`;
+- workspace binding/session IDs on the existing `auth.context_exchange_tickets` and `auth.session_contexts`.
 
-1. **Trusted broker session (existing application mechanism):** verify issuer/audience/JWKS and map to the existing `auth.external_identities → auth.principals → core.people`. No browser-supplied role or family is authoritative.
-2. **Capabilities:** student self-view requires the mapped person to be the student; parent view requires current `core.family_memberships`, verified `core.guardian_authorities` and applicable `consent.grants`; teacher view requires current `learning.teacher_assignment` for the specific class/student; teaching admin requires a separately approved, revocable scoped grant. Do not use Partner attribution.
-3. **Single existing database context:** use `auth.context_exchange_tickets` and `auth.session_contexts` with app/binder separation, one-use ≤60 s exchange, backend identity check and clear/discard on workspace switch/logout. If current columns cannot encode a narrowly scoped academic capability, propose additive columns to these existing tables in a separate forward migration, with non-academic callers unchanged.
-4. **Live checks:** every sensitive read/write rechecks current assignment, guardian authority, Consent, revocation and expiration. Ticket issuance is not a durable grant.
-5. **Default navigation:** a verified student-only account starts at Academy; a verified parent-only account starts at Family Center; dual-capability actors choose a view explicitly. Unknown/ambiguous relationship is denied until resolved.
+The latest SQL no longer has the earlier REGIONAL_PARTNER / FRANCHISEE / SUB_PARTNER organization vocabulary. This re-review does not repeat that stale finding.
 
-No SQL number is reserved by this P0 package. The current 0042 file must not be edited in this branch or merged into an Academic Studio migration. Review PR #77 independently; its broader Enterprise work may need separate redesign.
+## 2. Findings
+
+| Finding | Current evidence | Academic Studio disposition |
+|---|---|---|
+| Organization model | HQ/CHANNEL profiles and organization memberships remain | Not needed for global teaching resources. May be considered separately for Corporate OS channel/partner workspace, not as teaching tenants or regional teacher partitions. |
+| Workspace role bindings | Role codes include STAFF_TEACHER, STAFF_ADMIN, FOUNDER, FAMILY roles | Potentially useful role metadata, but not sufficient by itself to implement Founder-approved capability semantics; see Principal-kind finding below. |
+| Persistent workspace session | `auth.workspace_sessions` stores owner-session digest, context-token digest, binding/membership authorization versions, expiry and revocation | It is not a duplicate ticket or backend context table; it is a second durable workspace-selection/revocation lifecycle. No Academy requirement has yet proven it necessary. Prefer existing app login session + live capability checks + existing one-use context ticket and backend context. |
+| Existing context reuse | 0042 extends the existing `auth.context_exchange_tickets` and `auth.session_contexts`; it does not create duplicate ticket/context tables | Good reuse of the existing ephemeral mechanism. |
+| Multi-role identity | Formal `auth.validate_context_request()` still maps FAMILY Principal → FAMILY channel and TEACHER/SUPERVISOR → STAFF channel. `learning.current_staff_kind()` still derives from single `principal_kind`; `learning.teacher_has_class_access()` requires TEACHER. 0042 does not change these learning authorization functions. | A FAMILY Principal with a STAFF_TEACHER workspace binding is not automatically a Teacher in the existing learning functions. Therefore 0042 does not solve a person who is both Parent/Student and Teacher under one Principal. |
+| Family scope | Family workspace binding is based on current `core.family_memberships`; downstream Canonical projections and Learning functions still need guardian authority and Consent checks | Membership must never be treated as parental authority. Keep live subject-specific checks on every protected read/write. |
+| Runtime integration | Workspace service uses injected `resolve()` callback and is restricted to test/development mode; no production broker resolver/composition was found in main | Not a production-ready login or role-routing feature. |
+| CI | Current exact PR #77 head has 2 failed PG16/17 workspace-authorization checks | Current candidate is not green; root cause is not asserted without raw job logs. |
+
+## 3. Xuanwu security assessment
+
+- The candidate correctly reuses the existing one-use context ticket and backend-bound context rather than creating duplicate context-ticket/session-context tables.
+- The added workspace session stores authorization-version snapshots and is revalidated on ticket issue/redemption and during workspace context checks. The application service calls the injected `identity.assertCurrent()` before and after sensitive operations, and clears DB context/resets role/discards pooled connection state in cleanup.
+- These controls are additional complexity. They do not establish that Academic Studio needs a separate persistent workspace session; this must be justified against the existing application session and live role/assignment checks.
+- The role-binding table does not override the existing learning authorization's Principal-kind checks. A STAFF_TEACHER binding alone is insufficient for a FAMILY Principal.
+- Parent/child data still requires Guardian Authority and Consent in the protected data functions. Do not rely on Family workspace membership as a substitute.
+- Current 0042 CI is 19/21, not a full pass.
+
+## 4. Founder-aligned direction
+
+1. One Canonical Principal per Person; no duplicate student/teacher/parent accounts.
+2. Student capability derives from the person's own `core.student_profiles`.
+3. Parent capability derives from current verified `core.guardian_authorities` plus applicable Consent.
+4. Teacher capability derives from existing `learning.teacher` and active class/student assignment.
+5. Administrator/Founder authority requires a narrow, separately revocable and auditable grant if existing SUPERVISOR semantics are not accepted.
+6. A dual Student+Parent actor defaults to Student; Parent view is a deliberate switch followed by fresh server-side authorization.
+7. Decouple capabilities from the single `auth.principals.principal_kind` discriminator. Do not solve this by creating a second Principal or a broad multi-company tenant system.
+8. Reuse `auth.session_contexts`, `auth.context_exchange_tickets`, `bind_context()`, `redeem_context_ticket()` and `clear_context()`. Do not add `workspace_sessions` for Academy unless a concrete acceptance test proves the existing login/session + context model cannot satisfy the required revocation semantics.
+
+## 5. Decision
+
+- **For Academic Studio:** HOLD 0042 in its current form; do not depend on it or install it.
+- **For Corporate OS channels:** evaluate its HQ/CHANNEL organization and project-scoping features separately against the approved Partner Workspace scope. This review does not reject that separate use case.
+- **For P0.1:** implement no SQL yet. First close the one-Principal/multiple-capability contract and Founder/Admin grant semantics.
+- **Commercial rules:** remain HOLD.
+- **No migration number is allocated.**
