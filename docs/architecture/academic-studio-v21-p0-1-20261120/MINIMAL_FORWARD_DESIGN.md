@@ -63,7 +63,22 @@ ADVISOR, PARTNER and INTERNAL channels remain compatible with their existing rul
 
 The channel changes require updating the existing check constraints on `auth.session_contexts` and `auth.context_exchange_tickets`, plus `auth.validate_context_request()`, `auth.issue_context_ticket()`, `auth.redeem_context_ticket()` and relevant protected read functions. This is an extension of the existing ticket/context lifecycle, not a second one.
 
-### 2.4 Login and switching rules
+### 2.4 Global STAFF consent and family-scope gap
+
+A source-level detail must be handled before global STAFF context can be safe: current `consent.has_active_consent()` filters by `family_id = auth.current_family_id()`. A global STAFF context intentionally has `family_id=NULL`, so the existing helper will not authorize teacher access to a student even when the teacher has a valid assignment.
+
+**Minimum proposed fix:** add a separate audited helper such as `consent.has_active_consent_for_subject(subject, purpose, data_class)` for STAFF-only use. It must:
+- require a live STAFF context and active human Principal;
+- match the exact grantee Principal's person to `grantee_person_id`;
+- match the exact subject, purpose, data class, active status and expiry;
+- confirm the grant's family still contains the subject through a current Canonical family membership;
+- never return grants for other subjects or expose grant rows directly.
+
+Use this helper only inside protected learning/assessment/document functions after teacher assignment or Admin/Founder capability has also been checked. Keep the existing family-scoped `consent.has_active_consent()` unchanged for FAMILY / legacy flows.
+
+Student self access uses a separate STUDENT-only predicate and does not inherit parent or staff consent. Parent access continues to require current Guardian Authority and Consent for the exact child.
+
+### 2.5 Login and switching rules
 
 - If Student and Parent capabilities are both valid, login defaults to STUDENT.
 - Student view is self-only and cannot read parent finance, siblings or family administration.
@@ -74,7 +89,7 @@ The channel changes require updating the existing check constraints on `auth.ses
 - Revocation, expiry, Principal disable and Consent withdrawal deny the next protected request; do not rely on cached UI role labels.
 - Student and STAFF global contexts use `family_id=NULL`. Protected functions must therefore resolve the target Student's actual family from the Canonical enrollment/relationship records and must not assume `auth.current_family_id()` is always populated.
 
-### 2.5 Minimum new identity object
+### 2.6 Minimum new identity object
 
 **Proposed only:** `learning.academy_staff_grants`
 
@@ -94,13 +109,14 @@ No region, company, organization, franchise or tenant column. The initial Founde
 
 Existing `learning.register_staff_principal()` must not create a second Principal for a person who already has one. Existing person Principal is reused; Teacher is registered in `learning.teacher`; Administrator/Founder is granted through the new capability grant. Any legacy SUPERVISOR rows must be inventoried and explicitly mapped; do not silently elevate them to Founder.
 
-### 2.6 Required function behavior changes
+### 2.7 Required function behavior changes
 
 - `auth.validate_context_request()`: derive STUDENT, FAMILY and STAFF access from current Canonical facts, not solely `principal_kind`.
 - `learning.current_staff_kind()`: resolve Founder/Admin grant first, then active Teacher capability; retain any legacy SUPERVISOR behavior only under an explicit compatibility decision.
 - `learning.teacher_has_class_access()`: validate active teacher identity, active assignment, exact class/student relationship and Consent. It must not require the Principal's single kind to equal TEACHER.
 - `learning.can_manage_learning()`: allow only internal service or active Academy Admin/Founder grant; do not let CRM Staff, Advisor, Partner or Teacher inherit management rights.
-- `learning.can_read_sensitive()` and published-report reads: support STUDENT self-only, FAMILY guardian-authorised, and STAFF assignment/admin-scoped reads.
+- `learning.can_read_sensitive()` and published-report reads: support STUDENT self-only, FAMILY guardian-authorised, and STAFF assignment/admin-scoped reads. STAFF uses the new subject-scoped consent helper, not the current-family-bound helper.
+- `docs.can_read_document()` and new assessment evidence readers: add STUDENT self-only and STAFF assignment/consent paths without widening direct document access.
 - Teacher internal drafts remain teacher/admin-only. Parent and Student views receive only published feedback/reports.
 
 ## 3. Teaching catalogue and course enrollment — reuse
