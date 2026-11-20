@@ -1,70 +1,83 @@
 # Founder P0.1 Gate Plan — Contract Closure
 
-**Status:** READY FOR CODEX-FIRST EXECUTION · Founder decisions recorded  
+**Status:** CODEX SOURCE REVIEW COMPLETE · FOUNDER CONTRACT DECISIONS PENDING  
 **Gate:** P0.1 — Identity, Shared Resources and Assessment Contracts  
 **Not authorized:** migration authoring/install, production access, payment integration or real learner data.
 
-**Delegation rule:** [Codex First / Jimson Manual Only](../../engineering/CODEX_FIRST_JIMSON_MANUAL_ONLY.md). Codex performs every source, GitHub, SQL-analysis, automated-test and documentation task it can. Jimson is assigned only specific manual actions requiring access or execution Codex does not have.
+**Delegation rule:** [Codex First / Jimson Manual Only](../../engineering/CODEX_FIRST_JIMSON_MANUAL_ONLY.md). Codex and the assistant execute all repository, GitHub, SQL/source, API, automated-test and technical documentation work available through connected tools. The assistant also performs the Xuanwu-style security second pass directly. Jimson is exception-only.
 
 ## 1. Owners and outputs
 
 | Owner | Work | Required output |
 |---|---|---|
-| Codex / Assistant | Directly execute all repository, GitHub, SQL/source, API, automated-test, evidence collection and technical documentation work available through connected tools | Reproducible source paths, hashes, commands, raw outputs, REUSE/GAP/UNVERIFIED matrix |
-| Jimson | Exception-only manual execution in an authorized non-production environment or privileged operational checks unavailable to Codex | Exact execution ticket result with environment/version, command/steps, timestamp and sanitized raw evidence |
-| Assistant in Xuanwu role | Directly perform the security-focused second pass: identity threats, RLS/ACL, context lifecycle, revocation, pool reuse, negative tests and evidence integrity | Security findings linked to raw evidence; clearly distinguish model review from any separately required human attestation |
+| Codex / Assistant | Primary source audit, exact SHA/PR reconciliation, SQL/API/RLS/ACL analysis, automated evidence collection, test generation and execution where available, evidence report and minimum-gap proposal | Source paths, blob SHAs, commands, raw outputs and REUSE/GAP/UNVERIFIED matrix |
+| Assistant in Xuanwu role | Direct security second pass: identity threats, RLS/ACL, context lifecycle, revocation, pool reuse, negative tests and evidence integrity | Security findings linked to source evidence; clearly distinguished from human attestation |
+| Jimson | Only a specific manual action that requires a private environment, credential/permission, physical operation or human attestation unavailable to Codex/assistant | Exact run result, environment/version, command/steps, timestamp and sanitized raw evidence |
 | Founder | Approve unresolved product/commercial rules and next gate | Explicit P0.1 exit decision and, separately, commercial policy approval |
 
-## 2. Work sequence
+## 2. Completed Codex / Xuanwu work
 
-1. Codex re-fetches current `main`, PR #76, PR #77 and PR #83 heads. If any head differs from the captured baseline, refresh evidence and re-review changed paths before relying on previous findings.
-2. Codex reviews `P0_1_IDENTITY_CONTRACT.md`, `P0_1_SHARED_RESOURCE_CONTRACT.md` and `P0_1_ASSESSMENT_CONTRACT.md`; traces actual code, SQL, API and runtime behavior accessible through connected tools.
-3. Codex executes all available source checks and automated tests, including PG16/17 jobs where authorized test infrastructure is available. Record exact SHA, command, environment and output.
-4. Codex completes `P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md` with source evidence and marks each item REUSE / GAP / UNVERIFIED.
-5. For each remaining UNVERIFIED item, Codex must state the exact missing capability/access and decide whether it genuinely requires Jimson. Only then create a narrow Jimson manual execution ticket. Do not ask Jimson to repeat Codex-accessible work.
-6. Jimson executes only those tickets in the named non-production environment and returns raw sanitized evidence. If the access or environment is unavailable, leave the item UNVERIFIED.
-7. The assistant verifies any Jimson manual evidence, integrates it, updates the report and reruns all checks available through connected tools. The assistant also performs the Xuanwu security-review pass directly; do not route that analysis through Jimson.
-8. Keep `P0_1_COMMERCIAL_OPTIONS_HOLD.md` separate. Codex may prepare alternatives and consequences; no implementation or policy default is authorized.
-9. Submit the P0.1 review report with all unresolved decisions, no SQL changes, and a recommended minimal migration boundary.
-10. Return to Founder for explicit approval to draft a separate forward migration.
+- Re-fetched current `main`, PR #76, PR #77 and PR #83 heads.
+- Inspected formal Canonical identity, auth, consent, learning, education, entitlement and projection migrations.
+- Traced current application AuthService, session-family bridge, Canonical family projection, learning catalog, app bootstrap and HTTP routes.
+- Re-reviewed PR #77's latest 0042 candidate and its latest CI state; did not rely on an older 21/21 result.
+- Completed the source-backed REUSE / GAP / UNVERIFIED matrix.
+- Performed the direct Xuanwu-style security pass over Principal-kind conflict, guardian/Consent checks, context-ticket lifecycle, connection-pool cleanup, teacher assignment, student/room scheduling and assessment visibility.
+- Confirmed PR #83's prior exact HEAD checks; the new evidence-review commit will trigger its own CI run.
 
-## 3. Jimson ticket requirements
+See [P0.1 Technical Evidence Review](P0_1_TECHNICAL_EVIDENCE_REVIEW.md) for exact source fingerprints and findings.
 
-Every Jimson assignment must include:
+## 3. Work sequence from this point
+
+1. Founder reviews the P0.1 evidence report and confirms the remaining product contracts:
+   - one Principal with multiple capabilities, especially Parent/Student + Teacher;
+   - Administrator vs Founder authority and whether current SUPERVISOR scope is acceptable;
+   - hybrid roster/meeting semantics and timezone/DST policy;
+   - six assessment systems' evidence, licensing, review and retention requirements;
+   - Canonical-only Student identity and treatment of the legacy application-local Student model.
+2. Codex translates the confirmed decisions into the smallest migration impact proposal. Do not allocate a migration number yet.
+3. The assistant performs another direct Xuanwu security pass on that proposal.
+4. Jimson is not assigned any work now. If later a designated private non-production database/secret/host cannot be accessed by Codex, create one exact manual execution ticket only for that missing action.
+5. Founder explicitly approves or rejects the separate minimal Forward Migration proposal.
+6. Only after approval may Codex author a candidate SQL migration and run fresh PG16/17, RLS/ACL, concurrency, pool-reuse, revocation, repeat/drift and restore tests.
+
+## 4. Jimson ticket requirements (exception-only)
+
+Every future Jimson assignment must include:
 - exact action Codex cannot perform and why;
 - named non-production target environment;
 - exact command or manual steps;
 - expected result and evidence format;
 - safety boundary, stop condition and rollback instruction;
-- repository path for uploading the sanitized evidence.
+- repository path for uploading sanitized evidence.
 
-Do not send secrets or credentials in GitHub comments or task text. No broad "please review architecture" requests.
+Do not send secrets or credentials in GitHub comments or task text. Do not send broad "please review architecture" requests.
 
-## 4. Exit criteria
-
-- Identity default and Parent switch behavior mapped to actual server-side capability checks.
-- No duplicate session/ticket/context model.
-- Teaching resources use one shared identity and globally coordinated availability.
-- Every required room/student/teacher collision has a concurrency-safe implementation path.
-- Six assessment systems have separate score contracts and a governed timeline projection.
-- Commercial rules remain HOLD and excluded from all implementation scope.
-- Every migration object is justified by a proven gap, and PG16/17 test evidence or explicit UNVERIFIED reason is complete.
-- Codex's evidence report is complete; any Jimson manual evidence is attached only where required; Xuanwu security review is recorded.
-- Founder explicitly approves the next gate.
-
-## 5. Status tracking
+## 5. Current status
 
 | Item | Status |
 |---|---|
-| Founder decisions | DECIDED |
-| Identity contract draft | PROPOSED |
-| Shared resource contract draft | PROPOSED |
-| Assessment contract draft | PROPOSED |
-| Commercial decision packet | HOLD |
-| Migration impact / negative matrix | PROPOSED |
-| Codex source and automated evidence review | PENDING |
-| Jimson manual-only exceptions | NOT YET IDENTIFIED |
-| Xuanwu independent security review | PENDING |
+| Founder P0 decisions | DECIDED |
+| Canonical source audit | COMPLETE |
+| Direct Xuanwu-style security second pass | COMPLETE |
+| Identity capability contract | GAP identified; Founder contract decision pending |
+| Shared resource contract | Existing core reusable; student/room/mode/timezone gaps identified |
+| Assessment contract | Existing records reusable; instrument/version/review gaps identified |
+| Legacy application Student → Canonical mapping | GAP / runtime state UNVERIFIED |
+| PR #77 / 0042 for Academic Studio | HOLD |
+| Commercial rules | HOLD |
+| Jimson manual-only exceptions | NONE IDENTIFIED |
+| Actual private non-production installed schema / grants | UNVERIFIED; not needed to finish this source-contract review |
 | Minimal Forward Migration approval | NOT GRANTED |
 
-**Do not interpret preparation of documents, CI PASS or a manual test plan as P0.1 acceptance or migration approval.**
+## 6. Exit criteria
+
+- Founder confirms the remaining product/authority/assessment/resource contracts.
+- Each proposed migration object is justified by a proven gap.
+- No duplicate Principal, session, ticket or context system is introduced.
+- Commercial rules remain HOLD and excluded from implementation.
+- PG16/17 test evidence or a precise UNVERIFIED reason is complete.
+- Assistant security second pass is recorded.
+- Founder explicitly approves the next gate.
+
+**P0.1 source review is complete; P0.1 product/contract closure is not. No SQL is authorized, installed, merged or deployed.**
