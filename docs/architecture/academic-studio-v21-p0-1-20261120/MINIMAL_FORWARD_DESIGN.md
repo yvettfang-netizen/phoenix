@@ -56,7 +56,7 @@ Proposed context channels:
 | Channel | Purpose | Family ID in context | Server-side rule |
 |---|---|---|---|
 | `STUDENT` (additive) | Student Learning Center | NULL | Active Principal maps to actor; actor has own Student Profile; all student reads are self-only |
-| `FAMILY` (existing) | Parent / Family Center | Required | Current family membership; every child read separately checks verified Guardian Authority and applicable Consent |
+| `FAMILY` (existing) | Parent / Family Center | Required | Current family membership plus at least one active verified Guardian Authority to enter; every child read separately checks authority for that exact subject and applicable Consent |
 | `STAFF` (existing) | Corporate OS teacher/admin workbench | NULL for global staff context | Active teacher capability or active Academy Admin/Founder grant; every student operation checks assignment/authority |
 
 ADVISOR, PARTNER and INTERNAL channels remain compatible with their existing rules. Partner referral or channel membership never grants teaching authority.
