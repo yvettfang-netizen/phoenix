@@ -20,16 +20,16 @@ assert.equal(manifest.requires_sha256,
 assert.equal(manifest.historical_migrations, 37)
 assert.equal(manifest.isolated_ledger_rows, 40)
 assert.equal(manifest.isolated_tables, 104)
-assert.equal(manifest.isolated_policies_all_schemas, 92)
+assert.equal(manifest.isolated_policies_all_schemas, 94)
 assert(!sql.includes(13), 'Candidate SQL must use LF')
 const source = sql.toString('utf8')
 assert(source.startsWith('BEGIN;\n'))
 assert(source.trimEnd().endsWith('COMMIT;'))
 assert.equal((source.match(/^CREATE TABLE /gm) ?? []).length, 2)
-assert.equal((source.match(/^CREATE POLICY /gm) ?? []).length, 0)
+assert.equal((source.match(/^CREATE POLICY /gm) ?? []).length, 2)
 for (const required of [
   'FORCE ROW LEVEL SECURITY', 'SOURCE_REVIEW_REQUIRED', 'REVIEW_REQUIRED',
-  'FOR SHARE',
+  'FOR SHARE', 'AS RESTRICTIVE FOR ALL', 'USING (false) WITH CHECK (false)',
   'UNIQUE (study_enrollment_id,journey_cycle_id,rule_key)',
   'STUDY_MEMBER_NOT_CURRENT', 'STUDY_PROGRAM_MISMATCH'
 ]) assert(source.includes(required), required)

@@ -47,7 +47,7 @@ async function run() {
   assert(migrate40(db).includes('SKIP 0044_study_review_foundation.sql'))
   assert.equal(db.sql('SELECT count(*) FROM canonical_migrations.applied'), '40')
   assert.equal(db.sql("SELECT count(*) FROM pg_tables WHERE schemaname IN ('auth','core','consent','audit','integration','docs','casework','education','identity','operations_ref','learning','crm','service')"), '104')
-  assert.equal(db.sql('SELECT count(*) FROM pg_policies'), '92')
+  assert.equal(db.sql('SELECT count(*) FROM pg_policies'), '94')
   check('PG fresh 0001-0037 plus isolated 0042-0044, exact ledger and repeat')
 
   const passwords = seedWorkspaceAuthorization(db)
@@ -85,7 +85,7 @@ async function run() {
     VALUES(${q(id(key))},${q(family)},${q(person)},${institution},${program},
       ${entry},${expected},'SYNTHETIC_REVIEW',${q(fixtureIds.admin)});`
   assert.throws(() => db.sql(insert(3102, fixtureIds.families.b, fixtureIds.people.multi)),
-    /failed|foreign key|membership/i)
+    /STUDY_MEMBER_NOT_CURRENT/)
   db.sql(`INSERT INTO core.people(person_id,display_name)
     VALUES(${q(id(3090))},'Synthetic Former Member');
     INSERT INTO core.student_profiles(person_id) VALUES(${q(id(3090))});
@@ -130,7 +130,7 @@ async function run() {
   assert.throws(() => db.sql(`BEGIN;
     ${occurrence(3203, 3101, 3300)}
     ${insert(3106, fixtureIds.families.b, fixtureIds.people.multi)}
-    COMMIT;`), /failed|foreign key|membership/i)
+    COMMIT;`), /STUDY_MEMBER_NOT_CURRENT/)
   assert.equal(db.sql(`SELECT count(*) FROM education.lifecycle_review_occurrences
     WHERE lifecycle_occurrence_id=${q(id(3203))}`), '0')
   check('failed transaction rolls back the candidate occurrence atomically')
@@ -154,10 +154,10 @@ async function run() {
         'SELECT * FROM education.lifecycle_review_occurrences')
     } finally { legacyClient.release(true) }
   } finally { await app.end(); await legacyApp.end() }
-  assert.equal(db.sql("SELECT count(*) FROM pg_policies WHERE schemaname='education' AND tablename IN ('study_enrollments','lifecycle_review_occurrences')"), '0')
+  assert.equal(db.sql("SELECT count(*) FROM pg_policies WHERE schemaname='education' AND tablename IN ('study_enrollments','lifecycle_review_occurrences') AND permissive='RESTRICTIVE' AND qual='false' AND with_check='false'"), '2')
   assert.equal(db.sql("SELECT has_table_privilege('phoenix_canonical_app','education.study_enrollments','SELECT')"), 'f')
   assert.equal(db.sql("SELECT has_table_privilege('phoenix_canonical_workspace_reader','education.lifecycle_review_occurrences','SELECT')"), 'f')
-  check('real restricted LOGIN cannot read; no runtime grants or RLS allow policy')
+  check('real restricted LOGIN cannot read; no runtime grants and explicit restrictive deny')
 
   const probePassword = randomBytes(32).toString('hex')
   db.sql(`CREATE ROLE study_rls_probe LOGIN NOINHERIT NOSUPERUSER NOBYPASSRLS
@@ -187,7 +187,7 @@ async function run() {
   db.call(['exec', db.container, 'bash', '-c',
     'printf "\\n-- synthetic drift probe\\n" >> /opt/canonical-migrations/0044_study_review_foundation.sql'])
   assert.throws(() => db.call(['exec', '-e', 'CANONICAL_EXPECTED_MIGRATIONS=40',
-    db.container, 'bash', '/opt/verification/migrate.sh']), /drift|checksum|failed/i)
+    db.container, 'bash', '/opt/verification/migrate.sh']), /DRIFT_REFUSED/)
   db.call(['cp', path.resolve(candidate), `${db.container}:/opt/canonical-migrations/0044_study_review_foundation.sql`])
   assert(migrate40(db).includes('SKIP 0044_study_review_foundation.sql'))
   check('0044 checksum drift rejected and original repeat safe')

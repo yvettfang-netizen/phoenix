@@ -25,7 +25,7 @@
 
 ## Safe implementation boundary
 
-The isolated [0044 SQL candidate](../../../database/canonical/forward-candidates/study-lifecycle/0044_study_review_foundation.sql) establishes review-only study and stable occurrence storage with no runtime table grants or RLS allow policy. It cannot automatically send, contact, assign or create a project. The immutable occurrence has a unique `(study_enrollment_id, journey_cycle_id, rule_key)` key; a changed due date cannot create a second occurrence for that key. Authorized correction, rescheduling and active dispatch still require a later forward contract and migration. An executor must recheck current student, guardian, Consent, organization and recipient scope before any future action.
+The isolated [0044 SQL candidate](../../../database/canonical/forward-candidates/study-lifecycle/0044_study_review_foundation.sql) establishes review-only study and stable occurrence storage with no runtime table grants and explicit restrictive RLS `USING(false) WITH CHECK(false)`. It cannot automatically send, contact, assign or create a project. The immutable occurrence has a unique `(study_enrollment_id, journey_cycle_id, rule_key)` key; a changed due date cannot create a second occurrence for that key. Authorized correction, rescheduling and active dispatch still require a later forward contract and migration. An executor must recheck current student, guardian, Consent, organization and recipient scope before any future action.
 
 ## Specific required decisions before active reminders
 

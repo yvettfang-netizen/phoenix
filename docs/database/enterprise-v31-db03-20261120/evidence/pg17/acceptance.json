@@ -3,61 +3,61 @@
   "postgres": "17",
   "candidate": {
     "number": "0044",
-    "sha256": "0c36ec5d50e8ef299e80f1906ac75b7e79f64e58703369041c00d4409897f1e6"
+    "sha256": "74cf8bd474cb3253b2b571a96308bf6e5879b0a7bf38126b2ef3bd70c4e152ad"
   },
-  "startedAt": "2026-11-20T04:37:30.481Z",
+  "startedAt": "2026-11-20T04:43:35.346Z",
   "checks": [
     {
       "name": "PG fresh 0001-0037 plus isolated 0042-0044, exact ledger and repeat",
       "status": "PASS",
-      "at": "2026-11-20T04:37:38.276Z"
+      "at": "2026-11-20T04:43:43.023Z"
     },
     {
       "name": "reuses canonical student and family identities; source is review-required",
       "status": "PASS",
-      "at": "2026-11-20T04:37:38.993Z"
+      "at": "2026-11-20T04:43:43.730Z"
     },
     {
       "name": "cross-family, expired membership and mismatched program rejected",
       "status": "PASS",
-      "at": "2026-11-20T04:37:39.465Z"
+      "at": "2026-11-20T04:43:44.133Z"
     },
     {
       "name": "date chronology and immutable unapproved source record",
       "status": "PASS",
-      "at": "2026-11-20T04:37:39.835Z"
+      "at": "2026-11-20T04:43:44.435Z"
     },
     {
       "name": "stable enrollment-cycle-rule key rejects due-date duplication; review only",
       "status": "PASS",
-      "at": "2026-11-20T04:37:40.478Z"
+      "at": "2026-11-20T04:43:45.042Z"
     },
     {
       "name": "failed transaction rolls back the candidate occurrence atomically",
       "status": "PASS",
-      "at": "2026-11-20T04:37:40.740Z"
+      "at": "2026-11-20T04:43:45.259Z"
     },
     {
-      "name": "real restricted LOGIN cannot read; no runtime grants or RLS allow policy",
+      "name": "real restricted LOGIN cannot read; no runtime grants and explicit restrictive deny",
       "status": "PASS",
-      "at": "2026-11-20T04:37:41.133Z"
+      "at": "2026-11-20T04:43:45.599Z"
     },
     {
       "name": "FORCE RLS remains default deny even with test-only SELECT; no followup or task dispatched",
       "status": "PASS",
-      "at": "2026-11-20T04:37:41.478Z"
+      "at": "2026-11-20T04:43:45.936Z"
     },
     {
       "name": "existing 0037+0042 baseline upgrades through 0043/0044",
       "status": "PASS",
-      "at": "2026-11-20T04:37:51.287Z"
+      "at": "2026-11-20T04:43:55.439Z"
     },
     {
       "name": "0044 checksum drift rejected and original repeat safe",
       "status": "PASS",
-      "at": "2026-11-20T04:37:55.579Z"
+      "at": "2026-11-20T04:43:59.733Z"
     }
   ],
   "status": "PASS",
-  "finishedAt": "2026-11-20T04:37:56.000Z"
+  "finishedAt": "2026-11-20T04:44:00.136Z"
 }

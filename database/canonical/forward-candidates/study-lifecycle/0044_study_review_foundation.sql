@@ -92,7 +92,17 @@ ALTER TABLE education.study_enrollments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE education.study_enrollments FORCE ROW LEVEL SECURITY;
 ALTER TABLE education.lifecycle_review_occurrences ENABLE ROW LEVEL SECURITY;
 ALTER TABLE education.lifecycle_review_occurrences FORCE ROW LEVEL SECURITY;
--- Deliberately no runtime policy. Even a test-only SELECT grant returns zero.
+-- Explicit restrictive deny policies keep both USING and WITH CHECK closed,
+-- including if a test-only SELECT grant is made. A later approved migration
+-- must intentionally replace these before a runtime API can read or write.
+CREATE POLICY study_enrollments_runtime_deny
+  ON education.study_enrollments AS RESTRICTIVE FOR ALL
+  TO phoenix_canonical_app,phoenix_canonical_workspace_reader
+  USING (false) WITH CHECK (false);
+CREATE POLICY lifecycle_review_runtime_deny
+  ON education.lifecycle_review_occurrences AS RESTRICTIVE FOR ALL
+  TO phoenix_canonical_app,phoenix_canonical_workspace_reader
+  USING (false) WITH CHECK (false);
 
 REVOKE ALL ON education.study_enrollments,
   education.lifecycle_review_occurrences FROM PUBLIC;
