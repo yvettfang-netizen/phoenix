@@ -16,7 +16,7 @@ BEGIN
     RAISE EXCEPTION 'S1_FUNCTION_ATTRIBUTES_DRIFT_REFUSED';
   END IF;
   IF position('auth.write_context_is_live()' in v_definition)=0
-     OR position('auth.current_actor_person_id()=p_subject_id' in v_definition)=0
+     OR position('current_actor_person_id()' in v_definition)=0
      OR position('core.has_verified_guardian_authority' in v_definition)=0
      OR position('learning.teacher_has_class_access' in v_definition)=0
      OR (position('core.family_memberships' in v_definition)>0

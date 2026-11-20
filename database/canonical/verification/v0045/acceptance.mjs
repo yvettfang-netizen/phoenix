@@ -44,6 +44,7 @@ async function cluster(){
 }
 function sourceHash(db){
  return sql(db,"SELECT md5(pg_get_functiondef('learning.can_read_sensitive(uuid,uuid,uuid)'::regprocedure))");
+}
 function functionMeta(db){
  return sql(db,"SELECT concat_ws('|',pg_get_userbyid(proowner),coalesce(proacl::text,''),provolatile,prosecdef::text,coalesce(array_to_string(proconfig,','),'')) FROM pg_proc WHERE oid='learning.can_read_sensitive(uuid,uuid,uuid)'::regprocedure");
 }
