@@ -135,7 +135,7 @@ Use synthetic fixtures only, separate binder/app LOGINs, and the same app backen
 | Active member + verified guardian + active Learning Consent | Card read allowed |
 | Same bound context; membership `valid_until` updated to current time and committed by a second connection | Next request denies |
 | Same bound context; membership expires naturally while the backend remains connected | Next request denies |
-| Membership row removed/revoked before next request | Next request denies |
+| Membership is no longer current (`valid_until <= clock_timestamp()`) before next request | Next request denies |
 | Guardian authority revoked/expired | Next request denies |
 | Learning Consent withdrawn/expired | Next request denies |
 | Student reads own record through existing self branch | Existing behavior preserved |
@@ -177,7 +177,7 @@ Repeat the sequence for PG16 and PG17. Add a separate wall-clock expiry test whe
 These do not change the narrow S1 design, but must be resolved before P0.1 can be called complete:
 
 1. PR #85's report records its 8/8 run for commit `187c885d2613bbca3e80c22762ece2ab97db6973`; the current PR #85 branch head has advanced to `162c2ae4ca50827f250f5b0d4a256174c6fb8834`. Do not transfer the earlier run result to the new HEAD. Its base/mergeability also needs reconciliation with current PR #83.
-2. Current PR #83 head `3582c468823ede68b093aaab46ea352febac38df` has a PG16 `family-projection-e2e` failure at browser assertion line 225 after the restore drill; PG17 passes. The log shows the test disabled the synthetic external identity before taking the backup and later expected a successful read after restoring that backup. Treat this as a separate test-state/restore assertion to investigate; do not mark PR #83 fully green until resolved.
+2. Current PR #83 head `3582c468823ede68b093aaab46ea352febac38df` has a PG16 `family-projection-e2e` failure at browser assertion line 225 after the restore drill; PG17 passes. The test source creates the backup before the later guardian, mapping and external-identity revocation drills, so the restore should contain the pre-revocation state. The available log does not establish why the restored PG16 browser request receives a denial. Treat this as a separate restore/browser investigation; do not infer a root cause or mark PR #83 fully green until resolved.
 3. The named private non-production runtime receipt remains a separate UNVERIFIED item. It is not required to draft this source-based design and does not authorize candidate installation.
 
 ## 8. Approval boundary and next gate
