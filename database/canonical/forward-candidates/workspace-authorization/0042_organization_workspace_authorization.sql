@@ -139,43 +139,83 @@ CREATE UNIQUE INDEX workspace_sessions_one_current_uq
 CREATE INDEX workspace_sessions_binding_status_idx
   ON auth.workspace_sessions(workspace_binding_id,status,expires_at);
 
-CREATE TABLE auth.workspace_context_tickets (
-  ticket_id uuid PRIMARY KEY,
-  workspace_session_id uuid NOT NULL REFERENCES auth.workspace_sessions ON DELETE CASCADE,
-  principal_id uuid NOT NULL REFERENCES auth.principals,
-  workspace_binding_id uuid NOT NULL REFERENCES auth.workspace_role_bindings,
-  intended_principal_id uuid NOT NULL REFERENCES auth.principals,
-  request_nonce uuid NOT NULL,
-  issued_at timestamptz NOT NULL DEFAULT clock_timestamp(),
-  expires_at timestamptz NOT NULL,
-  CHECK (expires_at > issued_at AND expires_at <= issued_at + interval '60 seconds')
-);
-CREATE INDEX workspace_context_tickets_expiry_idx
-  ON auth.workspace_context_tickets(expires_at);
+-- Reuse Canonical's one-use ticket and backend-bound context.
+-- The persistent workspace session remains separate because it binds the browser
+-- login session and authorization versions; ephemeral database context is shared.
+ALTER TABLE auth.context_exchange_tickets
+  ADD COLUMN workspace_session_id uuid REFERENCES auth.workspace_sessions ON DELETE CASCADE,
+  ADD COLUMN workspace_binding_id uuid REFERENCES auth.workspace_role_bindings;
+ALTER TABLE auth.session_contexts
+  ADD COLUMN workspace_session_id uuid REFERENCES auth.workspace_sessions ON DELETE CASCADE,
+  ADD COLUMN workspace_binding_id uuid REFERENCES auth.workspace_role_bindings;
 
-CREATE TABLE auth.workspace_session_contexts (
-  backend_pid integer PRIMARY KEY,
-  backend_start timestamptz NOT NULL,
-  workspace_session_id uuid NOT NULL REFERENCES auth.workspace_sessions ON DELETE CASCADE,
-  principal_id uuid NOT NULL REFERENCES auth.principals,
-  actor_person_id uuid NOT NULL REFERENCES core.people,
-  workspace_binding_id uuid NOT NULL REFERENCES auth.workspace_role_bindings,
-  workspace_kind text NOT NULL CHECK (workspace_kind IN (
-    'FOUNDER','STAFF','PARTNER','FAMILY'
-  )),
-  role_code text NOT NULL,
-  organization_id uuid REFERENCES core.organizations,
-  family_id uuid REFERENCES core.families,
-  binding_authorization_version bigint NOT NULL,
-  membership_authorization_version bigint NOT NULL,
-  request_nonce uuid NOT NULL,
-  expires_at timestamptz NOT NULL,
-  bound_at timestamptz NOT NULL DEFAULT clock_timestamp(),
-  CHECK ((organization_id IS NOT NULL)<>(family_id IS NOT NULL)),
-  CHECK ((workspace_kind='FAMILY')=(family_id IS NOT NULL))
-);
-CREATE INDEX workspace_session_contexts_backend_identity_idx
-  ON auth.workspace_session_contexts(backend_pid,backend_start);
+ALTER TABLE auth.context_exchange_tickets
+  DROP CONSTRAINT ticket_family_channel_match,
+  ADD CONSTRAINT ticket_family_channel_match CHECK (
+    channel='INTERNAL' OR family_id IS NOT NULL
+    OR (channel='STAFF' AND workspace_session_id IS NOT NULL)
+  ),
+  ADD CONSTRAINT context_exchange_tickets_workspace_pair
+    CHECK ((workspace_session_id IS NULL)=(workspace_binding_id IS NULL)),
+  ADD CONSTRAINT context_exchange_tickets_workspace_channel
+    CHECK (workspace_session_id IS NULL OR channel IN ('FAMILY','STAFF'));
+ALTER TABLE auth.session_contexts
+  DROP CONSTRAINT session_family_channel_match,
+  ADD CONSTRAINT session_family_channel_match CHECK (
+    channel='INTERNAL' OR family_id IS NOT NULL
+    OR (channel='STAFF' AND workspace_session_id IS NOT NULL)
+  ),
+  ADD CONSTRAINT session_contexts_workspace_pair
+    CHECK ((workspace_session_id IS NULL)=(workspace_binding_id IS NULL)),
+  ADD CONSTRAINT session_contexts_workspace_channel
+    CHECK (workspace_session_id IS NULL OR channel IN ('FAMILY','STAFF'));
+
+CREATE INDEX context_exchange_tickets_workspace_session_idx
+  ON auth.context_exchange_tickets(workspace_session_id,expires_at)
+  WHERE workspace_session_id IS NOT NULL;
+CREATE INDEX session_contexts_workspace_session_idx
+  ON auth.session_contexts(workspace_session_id)
+  WHERE workspace_session_id IS NOT NULL;
+
+-- Legacy Family/Advisor/Teacher redemption shares the same backend row. A legacy
+-- rebind must explicitly clear workspace references to prevent privilege carryover.
+CREATE OR REPLACE FUNCTION auth.redeem_context_ticket(
+  p_ticket_id uuid,p_expected_principal_id uuid
+) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,auth
+AS $fn$
+DECLARE v_ticket auth.context_exchange_tickets%ROWTYPE; v_backend_start timestamptz;
+BEGIN
+  PERFORM auth.cleanup_ephemeral_state();
+  DELETE FROM auth.context_exchange_tickets
+   WHERE ticket_id=p_ticket_id
+     AND intended_principal_id=p_expected_principal_id
+     AND expires_at>clock_timestamp()
+   RETURNING * INTO v_ticket;
+  IF NOT FOUND THEN RAISE EXCEPTION 'CONTEXT_TICKET_INVALID_OR_ALREADY_USED'; END IF;
+  PERFORM auth.validate_context_request(v_ticket.principal_id,v_ticket.actor_person_id,
+    v_ticket.family_id,v_ticket.channel);
+  SELECT backend_start INTO v_backend_start FROM pg_catalog.pg_stat_activity
+   WHERE pid=pg_backend_pid();
+  IF v_backend_start IS NULL THEN RAISE EXCEPTION 'CONTEXT_BACKEND_NOT_FOUND'; END IF;
+  INSERT INTO auth.session_contexts(backend_pid,backend_start,principal_id,actor_person_id,
+    family_id,channel,request_nonce,expires_at)
+  VALUES(pg_backend_pid(),v_backend_start,v_ticket.principal_id,v_ticket.actor_person_id,
+    v_ticket.family_id,v_ticket.channel,v_ticket.request_nonce,v_ticket.expires_at)
+  ON CONFLICT (backend_pid) DO UPDATE SET
+    backend_start=excluded.backend_start,
+    principal_id=excluded.principal_id,
+    actor_person_id=excluded.actor_person_id,
+    family_id=excluded.family_id,
+    channel=excluded.channel,
+    request_nonce=excluded.request_nonce,
+    expires_at=excluded.expires_at,
+    bound_at=clock_timestamp(),
+    workspace_session_id=NULL,
+    workspace_binding_id=NULL;
+END
+$fn$;
 
 CREATE TABLE service.project_assignment_organization_scopes (
   project_assignment_id uuid PRIMARY KEY REFERENCES service.project_assignments,
@@ -516,10 +556,11 @@ BEGIN
       WHERE b.workspace_binding_id=s.workspace_binding_id
         AND b.organization_membership_id=p_membership_id
    );
-  DELETE FROM auth.workspace_session_contexts c WHERE EXISTS(
-    SELECT 1 FROM auth.workspace_sessions s
-     WHERE s.workspace_session_id=c.workspace_session_id AND s.status<>'ACTIVE'
-  );
+DELETE FROM auth.session_contexts c WHERE c.workspace_session_id IS NOT NULL
+     AND EXISTS(
+       SELECT 1 FROM auth.workspace_sessions s
+        WHERE s.workspace_session_id=c.workspace_session_id AND s.status<>'ACTIVE'
+     );
   IF p_next_status='REVOKED' THEN
     UPDATE auth.workspace_role_bindings
        SET status='REVOKED',valid_until=v_now,revoked_at=v_now,
@@ -603,8 +644,8 @@ BEGIN
    WHERE workspace_binding_id=p_workspace_binding_id;
   UPDATE auth.workspace_sessions SET status='REVOKED',revoked_at=v_now
    WHERE workspace_binding_id=p_workspace_binding_id AND status='ACTIVE';
-  DELETE FROM auth.workspace_session_contexts
-   WHERE workspace_binding_id=p_workspace_binding_id;
+  DELETE FROM auth.session_contexts
+    WHERE workspace_binding_id=p_workspace_binding_id AND workspace_session_id IS NOT NULL;
   RETURN auth.record_workspace_decision(
     auth.current_principal_id(),v_item.principal_id,NULL,'REVOKE','WORKSPACE_ROLE',
     p_workspace_binding_id,true,'WORKSPACE_ROLE_REVOKED',auth.current_request_nonce()
@@ -653,24 +694,21 @@ CREATE FUNCTION auth.cleanup_workspace_ephemeral_state() RETURNS integer
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth
 AS $fn$
-DECLARE v_removed integer:=0; v_rows integer;
+DECLARE v_removed integer:=0;
 BEGIN
+  -- Reuse Canonical cleanup for context_exchange_tickets and backend-bound
+  -- auth.session_contexts, including stale PID/backend_start pairs.
+  PERFORM auth.cleanup_ephemeral_state();
   UPDATE auth.workspace_sessions SET status='EXPIRED',revoked_at=clock_timestamp()
    WHERE status='ACTIVE' AND expires_at<=clock_timestamp();
-  DELETE FROM auth.workspace_context_tickets WHERE expires_at<=clock_timestamp();
-  GET DIAGNOSTICS v_rows=ROW_COUNT; v_removed:=v_removed+v_rows;
-  DELETE FROM auth.workspace_session_contexts c
-   WHERE c.expires_at<=clock_timestamp()
-      OR NOT EXISTS(
-        SELECT 1 FROM pg_catalog.pg_stat_activity a
-         WHERE a.pid=c.backend_pid AND a.backend_start=c.backend_start
-      )
-      OR NOT EXISTS(
-        SELECT 1 FROM auth.workspace_sessions s
-         WHERE s.workspace_session_id=c.workspace_session_id
-           AND s.status='ACTIVE' AND s.expires_at>clock_timestamp()
-      );
-  GET DIAGNOSTICS v_rows=ROW_COUNT; v_removed:=v_removed+v_rows;
+  DELETE FROM auth.session_contexts c
+   WHERE c.workspace_session_id IS NOT NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM auth.workspace_sessions s
+        WHERE s.workspace_session_id=c.workspace_session_id
+          AND s.status='ACTIVE' AND s.expires_at>clock_timestamp()
+     );
+  GET DIAGNOSTICS v_removed=ROW_COUNT;
   RETURN v_removed;
 END
 $fn$;
@@ -746,10 +784,11 @@ BEGIN
   UPDATE auth.workspace_sessions SET status='REVOKED',revoked_at=v_now
    WHERE principal_id=p_principal_id
      AND owner_session_digest=p_owner_session_digest AND status='ACTIVE';
-  DELETE FROM auth.workspace_session_contexts c WHERE EXISTS(
-    SELECT 1 FROM auth.workspace_sessions s
-     WHERE s.workspace_session_id=c.workspace_session_id AND s.status<>'ACTIVE'
-  );
+DELETE FROM auth.session_contexts c WHERE c.workspace_session_id IS NOT NULL
+     AND EXISTS(
+       SELECT 1 FROM auth.workspace_sessions s
+        WHERE s.workspace_session_id=c.workspace_session_id AND s.status<>'ACTIVE'
+     );
   INSERT INTO auth.workspace_sessions(
     workspace_session_id,principal_id,workspace_binding_id,owner_session_digest,
     context_token_digest,binding_authorization_version,
@@ -787,7 +826,7 @@ SET search_path=pg_catalog,auth,core
 AS $fn$
 DECLARE v_session auth.workspace_sessions%ROWTYPE;
         v record;
-        v_ticket uuid:=gen_random_uuid(); v_expiry timestamptz;
+        v_ticket uuid:=gen_random_uuid(); v_expiry timestamptz; v_channel text;
 BEGIN
   PERFORM auth.cleanup_workspace_ephemeral_state();
   SELECT * INTO v_session FROM auth.workspace_sessions s
@@ -813,12 +852,14 @@ BEGIN
   IF v_expiry<=clock_timestamp() OR p_request_nonce IS NULL THEN
     RAISE EXCEPTION 'WORKSPACE_TICKET_EXPIRY_INVALID';
   END IF;
-  INSERT INTO auth.workspace_context_tickets(
-    ticket_id,workspace_session_id,principal_id,workspace_binding_id,
-    intended_principal_id,request_nonce,expires_at
+  v_channel:=CASE WHEN v.workspace_kind='FAMILY' THEN 'FAMILY' ELSE 'STAFF' END;
+  INSERT INTO auth.context_exchange_tickets(
+    ticket_id,principal_id,actor_person_id,family_id,channel,request_nonce,
+    expires_at,intended_principal_id,workspace_session_id,workspace_binding_id
   ) VALUES(
-    v_ticket,v_session.workspace_session_id,v_session.principal_id,
-    v_session.workspace_binding_id,p_intended_principal_id,p_request_nonce,v_expiry
+    v_ticket,v_session.principal_id,v.actor_person_id,v.family_id,v_channel,
+    p_request_nonce,v_expiry,p_intended_principal_id,
+    v_session.workspace_session_id,v_session.workspace_binding_id
   );
   RETURN QUERY SELECT v_ticket,v_session.principal_id,v_expiry;
 END
@@ -830,20 +871,22 @@ CREATE FUNCTION auth.redeem_workspace_context_ticket(
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth,core
 AS $fn$
-DECLARE v_ticket auth.workspace_context_tickets%ROWTYPE;
+DECLARE v_ticket auth.context_exchange_tickets%ROWTYPE;
         v_session auth.workspace_sessions%ROWTYPE;
         v record;
         v_backend_start timestamptz;
 BEGIN
   PERFORM auth.cleanup_workspace_ephemeral_state();
-  DELETE FROM auth.workspace_context_tickets
+  DELETE FROM auth.context_exchange_tickets
    WHERE ticket_id=p_ticket_id
      AND intended_principal_id=p_expected_principal_id
+     AND workspace_session_id IS NOT NULL
      AND expires_at>clock_timestamp()
    RETURNING * INTO v_ticket;
   IF NOT FOUND THEN RAISE EXCEPTION 'WORKSPACE_TICKET_INVALID_OR_ALREADY_USED'; END IF;
   SELECT * INTO v_session FROM auth.workspace_sessions
    WHERE workspace_session_id=v_ticket.workspace_session_id
+     AND workspace_binding_id=v_ticket.workspace_binding_id
      AND principal_id=p_expected_principal_id
      AND status='ACTIVE' AND expires_at>clock_timestamp();
   IF NOT FOUND THEN RAISE EXCEPTION 'WORKSPACE_SESSION_INVALID'; END IF;
@@ -852,7 +895,11 @@ BEGIN
   );
   IF NOT FOUND
      OR v.binding_authorization_version<>v_session.binding_authorization_version
-     OR v.membership_authorization_version<>v_session.membership_authorization_version THEN
+     OR v.membership_authorization_version<>v_session.membership_authorization_version
+     OR v.actor_person_id IS DISTINCT FROM v_ticket.actor_person_id
+     OR v.family_id IS DISTINCT FROM v_ticket.family_id
+     OR (CASE WHEN v.workspace_kind='FAMILY' THEN 'FAMILY' ELSE 'STAFF' END)
+        IS DISTINCT FROM v_ticket.channel THEN
     RAISE EXCEPTION 'WORKSPACE_AUTHORIZATION_STALE';
   END IF;
   SELECT backend_start INTO v_backend_start FROM pg_catalog.pg_stat_activity
@@ -860,17 +907,13 @@ BEGIN
   IF v_backend_start IS NULL THEN RAISE EXCEPTION 'CONTEXT_BACKEND_NOT_FOUND'; END IF;
   DELETE FROM auth.session_contexts
    WHERE backend_pid=pg_backend_pid() AND backend_start=v_backend_start;
-  DELETE FROM auth.workspace_session_contexts WHERE backend_pid=pg_backend_pid();
-  INSERT INTO auth.workspace_session_contexts(
-    backend_pid,backend_start,workspace_session_id,principal_id,actor_person_id,
-    workspace_binding_id,workspace_kind,role_code,organization_id,family_id,
-    binding_authorization_version,membership_authorization_version,
-    request_nonce,expires_at
+  INSERT INTO auth.session_contexts(
+    backend_pid,backend_start,principal_id,actor_person_id,family_id,channel,
+    request_nonce,expires_at,workspace_session_id,workspace_binding_id
   ) VALUES(
-    pg_backend_pid(),v_backend_start,v_session.workspace_session_id,v.principal_id,
-    v.actor_person_id,v.workspace_binding_id,v.workspace_kind,v.role_code,
-    v.organization_id,v.family_id,v.binding_authorization_version,
-    v.membership_authorization_version,v_ticket.request_nonce,v_ticket.expires_at
+    pg_backend_pid(),v_backend_start,v_ticket.principal_id,v_ticket.actor_person_id,
+    v_ticket.family_id,v_ticket.channel,v_ticket.request_nonce,v_ticket.expires_at,
+    v_session.workspace_session_id,v_session.workspace_binding_id
   );
 END
 $fn$;
@@ -879,7 +922,7 @@ CREATE FUNCTION auth.workspace_context_is_live() RETURNS boolean
 LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth,core
 RETURN coalesce(EXISTS(
-  SELECT 1 FROM auth.workspace_session_contexts c
+  SELECT 1 FROM auth.session_contexts c
   JOIN pg_catalog.pg_stat_activity a
     ON a.pid=c.backend_pid AND a.backend_start=c.backend_start
   JOIN auth.workspace_sessions s
@@ -889,60 +932,73 @@ RETURN coalesce(EXISTS(
   ) b
   WHERE c.backend_pid=pg_backend_pid()
     AND c.backend_start=auth.current_backend_start()
+    AND c.workspace_session_id IS NOT NULL
+    AND c.workspace_binding_id=s.workspace_binding_id
+    AND c.principal_id=s.principal_id
     AND c.expires_at>clock_timestamp()
     AND s.status='ACTIVE' AND s.expires_at>clock_timestamp()
-    AND b.binding_authorization_version=c.binding_authorization_version
-    AND b.membership_authorization_version=c.membership_authorization_version
+    AND b.binding_authorization_version=s.binding_authorization_version
+    AND b.membership_authorization_version=s.membership_authorization_version
 ),false);
 
 CREATE FUNCTION auth.current_workspace_principal_id() RETURNS uuid
 LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth
-RETURN (SELECT c.principal_id FROM auth.workspace_session_contexts c
+RETURN (SELECT c.principal_id FROM auth.session_contexts c
   WHERE c.backend_pid=pg_backend_pid()
     AND c.backend_start=auth.current_backend_start()
+    AND c.workspace_session_id IS NOT NULL
     AND auth.workspace_context_is_live());
 CREATE FUNCTION auth.current_workspace_binding_id() RETURNS uuid
 LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth
-RETURN (SELECT c.workspace_binding_id FROM auth.workspace_session_contexts c
+RETURN (SELECT c.workspace_binding_id FROM auth.session_contexts c
   WHERE c.backend_pid=pg_backend_pid()
     AND c.backend_start=auth.current_backend_start()
+    AND c.workspace_session_id IS NOT NULL
     AND auth.workspace_context_is_live());
 CREATE FUNCTION auth.current_workspace_kind() RETURNS text
 LANGUAGE sql VOLATILE SECURITY DEFINER
-SET search_path=pg_catalog,auth
-RETURN (SELECT c.workspace_kind FROM auth.workspace_session_contexts c
+SET search_path=pg_catalog,auth,core
+RETURN (SELECT b.workspace_kind FROM auth.session_contexts c
+  CROSS JOIN LATERAL auth.workspace_binding_snapshot(c.principal_id,c.workspace_binding_id) b
   WHERE c.backend_pid=pg_backend_pid()
     AND c.backend_start=auth.current_backend_start()
+    AND c.workspace_session_id IS NOT NULL
     AND auth.workspace_context_is_live());
 CREATE FUNCTION auth.current_workspace_role() RETURNS text
 LANGUAGE sql VOLATILE SECURITY DEFINER
-SET search_path=pg_catalog,auth
-RETURN (SELECT c.role_code FROM auth.workspace_session_contexts c
+SET search_path=pg_catalog,auth,core
+RETURN (SELECT b.role_code FROM auth.session_contexts c
+  CROSS JOIN LATERAL auth.workspace_binding_snapshot(c.principal_id,c.workspace_binding_id) b
   WHERE c.backend_pid=pg_backend_pid()
     AND c.backend_start=auth.current_backend_start()
+    AND c.workspace_session_id IS NOT NULL
     AND auth.workspace_context_is_live());
 CREATE FUNCTION auth.current_workspace_organization_id() RETURNS uuid
 LANGUAGE sql VOLATILE SECURITY DEFINER
-SET search_path=pg_catalog,auth
-RETURN (SELECT c.organization_id FROM auth.workspace_session_contexts c
+SET search_path=pg_catalog,auth,core
+RETURN (SELECT b.organization_id FROM auth.session_contexts c
+  CROSS JOIN LATERAL auth.workspace_binding_snapshot(c.principal_id,c.workspace_binding_id) b
   WHERE c.backend_pid=pg_backend_pid()
     AND c.backend_start=auth.current_backend_start()
+    AND c.workspace_session_id IS NOT NULL
     AND auth.workspace_context_is_live());
 CREATE FUNCTION auth.current_workspace_family_id() RETURNS uuid
 LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth
-RETURN (SELECT c.family_id FROM auth.workspace_session_contexts c
+RETURN (SELECT c.family_id FROM auth.session_contexts c
   WHERE c.backend_pid=pg_backend_pid()
     AND c.backend_start=auth.current_backend_start()
+    AND c.workspace_session_id IS NOT NULL
     AND auth.workspace_context_is_live());
 CREATE FUNCTION auth.current_workspace_request_nonce() RETURNS uuid
 LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth
-RETURN (SELECT c.request_nonce FROM auth.workspace_session_contexts c
+RETURN (SELECT c.request_nonce FROM auth.session_contexts c
   WHERE c.backend_pid=pg_backend_pid()
     AND c.backend_start=auth.current_backend_start()
+    AND c.workspace_session_id IS NOT NULL
     AND auth.workspace_context_is_live());
 
 CREATE FUNCTION auth.clear_workspace_context() RETURNS void
@@ -951,8 +1007,6 @@ SET search_path=pg_catalog,auth
 AS $fn$
 DECLARE v_start timestamptz:=auth.current_backend_start();
 BEGIN
-  DELETE FROM auth.workspace_session_contexts
-   WHERE backend_pid=pg_backend_pid() AND backend_start=v_start;
   DELETE FROM auth.session_contexts
    WHERE backend_pid=pg_backend_pid() AND backend_start=v_start;
 END
@@ -978,11 +1032,18 @@ BEGIN
    WHERE principal_id=p_principal_id
      AND owner_session_digest=p_owner_session_digest AND status='ACTIVE';
   GET DIAGNOSTICS v_rows=ROW_COUNT;
-  DELETE FROM auth.workspace_session_contexts c WHERE EXISTS(
-    SELECT 1 FROM auth.workspace_sessions s
-     WHERE s.workspace_session_id=c.workspace_session_id
-       AND s.principal_id=p_principal_id AND s.status<>'ACTIVE'
-  );
+  DELETE FROM auth.context_exchange_tickets t
+   USING auth.workspace_sessions s
+   WHERE t.workspace_session_id=s.workspace_session_id
+     AND s.principal_id=p_principal_id
+     AND s.owner_session_digest=p_owner_session_digest
+     AND s.status<>'ACTIVE';
+  DELETE FROM auth.session_contexts c
+   USING auth.workspace_sessions s
+   WHERE c.workspace_session_id=s.workspace_session_id
+     AND s.principal_id=p_principal_id
+     AND s.owner_session_digest=p_owner_session_digest
+     AND s.status<>'ACTIVE';
   PERFORM auth.record_workspace_decision(
     p_principal_id,v_actor,NULL,'LOGOUT','WORKSPACE_SESSION',NULL,true,
     CASE WHEN v_rows>0 THEN 'WORKSPACE_SESSIONS_REVOKED' ELSE 'WORKSPACE_SESSION_ALREADY_CLEAR' END,
@@ -1058,10 +1119,6 @@ ALTER TABLE auth.workspace_role_bindings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auth.workspace_role_bindings FORCE ROW LEVEL SECURITY;
 ALTER TABLE auth.workspace_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE auth.workspace_sessions FORCE ROW LEVEL SECURITY;
-ALTER TABLE auth.workspace_context_tickets ENABLE ROW LEVEL SECURITY;
-ALTER TABLE auth.workspace_context_tickets FORCE ROW LEVEL SECURITY;
-ALTER TABLE auth.workspace_session_contexts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE auth.workspace_session_contexts FORCE ROW LEVEL SECURITY;
 ALTER TABLE service.project_assignment_organization_scopes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE service.project_assignment_organization_scopes FORCE ROW LEVEL SECURITY;
 
@@ -1079,19 +1136,12 @@ CREATE POLICY workspace_role_bindings_migrator
 CREATE POLICY workspace_sessions_migrator
   ON auth.workspace_sessions FOR ALL TO phoenix_canonical_migrator
   USING (true) WITH CHECK (true);
-CREATE POLICY workspace_context_tickets_migrator
-  ON auth.workspace_context_tickets FOR ALL TO phoenix_canonical_migrator
-  USING (true) WITH CHECK (true);
-CREATE POLICY workspace_session_contexts_migrator
-  ON auth.workspace_session_contexts FOR ALL TO phoenix_canonical_migrator
-  USING (true) WITH CHECK (true);
 CREATE POLICY project_assignment_organization_scopes_migrator
   ON service.project_assignment_organization_scopes FOR ALL TO phoenix_canonical_migrator
   USING (true) WITH CHECK (true);
 
 REVOKE ALL ON core.organization_workspace_profiles,core.organization_memberships,
   auth.workspace_role_bindings,auth.workspace_sessions,
-  auth.workspace_context_tickets,auth.workspace_session_contexts,
   service.project_assignment_organization_scopes
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,
     phoenix_canonical_context_binder,phoenix_canonical_workspace_reader;

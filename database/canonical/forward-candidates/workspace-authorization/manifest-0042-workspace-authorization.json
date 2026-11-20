@@ -5,10 +5,10 @@
   "historical_migrations": 37,
   "candidate_number": "0042",
   "file": "0042_organization_workspace_authorization.sql",
-  "sha256": "0d4a3de80b56ccb167049a846e17b9b6fc4ef3e152b57aa4600d87367a33cb65",
+  "sha256": "b01fc5e96eba53ae6209b08ee6339df914ae5ff3073c6c2f7b3d8539ffebd01d",
   "isolated_ledger_rows": 38,
-  "isolated_tables": 100,
-  "isolated_policies_including_auth": 90,
+  "isolated_tables": 98,
+  "isolated_policies_including_auth": 88,
   "reserved_candidates": [
     {
       "number": "0038",
@@ -16,7 +16,7 @@
     },
     {
       "number": "0039",
-      "source": "database/canonical/forward-candidates/service-workbench/0039_service_project_summary.sql"
+      "source": "database/canonical/forward-candidates/service-workbench/0039_service_project_workbench.sql"
     },
     {
       "number": "0040",
@@ -27,7 +27,7 @@
       "source": "concurrent PR #74 candidate; not imported or modified by this package"
     }
   ],
-  "scope": "organization workspace membership, role bindings, server-owned workspace sessions, one-use context exchange and a Staff project projection",
+  "scope": "organization workspace membership, role bindings, persistent browser workspace sessions, shared Canonical context_exchange_tickets and session_contexts, and a Staff project projection",
   "real_identity_status": "HOLD",
   "deployment_status": "NOT_APPROVED"
 }

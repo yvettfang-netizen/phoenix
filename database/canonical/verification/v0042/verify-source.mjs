@@ -23,24 +23,29 @@ assert.equal(manifest.candidate_number,'0042')
 assert.equal(manifest.historical_migrations,37)
 assert.equal(manifest.sha256,hash(candidate))
 assert.equal(manifest.isolated_ledger_rows,38)
-assert.equal(manifest.isolated_tables,100)
-assert.equal(manifest.isolated_policies_including_auth,90)
+assert.equal(manifest.isolated_tables,98)
+assert.equal(manifest.isolated_policies_including_auth,88)
 assert.deepEqual(manifest.reserved_candidates.map((item) => item.number),['0038','0039','0040','0041'])
 assert.equal(candidate.includes(13),false)
 assert(sql.startsWith('BEGIN;\n'))
 assert(sql.trimEnd().endsWith('\nCOMMIT;'))
-assert.equal((sql.match(/^CREATE TABLE /gm) ?? []).length,7)
+assert.equal((sql.match(/^CREATE TABLE /gm) ?? []).length,5)
+assert.equal((sql.match(/^CREATE POLICY /gm) ?? []).length,5)
 for (const table of [
   'core.organization_workspace_profiles','core.organization_memberships',
-  'auth.workspace_role_bindings','auth.workspace_sessions','auth.workspace_context_tickets',
-  'auth.workspace_session_contexts','service.project_assignment_organization_scopes'
+  'auth.workspace_role_bindings','auth.workspace_sessions',
+  'service.project_assignment_organization_scopes'
 ]) assert(sql.includes(`CREATE TABLE ${table} (`),table)
 for (const token of [
   'FORCE ROW LEVEL SECURITY','REVOKE ALL ON ALL FUNCTIONS IN SCHEMA auth FROM PUBLIC',
   'auth.rotate_workspace_session','auth.issue_workspace_context_ticket',
   'auth.redeem_workspace_context_ticket','service.read_staff_workspace_projects',
+  'ALTER TABLE auth.context_exchange_tickets','ALTER TABLE auth.session_contexts',
+  'workspace_session_id=NULL','workspace_binding_id=NULL',
   'pg_stat_activity','backend_start'
 ]) assert(sql.includes(token),token)
+assert(!sql.includes('CREATE TABLE auth.workspace_context_tickets'))
+assert(!sql.includes('CREATE TABLE auth.workspace_session_contexts'))
 assert(!/GRANT\s+(?:SELECT|INSERT|UPDATE|DELETE|ALL)\s+ON\s+(?:TABLE\s+)?/i.test(sql))
 assert(!/(?:1\.12\.77\.180|POSTGRES_PASSWORD|PGPASSWORD|BEGIN (?:RSA|OPENSSH) PRIVATE KEY)/.test(sql))
 

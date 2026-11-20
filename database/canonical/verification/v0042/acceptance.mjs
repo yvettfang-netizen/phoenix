@@ -49,9 +49,9 @@ async function run() {
   record.postgres.tables = Number(db.sql("SELECT count(*) FROM pg_tables WHERE schemaname IN ('auth','core','consent','audit','integration','docs','casework','education','identity','operations_ref','learning','crm','service')"))
   record.postgres.policies = Number(db.sql("SELECT count(*) FROM pg_policies WHERE schemaname IN ('auth','core','consent','audit','integration','docs','casework','education','identity','operations_ref','learning','crm','service')"))
   assert.equal(record.postgres.ledger,38)
-  assert.equal(record.postgres.tables,100)
-  assert.equal(record.postgres.policies,90)
-  check('fresh migration 0001-0037 plus isolated 0042 and repeat safety',{ledger:38,tables:100,policies:90})
+  assert.equal(record.postgres.tables,98)
+  assert.equal(record.postgres.policies,88)
+  check('fresh migration 0001-0037 plus isolated 0042 and repeat safety',{ledger:38,tables:98,policies:88})
 
   const passwords = seedWorkspaceAuthorization(db)
   assert.equal(db.sql("SELECT string_agg(workspace_organization_kind,',' ORDER BY workspace_organization_kind) FROM core.organization_workspace_profiles"),
@@ -164,12 +164,22 @@ async function run() {
     await appClient.query('SET ROLE phoenix_canonical_workspace_reader')
     await appClient.query('SELECT auth.redeem_workspace_context_ticket($1,$2)',
       [issued.rows[0].ticket_id,fixtureIds.principals.partnerB])
+    const backendPid = (await appClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
+    const unifiedContext = await appClient.query(
+      "SELECT concat(channel,'|',coalesce(family_id::text,'NULL'),'|',(workspace_session_id IS NOT NULL)::text,'|',workspace_binding_id::text) AS value FROM auth.session_contexts WHERE backend_pid=$1",
+      [backendPid]
+    )
+    assert.equal(unifiedContext.rows[0].value,'STAFF|NULL|t|' + fixtureIds.bindings.partnerBStaff)
     const projection = (await appClient.query(
       'SELECT service.read_staff_workspace_projects() AS value'
     )).rows[0].value
     assert.equal(projection.status,'ALLOW')
     assert.deepEqual(projectCodes(projection.data),['SYN_WS_PARTNER_B'])
     await appClient.query('SELECT auth.clear_workspace_context()')
+    const clearedContext = await appClient.query(
+      'SELECT count(*)::int AS n FROM auth.session_contexts WHERE backend_pid=$1',[backendPid]
+    )
+    assert.equal(clearedContext.rows[0].n,0)
     await expectDatabaseReject(() => appClient.query('SELECT auth.redeem_workspace_context_ticket($1,$2)',
       [issued.rows[0].ticket_id,fixtureIds.principals.partnerB]),/WORKSPACE_TICKET_INVALID_OR_ALREADY_USED/)
     const expiring = await binderClient.query(
@@ -271,9 +281,10 @@ async function run() {
   check('existing Family OS one-use context flow remains compatible and independently scoped')
 
   assert(Number(db.sql("SELECT count(*) FROM audit.access_events WHERE resource_kind IN ('WORKSPACE','WORKSPACE_SESSION','STAFF_PROJECT_PROJECTION','WORKSPACE_ROLE','ORGANIZATION_MEMBERSHIP')"))>=20)
-  assert.equal(db.sql('SELECT count(*) FROM auth.workspace_session_contexts'),'0')
-  assert.equal(db.sql('SELECT count(*) FROM auth.workspace_context_tickets'),'0')
-  check('allow and deny decisions are audited and no backend context or ticket remains')
+  assert.equal(db.sql('SELECT count(*) FROM auth.session_contexts WHERE workspace_session_id IS NOT NULL'),'0')
+  assert.equal(db.sql('SELECT count(*) FROM auth.context_exchange_tickets WHERE workspace_session_id IS NOT NULL'),'0')
+  assert.equal(db.sql("SELECT (to_regclass('auth.workspace_session_contexts') IS NULL AND to_regclass('auth.workspace_context_tickets') IS NULL)"),'t')
+  check('allow/deny decisions are audited; Canonical context tables are reused and cleared')
 
   let atomicFailed = false
   try { db.sql("BEGIN; CREATE TABLE public.workspace_atomic_probe(value integer); SELECT 1/0; COMMIT;") }
