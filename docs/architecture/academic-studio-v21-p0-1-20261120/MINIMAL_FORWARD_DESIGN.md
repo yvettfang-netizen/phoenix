@@ -67,7 +67,7 @@ The channel changes require updating the existing check constraints on `auth.ses
 
 - If Student and Parent capabilities are both valid, login defaults to STUDENT.
 - Student view is self-only and cannot read parent finance, siblings or family administration.
-- Parent switch is an explicit user action. The server issues a fresh short-lived ticket only after rechecking current membership and guardian capability; each child read rechecks exact Guardian Authority and Consent.
+- Parent switch is an explicit user action. The server issues a fresh short-lived FAMILY ticket only after rechecking current membership and at least one active verified Guardian Authority in that family. Each child read then rechecks Guardian Authority for that exact subject and the applicable Consent. Family membership alone is not enough to enter the Parent view.
 - Parent-only users default to FAMILY.
 - Teacher-only and Academy Admin/Founder users enter STAFF / Corporate OS.
 - A user with multiple capabilities keeps one Principal and one authenticated identity. Switching views re-resolves capability; it never creates a new account.
