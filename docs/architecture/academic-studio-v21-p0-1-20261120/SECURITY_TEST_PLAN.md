@@ -12,6 +12,7 @@
 - Parent channel is explicitly selected and uses a valid Family context only after membership plus at least one active verified Guardian Authority in that family.
 - Parent can list only children with current verified Guardian Authority and applicable Consent.
 - Teacher can enter STAFF global context using the existing Principal plus active Teacher identity.
+- A global STAFF request with NULL family_id can access a student only through a subject-scoped Consent check that matches the exact grantee person, subject, purpose, data class and the subject's current Canonical family.
 - Administrator and Founder can enter STAFF global context only with their respective active Academy grant.
 - Existing ADVISOR / PARTNER / INTERNAL context paths remain compatible.
 - Existing one-use ticket, 60-second expiry, backend PID + backend_start binding and context cleanup continue to work.
