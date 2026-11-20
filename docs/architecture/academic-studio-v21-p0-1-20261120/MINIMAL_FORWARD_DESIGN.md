@@ -211,7 +211,7 @@ This preserves the required before/after evidence. Existing access-decision audi
 9. Student overlap across all classes is enforced at database level using a GiST exclusion on the active per-student slot reservation time range.
 10. Room capacity counts only ONSITE participants. Class capacity remains the existing enrollment/class capacity.
 11. A HYBRID session is one slot, not duplicated Online and Onsite classes. Recommended finalization rule: at least one participant is assigned to each mode; if not, teacher changes the session to ONLINE or ONSITE.
-12. Students/parents receive the latest schedule through the Family OS read projection. Publish a Family Timeline event for material schedule changes using the existing append-only event contract; do not create a second notification or timeline database.
+12. Students/parents receive the latest schedule through the Family OS read projection. Publish a Family Timeline event for material schedule changes using the existing append-only event contract; new event types must be added to the approved event registry before use. Do not create a second notification or timeline database.
 
 ### 4.5 Time and meeting provider
 
