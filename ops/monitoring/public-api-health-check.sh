@@ -4,7 +4,7 @@
 # Does not query legacy PostgreSQL, inspect PM2, or touch Canonical data.
 set -uo pipefail
 
-NODE_BIN=/home/ubuntu/.nvm/versions/node/v24.20.0/bin
+NODE_BIN=${PHOENIX_NODE_BIN:-/home/ubuntu/.nvm/versions/node/v24.20.0/bin}
 export PATH="$NODE_BIN:$PATH"
 NOTIFY=("$NODE_BIN/node" "${PHOENIX_ALERT_NOTIFY:-/home/ubuntu/phoenix-alert-notify.mjs}")
 STATE_DIR="${PHOENIX_ALERT_STATE_DIR:-$HOME/.local/state/phoenix-alert}"
