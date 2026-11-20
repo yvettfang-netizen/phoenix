@@ -158,38 +158,69 @@ async function assertCompassHeader(page, route, width) {
   assert.equal(await page.locator('link[rel~="icon"], link[rel="apple-touch-icon"]').count(), 0, `${route}: favicon markup must remain disabled`);
 }
 
-function expectedPrimaryHrefs(locale) {
-  return [
-    `/${locale}`,
-    `/${locale}/education`,
-    `/${locale}/identity`,
-    `${WEALTH_ORIGIN}/${locale}`,
-    `/${locale}/health`,
-    `/${locale}/about`,
-    `/${locale}/insights`,
-  ];
+function expectedPrimaryNavigation(locale) {
+  return {
+    hrefs: [
+      `/${locale}`,
+      `/${locale}/education`,
+      `/${locale}/identity`,
+      `/${locale}/health`,
+      `${WEALTH_ORIGIN}/${locale}`,
+      `/${locale}/insights`,
+    ],
+    labels: locale === "zh"
+      ? ["首页", "教育", "身份", "健康", "财富", "洞察"]
+      : ["Home", "Education", "Identity", "Health", "Wealth", "Insights"],
+  };
+}
+
+async function assertFooterAboutEntry(page, locale) {
+  const footer = page.locator("footer.site-footer");
+  const aboutDirectory = footer.locator(`[role="navigation"][aria-label="${locale === "zh" ? "页脚产品导航" : "Footer product directory"}"]`);
+  assert.equal(await aboutDirectory.count(), 1, `${locale}: Footer product directory is missing`);
+  const aboutLinks = aboutDirectory.locator(`a[href="/${locale}/about"]`);
+  assert.equal(await aboutLinks.count(), 2, `${locale}: Footer must retain both About entries`);
+  assert.deepEqual(
+    await aboutLinks.evaluateAll(anchors => anchors.map(anchor => (anchor.textContent || "").replace(/\s+/g, " ").trim())),
+    locale === "zh" ? ["品牌介绍", "企业文化"] : ["Our brand", "Our principles"],
+    `${locale}: Footer About labels changed`,
+  );
+  assert.match(
+    await footer.innerText(),
+    locale === "zh" ? /关于凤启/ : /About Phoenix Nova/,
+    `${locale}: Footer About group is missing`,
+  );
 }
 
 async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
-  const expected = expectedPrimaryHrefs(locale);
+  const expected = expectedPrimaryNavigation(locale);
   const links = page.locator(mobile ? ".mobile-menu nav > a" : ".desktop-nav > a");
   if (mobile) {
     const menu = page.locator(".mobile-menu");
     if (!(await menu.evaluate(element => element.open))) await page.locator(".mobile-menu summary").click();
     assert.ok(await page.locator(".mobile-menu nav").isVisible(), `${locale}: mobile navigation is not visible`);
-    assert.equal(await links.count(), 10, `${locale}: mobile navigation includes seven primary links, Family Center, partner introduction and locale switch`);
+    assert.equal(await links.count(), 9, `${locale}: mobile navigation includes six primary links, Family Center, partner introduction and locale switch`);
   } else {
     assert.ok(await links.first().isVisible(), `${locale}: desktop navigation is not visible`);
-    assert.equal(await links.count(), 7, `${locale}: desktop navigation must contain seven primary links`);
+    assert.equal(await links.count(), 6, `${locale}: desktop navigation must contain the six Founder-approved primary links`);
   }
   const hrefs = await links.evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute("href")));
-  assert.deepEqual(hrefs.slice(0, expected.length), expected, `${locale}: primary navigation hrefs changed`);
+  const labels = await links.evaluateAll(anchors => anchors.map(anchor => (anchor.textContent || "")
+    .replace(/^\s*\d{2}\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim()));
+  assert.deepEqual(hrefs.slice(0, expected.hrefs.length), expected.hrefs, `${locale}: primary navigation hrefs changed`);
+  assert.deepEqual(labels.slice(0, expected.labels.length), expected.labels, `${locale}: primary navigation labels changed`);
   if (mobile) {
-    assert.equal(hrefs[7], `/${locale}/account`, `${locale}: mobile Family Center must use the controlled account entry`);
-    assert.equal(hrefs[8], '#partners');
-    assert.equal(hrefs[9], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
+    assert.equal(hrefs[6], `/${locale}/account`, `${locale}: mobile Family Center must use the controlled account entry`);
+    assert.equal(hrefs[7], '#partners');
+    assert.equal(hrefs[8], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
+    assert.deepEqual(labels.slice(6), locale === "zh"
+      ? ["家庭中心", "合作伙伴工作台 · 受控预览", "English"]
+      : ["My Family Center", "Partner workspace · Controlled preview", "中文"], `${locale}: mobile utility navigation labels changed`);
     await page.locator(".mobile-menu summary").click();
   }
+  await assertFooterAboutEntry(page, locale);
 }
 
 async function assertCrossBorderProcess(page, route) {
