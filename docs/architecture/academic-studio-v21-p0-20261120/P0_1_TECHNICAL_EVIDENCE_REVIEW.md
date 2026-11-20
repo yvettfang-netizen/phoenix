@@ -199,7 +199,7 @@ No per-student slot reservation/booking object was found in formal migrations 00
 
 **GAP C — delivery mode / online meeting contract**
 
-The formal class/slot model has no explicit ONLINE / ONSITE / HYBRID mode, no private meeting-provider reference and no per-participant attendance mode for hybrid delivery. The meeting-provider adapter remains a product/integration contract, not an existing verified feature.
+The formal class/slot model has no explicit ONLINE / ONSITE / HYBRID mode, no private meeting-provider reference and no per-participant attendance mode for hybrid delivery. Founder has clarified the target authority: the assigned teacher (or explicitly authorized teaching administrator) sets the session mode; for a HYBRID session, the teacher assigns each enrolled student to Online or Onsite participation. Students/parents are read-only and cannot self-select or change the mode. Any teacher-directed change must be audited, notify affected participants and atomically re-check resource conflicts/capacity. The meeting-provider adapter remains a product/integration contract, not an existing verified feature.
 
 **GAP D — timezone presentation policy**
 
@@ -307,7 +307,7 @@ Codex has completed the source and CI checks available through connected tools. 
 The evidence supports a small number of real gaps, not a new education platform. The next step is Founder decisions on:
 1. how a single person may hold FAMILY + TEACHER + ADMIN/FOUNDER capabilities while keeping one Principal;
 2. whether `SUPERVISOR` may serve as Administrator or must be narrowed;
-3. hybrid roster/meeting semantics and timezone policy;
+3. timezone/DST policy and online-provider capacity; teacher-controlled Hybrid participation authority is confirmed by Founder;
 4. assessment evidence/licensing/review/retention requirements;
 5. what the existing Education Compass local student data model should do during the Canonical-only integration.
 
