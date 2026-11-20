@@ -1,0 +1,48 @@
+name: Canonical-only legacy database boundary
+
+on:
+  pull_request:
+    paths:
+      - "database/**"
+      - "Phoenix Compass/education compass/**"
+      - "Phoenix Family OS/phoenix-family-os-mvp/**"
+      - "askwise/**"
+      - "website/**"
+      - ".github/scripts/verify-canonical-only.mjs"
+      - ".github/workflows/canonical-only-legacy-boundary.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  no-parallel-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+      - run: node .github/scripts/verify-canonical-only.mjs
+
+  askwise-retirement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: askwise/askwise-learning-engine
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: askwise/askwise-learning-engine/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

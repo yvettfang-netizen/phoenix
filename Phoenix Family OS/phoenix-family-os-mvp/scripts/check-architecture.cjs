@@ -9,7 +9,7 @@ function resolveLocal(relative) {
   assert(!scoped.startsWith('..') && !path.isAbsolute(scoped), 'path escapes Family OS: ' + relative);
   return target;
 }
-for (const file of [...map.runtimeEntrypoints, map.migrationSource]) {
+for (const file of [...map.runtimeEntrypoints, ...map.dataAuthorityDocuments]) {
   assert(fs.statSync(resolveLocal(file)).isFile(), 'missing runtime source: ' + file);
 }
 for (const directory of map.reservedDirectories) {
@@ -41,4 +41,4 @@ for (const file of documents) {
   }
 }
 console.log('Architecture OK: ' + map.reservedDirectories.length + ' directories, ' + map.modules.length + ' module maps, ' + documents.length + ' Markdown files, ' + checkedLinks + ' local links.');
-console.log('Runtime entry and existing migration preserved. Reserved modules are not implemented.');
+console.log('Runtime entry preserved; Canonical PostgreSQL is the only persistent source. Reserved modules are not implemented.');

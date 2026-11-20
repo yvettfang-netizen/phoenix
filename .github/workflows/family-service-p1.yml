@@ -58,11 +58,15 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/p1-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
           node "$RUNNER_TEMP/p1-browser/node_modules/playwright/cli.js" install --with-deps chromium
-      - name: Synthetic D1 login to BFF to PostgreSQL acceptance
+      - name: Synthetic Canonical identity fixture contracts
+        run: node --test database/canonical/verification/p1/canonical-auth-fixture.test.mjs
+      - name: Synthetic Canonical identity to BFF to PostgreSQL acceptance
+        timeout-minutes: 10
         env:
           P1_EVIDENCE_DIR: ${{ runner.temp }}/p1-family-service/pg${{ matrix.pg }}
         run: node --import ./website/phoenix-nova-website-v5/tests/register-typescript.mjs database/canonical/verification/p1/acceptance.mjs '${{ matrix.pg }}'
       - name: Isolated Family Service browser and screenshots
+        timeout-minutes: 15
         env:
           P1_EVIDENCE_DIR: ${{ runner.temp }}/p1-family-service/browser-pg${{ matrix.pg }}
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/p1-browser/node_modules/playwright

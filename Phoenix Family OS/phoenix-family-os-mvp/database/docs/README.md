@@ -1,5 +1,3 @@
 # 持久化说明
 
-小程序使用 services/store.js 管理微信本地数据；问卷代理使用 backend/database.js 管理本地 SQLite，两者尚不是共享生产家庭数据库。
-
-结构迁移必须区分客户端 Demo 状态、问卷提交与未来 Core 主体，不能假定本地 family_id 已完成 Core 映射。参见 [Schema 映射](../schema/README.md)。
+2026-11-10：独立 SQLite 后端已移除。微信本地演示数据并非生产主数据；正式用户身份、家庭成员、问卷及服务项目均由 Canonical PostgreSQL 受控接口管理。缺少可信身份或 API 时拒绝写入。

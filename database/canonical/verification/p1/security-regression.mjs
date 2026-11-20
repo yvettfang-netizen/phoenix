@@ -71,41 +71,32 @@ export async function verifyGatewaySecurity(db,rt,customerToken,check){
  check('A3 effective role rejects unexpected ACLs and object ownership before ticket issue',{driftCases:[...grants.map(([name])=>name),'table ownership with ordinary ACLs revoked']})
 }
 
-export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,account,mapping,check}){
+export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,authFixture,account,mapping,check}){
  const invoke=async(resource,{onAudit=()=>{},onReleaseRead,mappedProvider=provider,body,key}={})=>{
   const ids=[]
   let sessionReads=0
-  const observedDb={
-   prepare(sql){
-    const statement=config.db.prepare(sql)
-    if(onReleaseRead&&sql.includes('FROM core_auth_sessions')){
-     return {bind(...values){return {async first(){
-      const row=await statement.bind(...values).first()
-      if(++sessionReads===2)await onReleaseRead(row)
-      return row
-     }}}}
-    }
-    if(!sql.startsWith('INSERT INTO core_auth_audit'))return statement
-    return {bind(...values){
-     const bound=statement.bind(...values)
-     return {async run(){
-      await onAudit(values[2])
-      const result=await bound.run()
-      ids.push(values[0])
-      return result
-     }}
-    }}
+  const observedConfig={
+   ...config,
+   async verifySession(request,options){
+    const session=await config.verifySession(request,options)
+    if(++sessionReads===2&&onReleaseRead)await onReleaseRead(session)
+    return session
+   },
+   async recordAccess(actorId,action,requestId){
+    await onAudit(action)
+    await config.recordAccess(actorId,action,requestId)
+    ids.push(requestId)
    }
   }
   const headers={cookie:account.cookie}
   if(body)Object.assign(headers,{origin:config.origin,'content-type':'application/json','idempotency-key':key})
   const request=new Request(config.origin+'/api/service-workbench/'+resource,
    {method:body?'POST':'GET',headers,body:body?JSON.stringify(body):undefined})
-  const response=await bridge.handleCustomerServices(request,env,'development',resource,{...config,db:observedDb},mappedProvider)
-  const rows=await Promise.all(ids.map(auditId=>config.db.prepare('SELECT id,action FROM core_auth_audit WHERE id=?').bind(auditId).first()))
+  const response=await bridge.handleCustomerServices(request,env,'development',resource,observedConfig,mappedProvider)
+  const rows=authFixture.events.filter(row=>ids.includes(row.requestId))
   assert.ok(rows.length>0)
-  assert.equal(new Set(rows.map(row=>row.id.split(':')[0])).size,1)
-  assert.equal(rows[0].id.split(':')[1],'attempt')
+  assert.equal(new Set(rows.map(row=>row.requestId.split(':')[0])).size,1)
+  assert.equal(rows[0].requestId.split(':')[1],'attempt')
   return {response,actions:rows.map(row=>row.action)}
  }
  const attempt='CANONICAL_ACCESS_ATTEMPT',prepared='CANONICAL_ACCESS_PREPARED'
@@ -116,14 +107,14 @@ export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,acc
  assert.ok((await initial.response.json()).projects.some(item=>item.service_project_id===id(310)))
  assert.deepEqual(initial.actions,[attempt,prepared])
 
- const setExpiry=value=>config.db.prepare('UPDATE core_auth_sessions SET expires_at=? WHERE token_hash=?').bind(value,account.sessionHash).run()
- const expiry=await config.db.prepare('SELECT expires_at FROM core_auth_sessions WHERE token_hash=?').bind(account.sessionHash).first()
+ const setExpiry=value=>{authFixture.sessions.get(account.sessionHash).valid_until=value}
+ const expiry=authFixture.sessions.get(account.sessionHash).valid_until
  try{
   const expired=await invoke('summary',{onAudit:async action=>{if(atPreparation(action))await setExpiry(0)}})
   assert.equal(expired.response.status,401)
   assert.deepEqual(await expired.response.json(),{error:{code:'SIGN_IN_REQUIRED'}})
   assert.deepEqual(expired.actions,[attempt,prepared,denied])
- }finally{await setExpiry(expiry.expires_at)}
+ }finally{await setExpiry(expiry)}
 
  let releaseRow=false
  try{
@@ -133,9 +124,9 @@ export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,acc
   assert.deepEqual(await revoked.response.json(),{error:{code:'IDENTITY_BRIDGE_UNAVAILABLE'}})
   assert.deepEqual(revoked.actions,[attempt,prepared,unavailable])
  }finally{mapping.active=true}
- check('A2 revoking the mapping during the last D1 session lookup withholds the buffered project')
+ check('A2 revoking the mapping during final identity verification withholds the buffered project')
 
- for(const point of ['D1 read','authority check']){
+ for(const point of ['identity verification','authority check']){
   let deadline=0,entered=false
   const onAudit=async action=>{
    if(atPreparation(action)){
@@ -158,15 +149,15 @@ export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,acc
    }}
    const expired=await invoke('summary',{onAudit,mappedProvider,onReleaseRead:async row=>{
     assert.equal(row?.valid_until,deadline)
-    if(point==='D1 read')await crossDeadline()
+    if(point==='identity verification')await crossDeadline()
    }})
    assert.ok(entered&&Date.now()>=deadline,point)
    assert.equal(expired.response.status,401,point)
    assert.deepEqual(await expired.response.json(),{error:{code:'SIGN_IN_REQUIRED'}})
    assert.deepEqual(expired.actions,[attempt,prepared,denied])
-  }finally{await setExpiry(expiry.expires_at)}
+  }finally{await setExpiry(expiry)}
  }
- check('A2 the session deadline must still be valid after both the D1 lookup and the final authority check')
+ check('A2 the session deadline must remain valid after identity verification and the final authority check')
 
  const currentRevision=()=>Number(db.sql("SELECT revision FROM service.workbench_settings WHERE service_project_id='"+id(310)+"'"))
  const content='Synthetic authorized download bytes'
@@ -187,7 +178,7 @@ export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,acc
   assert.equal(revoked.response.headers.get('content-disposition'),null)
   assert.deepEqual(revoked.actions,[attempt,prepared,unavailable])
  }finally{mapping.active=true}
- check('A2 D1 expiration and mapping revocation during the release audit withhold summary and real file bytes')
+ check('A2 identity expiration and mapping revocation during release audit withhold summary and real file bytes')
 
  const messageCount=()=>Number(db.sql("SELECT count(*) FROM service.workbench_messages WHERE service_project_id='"+id(310)+"'"))
  const before=messageCount(),resource=project(310)+'/commands',key='p1-security-a2-idempotent-message'
@@ -209,7 +200,7 @@ export async function verifyBridgeSecurity({db,rt,bridge,env,config,provider,acc
  assert.equal(refused.response.status,503)
  assert.deepEqual(await refused.response.json(),{error:{code:'IDENTITY_BRIDGE_UNAVAILABLE'}})
  assert.deepEqual(refused.actions,[attempt,unavailable])
- const auditFault=await invoke('summary',{onAudit:action=>{if(atPreparation(action))throw Error('Synthetic D1 audit outage')}})
+ const auditFault=await invoke('summary',{onAudit:action=>{if(atPreparation(action))throw Error('Synthetic Canonical audit callback outage')}})
  assert.equal(auditFault.response.status,503)
  assert.deepEqual(auditFault.actions,[attempt,unavailable])
  check('A4 provider and audit faults record a correlated terminal failure and disclose no provider error')
