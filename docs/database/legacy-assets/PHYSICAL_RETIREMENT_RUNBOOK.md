@@ -68,9 +68,13 @@ sudo systemctl disable --now education-compass.service education-compass-agent-w
 pm2 delete phoenix_uat_api phoenix_uat_agent_worker 2>/dev/null || true
 pm2 save 2>/dev/null || true
 sudo systemctl daemon-reload
+
+# Remove only the retired Education high-frequency health-check cron; preserve other cron entries.
+( crontab -l 2>/dev/null | grep -vF '/home/ubuntu/health-check.sh' ) | crontab -
+crontab -l
 ```
 
-Verify both systemd units are inactive/disabled and both PM2 process names are absent. Remove only the two retired unit files from `/etc/systemd/system` if they remain there, then run `sudo systemctl daemon-reload` again.
+Verify both systemd units are inactive/disabled, both PM2 process names are absent, and no retired health-check cron remains. Remove only the two retired unit files from `/etc/systemd/system` if they remain there, then run `sudo systemctl daemon-reload` again.
 
 ### C. Drop only the confirmed legacy databases
 
