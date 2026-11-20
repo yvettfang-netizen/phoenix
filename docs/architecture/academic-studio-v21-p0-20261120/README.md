@@ -6,6 +6,7 @@ Baseline: `phoenix/main@9db147ac3a5d135d50b90bfea5a7316ce747d90b` (verified 2026
 
 ## Deliverables
 
+- [Founder Decision Record — approved P0 choices and P0.1 gate](FOUNDER_DECISIONS.md)
 - [Founder Executive Decision Brief](EXECUTIVE_DECISION_BRIEF.md)
 - [Target ERD](TARGET_ERD.md)
 - [Database reuse and gaps](DATABASE_REUSE_AND_GAPS.md)
