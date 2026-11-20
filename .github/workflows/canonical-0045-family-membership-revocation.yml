@@ -1,0 +1,55 @@
+name: Canonical 0045 family membership revocation
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/family-membership-revocation/**'
+      - 'database/canonical/verification/v0045/**'
+      - '.github/workflows/canonical-0045-family-membership-revocation.yml'
+      - 'database/canonical/migrations/**'
+permissions:
+  contents: read
+concurrency:
+  group: canonical-0045-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Verify 0045 candidate, rollback and formal baseline
+        run: |
+          node database/canonical/verification/v0045/verify-source.mjs
+          node database/canonical/verification/v0037/verify-source.mjs
+      - name: Scan candidate and verification sources
+        run: |
+          image='ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f'
+          for path in database/canonical/forward-candidates/family-membership-revocation database/canonical/verification/v0045 .github/workflows/canonical-0045-family-membership-revocation.yml; do
+            docker run --rm --network none --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
+          done
+  isolated-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['16','17']
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+          cache: npm
+          cache-dependency-path: 'Phoenix Compass/education compass/server/package-lock.json'
+      - name: Install existing backend PostgreSQL test dependency
+        working-directory: Phoenix Compass/education compass/server
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run formal 0037 to 0045 same-backend revocation tests
+        run: node database/canonical/verification/v0045/acceptance.mjs '${{ matrix.version }}'

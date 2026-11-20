@@ -1,0 +1,35 @@
+{
+  "status": "DEVELOPMENT CANDIDATE; NOT APPROVED FOR INSTALLATION, MERGE OR DEPLOYMENT",
+  "candidate": "0045",
+  "file": "0045_family_membership_live_revocation.sql",
+  "sha256": "cccfd555e73b443be7557d08e41f43922ad46b175ebc5d351d061ab25f3ff6b1",
+  "rollback_file": "rollback_0045_family_membership_live_revocation.sql",
+  "rollback_sha256": "e711e45a2bd64cbdf4a3e9547850327f3adeb908605897a36acabe739336fa47",
+  "formal_base": {
+    "migrations": 37,
+    "last": "0037_scoped_public_id_projection_read_audit.sql"
+  },
+  "scope": "Replace only learning.can_read_sensitive(uuid,uuid,uuid); require the current actor's active core.family_memberships row on the FAMILY guardian-to-child branch.",
+  "preconditions": {
+    "function": "learning.can_read_sensitive(uuid,uuid,uuid)",
+    "language": "sql",
+    "volatility": "VOLATILE",
+    "security_definer": true,
+    "allowed_pre_implementation_prosrc_md5": "cd414150847fad2d1f8f6318f2e21ebf",
+    "allowed_post_implementation_prosrc_md5": "e8a483fadc17d2768c7398f0cd40ae3c",
+    "drift": "Any other source or function-attribute fingerprint is refused."
+  },
+  "changed_objects": [
+    "learning.can_read_sensitive(uuid,uuid,uuid)"
+  ],
+  "added_tables": 0,
+  "added_columns": 0,
+  "added_indexes": 0,
+  "added_policies": 0,
+  "added_roles": 0,
+  "added_schemas": 0,
+  "data_migration": false,
+  "permissions": "CREATE OR REPLACE preserves the existing owner and ACL; no GRANT or REVOKE is included.",
+  "rollback": "Explicit rollback SQL restores the pre-0045 function body and retains owner/ACL.",
+  "activation": "Founder second approval required. Do not copy into database/canonical/migrations or install in any shared environment."
+}
