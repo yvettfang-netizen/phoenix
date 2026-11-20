@@ -273,7 +273,8 @@ No universal score or cross-instrument conversion field.
 - No cross-instrument average, ranking, percentile conversion or normalized “overall ability” score.
 - Official/self-reported/teacher-assessed/AI-proposed sources are visibly distinct.
 - AI_PROPOSAL cannot become PUBLISHED without qualified human review and a recorded reviewer.
-- Student sees only their own permitted records. Parent sees only PUBLISHED records for children backed by current Guardian Authority and Consent. Teacher sees only assigned student records needed for the teaching task. Admin/Founder access is audited and grant-scoped.
+- Student sees only their own permitted records; the student-self projection never returns siblings or Family summary. Parent sees only PUBLISHED records for children backed by current Guardian Authority and Consent. Teacher sees only assigned student records needed for the teaching task. Admin/Founder access is audited and grant-scoped.
+- The assessment read function branches explicitly: STUDENT self-only; FAMILY exact child + verified Guardian Authority + EDUCATION Consent; STAFF exact assignment or Admin/Founder grant + subject-scoped EDUCATION Consent. Direct table access remains denied.
 - Corrections append a superseding attempt/event; no silent overwrite or delete.
 - Use `docs.documents` for evidence; do not copy raw assessment answers or full report binaries into Family Timeline.
 - Use existing Family Timeline event contract as the presentation layer. New event types require registry review; do not create a second timeline table.
