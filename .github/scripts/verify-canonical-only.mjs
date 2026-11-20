@@ -66,6 +66,13 @@ const extraLegacy = [
   'Phoenix Compass/education compass/ops/systemd/education-compass-agent-worker.service'
 ];
 for (const path of extraLegacy) assert(!existsSync(join(root,path)),'Retired Education database operation reappeared: '+path);
+const publicMonitor=join(root,'ops/monitoring/public-api-health-check.sh');
+assert(existsSync(publicMonitor),'Public Phoenix API monitor missing after legacy health-check removal');
+const publicMonitorSource=readFileSync(publicMonitor,'utf8');
+assert(publicMonitorSource.includes('https://api.phoenixnova.com.cn/health'),'Public API health endpoint is not monitored');
+assert(!publicMonitorSource.includes('phoenix_uat')&&!publicMonitorSource.includes('3010/health'),'Public API monitor references retired Education UAT');
+const feishuAlertSource=readFileSync(join(root,'Phoenix Compass/education compass/ops/server/set-feishu-alert.sh'),'utf8');
+assert(feishuAlertSource.includes('/home/ubuntu/public-api-health-check.sh'),'2-minute public API monitor cron was removed');
 const educationEnv=readFileSync(join(root,'Phoenix Compass/education compass/server/.env.example'),'utf8');
 assert(!educationEnv.includes('DATABASE_URL='),'Retired standalone Education DATABASE_URL remains in env example');
 const site=JSON.parse(readFileSync(join(root,'website/phoenix-nova-website-v5/.openai/hosting.json'),'utf8'));
