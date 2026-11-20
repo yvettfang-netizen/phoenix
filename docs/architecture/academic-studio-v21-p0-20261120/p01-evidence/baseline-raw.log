@@ -1,0 +1,109 @@
+COMMAND gh api repos/yvettfang-netizen/phoenix/commits/main --jq .sha
+9db147ac3a5d135d50b90bfea5a7316ce747d90b
+COMMAND gh pr view 76 --repo yvettfang-netizen/phoenix --json headRefOid,baseRefOid,isDraft,url
+{"baseRefOid":"9db147ac3a5d135d50b90bfea5a7316ce747d90b","headRefOid":"78f3716f31403907b6ab254a86cf6df888e5ebfe","isDraft":true,"url":"https://github.com/yvettfang-netizen/phoenix/pull/76"}
+COMMAND gh pr checks 76 --repo yvettfang-netizen/phoenix
+catalog-e2e (16)	pass	2m52s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838049/job/136041663634	
+catalog-e2e (17)	pass	3m45s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838049/job/136041664219	
+education	pass	8m36s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837957/job/136041662669	
+education-client-regression	pass	16s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664794	
+family-projection-e2e (16)	pass	1m51s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837724/job/136041663237	
+family-projection-e2e (17)	pass	3m33s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837724/job/136041662681	
+health	pass	9m10s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837777/job/136041662461	
+identity	pass	2m16s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837760/job/136041662563	
+isolated-postgres (16, fresh)	pass	35s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664716	
+isolated-postgres (16, upgrade)	pass	34s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664569	
+isolated-postgres (17, fresh)	pass	43s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664821	
+isolated-postgres (17, upgrade)	pass	35s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664787	
+public-candidate-scan	pass	16s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664891	
+scoped-read-audit (16)	pass	6m5s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838027/job/136041664182	
+scoped-read-audit (17)	pass	7m2s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838027/job/136041663697	
+synthetic-d1-bff-postgres (16)	pass	3m42s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837826/job/136041663001	
+synthetic-d1-bff-postgres (17)	pass	3m37s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837826/job/136041663302	
+synthetic-workbench (16)	pass	6m42s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837976/job/136041663043	
+synthetic-workbench (17)	pass	6m19s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837976/job/136041663463	
+wealth-compass-regression	pass	38s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664826	
+website-regression	pass	1m53s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664495	
+website/phoenix-digital-world	pass	38s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838135/job/136041664046	
+website/phoenix-east	pass	51s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838135/job/136041664168	
+website/phoenix-nova-website-v5	pass	2m40s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838135/job/136041663892	
+CHECKS_EXIT=0
+COMMAND gh pr view 77 --repo yvettfang-netizen/phoenix --json headRefOid,baseRefOid,isDraft,url
+{"baseRefOid":"9db147ac3a5d135d50b90bfea5a7316ce747d90b","headRefOid":"380fec99da5151fd28b8a5d3a2acaaa7292d3c23","isDraft":true,"url":"https://github.com/yvettfang-netizen/phoenix/pull/77"}
+COMMAND gh pr checks 77 --repo yvettfang-netizen/phoenix
+workspace-authorization (16)	fail	42s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668551/job/136194838063	
+workspace-authorization (17)	fail	34s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668551/job/136194837946	
+catalog-e2e (16)	pass	2m14s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668270/job/136194509299	
+catalog-e2e (17)	pass	2m20s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668270/job/136194509511	
+education-client-regression	pass	13s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668284/job/136194510053	
+family-projection-e2e (16)	pass	2m3s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668294/job/136194509540	
+family-projection-e2e (17)	pass	1m28s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668294/job/136194510003	
+isolated-postgres (16, fresh)	pass	35s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668284/job/136194510306	
+isolated-postgres (16, upgrade)	pass	46s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668284/job/136194509986	
+isolated-postgres (17, fresh)	pass	33s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668284/job/136194510181	
+isolated-postgres (17, upgrade)	pass	33s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668284/job/136194510400	
+public-candidate-scan	pass	14s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668284/job/136194510048	
+scoped-read-audit (16)	pass	6m40s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668353/job/136194509495	
+scoped-read-audit (17)	pass	6m26s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668353/job/136194509776	
+source-and-server	pass	40s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668551/job/136194510497	
+synthetic-d1-bff-postgres (16)	pass	12m16s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668380/job/136194510295	
+synthetic-d1-bff-postgres (17)	pass	2m17s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668380/job/136194510639	
+synthetic-workbench (16)	pass	5m27s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668375/job/136194509980	
+synthetic-workbench (17)	pass	3m56s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668375/job/136194510875	
+wealth-compass-regression	pass	30s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668284/job/136194509621	
+website-regression	pass	1m51s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44708668284/job/136194509897	
+CHECKS_EXIT=1
+COMMAND gh pr view 83 --repo yvettfang-netizen/phoenix --json headRefOid,baseRefOid,isDraft,url
+{"baseRefOid":"9db147ac3a5d135d50b90bfea5a7316ce747d90b","headRefOid":"80cbf0d98b346f12587568689196e07a8f6e481e","isDraft":true,"url":"https://github.com/yvettfang-netizen/phoenix/pull/83"}
+COMMAND gh pr checks 83 --repo yvettfang-netizen/phoenix
+catalog-e2e (16)	pass	2m5s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086703/job/136216415403	
+catalog-e2e (17)	pass	2m3s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086703/job/136216414965	
+education	pass	4m51s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086779/job/136216299688	
+education-client-regression	pass	18s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086790/job/136216416630	
+family-projection-e2e (16)	pass	1m56s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086960/job/136216392061	
+family-projection-e2e (17)	pass	1m33s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086960/job/136216392537	
+health	pass	8m20s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086738/job/136216299384	
+identity	pass	2m18s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086772/job/136216299486	
+isolated-postgres (16, fresh)	pass	34s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086790/job/136216416888	
+isolated-postgres (16, upgrade)	pass	36s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086790/job/136216416551	
+isolated-postgres (17, fresh)	pass	33s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086790/job/136216416949	
+isolated-postgres (17, upgrade)	pass	41s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086790/job/136216416567	
+public-candidate-scan	pass	17s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086790/job/136216416506	
+scoped-read-audit (16)	pass	6m39s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086989/job/136216391301	
+scoped-read-audit (17)	pass	6m33s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086989/job/136216391827	
+synthetic-d1-bff-postgres (16)	pass	2m30s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086820/job/136216326239	
+synthetic-d1-bff-postgres (17)	pass	2m22s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086820/job/136216325812	
+synthetic-workbench (16)	pass	4m21s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086605/job/136216327294	
+synthetic-workbench (17)	pass	5m20s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086605/job/136216326909	
+wealth-compass-regression	pass	29s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086790/job/136216416492	
+website-regression	pass	1m30s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086790/job/136216416061	
+website/phoenix-digital-world	pass	36s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086850/job/136216300370	
+website/phoenix-east	pass	44s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086850/job/136216300215	
+website/phoenix-nova-website-v5	pass	2m9s	https://github.com/yvettfang-netizen/phoenix/actions/runs/44715086850/job/136216300414	
+CHECKS_EXIT=0
+COMMAND git show 80cbf0d98b346f12587568689196e07a8f6e481e:<path> | SHA-256 (fixed PR83 baseline)
+7dc0c5060237fae9069915ba8a1ecc39323cf74ab8ea0d49dd832ef9d8330618  database/canonical/migrations/0003_core_consent_access.sql
+49ec737393a4a4bc5f1e287add369db4f04fbde1c021521e8b4cf781f966ff93  database/canonical/migrations/0007_security_boundary_fixes.sql
+51215c0b4d76e242c28197187bf1e017362700128ddd562e2da5d64980a8588d  database/canonical/migrations/0008_expiry_and_ephemeral_cleanup.sql
+2a48d016c0b2dd952d56a15853c8092895df057e6a0d69f5ab391803ca0747c2  database/canonical/migrations/0009_application_write_api.sql
+385206d698db33cd6a26b7ea48ab5362f2fa2e4256ec96740c336429ad54afa8  database/canonical/migrations/0012_service_principal_and_context.sql
+063f8ba5b57de24208579369ce75424526737953319544d0174c5a31e3f5d74b  database/canonical/migrations/0018_advisor_session_scope_and_binder_hardening.sql
+425b72e7c62916da9c8c22624dc3d2beca547a0b8b96297a68604ecf574cec94  database/canonical/migrations/0019_education_master_and_records.sql
+4df4b55cc9b2830c357d676906a77a9fa7ac981bbe4673c156285aa40fba2f5f  database/canonical/migrations/0022_learning_core.sql
+29c153177b4177cc279fe2494e2be563bd6250f6564c57fc62e381df1c7decb2  database/canonical/migrations/0037_scoped_public_id_projection_read_audit.sql
+9f634544a39591ca9a089885bba64ef829d0bddc84dfa9b6ca444b3af1f2542c  docs/architecture/academic-studio-v21-p0-20261120/FOUNDER_DECISIONS.md
+adc30d19f30e24ae78f0864d61e2b014a8fafb5a06177651b9650276347c7563  docs/architecture/academic-studio-v21-p0-20261120/P0_1_IDENTITY_CONTRACT.md
+41a58d365efd3d2d3c5f1922d7ef4a63e2c8329cdb279a06921e86cea571e288  docs/architecture/academic-studio-v21-p0-20261120/P0_1_SHARED_RESOURCE_CONTRACT.md
+621d0d4c2a24924b18099018031e84f9fe932c2bea5f2a1f3bc09dd34499a1db  docs/architecture/academic-studio-v21-p0-20261120/P0_1_ASSESSMENT_CONTRACT.md
+329d00802bf7825f0e92cd306ecf1181f95fea85ec674ecf4ab76de9f7c5837e  docs/architecture/academic-studio-v21-p0-20261120/P0_1_COMMERCIAL_OPTIONS_HOLD.md
+329b098e01a432cc27f49120930c172f18f556ea8a728b334d7955fad0f21d1d  docs/architecture/academic-studio-v21-p0-20261120/P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md
+e82f8ce61e2ed8706b1d6e56be54f68ba01e9a4c30b9dfb4db5edf91a10405cc  docs/architecture/academic-studio-v21-p0-20261120/P0_1_GATE_PLAN.md
+COMMAND candidate 0042 SHA-256 from fixed PR77 Git blob
+1bd86f098a8382d943da109ad05d226ee8edcfe1e75d8161983a86b9ce02d75e  380fec99da5151fd28b8a5d3a2acaaa7292d3c23:database/canonical/forward-candidates/workspace-authorization/0042_organization_workspace_authorization.sql
+COMMAND git status --short and formal migration count
+ M docs/architecture/academic-studio-v21-p0-20261120/P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md
+?? docs/architecture/academic-studio-v21-p0-20261120/P0_1_JIMSON_NONPROD_TICKET.md
+?? docs/architecture/academic-studio-v21-p0-20261120/P0_1_SECURITY_SECOND_PASS.md
+?? docs/architecture/academic-studio-v21-p0-20261120/P0_1_TECHNICAL_REVIEW.md
+?? docs/architecture/academic-studio-v21-p0-20261120/p01-evidence/
+37

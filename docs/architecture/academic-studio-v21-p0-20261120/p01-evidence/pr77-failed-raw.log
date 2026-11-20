@@ -1,0 +1,128 @@
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	﻿2026-11-20T09:12:56.1193691Z ##[group]Run node database/canonical/verification/v0042/acceptance.mjs '17'
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:12:56.1194649Z ^[[36;1mnode database/canonical/verification/v0042/acceptance.mjs '17'^[[0m
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:12:56.1256794Z shell: /usr/bin/bash -e {0}
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:12:56.1257070Z env:
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:12:56.1257423Z   WORKSPACE_AUTH_EVIDENCE_DIR: /home/runner/work/_temp/workspace-auth-evidence/pg17
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:12:56.1257860Z ##[endgroup]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1035641Z PASS owned workspace-auth cluster and private fixture directory cleaned
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1042168Z file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/cluster.mjs:36
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1043708Z       throw new Error(`Owned Docker ${args[0]} failed: ${redact(result.stderr + result.stdout).slice(-2200)}`)
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1044669Z             ^
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1044942Z 
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1046601Z Error: Owned Docker exec failed: psql:/tmp/canonical-atomic.sql:388: NOTICE:  trigger "protect_advisor_assignment" for relation "casework.advisor_assignments" does not exist, skipping
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1049130Z psql:/tmp/canonical-atomic.sql:407: NOTICE:  trigger "protect_guardian_authority" for relation "core.guardian_authorities" does not exist, skipping
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1051350Z psql:/tmp/canonical-atomic.sql:442: NOTICE:  trigger "validate_submission_target" for relation "docs.submission_manifests" does not exist, skipping
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1053027Z psql:/tmp/canonical-atomic.sql:331: ERROR:  syntax error at or near "ELSE"
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1053811Z LINE 59:   ELSE
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1054213Z            ^
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1054739Z APPLIED 0001_foundation.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1055400Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1056250Z APPLIED 0003_core_consent_access.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1056916Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1057603Z APPLIED 0005_documents_submissions.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1058358Z APPLIED 0006_access_decision_api.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1059228Z APPLIED 0007_security_boundary_fixes.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1060109Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1060901Z APPLIED 0009_application_write_api.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1061638Z APPLIED 0010_reader_ledger_usage.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1062294Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1062869Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1063526Z APPLIED 0013_management_write_api.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1064243Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1064940Z APPLIED 0015_contract_gap_controls.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1065744Z APPLIED 0016_assignment_scope_integrity.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1066721Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1067317Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1067965Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1068623Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1069203Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1069841Z APPLIED 0022_learning_core.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1070468Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1071036Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1071600Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1072162Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1072819Z APPLIED 0027_crm_lead_deal_foundation.sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1073490Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1074031Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1074599Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1075154Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1075690Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1076697Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1077277Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1077844Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1078468Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1079028Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1079716Z 
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1079733Z 
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1080486Z     at call (file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/cluster.mjs:36:13)
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1082006Z     at migrate (file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/cluster.mjs:89:25)
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1083540Z     at createCluster (file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/cluster.mjs:99:27)
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1085612Z     at async run (file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/acceptance.mjs:46:8)
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1087464Z     at async file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/acceptance.mjs:383:3
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1088299Z 
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1088491Z Node.js v22.13.0
+workspace-authorization (17)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:10.1104699Z ##[error]Process completed with exit code 1.
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	﻿2026-11-20T09:13:03.4300393Z ##[group]Run node database/canonical/verification/v0042/acceptance.mjs '16'
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:03.4300970Z ^[[36;1mnode database/canonical/verification/v0042/acceptance.mjs '16'^[[0m
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:03.4319668Z shell: /usr/bin/bash -e {0}
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:03.4320018Z env:
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:03.4320385Z   WORKSPACE_AUTH_EVIDENCE_DIR: /home/runner/work/_temp/workspace-auth-evidence/pg16
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:03.4320767Z ##[endgroup]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8679820Z PASS owned workspace-auth cluster and private fixture directory cleaned
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8684034Z file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/cluster.mjs:36
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8684951Z       throw new Error(`Owned Docker ${args[0]} failed: ${redact(result.stderr + result.stdout).slice(-2200)}`)
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8685452Z             ^
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8685592Z 
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8686226Z Error: Owned Docker exec failed: psql:/tmp/canonical-atomic.sql:388: NOTICE:  trigger "protect_advisor_assignment" for relation "casework.advisor_assignments" does not exist, skipping
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8687331Z psql:/tmp/canonical-atomic.sql:407: NOTICE:  trigger "protect_guardian_authority" for relation "core.guardian_authorities" does not exist, skipping
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8688180Z psql:/tmp/canonical-atomic.sql:442: NOTICE:  trigger "validate_submission_target" for relation "docs.submission_manifests" does not exist, skipping
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8689045Z psql:/tmp/canonical-atomic.sql:331: ERROR:  syntax error at or near "ELSE"
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8689473Z LINE 59:   ELSE
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8689752Z            ^
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8690024Z APPLIED 0001_foundation.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8690325Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8690639Z APPLIED 0003_core_consent_access.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8691006Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8691347Z APPLIED 0005_documents_submissions.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8691693Z APPLIED 0006_access_decision_api.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8692040Z APPLIED 0007_security_boundary_fixes.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8692364Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8692687Z APPLIED 0009_application_write_api.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8693271Z APPLIED 0010_reader_ledger_usage.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8693686Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8693963Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8694287Z APPLIED 0013_management_write_api.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8694646Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8694939Z APPLIED 0015_contract_gap_controls.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8695299Z APPLIED 0016_assignment_scope_integrity.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8695632Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8695909Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8696196Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8696514Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8696804Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8697107Z APPLIED 0022_learning_core.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8697398Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8697704Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8698060Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8698352Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8698688Z APPLIED 0027_crm_lead_deal_foundation.sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8699027Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8699295Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8699552Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8699838Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8700108Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8700428Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8700695Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8700941Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8701265Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8701533Z APPLIED [REDACTED].sql [REDACTED]
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8701894Z 
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8701901Z 
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8702277Z     at call (file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/cluster.mjs:36:13)
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8705286Z     at migrate (file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/cluster.mjs:89:25)
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8705952Z     at createCluster (file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/cluster.mjs:99:27)
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8706753Z     at async run (file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/acceptance.mjs:46:8)
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8707448Z     at async file:///home/runner/work/phoenix/phoenix/database/canonical/verification/v0042/acceptance.mjs:383:3
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8707745Z 
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8707884Z Node.js v22.13.0
+workspace-authorization (16)	PG fresh repeat drift atomicity and cross-organization authorization	2026-11-20T09:13:17.8720470Z ##[error]Process completed with exit code 1.

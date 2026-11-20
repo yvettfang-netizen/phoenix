@@ -40,7 +40,7 @@ The follow-on contract package is prepared for Codex/Jimson review:
 - [Migration impact and negative acceptance matrix](P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md)
 - [P0.1 gate plan](P0_1_GATE_PLAN.md)
 
-P0.1 status: **contract drafts prepared; Jimson review pending; no migration authorized**. The commercial rules remain HOLD.
+P0.1 status: **Codex source and isolated PG16/17 technical review completed; security gate HOLD; no migration authorized**. See the [actual technical review](P0_1_TECHNICAL_REVIEW.md), [security second pass](P0_1_SECURITY_SECOND_PASS.md), [evidence matrix](P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md), and the [narrow Jimson nonproduction receipt ticket](P0_1_JIMSON_NONPROD_TICKET.md). The commercial rules remain HOLD.
 
 
 ## Engineering delegation rule

@@ -1,6 +1,6 @@
 # P0.1 Canonical Migration Impact Map and Negative Acceptance Matrix
 
-**Status:** REVIEW PLAN ONLY · no SQL authored or approved  
+**Status:** REVIEW PLAN + P0.1 EVIDENCE DISPOSITION · no SQL authored or approved
 **Purpose:** prepare an evidence-based minimal forward-migration proposal after contract review.
 
 ## 1. Reuse map
@@ -62,15 +62,53 @@
 | Assessment retracted | absent from future projection; audit retained | read + audit test |
 | Refund/payment duplicate event | no duplicate financial/entitlement event | deferred until commercial HOLD released |
 
-## 4. Required review evidence
+## 4. Actual P0.1 evidence (Codex First)
 
-Jimson must attach:
-- exact main and PR #77 HEADs;
-- source-file paths and SHA-256 for all reused functions/tables;
-- current schema introspection from a designated non-production PG16 and PG17, without production credentials;
-- actual role grants, RLS policies and FORCE status;
-- pool binder/app reset test;
-- precise list of gaps and candidate SQL objects;
-- migration dry-run and rollback/restore plan only after Founder authorizes SQL drafting.
+The direct source, GitHub, SQL, RLS/ACL and isolated synthetic PG16/17 review is in
+[`P0_1_TECHNICAL_REVIEW.md`](P0_1_TECHNICAL_REVIEW.md). The commands and raw outputs are in
+[`p01-evidence/`](p01-evidence/). The security-focused second pass is
+[`P0_1_SECURITY_SECOND_PASS.md`](P0_1_SECURITY_SECOND_PASS.md).
+The installed test baseline is **0001–0037** only. PR #77's 0042 and 0038/0039 were not installed.
 
-No database credentials are requested in this document. Do not connect to production.
+| Capability or invariant | Disposition | Evidence / limit |
+| --- | --- | --- |
+| Person, family, student master keys | **REUSE** | 0003 source and both disposable PG clusters accepted one shared synthetic family/student. This says nothing about a real identity provider. |
+| One-use binder → app context and clear | **REUSE** | Separate LOGINs on PG16/17 issued/redeemed a ticket; `auth.clear_context()` removed the following read. |
+| Parent learning read: verified guardian + active Consent | **REUSE with security GAP** | Published-card read = 1 while both active; Consent withdrawal yielded 0. Membership ending after context binding still yielded 1; see next row. |
+| Family membership revocation/expiry on next read | **GAP** | PG16/17 `before_membership_revoke=1`, `after_membership_revoke=1` on the *same bound app backend*. No current membership check in `learning.can_read_sensitive()`. |
+| Teacher assignment, Consent and revocation | **REUSE** | Assigned teacher read = 1; after assignment revocation = 0 on both versions. Full Academy teacher UI and pool behavior remain unverified. |
+| Academy teaching-admin grant | **UNVERIFIED** | `SUPERVISOR` Principal kind and Learning management functions exist, but no Academy-specific scoped admin authorization or UI behavior was established. Do not infer it from a browser-selected role. |
+| One FAMILY Principal with Student self + Parent guardian reads | **REUSE at database-read level** | The same synthetic FAMILY Principal read its own published card and a verified child card: `self_cards=1`, `authorized_cards=1` on both versions. The trusted default/switch route is absent. |
+| One Person with FAMILY and TEACHER Principal kinds | **GAP** | Second principal insert rejected by `principals_person_id_key` on both versions. Do not create another Person or session system to work around it. |
+| Student-default route and explicit Parent switch | **GAP** | No Academy capability resolver/route found in the reviewed server; six previews are static. Do not infer authority from browser role or route. |
+| Learning table RLS and direct read ACL | **REUSE** | PG16/17: 14/14 Learning tables FORCE RLS; separate reader LOGIN direct table read denied; catalog function allowed, internal teacher helper denied. |
+| Published course catalog | **REUSE for read-only catalog** | `learning.list_published_courses()` and `/v1/learning/catalog` exist. This does not establish course enrolment or student default navigation. |
+| Teacher schedule overlap | **REUSE** | GiST exclusion rejects synthetic overlapping slots on both versions. |
+| Stable room identity and overlap | **GAP** | `room_label` is text; two overlapping classes in `Synthetic Room 1` were accepted on both versions. |
+| Per-student slot booking and overlap | **GAP** | One student was placed in two simultaneously scheduled classes; no per-slot booking object or student overlap constraint exists in formal 0001–0037. |
+| Last-seat concurrency | **UNVERIFIED** | `learning.place_enrollment_in_class()` locks class and enrollment, but no concurrent two-client Academy acceptance test was found or run. |
+| Education academic facts | **REUSE for existing generic facts only** | `education.score_record`, `education.language_test` and `learning.stage_report` install in both clusters. Their values were not accepted as formal six-instrument scores. |
+| Six versioned assessment systems and governed timeline | **GAP** | No instrument/edition/scale/review/retraction authority or Academy timeline API in formal source. |
+| `education.study_enrollments` | **GAP if required** | Absent in formal source and both disposable clusters; never substitute it for `learning.enrollment`. Its business need is not yet established. |
+| Commercial package, debit, refund and settlement rules | **HOLD** | Founder deliberately withheld policy; no candidate SQL/API may be implemented from this packet. |
+| Named nonproduction database and real provider | **UNVERIFIED** | No approved connection/service receipt for P0.1. Only the narrow Jimson [read-only ticket](P0_1_JIMSON_NONPROD_TICKET.md) needs manual environment access. |
+
+## 5. Negative acceptance results
+
+| Test | PG16 | PG17 | Meaning |
+| --- | --- | --- | --- |
+| Direct Learning table read by real reader LOGIN | DENIED | DENIED | PASS |
+| Active guardian + Consent reads published card | 1 | 1 | PASS for the scoped read |
+| Same FAMILY Principal reads own and verified child's card | 1 + 1 | 1 + 1 | PASS at DB-read level; navigation NOT RUN |
+| Consent withdrawal, next read | 0 | 0 | PASS |
+| Assigned teacher, then revoked assignment | 1 → 0 | 1 → 0 | PASS |
+| Binder/app split and `clear_context()` | 1 → 0 | 1 → 0 | PASS |
+| Family membership expiry on already-bound app backend | 1 → **1** | 1 → **1** | **FAIL / security GAP** |
+| Second TEACHER Principal for same FAMILY Person | DENIED | DENIED | Constraint PASS, dual-kind product capability GAP |
+| Same teacher overlapping slot | DENIED | DENIED | PASS |
+| Same physical room, different teachers, overlapping slot | ACCEPTED | ACCEPTED | **FAIL / resource GAP** |
+| Same student in two overlapping classes | ACCEPTED | ACCEPTED | **FAIL / resource GAP** |
+| Student/Parent default, forged switch, sibling, Partner, DST, last-seat race, six-score projection | NOT RUN | NOT RUN | Missing Academy route/model or a dedicated concurrent test; never mark PASS from a design document. |
+
+The bounded report records the proposed minimum forward-migration boundary. No existing
+Migration was changed, no new Migration was allocated, and no production environment was accessed.

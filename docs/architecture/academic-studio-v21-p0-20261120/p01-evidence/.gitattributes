@@ -1,0 +1,2 @@
+# Preserve command output exactly, including trailing tabs/spaces emitted by gh.
+*.log whitespace=-blank-at-eol
