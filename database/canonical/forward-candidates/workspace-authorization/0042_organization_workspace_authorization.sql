@@ -310,7 +310,7 @@ BEGIN
          NEW.role_code NOT IN ('CHANNEL_ADMIN','CHANNEL_MEMBER')
          OR v_kind<>'CHANNEL')) THEN
       RAISE EXCEPTION 'WORKSPACE_ROLE_OR_ORGANIZATION_KIND_INVALID';
-    END IF;    END IF;
+    END IF;
   ELSE
     SELECT m.person_id,m.membership_role INTO v_person,v_membership_role
       FROM core.family_memberships m
@@ -1076,6 +1076,9 @@ BEGIN
   v_request:=auth.current_workspace_request_nonce();
   IF (auth.workspace_context_is_live()
       AND auth.current_workspace_kind()='STAFF'
+      AND auth.current_workspace_role() IN (
+        'STAFF_ADMIN','STAFF_ADVISOR','STAFF_OPERATIONS','STAFF_VIEWER'
+      )
       AND v_principal IS NOT NULL AND v_org IS NOT NULL) IS NOT TRUE THEN
     PERFORM auth.record_workspace_decision(
       v_principal,NULL,NULL,'READ','STAFF_PROJECT_PROJECTION',NULL,false,
