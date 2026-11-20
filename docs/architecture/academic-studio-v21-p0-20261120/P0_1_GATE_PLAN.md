@@ -10,9 +10,9 @@
 
 | Owner | Work | Required output |
 |---|---|---|
-| Codex | Primary source audit, exact SHA/PR reconciliation, SQL/API/RLS/ACL analysis, test generation and execution where authorized, evidence matrix, P0.1 report and smallest justified migration impact proposal | Reproducible source paths, hashes, commands, raw outputs, REUSE/GAP/UNVERIFIED matrix |
+| Codex / Assistant | Directly execute all repository, GitHub, SQL/source, API, automated-test, evidence collection and technical documentation work available through connected tools | Reproducible source paths, hashes, commands, raw outputs, REUSE/GAP/UNVERIFIED matrix |
 | Jimson | Exception-only manual execution in an authorized non-production environment or privileged operational checks unavailable to Codex | Exact execution ticket result with environment/version, command/steps, timestamp and sanitized raw evidence |
-| Xuanwu | Independent security review of identity, RLS/ACL, context lifecycle, revocation, pool reuse and negative-test conclusions | Independent findings linked to evidence; not a repeat of the whole source audit |
+| Assistant in Xuanwu role | Directly perform the security-focused second pass: identity threats, RLS/ACL, context lifecycle, revocation, pool reuse, negative tests and evidence integrity | Security findings linked to raw evidence; clearly distinguish model review from any separately required human attestation |
 | Founder | Approve unresolved product/commercial rules and next gate | Explicit P0.1 exit decision and, separately, commercial policy approval |
 
 ## 2. Work sequence
@@ -23,7 +23,7 @@
 4. Codex completes `P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md` with source evidence and marks each item REUSE / GAP / UNVERIFIED.
 5. For each remaining UNVERIFIED item, Codex must state the exact missing capability/access and decide whether it genuinely requires Jimson. Only then create a narrow Jimson manual execution ticket. Do not ask Jimson to repeat Codex-accessible work.
 6. Jimson executes only those tickets in the named non-production environment and returns raw sanitized evidence. If the access or environment is unavailable, leave the item UNVERIFIED.
-7. Codex verifies Jimson's evidence, integrates it, updates the report and reruns all checks available to Codex. Xuanwu independently reviews security-sensitive findings.
+7. The assistant verifies any Jimson manual evidence, integrates it, updates the report and reruns all checks available through connected tools. The assistant also performs the Xuanwu security-review pass directly; do not route that analysis through Jimson.
 8. Keep `P0_1_COMMERCIAL_OPTIONS_HOLD.md` separate. Codex may prepare alternatives and consequences; no implementation or policy default is authorized.
 9. Submit the P0.1 review report with all unresolved decisions, no SQL changes, and a recommended minimal migration boundary.
 10. Return to Founder for explicit approval to draft a separate forward migration.
