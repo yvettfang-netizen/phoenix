@@ -13,7 +13,7 @@
 | Session context and ticket | `auth.session_contexts`, `auth.context_exchange_tickets`, existing binder/redeemer/clear functions | Reuse; test pool hygiene and live revalidation |
 | Consent | `consent.grants` | Reuse where purpose/data-class contract matches; identify missing purposes only after policy review |
 | Teacher identity | `learning.teacher` → `core.people` | Reuse |
-| Teacher-to-class assignment | `learning.teacher_assignment` | Reuse; assignment is class scoped |
+| Teacher-to-class assignment | `learning.teacher_assignment` | Reuse; assignment is class scoped and must authorize mode changes |
 | Enrollment | `learning.enrollment` | Reuse; distinct from academic study enrollment |
 | Student-in-class | `learning.enrollment_class` | Reuse |
 | Timetable | `learning.schedule_slot` | Reuse; teacher overlap protection exists in formal source |
@@ -55,6 +55,10 @@
 | One teacher double-booked concurrently | one booking succeeds | concurrent PG test |
 | One student double-booked across classes | one booking succeeds | concurrent PG test |
 | One physical room double-booked | one booking succeeds | concurrent PG test |
+| Student/parent attempts to self-select or change Online/Onsite mode | DENY; no state change | API + DB authorization negative |
+| Unassigned teacher attempts to change session mode or Hybrid student participation | DENY | active-assignment authorization negative |
+| Assigned teacher changes Hybrid student's Online/Onsite participation | ALLOW only after room/provider/student/teacher conflict checks; audit and notify | transactional update + audit/outbox test |
+| Teacher-directed mode change would exceed room/provider capacity or create a time conflict | DENY atomically; prior assignment remains | concurrent PG rollback test |
 | Last small-group seat claimed concurrently | one reservation succeeds | capacity race test |
 | DST ambiguous/nonexistent local time | explicit rejection or selected offset | timezone boundary test |
 | CAT4 and IELTS values shown together | original scale labels retained, no conversion | projection/UI test |
