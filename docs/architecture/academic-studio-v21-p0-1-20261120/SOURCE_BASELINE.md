@@ -67,6 +67,7 @@ The existing Education Compass in-memory demo backend must not become a second p
 - Formal channel vocabulary includes FAMILY, ADVISOR, PARTNER, INTERNAL and STAFF. STUDENT is not yet a context channel.
 - `auth.session_contexts` and `auth.context_exchange_tickets` already support backend-bound context and one-use ticket transfer. The context ticket expires within 60 seconds.
 - Formal `auth.session_contexts.family_id` and ticket `family_id` are nullable at the column level, but current check constraints require a family for every channel except INTERNAL.
+- Existing `consent.has_active_consent()` is family-context-bound (`family_id = auth.current_family_id()`); a global STAFF context with NULL family cannot reuse it unchanged. A subject-scoped staff consent helper is a required gap if global STAFF context is approved.
 - `learning.teacher` is keyed to `core.people`; `learning.teacher_assignment` is class-scoped and time-bounded.
 - `learning.schedule_slot` has teacher overlap exclusion but uses free-text `room_label`; no stable room ID or per-student future slot reservation was found.
 - `learning.place_enrollment_in_class()` locks the class row before checking capacity, protecting the final group seat.
