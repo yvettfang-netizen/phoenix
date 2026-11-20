@@ -1,0 +1,508 @@
+{
+  "schemaVersion": "academic-studio-v21-p0-source-evidence.v1",
+  "capturedAt": "2026-11-20T08:39:52.039Z",
+  "main": "9db147ac3a5d135d50b90bfea5a7316ce747d90b",
+  "formalMigrations": [
+    {
+      "path": "database/canonical/migrations/0001_foundation.sql",
+      "sha256": "eea8d1deece72afdc3832d075fcfb42b71b4c1fe4fdccc8900104a0e0ca78a2d"
+    },
+    {
+      "path": "database/canonical/migrations/0002_education_identity_skeleton.sql",
+      "sha256": "bef7d9a902e8ad34491b7455987d7791667dcb8a5ab31945cf609a6aa97e4e7f"
+    },
+    {
+      "path": "database/canonical/migrations/0003_core_consent_access.sql",
+      "sha256": "7dc0c5060237fae9069915ba8a1ecc39323cf74ab8ea0d49dd832ef9d8330618"
+    },
+    {
+      "path": "database/canonical/migrations/0004_casework_education_identity.sql",
+      "sha256": "aec2be38c6ad363f5594d65016b8a2dfcb79fe76e77a225271379bb991a443e9"
+    },
+    {
+      "path": "database/canonical/migrations/0005_documents_submissions.sql",
+      "sha256": "7bd581d16bb8c21278bd5bc013496779fe08f509d84bf74b652e5ce3b21cdbec"
+    },
+    {
+      "path": "database/canonical/migrations/0006_access_decision_api.sql",
+      "sha256": "2a3d6cd19febd62b7128c9ad4a2d7c94abdb9a4e11d499f36f4050eb2c2ed9d8"
+    },
+    {
+      "path": "database/canonical/migrations/0007_security_boundary_fixes.sql",
+      "sha256": "49ec737393a4a4bc5f1e287add369db4f04fbde1c021521e8b4cf781f966ff93"
+    },
+    {
+      "path": "database/canonical/migrations/0008_expiry_and_ephemeral_cleanup.sql",
+      "sha256": "51215c0b4d76e242c28197187bf1e017362700128ddd562e2da5d64980a8588d"
+    },
+    {
+      "path": "database/canonical/migrations/0009_application_write_api.sql",
+      "sha256": "2a48d016c0b2dd952d56a15853c8092895df057e6a0d69f5ab391803ca0747c2"
+    },
+    {
+      "path": "database/canonical/migrations/0010_reader_ledger_usage.sql",
+      "sha256": "eb05a55b813695ef7c6252ffc00569a0d97920008773fc07b6d0f6109959825a"
+    },
+    {
+      "path": "database/canonical/migrations/0011_verified_capacity_official_facts_manifest_confirmation.sql",
+      "sha256": "acc638a3d308b9a9c601238843b1f5dea75a4f376cfb4e77a48cd3afb8f1caa8"
+    },
+    {
+      "path": "database/canonical/migrations/0012_service_principal_and_context.sql",
+      "sha256": "385206d698db33cd6a26b7ea48ab5362f2fa2e4256ec96740c336429ad54afa8"
+    },
+    {
+      "path": "database/canonical/migrations/0013_management_write_api.sql",
+      "sha256": "fcbeeea5b8fc35c0993b7b7b9dbe956fd0c6edc4a6142e49cb329fad41a320cb"
+    },
+    {
+      "path": "database/canonical/migrations/0014_rollback_resistant_write_audit.sql",
+      "sha256": "92328ac4bf51b54980da63e96681220437ac20e4557fc008ab51431793ba4209"
+    },
+    {
+      "path": "database/canonical/migrations/0015_contract_gap_controls.sql",
+      "sha256": "a639f9f10c5130c780f008832bcf9e4852badd00fcec618379e94d4e7c82d683"
+    },
+    {
+      "path": "database/canonical/migrations/0016_assignment_scope_integrity.sql",
+      "sha256": "7b10af1992e548e065c68d947b47bb073cdc88c52e4312b9aa9ccbe1bfa962e4"
+    },
+    {
+      "path": "database/canonical/migrations/0017_external_identity_request_trace.sql",
+      "sha256": "c701f74897ca13d503c8c165fd2182d77a06583afa832760dc80f8dd9524aab6"
+    },
+    {
+      "path": "database/canonical/migrations/0018_advisor_session_scope_and_binder_hardening.sql",
+      "sha256": "063f8ba5b57de24208579369ce75424526737953319544d0174c5a31e3f5d74b"
+    },
+    {
+      "path": "database/canonical/migrations/0019_education_master_and_records.sql",
+      "sha256": "425b72e7c62916da9c8c22624dc3d2beca547a0b8b96297a68604ecf574cec94"
+    },
+    {
+      "path": "database/canonical/migrations/0020_education_service_read_hardening.sql",
+      "sha256": "20435da63432175396bf118d6b6b3b5c9865e7b8b8ba8343f0da84f273d1eedd"
+    },
+    {
+      "path": "database/canonical/migrations/0021_operations_entitlement_reference.sql",
+      "sha256": "adb8ec15e956c726e5717f9b19aebaae9d37ba4acece6a960729a204aa746d09"
+    },
+    {
+      "path": "database/canonical/migrations/0022_learning_core.sql",
+      "sha256": "4df4b55cc9b2830c357d676906a77a9fa7ac981bbe4673c156285aa40fba2f5f"
+    },
+    {
+      "path": "database/canonical/migrations/0023_application_family_context_resolver.sql",
+      "sha256": "e5587c58895495097dea033f25cecfce67661eb0a6aede15821bdf115633f720"
+    },
+    {
+      "path": "database/canonical/migrations/0024_family_mapping_management_api.sql",
+      "sha256": "992a9623e933b84f8e58db937450b0bb440e9aaf234ed204b72b7497e44c605f"
+    },
+    {
+      "path": "database/canonical/migrations/0025_family_mapping_lock_hardening.sql",
+      "sha256": "fbedd76cb36b6938c9a051ab3606146b9c097f529dee41a7d5cc1f12ee876aea"
+    },
+    {
+      "path": "database/canonical/migrations/0026_enterprise_core_organization_client.sql",
+      "sha256": "aad3a52829404e1259d89a9751471af7d0f1322af710d498bb2498c5be7119d5"
+    },
+    {
+      "path": "database/canonical/migrations/0027_crm_lead_deal_foundation.sql",
+      "sha256": "81976bd7835a7ada6ab8d0e335ac751d3fd98432a53b0dc4d343c750456e78cc"
+    },
+    {
+      "path": "database/canonical/migrations/0028_service_project_task_delivery.sql",
+      "sha256": "b8ec5d270d34da8f24423771b362d1dd6d3aa6c6f3d78cbd61b12968ebf6e8a2"
+    },
+    {
+      "path": "database/canonical/migrations/0029_service_party_milestone_delivery_api.sql",
+      "sha256": "898079125502bd5406e64fe50744ea04fe846f519e26d00bd30fe4bbe695fb33"
+    },
+    {
+      "path": "database/canonical/migrations/0030_m0_organization_identity_governance.sql",
+      "sha256": "c0559ba97ad9edeaa8cb6559b9d382030e27ef4c9a109e97ab7ea99c43eb2d2e"
+    },
+    {
+      "path": "database/canonical/migrations/0031_m1_client_partner_relationships.sql",
+      "sha256": "a58d07ffd116a5890c46f6ca13c97034632b0905522ebdf1f464301746043936"
+    },
+    {
+      "path": "database/canonical/migrations/0032_m2_lead_acquisition_management.sql",
+      "sha256": "714ee075bde36d52545e6ae38afc61b3de2509b6f749f0ed31ba29805931047e"
+    },
+    {
+      "path": "database/canonical/migrations/0033_m3_consultation_deal_management.sql",
+      "sha256": "f4f08da18a5e4a39eaeeb13c3f1130fd83521fc2583d5394647fb886763a0320"
+    },
+    {
+      "path": "database/canonical/migrations/0034_m4_service_project_governance.sql",
+      "sha256": "fa879f5088f12a1797dc9264e9b2e52c2b5ed75d7151bb2d088b0788df9a1895"
+    },
+    {
+      "path": "database/canonical/migrations/0035_m5_service_delivery_governance.sql",
+      "sha256": "c25d5efb3ddecdd11b1fa45793061b992e8bcaee278e3e1e359f7ca6b510c631"
+    },
+    {
+      "path": "database/canonical/migrations/0036_crm_acquisition_provenance_and_need_facts.sql",
+      "sha256": "2c977cb44e3ec01f7ad00d4c0d8f32c5e2cd8e8fd2fed796340a919dfd0b7719"
+    },
+    {
+      "path": "database/canonical/migrations/0037_scoped_public_id_projection_read_audit.sql",
+      "sha256": "29c153177b4177cc279fe2494e2be563bd6250f6564c57fc62e381df1c7decb2"
+    }
+  ],
+  "educationStudyEnrollmentsCreateTableFound": false,
+  "candidates": [
+    {
+      "path": "database/canonical/forward-candidates/service-workbench/0038_service_project_workbench.sql",
+      "sha256": "4b82dc15b86b5936258a3d32a1b91ccbaf756e8ca76cd11a609bb6373c934ecf",
+      "status": "FORWARD_CANDIDATE"
+    },
+    {
+      "path": "database/canonical/forward-candidates/service-workbench/0039_service_project_summary.sql",
+      "sha256": "7679b16297ebcffb301a2aedfc3b9a3f0dd962e23bb571c1a748786d6160fe76",
+      "status": "FORWARD_CANDIDATE"
+    },
+    {
+      "path": "database/canonical/forward-candidates/workspace-authorization/0042_organization_workspace_authorization.sql",
+      "sha256": "bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea",
+      "status": "PR_77_CANDIDATE"
+    }
+  ],
+  "pullRequests": [
+    {
+      "number": 76,
+      "head": "78f3716f31403907b6ab254a86cf6df888e5ebfe",
+      "base": "9db147ac3a5d135d50b90bfea5a7316ce747d90b",
+      "state": "OPEN",
+      "isDraft": true,
+      "fullDiffSha256": "ef79290aa6399725c5b6c4a5f2ab89f2485a5ff551792a4a52041817f75e2d03",
+      "changedPaths": [
+        "Phoenix Compass/education compass/server/src/domain/student-lifecycle/planner.ts",
+        "Phoenix Compass/education compass/server/tests/student-lifecycle-planner.test.ts",
+        "docs/architecture/enterprise-v3-20261120/API_CONTRACTS.md",
+        "docs/architecture/enterprise-v3-20261120/DATABASE_REUSE_MATRIX.md",
+        "docs/architecture/enterprise-v3-20261120/README.md",
+        "docs/architecture/enterprise-v3-20261120/VALIDATION.md",
+        "docs/architecture/enterprise-v3-20261120/evidence/http-validation.json",
+        "docs/architecture/enterprise-v3-20261120/evidence/source-inventory.json",
+        "ops/enterprise-v3/database-preflight.sql",
+        "ops/enterprise-v3/source-inventory.mjs",
+        "website/phoenix-nova-website-v5/app/[locale]/company-os/page.tsx",
+        "website/phoenix-nova-website-v5/app/[locale]/corporate-os/page.tsx",
+        "website/phoenix-nova-website-v5/components/corporate-os-preview.module.css",
+        "website/phoenix-nova-website-v5/components/corporate-os-preview.tsx",
+        "website/phoenix-nova-website-v5/components/v5-site.tsx",
+        "website/phoenix-nova-website-v5/lib/corporate-os-preview.ts",
+        "website/phoenix-nova-website-v5/tests/corporate-os-preview.test.mjs",
+        "website/phoenix-nova-website-v5/tests/health-landing-browser.mjs"
+      ],
+      "checks": [
+        {
+          "name": "public-candidate-scan",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664891"
+        },
+        {
+          "name": "scoped-read-audit (16)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838027/job/136041664182"
+        },
+        {
+          "name": "education",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837957/job/136041662669"
+        },
+        {
+          "name": "synthetic-d1-bff-postgres (16)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837826/job/136041663001"
+        },
+        {
+          "name": "family-projection-e2e (16)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837724/job/136041663237"
+        },
+        {
+          "name": "health",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837777/job/136041662461"
+        },
+        {
+          "name": "identity",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837760/job/136041662563"
+        },
+        {
+          "name": "catalog-e2e (16)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838049/job/136041663634"
+        },
+        {
+          "name": "synthetic-workbench (16)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837976/job/136041663043"
+        },
+        {
+          "name": "website/phoenix-nova-website-v5",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838135/job/136041663892"
+        },
+        {
+          "name": "scoped-read-audit (17)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838027/job/136041663697"
+        },
+        {
+          "name": "synthetic-d1-bff-postgres (17)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837826/job/136041663302"
+        },
+        {
+          "name": "family-projection-e2e (17)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837724/job/136041662681"
+        },
+        {
+          "name": "catalog-e2e (17)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838049/job/136041664219"
+        },
+        {
+          "name": "synthetic-workbench (17)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661837976/job/136041663463"
+        },
+        {
+          "name": "website/phoenix-digital-world",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838135/job/136041664046"
+        },
+        {
+          "name": "website/phoenix-east",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838135/job/136041664168"
+        },
+        {
+          "name": "isolated-postgres (16, fresh)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664716"
+        },
+        {
+          "name": "isolated-postgres (16, upgrade)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664569"
+        },
+        {
+          "name": "isolated-postgres (17, fresh)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664821"
+        },
+        {
+          "name": "isolated-postgres (17, upgrade)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664787"
+        },
+        {
+          "name": "website-regression",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664495"
+        },
+        {
+          "name": "education-client-regression",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664794"
+        },
+        {
+          "name": "wealth-compass-regression",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44661838254/job/136041664826"
+        }
+      ]
+    },
+    {
+      "number": 77,
+      "head": "7d1bc6bfea14348192ca549510fbc571fb978254",
+      "base": "9db147ac3a5d135d50b90bfea5a7316ce747d90b",
+      "state": "OPEN",
+      "isDraft": true,
+      "fullDiffSha256": "df0658b80e017e18683f0c0376a452011d562e2ec00a5d6eae3d23f0f200d4ea",
+      "changedPaths": [
+        ".github/workflows/enterprise-v3-workspace-auth-p1.yml",
+        "Phoenix Compass/education compass/server/src/http/app.ts",
+        "Phoenix Compass/education compass/server/src/services/canonical-workspace-access.ts",
+        "Phoenix Compass/education compass/server/tests/canonical-workspace-access.test.ts",
+        "database/canonical/forward-candidates/workspace-authorization/.gitattributes",
+        "database/canonical/forward-candidates/workspace-authorization/0042_organization_workspace_authorization.sql",
+        "database/canonical/forward-candidates/workspace-authorization/manifest-0042-workspace-authorization.json",
+        "database/canonical/verification/v0042/acceptance.mjs",
+        "database/canonical/verification/v0042/cluster.mjs",
+        "database/canonical/verification/v0042/fixtures.mjs",
+        "database/canonical/verification/v0042/runtime.mjs",
+        "database/canonical/verification/v0042/verify-source.mjs",
+        "docs/database/enterprise-v3-workspace-auth-p1-20261120/API_AND_COMPATIBILITY.md",
+        "docs/database/enterprise-v3-workspace-auth-p1-20261120/DATABASE_OBJECTS_AND_PERMISSION_MATRIX.md",
+        "docs/database/enterprise-v3-workspace-auth-p1-20261120/EXECUTION_REPORT.md",
+        "docs/database/enterprise-v3-workspace-auth-p1-20261120/P0_REVIEW_DECISIONS.md",
+        "docs/database/enterprise-v3-workspace-auth-p1-20261120/README.md",
+        "docs/database/enterprise-v3-workspace-auth-p1-20261120/STATUS_AND_JIMSON_NONPROD.md",
+        "docs/database/enterprise-v3-workspace-auth-p1-20261120/evidence/GITHUB_ACTIONS_PG16_PG17_RESULT.json",
+        "docs/database/enterprise-v3-workspace-auth-p1-20261120/evidence/LOCAL_PG16_PG17_RESULT.json"
+      ],
+      "checks": [
+        {
+          "name": "scoped-read-audit (16)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248982/job/136179888559"
+        },
+        {
+          "name": "synthetic-d1-bff-postgres (16)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248989/job/136179760206"
+        },
+        {
+          "name": "family-projection-e2e (16)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249005/job/136179760954"
+        },
+        {
+          "name": "catalog-e2e (16)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249020/job/136179760630"
+        },
+        {
+          "name": "synthetic-workbench (16)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249021/job/136179883247"
+        },
+        {
+          "name": "public-candidate-scan",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248962/job/136179760992"
+        },
+        {
+          "name": "source-and-server",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249025/job/136179760593"
+        },
+        {
+          "name": "scoped-read-audit (17)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248982/job/136179888801"
+        },
+        {
+          "name": "synthetic-d1-bff-postgres (17)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248989/job/136179760569"
+        },
+        {
+          "name": "family-projection-e2e (17)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249005/job/136179760486"
+        },
+        {
+          "name": "catalog-e2e (17)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249020/job/136179761430"
+        },
+        {
+          "name": "synthetic-workbench (17)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249021/job/136179882851"
+        },
+        {
+          "name": "isolated-postgres (16, fresh)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248962/job/136179760821"
+        },
+        {
+          "name": "workspace-authorization (16)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249025/job/136180038333"
+        },
+        {
+          "name": "workspace-authorization (17)",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704249025/job/136180038329"
+        },
+        {
+          "name": "isolated-postgres (16, upgrade)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248962/job/136179760658"
+        },
+        {
+          "name": "isolated-postgres (17, fresh)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248962/job/136179760936"
+        },
+        {
+          "name": "isolated-postgres (17, upgrade)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248962/job/136179760938"
+        },
+        {
+          "name": "website-regression",
+          "status": "IN_PROGRESS",
+          "conclusion": "",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248962/job/136179760867"
+        },
+        {
+          "name": "education-client-regression",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248962/job/136179760819"
+        },
+        {
+          "name": "wealth-compass-regression",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "url": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44704248962/job/136179760349"
+        }
+      ]
+    }
+  ],
+  "scope": "Source/CI snapshot only; no database or production connection"
+}
