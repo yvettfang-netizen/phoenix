@@ -148,6 +148,69 @@ CREATE TABLE education.lifecycle_review_occurrences (
 CREATE INDEX lifecycle_review_enrollment_idx
   ON education.lifecycle_review_occurrences(study_enrollment_id,created_at);
 
+-- Internal review ingestion only. The stable enrollment/cycle/rule identity is
+-- idempotent for an identical due date. A changed due date requires source
+-- review rather than silently mutating or duplicating the candidate.
+CREATE FUNCTION education.record_lifecycle_review_occurrence(
+  p_occurrence_id uuid,p_study_enrollment_id uuid,p_journey_cycle_id uuid,
+  p_rule_key text,p_proposed_due_at timestamptz
+) RETURNS TABLE(outcome text,resolved_lifecycle_occurrence_id uuid)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path = pg_catalog,auth,core,education,audit
+AS $fn$
+DECLARE v_existing education.lifecycle_review_occurrences%ROWTYPE;
+        v_rows integer;
+BEGIN
+  IF (auth.is_internal_service() AND auth.current_principal_id() IS NOT NULL
+      AND core.is_uuid_v7(p_occurrence_id)
+      AND core.is_uuid_v7(p_journey_cycle_id)
+      AND p_rule_key ~ '^[A-Z0-9_]{2,80}$'
+      AND EXISTS (
+        SELECT 1 FROM education.study_enrollments s
+        WHERE s.study_enrollment_id=p_study_enrollment_id
+          AND s.review_state='SOURCE_REVIEW_REQUIRED'
+      )) IS NOT TRUE THEN
+    PERFORM audit.record_write_decision('CREATE','LIFECYCLE_REVIEW_OCCURRENCE',
+      p_occurrence_id,false,'LIFECYCLE_REVIEW_INPUT_DENIED');
+    RETURN QUERY SELECT 'DENIED'::text,NULL::uuid; RETURN;
+  END IF;
+
+  INSERT INTO education.lifecycle_review_occurrences(
+    lifecycle_occurrence_id,study_enrollment_id,journey_cycle_id,rule_key,
+    proposed_due_at,created_by_principal_id
+  ) VALUES (
+    p_occurrence_id,p_study_enrollment_id,p_journey_cycle_id,p_rule_key,
+    p_proposed_due_at,auth.current_principal_id()
+  ) ON CONFLICT (study_enrollment_id,journey_cycle_id,rule_key) DO NOTHING;
+  GET DIAGNOSTICS v_rows=ROW_COUNT;
+  IF v_rows=1 THEN
+    PERFORM audit.record_write_decision('CREATE','LIFECYCLE_REVIEW_OCCURRENCE',
+      p_occurrence_id,true,'LIFECYCLE_REVIEW_CREATED');
+    RETURN QUERY SELECT 'CREATED'::text,p_occurrence_id; RETURN;
+  END IF;
+
+  SELECT * INTO v_existing FROM education.lifecycle_review_occurrences
+   WHERE study_enrollment_id=p_study_enrollment_id
+     AND journey_cycle_id=p_journey_cycle_id AND rule_key=p_rule_key
+   FOR SHARE;
+  IF NOT FOUND THEN
+    PERFORM audit.record_write_decision('DEDUP','LIFECYCLE_REVIEW_OCCURRENCE',
+      p_occurrence_id,false,'LIFECYCLE_REVIEW_RETRY_REQUIRED');
+    RETURN QUERY SELECT 'RETRY_REQUIRED'::text,NULL::uuid; RETURN;
+  END IF;
+  IF v_existing.proposed_due_at IS NOT DISTINCT FROM p_proposed_due_at THEN
+    PERFORM audit.record_write_decision('DEDUP','LIFECYCLE_REVIEW_OCCURRENCE',
+      v_existing.lifecycle_occurrence_id,true,'LIFECYCLE_REVIEW_REPLAY_IDENTICAL');
+    RETURN QUERY SELECT 'ALREADY_RECORDED'::text,
+      v_existing.lifecycle_occurrence_id; RETURN;
+  END IF;
+  PERFORM audit.record_write_decision('DEDUP','LIFECYCLE_REVIEW_OCCURRENCE',
+    v_existing.lifecycle_occurrence_id,false,'LIFECYCLE_REVIEW_DUE_DATE_CONFLICT');
+  RETURN QUERY SELECT 'SOURCE_CONFLICT_REVIEW_REQUIRED'::text,
+    v_existing.lifecycle_occurrence_id;
+END
+$fn$;
+
 CREATE FUNCTION education.guard_study_enrollment_review() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = pg_catalog,core,education
@@ -214,7 +277,8 @@ REVOKE ALL ON education.study_enrollments,
   education.lifecycle_review_occurrences FROM PUBLIC;
 REVOKE ALL ON FUNCTION education.guard_study_enrollment_review(),
   education.guard_lifecycle_review_occurrence(),
-  education.record_study_enrollment_review(uuid,uuid,uuid,uuid,uuid,date,date,text,text,text,text)
+  education.record_study_enrollment_review(uuid,uuid,uuid,uuid,uuid,date,date,text,text,text,text),
+  education.record_lifecycle_review_occurrence(uuid,uuid,uuid,text,timestamptz)
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,
     phoenix_canonical_context_binder,phoenix_canonical_workspace_reader,
     phoenix_canonical_migrator;

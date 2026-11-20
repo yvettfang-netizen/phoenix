@@ -5,7 +5,7 @@
   "historical_migrations": 37,
   "candidate_number": "0042",
   "file": "0042_organization_workspace_authorization.sql",
-  "sha256": "bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea",
+  "sha256": "9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991",
   "isolated_ledger_rows": 38,
   "isolated_tables": 98,
   "isolated_policies_including_auth": 88,
@@ -27,7 +27,7 @@
       "source": "concurrent PR #74 candidate; not imported or modified by this package"
     }
   ],
-  "scope": "organization workspace membership, role bindings, persistent browser workspace sessions, shared Canonical context_exchange_tickets and session_contexts, and a Staff project projection",
+  "scope": "single Phoenix platform with Headquarters, Staff, Teacher, Family and Channel workspace roles; legal organizations remain distinct; Canonical session tickets and backend contexts reused",
   "real_identity_status": "HOLD",
   "deployment_status": "NOT_APPROVED"
 }

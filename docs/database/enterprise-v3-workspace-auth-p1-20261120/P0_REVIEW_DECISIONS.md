@@ -26,7 +26,7 @@ Safety requirements now tested:
 6. Separate binder and reader LOGINs; no runtime direct table privileges.
 7. Revocation and logout invalidate the workspace session and its context.
 
-**Current evidence:** PR #77 current candidate SQL SHA `bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea`; PG16 and PG17 each 20/20 synthetic acceptance groups PASS in workflow [44702823335](https://github.com/yvettfang-netizen/phoenix/actions/runs/44702823335). PR remains Draft; real identity integration and deployment remain HOLD.
+**Current evidence:** PR #77 candidate SQL SHA `9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991`; PG16 and PG17 each 20/20 synthetic acceptance groups PASS in workflow [44719124928](https://github.com/yvettfang-netizen/phoenix/actions/runs/44719124928) at code commit `b110c0c7fdcca6e14fda575dbfaeffdb51e6ae91`. PR remains Draft; real identity integration and deployment remain HOLD.
 
 ## P0-B｜0043: do not add a second task-transfer authority
 
@@ -45,3 +45,14 @@ If a recipient-acceptance workflow is later required, open a new scoped design g
 ## Release boundary
 
 Neither decision authorizes merging PR #77, applying migrations to a shared environment, connecting real identity providers, or deploying to production. Those remain separate Founder gates.
+
+
+## P0-C｜0042: remove legacy multi-level partner workspace taxonomy
+
+**Decision: keep legal organizations and their independent commercial ownership; reduce the workspace taxonomy to Headquarters and Channel.** The previous candidate's `REGIONAL_PARTNER`, `FRANCHISEE`, `CHANNEL_AGENT` and `SUB_PARTNER` workspace organization kinds were unnecessary hierarchy. They are removed from the candidate. Distinct legal Channel organizations remain separate Canonical `core.organizations` rows, with their own memberships, project scopes, contracts and accounting attribution.
+
+The workspace kinds are now `FOUNDER`, `STAFF`, `CHANNEL` and `FAMILY`. Channel workspace roles are `CHANNEL_ADMIN` / `CHANNEL_MEMBER`. The legacy database context channel `PARTNER` remains unchanged for compatibility with formal migrations 0001–0037; it is not a new workspace tier.
+
+## P0-D｜Teacher: reuse formal Education authorization
+
+**Decision: no second teacher identity, student scope or assignment table.** Formal 0022 already defines `auth.principals` TEACHER principals, `learning.teacher`, `learning.teacher_assignment` and `learning.teacher_has_class_access()`. 0042 adds only `STAFF_TEACHER` as a role within the existing Staff workspace. Assignment of this role requires an active TEACHER principal and active `learning.teacher` record. The Staff project read function now explicitly rejects that role; PG16/17 regression confirms 403. Student/class access remains restricted by the existing teacher-assignment and learning-consent checks in 0022. No new teacher/student tables or permissions are introduced.

@@ -33,10 +33,13 @@ for (const required of [
   'UNIQUE (study_enrollment_id,journey_cycle_id,rule_key)',
   'study_enrollments_source_identity_unique', 'source_system',
   'source_version', 'source_payload_sha256', 'record_study_enrollment_review',
+  'record_lifecycle_review_occurrence', 'LIFECYCLE_REVIEW_REPLAY_IDENTICAL',
+  'LIFECYCLE_REVIEW_DUE_DATE_CONFLICT',
   'SOURCE_REPLAY_IDENTICAL', 'SOURCE_CONFLICT_REVIEW_REQUIRED',
   'STUDY_MEMBER_NOT_CURRENT', 'STUDY_PROGRAM_MISMATCH'
 ]) assert(source.includes(required), required)
 assert(!/GRANT\s+(?:SELECT|INSERT|UPDATE|DELETE|ALL)\s+ON\s+/i.test(source))
 assert(!/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+education\.record_study_enrollment_review/i.test(source))
+assert(!/GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+education\.record_lifecycle_review_occurrence/i.test(source))
 assert(!/(?:POSTGRES_PASSWORD|PGPASSWORD|BEGIN (?:RSA|OPENSSH) PRIVATE KEY)/.test(source))
 console.log(`PASS 0044 source guard sha256=${manifest.sha256} parent=0042 historical=37 no-DB02`)

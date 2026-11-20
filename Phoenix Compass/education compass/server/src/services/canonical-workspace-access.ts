@@ -254,7 +254,7 @@ function workspaceItem(value: unknown): Record<string, unknown> {
   const item = value as Record<string, unknown>
   if (Object.keys(item).sort().join(',') !== 'displayName,organizationCode,role,workspaceBindingId,workspaceKind,workspaceRef'
       || !uuid.test(String(item.workspaceBindingId))
-      || !['FOUNDER','STAFF','PARTNER','FAMILY'].includes(String(item.workspaceKind))
+      || !['FOUNDER','STAFF','CHANNEL','FAMILY'].includes(String(item.workspaceKind))
       || typeof item.role !== 'string' || item.role.length > 40
       || typeof item.displayName !== 'string' || item.displayName.length < 1 || item.displayName.length > 300
       || !publicRef.test(String(item.workspaceRef))

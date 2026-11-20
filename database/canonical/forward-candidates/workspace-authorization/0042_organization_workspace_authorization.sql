@@ -31,7 +31,7 @@ GRANT USAGE ON SCHEMA auth,service TO phoenix_canonical_workspace_reader;
 CREATE TABLE core.organization_workspace_profiles (
   organization_id uuid PRIMARY KEY REFERENCES core.organizations,
   workspace_organization_kind text NOT NULL CHECK (workspace_organization_kind IN (
-    'HEADQUARTERS','REGIONAL_PARTNER','FRANCHISEE','CHANNEL_AGENT','SUB_PARTNER'
+    'HEADQUARTERS','CHANNEL'
   )),
   organization_code text NOT NULL UNIQUE CHECK (
     organization_code ~ '^[A-Z0-9][A-Z0-9_-]{3,31}$'
@@ -83,11 +83,11 @@ CREATE TABLE auth.workspace_role_bindings (
   organization_membership_id uuid REFERENCES core.organization_memberships,
   family_membership_id uuid REFERENCES core.family_memberships,
   workspace_kind text NOT NULL CHECK (workspace_kind IN (
-    'FOUNDER','STAFF','PARTNER','FAMILY'
+    'FOUNDER','STAFF','CHANNEL','FAMILY'
   )),
   role_code text NOT NULL CHECK (role_code IN (
     'FOUNDER','STAFF_ADMIN','STAFF_ADVISOR','STAFF_OPERATIONS','STAFF_VIEWER',
-    'PARTNER_ADMIN','PARTNER_MEMBER','FAMILY_PRIMARY','FAMILY_MEMBER'
+    'STAFF_TEACHER','CHANNEL_ADMIN','CHANNEL_MEMBER','FAMILY_PRIMARY','FAMILY_MEMBER'
   )),
   status text NOT NULL CHECK (status IN ('ACTIVE','REVOKED')),
   valid_from timestamptz NOT NULL,
@@ -296,11 +296,19 @@ BEGIN
       RAISE EXCEPTION 'WORKSPACE_ORGANIZATION_MEMBERSHIP_INVALID';
     END IF;
     IF (NEW.workspace_kind='FOUNDER' AND (NEW.role_code<>'FOUNDER' OR v_kind<>'HEADQUARTERS'))
-       OR (NEW.workspace_kind='STAFF' AND NEW.role_code NOT IN (
-         'STAFF_ADMIN','STAFF_ADVISOR','STAFF_OPERATIONS','STAFF_VIEWER'))
-       OR (NEW.workspace_kind='PARTNER' AND (
-         NEW.role_code NOT IN ('PARTNER_ADMIN','PARTNER_MEMBER')
-         OR v_kind='HEADQUARTERS')) THEN
+       OR (NEW.workspace_kind='STAFF' AND (
+         NEW.role_code NOT IN ('STAFF_ADMIN','STAFF_ADVISOR','STAFF_OPERATIONS',
+           'STAFF_VIEWER','STAFF_TEACHER')
+         OR (NEW.role_code='STAFF_TEACHER' AND NOT EXISTS (
+           SELECT 1 FROM auth.principals p
+           JOIN learning.teacher t ON t.teacher_person_id=p.person_id
+           WHERE p.principal_id=NEW.principal_id
+             AND p.principal_kind='TEACHER' AND p.status='ACTIVE'
+             AND t.status='ACTIVE'
+         ))))
+       OR (NEW.workspace_kind='CHANNEL' AND (
+         NEW.role_code NOT IN ('CHANNEL_ADMIN','CHANNEL_MEMBER')
+         OR v_kind<>'CHANNEL')) THEN
       RAISE EXCEPTION 'WORKSPACE_ROLE_OR_ORGANIZATION_KIND_INVALID';
     END IF;
   ELSE
@@ -422,8 +430,7 @@ SET search_path=pg_catalog,auth,core,audit
 AS $fn$
 BEGIN
   IF (auth.is_workspace_admin_service()
-      AND p_kind IN ('HEADQUARTERS','REGIONAL_PARTNER','FRANCHISEE',
-        'CHANNEL_AGENT','SUB_PARTNER')
+      AND p_kind IN ('HEADQUARTERS','CHANNEL')
       AND p_organization_code ~ '^[A-Z0-9][A-Z0-9_-]{3,31}$'
       AND EXISTS(SELECT 1 FROM core.organizations
         WHERE organization_id=p_organization_id AND status='ACTIVE')) IS NOT TRUE THEN
@@ -1069,6 +1076,9 @@ BEGIN
   v_request:=auth.current_workspace_request_nonce();
   IF (auth.workspace_context_is_live()
       AND auth.current_workspace_kind()='STAFF'
+      AND auth.current_workspace_role() IN (
+        'STAFF_ADMIN','STAFF_ADVISOR','STAFF_OPERATIONS','STAFF_VIEWER'
+      )
       AND v_principal IS NOT NULL AND v_org IS NOT NULL) IS NOT TRUE THEN
     PERFORM auth.record_workspace_decision(
       v_principal,NULL,NULL,'READ','STAFF_PROJECT_PROJECTION',NULL,false,

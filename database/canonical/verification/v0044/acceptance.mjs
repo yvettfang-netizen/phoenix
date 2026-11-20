@@ -152,6 +152,24 @@ async function run() {
     WHERE lifecycle_occurrence_id=${q(id(3200))}`), /LIFECYCLE_REVIEW_IMMUTABLE/)
   check('stable enrollment-cycle-rule key rejects due-date duplication; review only')
 
+  const recordOccurrence = (key, due) => asWorkspaceAdmin(db, `
+    SELECT * FROM education.record_lifecycle_review_occurrence(
+      ${q(id(key))},${q(id(3100))},${q(id(3302))},
+      'YEAR_TWO_REVIEW',${q(due)}::timestamptz);
+  `)
+  const occurrenceDue = '2027-11-01T00:00:00Z'
+  const occurrenceCreated = recordOccurrence(3204, occurrenceDue)
+  assert(occurrenceCreated.includes('CREATED'))
+  assert(occurrenceCreated.includes(id(3204)))
+  const occurrenceReplay = recordOccurrence(3205, occurrenceDue)
+  assert(occurrenceReplay.includes('ALREADY_RECORDED'))
+  assert(occurrenceReplay.includes(id(3204)))
+  const occurrenceConflict = recordOccurrence(3206, '2027-12-01T00:00:00Z')
+  assert(occurrenceConflict.includes('SOURCE_CONFLICT_REVIEW_REQUIRED'))
+  assert(occurrenceConflict.includes(id(3204)))
+  assert.equal(db.sql('SELECT count(*) FROM education.lifecycle_review_occurrences'), '3')
+  check('lifecycle occurrence identical replay is idempotent; changed due date is review conflict')
+
   assert.throws(() => db.sql(`BEGIN;
     ${occurrence(3203, 3101, 3300)}
     ${insert(3106, fixtureIds.families.b, fixtureIds.people.multi)}
@@ -184,6 +202,8 @@ async function run() {
   assert.equal(db.sql("SELECT has_table_privilege('phoenix_canonical_workspace_reader','education.lifecycle_review_occurrences','SELECT')"), 'f')
   assert.equal(db.sql("SELECT has_function_privilege('phoenix_canonical_app','education.record_study_enrollment_review(uuid,uuid,uuid,uuid,uuid,date,date,text,text,text,text)','EXECUTE')"), 'f')
   assert.equal(db.sql("SELECT has_function_privilege('phoenix_canonical_workspace_reader','education.record_study_enrollment_review(uuid,uuid,uuid,uuid,uuid,date,date,text,text,text,text)','EXECUTE')"), 'f')
+  assert.equal(db.sql("SELECT has_function_privilege('phoenix_canonical_app','education.record_lifecycle_review_occurrence(uuid,uuid,uuid,text,timestamptz)','EXECUTE')"), 'f')
+  assert.equal(db.sql("SELECT has_function_privilege('phoenix_canonical_workspace_reader','education.record_lifecycle_review_occurrence(uuid,uuid,uuid,text,timestamptz)','EXECUTE')"), 'f')
   check('real restricted LOGIN cannot read; no runtime grants and explicit restrictive deny')
 
   const probePassword = randomBytes(32).toString('hex')

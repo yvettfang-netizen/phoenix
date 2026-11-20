@@ -1,0 +1,1053 @@
+{
+  "schemaVersion": "phoenix-enterprise-v3-workspace-auth-p1.v1",
+  "startedAt": "2026-11-20T10:24:19.951Z",
+  "sourceCommit": "380fec99da5151fd28b8a5d3a2acaaa7292d3c23",
+  "sourceState": "WORKING_TREE",
+  "postgres": {
+    "version": "16",
+    "serverVersion": "16.15 (Debian 16.15-1.pgdg13+2)",
+    "ledger": 38,
+    "tables": 98,
+    "policies": 88
+  },
+  "migration": {
+    "number": "0042",
+    "sha256": "9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991"
+  },
+  "checks": [
+    {
+      "name": "fresh migration 0001-0037 plus isolated 0042 and repeat safety",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:29.408Z",
+      "ledger": 38,
+      "tables": 98,
+      "policies": 88
+    },
+    {
+      "name": "organization kinds, invitation acceptance and role bindings use Canonical people and organizations",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:30.277Z"
+    },
+    {
+      "name": "active workspace roles require explicit revocation and cannot become silently expired blockers",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:30.522Z"
+    },
+    {
+      "name": "one natural person receives independent Founder, Staff, Channel and Family roles",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:30.591Z"
+    },
+    {
+      "name": "Channel legal entities remain separate; Teacher cannot inherit Staff project access",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:30.772Z"
+    },
+    {
+      "name": "browser role, organization and organization-code authentication assertions are rejected",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:30.817Z"
+    },
+    {
+      "name": "HQ Staff context exposes one authorized projection and no ticket or identity internals",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:30.926Z"
+    },
+    {
+      "name": "workspace switch invalidates old context and same principal cannot cross organization scope",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:31.021Z"
+    },
+    {
+      "name": "second partner staff projection and bearer-to-cookie binding reject cross-principal reuse",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:31.112Z"
+    },
+    {
+      "name": "Partner and Family roles cannot inherit the Staff projection",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:31.251Z"
+    },
+    {
+      "name": "separate LOGINs, one-use tickets, cross-flow rejection and same-backend legacy rebind are enforced",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:32.241Z"
+    },
+    {
+      "name": "app and binder LOGINs cannot read tables, forge audit, invoke binder API or escalate roles",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:32.286Z"
+    },
+    {
+      "name": "member deactivation immediately removes workspaces and invalidates its old context",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:32.535Z"
+    },
+    {
+      "name": "role revocation invalidates only the revoked workspace while preserving independent roles",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:32.736Z"
+    },
+    {
+      "name": "logout revokes the server-owned workspace session and clears the cookie",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:32.774Z"
+    },
+    {
+      "name": "trusted login session revocation is rechecked before every database projection",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:32.815Z"
+    },
+    {
+      "name": "existing Family OS one-use context flow remains compatible and independently scoped",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:32.857Z"
+    },
+    {
+      "name": "allow/deny decisions are audited; Canonical context tables are reused and cleared",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:33.328Z"
+    },
+    {
+      "name": "synthetic migration failure rolls back atomically",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:33.548Z"
+    },
+    {
+      "name": "0042 checksum drift is refused and exact source restores repeat safety",
+      "status": "PASS",
+      "at": "2026-11-20T10:24:37.706Z"
+    }
+  ],
+  "requests": [
+    {
+      "alias": "multi",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:30.580604+00:00",
+        "workspaces": [
+          {
+            "role": "CHANNEL_ADMIN",
+            "displayName": "Synthetic Channel A",
+            "workspaceRef": "org_019420000000700080000000000001f5",
+            "workspaceKind": "CHANNEL",
+            "organizationCode": "PHX_CHANNEL_A",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000642"
+          },
+          {
+            "role": "FAMILY_PRIMARY",
+            "displayName": "Synthetic Family A",
+            "workspaceRef": "fam_01942000000070008000000000000064",
+            "workspaceKind": "FAMILY",
+            "organizationCode": null,
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000645"
+          },
+          {
+            "role": "FOUNDER",
+            "displayName": "Synthetic HQ",
+            "workspaceRef": "org_019420000000700080000000000001f4",
+            "workspaceKind": "FOUNDER",
+            "organizationCode": "PHX_HQ",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000640"
+          },
+          {
+            "role": "STAFF_ADMIN",
+            "displayName": "Synthetic HQ",
+            "workspaceRef": "org_019420000000700080000000000001f4",
+            "workspaceKind": "STAFF",
+            "organizationCode": "PHX_HQ",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000641"
+          },
+          {
+            "role": "STAFF_ADVISOR",
+            "displayName": "Synthetic Channel A",
+            "workspaceRef": "org_019420000000700080000000000001f5",
+            "workspaceKind": "STAFF",
+            "organizationCode": "PHX_CHANNEL_A",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000643"
+          }
+        ],
+        "contractVersion": "workspace-list.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "partnerB",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:30.59881+00:00",
+        "workspaces": [
+          {
+            "role": "CHANNEL_ADMIN",
+            "displayName": "Synthetic Channel B",
+            "workspaceRef": "org_019420000000700080000000000001f6",
+            "workspaceKind": "CHANNEL",
+            "organizationCode": "PHX_CHANNEL_B",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000644"
+          },
+          {
+            "role": "FAMILY_PRIMARY",
+            "displayName": "Synthetic Family B",
+            "workspaceRef": "fam_01942000000070008000000000000065",
+            "workspaceKind": "FAMILY",
+            "organizationCode": null,
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000646"
+          },
+          {
+            "role": "STAFF_VIEWER",
+            "displayName": "Synthetic Channel B",
+            "workspaceRef": "org_019420000000700080000000000001f6",
+            "workspaceKind": "STAFF",
+            "organizationCode": "PHX_CHANNEL_B",
+            "workspaceBindingId": "01942000-0000-7000-8000-00000000064a"
+          }
+        ],
+        "contractVersion": "workspace-list.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "auxiliary",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:30.625131+00:00",
+        "workspaces": [
+          {
+            "role": "CHANNEL_ADMIN",
+            "displayName": "Synthetic Channel D",
+            "workspaceRef": "org_019420000000700080000000000001f7",
+            "workspaceKind": "CHANNEL",
+            "organizationCode": "PHX_CHANNEL_D",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000647"
+          },
+          {
+            "role": "CHANNEL_MEMBER",
+            "displayName": "Synthetic Channel",
+            "workspaceRef": "org_019420000000700080000000000001f8",
+            "workspaceKind": "CHANNEL",
+            "organizationCode": "PHX_CHANNEL_C",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000648"
+          },
+          {
+            "role": "CHANNEL_MEMBER",
+            "displayName": "Synthetic Channel E",
+            "workspaceRef": "org_019420000000700080000000000001f9",
+            "workspaceKind": "CHANNEL",
+            "organizationCode": "PHX_CHANNEL_E",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000649"
+          }
+        ],
+        "contractVersion": "workspace-list.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "teacher",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:30.639073+00:00",
+        "workspaces": [
+          {
+            "role": "STAFF_TEACHER",
+            "displayName": "Synthetic HQ",
+            "workspaceRef": "org_019420000000700080000000000001f4",
+            "workspaceKind": "STAFF",
+            "organizationCode": "PHX_HQ",
+            "workspaceBindingId": "01942000-0000-7000-8000-00000000064b"
+          }
+        ],
+        "contractVersion": "workspace-list.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "teacher",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "STAFF_TEACHER",
+          "displayName": "Synthetic HQ",
+          "workspaceRef": "org_019420000000700080000000000001f4",
+          "workspaceKind": "STAFF",
+          "organizationCode": "PHX_HQ",
+          "workspaceBindingId": "01942000-0000-7000-8000-00000000064b"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=899"
+    },
+    {
+      "alias": "teacher",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/me/workspaces?role=FOUNDER",
+      "method": "GET",
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "QUERY_NOT_ALLOWED",
+          "message": "此接口不接受查询参数"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "organization-code",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 401
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 400,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_BINDING_REQUIRED",
+          "message": "工作区选择无效"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "STAFF_ADMIN",
+          "displayName": "Synthetic HQ",
+          "workspaceRef": "org_019420000000700080000000000001f4",
+          "workspaceKind": "STAFF",
+          "organizationCode": "PHX_HQ",
+          "workspaceBindingId": "01942000-0000-7000-8000-000000000641"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=899"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:30.920256+00:00",
+        "items": [
+          {
+            "domain": "EDUCATION",
+            "status": "ACTIVE",
+            "updatedAt": "2026-11-20T10:24:29.554639+00:00",
+            "projectCode": "SYN_WS_HQ",
+            "projectName": "Synthetic HQ Project",
+            "assignmentRole": "PROJECT_MANAGER"
+          }
+        ],
+        "contractVersion": "staff-projects.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "STAFF_ADVISOR",
+          "displayName": "Synthetic Channel A",
+          "workspaceRef": "org_019420000000700080000000000001f5",
+          "workspaceKind": "STAFF",
+          "organizationCode": "PHX_CHANNEL_A",
+          "workspaceBindingId": "01942000-0000-7000-8000-000000000643"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=899"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:31.015046+00:00",
+        "items": [
+          {
+            "domain": "IDENTITY",
+            "status": "ACTIVE",
+            "updatedAt": "2026-11-20T10:24:29.554639+00:00",
+            "projectCode": "SYN_WS_PARTNER_A",
+            "projectName": "Synthetic Channel A Project",
+            "assignmentRole": "SPECIALIST"
+          }
+        ],
+        "contractVersion": "staff-projects.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "partnerB",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "STAFF_VIEWER",
+          "displayName": "Synthetic Channel B",
+          "workspaceRef": "org_019420000000700080000000000001f6",
+          "workspaceKind": "STAFF",
+          "organizationCode": "PHX_CHANNEL_B",
+          "workspaceBindingId": "01942000-0000-7000-8000-00000000064a"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=899"
+    },
+    {
+      "alias": "partnerB",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:31.085404+00:00",
+        "items": [
+          {
+            "domain": "WEALTH",
+            "status": "ACTIVE",
+            "updatedAt": "2026-11-20T10:24:29.554639+00:00",
+            "projectCode": "SYN_WS_PARTNER_B",
+            "projectName": "Synthetic Channel B Project",
+            "assignmentRole": "PROJECT_MANAGER"
+          }
+        ],
+        "contractVersion": "staff-projects.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "CHANNEL_ADMIN",
+          "displayName": "Synthetic Channel A",
+          "workspaceRef": "org_019420000000700080000000000001f5",
+          "workspaceKind": "CHANNEL",
+          "organizationCode": "PHX_CHANNEL_A",
+          "workspaceBindingId": "01942000-0000-7000-8000-000000000642"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=899"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "FAMILY_PRIMARY",
+          "displayName": "Synthetic Family A",
+          "workspaceRef": "fam_01942000000070008000000000000064",
+          "workspaceKind": "FAMILY",
+          "organizationCode": null,
+          "workspaceBindingId": "01942000-0000-7000-8000-000000000645"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=899"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "partnerB",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "STAFF_VIEWER",
+          "displayName": "Synthetic Channel B",
+          "workspaceRef": "org_019420000000700080000000000001f6",
+          "workspaceKind": "STAFF",
+          "organizationCode": "PHX_CHANNEL_B",
+          "workspaceBindingId": "01942000-0000-7000-8000-00000000064a"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=899"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "STAFF_ADVISOR",
+          "displayName": "Synthetic Channel A",
+          "workspaceRef": "org_019420000000700080000000000001f5",
+          "workspaceKind": "STAFF",
+          "organizationCode": "PHX_CHANNEL_A",
+          "workspaceBindingId": "01942000-0000-7000-8000-000000000643"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=898"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:32.360876+00:00",
+        "items": [
+          {
+            "domain": "IDENTITY",
+            "status": "ACTIVE",
+            "updatedAt": "2026-11-20T10:24:29.554639+00:00",
+            "projectCode": "SYN_WS_PARTNER_A",
+            "projectName": "Synthetic Channel A Project",
+            "assignmentRole": "SPECIALIST"
+          }
+        ],
+        "contractVersion": "staff-projects.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:32.532798+00:00",
+        "workspaces": [
+          {
+            "role": "FAMILY_PRIMARY",
+            "displayName": "Synthetic Family A",
+            "workspaceRef": "fam_01942000000070008000000000000064",
+            "workspaceKind": "FAMILY",
+            "organizationCode": null,
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000645"
+          },
+          {
+            "role": "FOUNDER",
+            "displayName": "Synthetic HQ",
+            "workspaceRef": "org_019420000000700080000000000001f4",
+            "workspaceKind": "FOUNDER",
+            "organizationCode": "PHX_HQ",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000640"
+          },
+          {
+            "role": "STAFF_ADMIN",
+            "displayName": "Synthetic HQ",
+            "workspaceRef": "org_019420000000700080000000000001f4",
+            "workspaceKind": "STAFF",
+            "organizationCode": "PHX_HQ",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000641"
+          }
+        ],
+        "contractVersion": "workspace-list.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "STAFF_ADMIN",
+          "displayName": "Synthetic HQ",
+          "workspaceRef": "org_019420000000700080000000000001f4",
+          "workspaceKind": "STAFF",
+          "organizationCode": "PHX_HQ",
+          "workspaceBindingId": "01942000-0000-7000-8000-000000000641"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=897"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/me/workspaces",
+      "method": "GET",
+      "status": 200,
+      "body": {
+        "asOf": "2026-11-20T10:24:32.733566+00:00",
+        "workspaces": [
+          {
+            "role": "FAMILY_PRIMARY",
+            "displayName": "Synthetic Family A",
+            "workspaceRef": "fam_01942000000070008000000000000064",
+            "workspaceKind": "FAMILY",
+            "organizationCode": null,
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000645"
+          },
+          {
+            "role": "FOUNDER",
+            "displayName": "Synthetic HQ",
+            "workspaceRef": "org_019420000000700080000000000001f4",
+            "workspaceKind": "FOUNDER",
+            "organizationCode": "PHX_HQ",
+            "workspaceBindingId": "01942000-0000-7000-8000-000000000640"
+          }
+        ],
+        "contractVersion": "workspace-list.v1"
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "FOUNDER",
+          "displayName": "Synthetic HQ",
+          "workspaceRef": "org_019420000000700080000000000001f4",
+          "workspaceKind": "FOUNDER",
+          "organizationCode": "PHX_HQ",
+          "workspaceBindingId": "01942000-0000-7000-8000-000000000640"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=897"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/workspace-contexts",
+      "method": "DELETE",
+      "status": 204,
+      "body": null,
+      "setCookie": "phoenix_workspace_context=; Path=[REDACTED]; HttpOnly; Secure; SameSite=Strict; Max-Age=0"
+    },
+    {
+      "alias": "multi",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 403,
+      "body": {
+        "error": {
+          "code": "WORKSPACE_ACCESS_DENIED",
+          "message": "工作区访问未授权"
+        }
+      },
+      "setCookie": null
+    },
+    {
+      "alias": "partnerB",
+      "path": "/v1/workspace-contexts",
+      "method": "POST",
+      "status": 200,
+      "body": {
+        "expiresAt": "2026-11-20T10:39:30.523+00:00",
+        "workspace": {
+          "role": "STAFF_VIEWER",
+          "displayName": "Synthetic Channel B",
+          "workspaceRef": "org_019420000000700080000000000001f6",
+          "workspaceKind": "STAFF",
+          "organizationCode": "PHX_CHANNEL_B",
+          "workspaceBindingId": "01942000-0000-7000-8000-00000000064a"
+        },
+        "contractVersion": "workspace-context.v1"
+      },
+      "setCookie": "phoenix_workspace_context=[REDACTED]; Path=/v1; HttpOnly; Secure; SameSite=Strict; Max-Age=897"
+    },
+    {
+      "alias": "partnerB",
+      "path": "/v1/staff/projects",
+      "method": "GET",
+      "status": 401,
+      "body": {
+        "error": {
+          "code": "SIGN_IN_REQUIRED",
+          "message": "Synthetic session required"
+        }
+      },
+      "setCookie": null
+    }
+  ],
+  "status": "PASS",
+  "finishedAt": "2026-11-20T10:24:37.706Z",
+  "auditCallbacks": [
+    {
+      "requestId": "e275a7a4-4117-4dd0-a04c-560ba4fc6e06",
+      "operation": "LIST",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:30.585Z"
+    },
+    {
+      "requestId": "4fd403ce-73fb-41e2-b0f3-0959c46d7d26",
+      "operation": "LIST",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:30.600Z"
+    },
+    {
+      "requestId": "51ce47c6-f614-4483-ab3b-1014942818c7",
+      "operation": "LIST",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:30.626Z"
+    },
+    {
+      "requestId": "f5981640-3ca4-4416-8570-b599b53dd02f",
+      "operation": "LIST",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:30.640Z"
+    },
+    {
+      "requestId": "5da4fe48-0201-4779-b867-d0421c541c65",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:30.664Z"
+    },
+    {
+      "requestId": "3c786dab-10f1-4930-8ab3-1e2d0d513af9",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:30.771Z"
+    },
+    {
+      "requestId": "fc74c1e9-642b-4d2d-95a3-10a78488a0c8",
+      "operation": "LIST",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:30.785Z"
+    },
+    {
+      "requestId": "11adaa87-1111-44e4-87e7-eaae476476fa",
+      "operation": "LIST",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:30.800Z"
+    },
+    {
+      "requestId": "c131df86-293d-49cc-8199-2119892e51e3",
+      "operation": "LIST",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:30.815Z"
+    },
+    {
+      "requestId": "78b2a5f2-4d28-49ef-83d9-76dcdffa20b7",
+      "operation": "LIST",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:30.817Z"
+    },
+    {
+      "requestId": "ef3434d5-0d5d-4b75-b842-7995599ffe29",
+      "operation": "SWITCH",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:30.831Z"
+    },
+    {
+      "requestId": "7259ece7-d900-404a-af38-bc6ba1d5a3d2",
+      "operation": "SWITCH",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:30.847Z"
+    },
+    {
+      "requestId": "5ab8575b-3fb0-4e70-9bfb-2fbdfcd0e931",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:30.871Z"
+    },
+    {
+      "requestId": "14be5901-e6f2-409e-8736-61cb817600e8",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:30.925Z"
+    },
+    {
+      "requestId": "6e5e4219-a73b-4125-b16e-2bbb6d8cbc75",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:30.947Z"
+    },
+    {
+      "requestId": "8bd71845-f071-4224-9a3c-de892c703a86",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:30.958Z"
+    },
+    {
+      "requestId": "45dca27f-dc3b-4f80-8ee8-089782fffff3",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:31.020Z"
+    },
+    {
+      "requestId": "95ad40f9-322d-4ab9-bc7e-079f84c8492f",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:31.040Z"
+    },
+    {
+      "requestId": "9a2961a8-e599-4650-a2dc-016c290ca27f",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:31.090Z"
+    },
+    {
+      "requestId": "8df468fa-7335-446a-8212-a7413e06e020",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:31.111Z"
+    },
+    {
+      "requestId": "16e0bea3-f0f9-463e-8821-7c7fed89cdc4",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:31.136Z"
+    },
+    {
+      "requestId": "20873ead-b73b-4622-b3f6-cbd0362d5bd7",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:31.196Z"
+    },
+    {
+      "requestId": "34af97ae-e9aa-4711-9314-fdaed1f09bc1",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:31.204Z"
+    },
+    {
+      "requestId": "67601cc8-5467-4523-9bcd-3afa3387452d",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:31.250Z"
+    },
+    {
+      "requestId": "9bd00251-5089-466f-9210-7401ca1cc3cc",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:31.269Z"
+    },
+    {
+      "requestId": "44a7c036-2ebf-400a-8eed-da41f548c144",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:32.308Z"
+    },
+    {
+      "requestId": "fcc57768-34ec-46a6-a548-e51efb371271",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:32.366Z"
+    },
+    {
+      "requestId": "c59c1319-7e3d-48d0-8116-164406c302b0",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:32.513Z"
+    },
+    {
+      "requestId": "1c4e2597-fad7-48c7-a6fb-977ce8f0695c",
+      "operation": "LIST",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:32.535Z"
+    },
+    {
+      "requestId": "53649e07-665a-4e27-9e0a-fc44ceaaa56c",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:32.549Z"
+    },
+    {
+      "requestId": "8ff6fb24-9b09-450e-bee2-741e08d8313c",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:32.712Z"
+    },
+    {
+      "requestId": "06613386-d2db-4966-a092-5ae5a81cc6b9",
+      "operation": "LIST",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:32.735Z"
+    },
+    {
+      "requestId": "e10088e0-2909-4c01-ae98-5025c2c28117",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:32.750Z"
+    },
+    {
+      "requestId": "19bc7cfd-539e-4bc4-8972-74abe9830262",
+      "operation": "LOGOUT",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:32.760Z"
+    },
+    {
+      "requestId": "6c7c76ad-5643-4fcb-922c-8c1684d8b41a",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:32.774Z"
+    },
+    {
+      "requestId": "65da5bf6-06f0-409b-aede-36d32a2124b4",
+      "operation": "SWITCH",
+      "decision": "ALLOW",
+      "at": "2026-11-20T10:24:32.800Z"
+    },
+    {
+      "requestId": "9aa469c6-e408-41ce-8e69-4898be7f6661",
+      "operation": "READ_STAFF_PROJECTS",
+      "decision": "DENY",
+      "at": "2026-11-20T10:24:32.815Z"
+    }
+  ]
+}

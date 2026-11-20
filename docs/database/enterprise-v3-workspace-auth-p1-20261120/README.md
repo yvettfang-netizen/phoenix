@@ -10,7 +10,7 @@ PR [#77](https://github.com/yvettfang-netizen/phoenix/pull/77) remains Draft. Th
 - Formal historical migrations: `0001–0037`, unchanged
 - Reserved candidates: `0038/0039` Service Workbench, `0040` historical PR #61, `0041` PR #74
 - Candidate: `0042_organization_workspace_authorization.sql`
-- Current candidate SHA-256: `bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea`
+- Current candidate SHA-256: `9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991`
 - Isolated ledger: 38 rows; 98 tables; 88 policies including auth
 
 ## Context consolidation decision
@@ -29,7 +29,7 @@ The old Family/Advisor/Partner/Teacher context flow remains compatible. Legacy r
 
 ## Verification
 
-- GitHub Actions run: [44702823335](https://github.com/yvettfang-netizen/phoenix/actions/runs/44702823335)
+- GitHub Actions run for code commit `b110c0c7fdcca6e14fda575dbfaeffdb51e6ae91`: [44719124928](https://github.com/yvettfang-netizen/phoenix/actions/runs/44719124928)
 - PG16: 20/20 acceptance groups PASS
 - PG17: 20/20 acceptance groups PASS
 - Source/backend job: hash guard, scoped secret scan, backend typecheck/build/tests PASS
@@ -37,6 +37,7 @@ The old Family/Advisor/Partner/Teacher context flow remains compatible. Legacy r
 - Cross-flow replay rejection, same-backend legacy rebind, cleanup, revocation, rollback and checksum-drift rejection all covered
 
 Structured evidence: [GITHUB_ACTIONS_PG16_PG17_RESULT.json](evidence/GITHUB_ACTIONS_PG16_PG17_RESULT.json).
+The installation failure, correction and current acceptance receipts are recorded in [CI_FIX_EXECUTION_REPORT_20261120.md](CI_FIX_EXECUTION_REPORT_20261120.md).
 
 ## Explicit HOLD
 

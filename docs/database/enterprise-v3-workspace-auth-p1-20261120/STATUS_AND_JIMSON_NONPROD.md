@@ -18,11 +18,13 @@
 
 当前不引入 0043。正式 0035 的 `service.transfer_task()` 已承接既有 service-managed 转派；但它当前不检查 assignment `valid_from`、recipient Principal status/role，也不是 Staff workspace 的直接授权入口。0043 增加双边审批与更严格 Staff/Organization 检查，却重复实现 task 更新和 TRANSFERRED 事件。PR #78 已关闭未合并，PR #82 不再依赖 0043。若未来确需 Staff 转派或接收方审批，应先扩展/抽取唯一转移 authority，再由审批层调用。
 
-## Jimson 可执行的非生产准备步骤
+## Jimson 唯一补证项与后续工程门禁
 
-以下步骤只适用于 Founder 另行指定的隔离非生产环境；当前 PR 不执行这些操作。
+Jimson 本轮只需按 [PR #85 的 P0.1 非生产工单](https://github.com/yvettfang-netizen/phoenix/blob/187c885d2613bbca3e80c22762ece2ab97db6973/docs/architecture/academic-studio-v21-p0-20261120/P0_1_JIMSON_NONPROD_TICKET.md)，在明确指定的 `canonical-nonprod` 实例上用独立只读 LOGIN 返回实际数据库/PG 版本、正式迁移账本及哈希、角色权限、Learning RLS/FORCE、UTC 执行时间与脱敏原始输出。实例或凭据不明时保持 HOLD；不安装任何候选 Migration，也不要求 Jimson 重做架构审查或本地 PG16/17。
 
-1. 对固定候选 SHA `bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea` 做独立安全/数据库复审；确认 manifest SHA、PG16/17 workflow 和 0001–0037 不变。
+以下是未来 0042 接线的工程门禁，**并非分派给 Jimson 的本轮补证任务**；当前 PR 不执行这些操作。
+
+1. 对固定候选 SHA `9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991` 做独立安全/数据库复审；确认 manifest SHA、PG16/17 workflow 和 0001–0037 不变。
 2. 登记真实登录提供方的 `issuer/audience/JWKS`、会话撤销接口和脱敏配置摘要；私钥、token、密码及 `.env` 不得提交 Git。
 3. 登记“外部身份 → auth.principals”的权威映射，以及总部员工、伙伴机构、家庭的受控非生产账号；记录停用与撤权责任人。
 4. 分别配置 binder LOGIN 与 workspace reader/app LOGIN，使用受保护 secret reference；不得共用凭据。运行时账号不得获得新表直接权限。

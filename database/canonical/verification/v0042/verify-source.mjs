@@ -48,6 +48,13 @@ for (const token of [
 ]) assert(sql.includes(token),token)
 assert(!sql.includes('CREATE TABLE auth.workspace_context_tickets'))
 assert(!sql.includes('CREATE TABLE auth.workspace_session_contexts'))
+for (const obsolete of ['REGIONAL_PARTNER','FRANCHISEE','CHANNEL_AGENT','SUB_PARTNER',
+  'PARTNER_ADMIN','PARTNER_MEMBER']) assert(!sql.includes(obsolete),obsolete)
+assert(sql.includes("'STAFF_TEACHER'"))
+assert(sql.includes('learning.teacher t'))
+const learning = read('database/canonical/migrations/0022_learning_core.sql').toString('utf8')
+assert(learning.includes('CREATE FUNCTION learning.teacher_has_class_access'))
+assert(learning.includes("a.status='ACTIVE'"))
 assert(!/GRANT\s+(?:SELECT|INSERT|UPDATE|DELETE|ALL)\s+ON\s+(?:TABLE\s+)?/i.test(sql))
 assert(!/(?:1\.12\.77\.180|POSTGRES_PASSWORD|PGPASSWORD|BEGIN (?:RSA|OPENSSH) PRIVATE KEY)/.test(sql))
 
