@@ -199,7 +199,7 @@ No per-student slot reservation/booking object was found in formal migrations 00
 
 **GAP C — delivery mode / online meeting contract**
 
-The formal class/slot model has no explicit ONLINE / ONSITE / HYBRID mode, no private meeting-provider reference and no per-participant attendance mode for hybrid delivery. Founder has clarified the target authority: the assigned teacher (or explicitly authorized teaching administrator) sets the session mode; for a HYBRID session, the teacher assigns each enrolled student to Online or Onsite participation. Students/parents are read-only and cannot self-select or change the mode. Any teacher-directed change must be audited, notify affected participants and atomically re-check resource conflicts/capacity. The meeting-provider adapter remains a product/integration contract, not an existing verified feature.
+The formal class/slot model has no explicit ONLINE / ONSITE / HYBRID mode, no private meeting-provider reference and no per-participant attendance mode for hybrid delivery. Founder has clarified the target authority: the assigned teacher sets the session mode; for a HYBRID session, the teacher assigns each enrolled student to Online or Onsite participation. Students/parents are read-only and cannot self-select or change the mode. Any teacher-directed change must be audited, notify affected participants and atomically re-check resource conflicts/capacity. The meeting-provider adapter remains a product/integration contract, not an existing verified feature.
 
 **GAP D — timezone presentation policy**
 
