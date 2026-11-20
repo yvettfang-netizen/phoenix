@@ -41,3 +41,10 @@ The follow-on contract package is prepared for Codex/Jimson review:
 - [P0.1 gate plan](P0_1_GATE_PLAN.md)
 
 P0.1 status: **contract drafts prepared; Jimson review pending; no migration authorized**. The commercial rules remain HOLD.
+
+
+## Engineering delegation rule
+
+- [Codex First / Jimson Manual Only](../../engineering/CODEX_FIRST_JIMSON_MANUAL_ONLY.md)
+
+P0.1 execution is Codex-led. Jimson is assigned only specific manual/non-production actions that Codex cannot perform with its authorized tools. See the updated [P0.1 Gate Plan](P0_1_GATE_PLAN.md).
