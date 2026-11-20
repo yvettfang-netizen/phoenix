@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "phoenix-enterprise-v31-db03-rebase-ci.v1",
+  "workflowRunId": 44705376689,
+  "workflowRunUrl": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44705376689",
+  "prNumber": 82,
+  "commitSha": "e11a4d9a65d790706aadbe3ff1c96d73b6f8ff76",
+  "candidates": {
+    "0042": "bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea",
+    "0044": "b097f1bae3c8950f5ebf51abe3317d9111d4b9012b389628eb2436f5c8896020"
+  },
+  "sourceAndBackend": {
+    "jobId": 136183546864,
+    "status": "PASS"
+  },
+  "postgres": [
+    {
+      "version": "16",
+      "jobId": 136183788245,
+      "status": "PASS",
+      "acceptanceChecks": 11,
+      "ledger": 39,
+      "tables": 100,
+      "policies": 90,
+      "artifactId": 14615300632
+    },
+    {
+      "version": "17",
+      "jobId": 136183788276,
+      "status": "PASS",
+      "acceptanceChecks": 11,
+      "ledger": 39,
+      "tables": 100,
+      "policies": 90,
+      "artifactId": 14614188965
+    }
+  ],
+  "data": "synthetic only",
+  "sharedNonProduction": "NOT RUN",
+  "production": "NOT RUN",
+  "deployment": "NOT APPROVED"
+}
