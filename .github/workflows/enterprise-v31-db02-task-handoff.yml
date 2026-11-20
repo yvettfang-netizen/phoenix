@@ -1,0 +1,80 @@
+name: Enterprise V3.1 DB-02 scoped task handoff candidate
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/task-handoff/**'
+      - 'database/canonical/verification/v0043/**'
+      - 'docs/database/enterprise-v31-db02-20261120/**'
+      - '.github/workflows/enterprise-v31-db02-task-handoff.yml'
+permissions:
+  contents: read
+concurrency:
+  group: enterprise-v31-db02-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-and-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Historical source and 0042/0043 hash guard
+        run: node database/canonical/verification/v0043/verify-source.mjs
+      - name: Candidate secret scan
+        run: |
+          image='ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f'
+          for path in \
+            'database/canonical/forward-candidates/task-handoff' \
+            'database/canonical/verification/v0043' \
+            'docs/database/enterprise-v31-db02-20261120' \
+            '.github/workflows/enterprise-v31-db02-task-handoff.yml'; do
+            docker run --rm --network none --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
+          done
+      - name: Existing backend typecheck build and tests
+        working-directory: Phoenix Compass/education compass/server
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npm test
+
+  task-handoff:
+    needs: source-and-backend
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16', '17']
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Build existing trusted backend test module
+        working-directory: Phoenix Compass/education compass/server
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+      - name: Fresh upgrade repeat drift ACL RLS revocation concurrency and rollback
+        env:
+          TASK_HANDOFF_EVIDENCE_DIR: ${{ runner.temp }}/task-handoff/pg${{ matrix.pg }}
+        run: |
+          node database/canonical/verification/v0043/acceptance.mjs '${{ matrix.pg }}'
+          node database/canonical/verification/v0043/catalog.mjs '${{ matrix.pg }}'
+      - name: Synthetic test and catalog evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: enterprise-v31-db02-pg${{ matrix.pg }}
+          path: ${{ runner.temp }}/task-handoff/pg${{ matrix.pg }}/*.json
+          if-no-files-found: error

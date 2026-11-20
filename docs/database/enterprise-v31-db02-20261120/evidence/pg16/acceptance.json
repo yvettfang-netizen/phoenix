@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "enterprise-v31-db02-task-handoff.v1",
+  "postgres": "16",
+  "migration": {
+    "number": "0043",
+    "sha256": "6e043ffdeeb228dac59c605ba763e95f052bdedcdae37b652cba9b6666d18a3a"
+  },
+  "startedAt": "2026-11-20T04:13:55.353Z",
+  "checks": [
+    {
+      "name": "PG fresh 0001-0037 plus isolated 0042/0043, ledger and repeat",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:03.160Z"
+    },
+    {
+      "name": "recipient already holds same-project and same-organization authorization",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:03.793Z"
+    },
+    {
+      "name": "cross-organization and Partner workspace proposals denied",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:04.062Z"
+    },
+    {
+      "name": "eligible sender proposes one idempotent request; Staff Viewer denied",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:04.605Z"
+    },
+    {
+      "name": "restricted inbox reveals only current same-organization Staff proposals",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:04.792Z"
+    },
+    {
+      "name": "recipient-only accept, revision guard, exactly one transfer event and no new project grant",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:05.411Z"
+    },
+    {
+      "name": "natural expiry releases open slot; rejection replay is idempotent and task unchanged",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:06.703Z"
+    },
+    {
+      "name": "two real restricted app connections accept concurrently; one transfer event wins",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:07.000Z"
+    },
+    {
+      "name": "failed transfer rolls back atomically; sender cancel and recipient role revocation deny reuse",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:07.565Z"
+    },
+    {
+      "name": "restricted LOGIN has no direct table write or read; narrow EXECUTE grants, FORCE RLS and audit denials",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:08.178Z"
+    },
+    {
+      "name": "existing 0037+0042 baseline upgrades to 0043 without changing prior bytes",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:18.337Z"
+    },
+    {
+      "name": "0043 drift rejected and original candidate remains repeat-safe",
+      "status": "PASS",
+      "at": "2026-11-20T04:14:22.509Z"
+    }
+  ],
+  "status": "PASS",
+  "finishedAt": "2026-11-20T04:14:22.874Z"
+}
