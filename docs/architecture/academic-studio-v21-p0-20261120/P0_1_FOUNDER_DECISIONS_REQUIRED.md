@@ -57,13 +57,17 @@ Do not let CRM Staff, Channel Partner or Partner referral imply Academy Administ
 
 ### Recommended decision
 - One lesson slot is the single source for Online, Onsite and Hybrid.
-- Hybrid is one session, not duplicate classes. Each student booking records whether that participant attends online or onsite.
+- Hybrid is one session, not duplicate classes. **The teacher assigns each enrolled student to Online or Onsite participation**; the student/parent cannot self-select or change it.
+- For Online or Onsite sessions, the teacher sets the mode for the whole session.
+- Only the assigned teacher or an explicitly authorized teaching administrator may change mode/participation. Changes are audited, re-check resource capacity/conflicts atomically, and notify affected students/parents.
 - Onsite/Hybrid reserves one stable physical room; Online does not.
 - All slots reserve teacher time and each student's time; database concurrency controls prevent overlaps.
 - Store UTC instants plus an IANA timezone for the intended local schedule and display. Reject ambiguous/nonexistent DST local times unless the user explicitly selects the offset.
 - No travel/setup buffer by default; add one only if Operations demonstrates a real need.
 
-**Founder decision requested:** approve this simplest Hybrid model and no default travel buffer.
+**Founder correction recorded:** teacher controls the session mode and each Hybrid student's Online/Onsite participation; student/parent self-selection is not allowed.
+
+**Founder decision still requested:** confirm timezone/DST presentation policy and no default travel buffer. Online provider capacity remains an implementation verification item.
 
 ## 4. Assessment evidence, review and retention
 
