@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "phoenix-enterprise-v3-workspace-auth-ci.v2",
+  "workflowRunId": 44702823335,
+  "workflowRunUrl": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44702823335",
+  "commitSha": "5af10a0f9d22dc1810b3b46e1576c8902887800f",
+  "candidate": {
+    "number": "0042",
+    "sha256": "bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea"
+  },
+  "sourceAndBackend": {
+    "jobId": 136175068637,
+    "status": "PASS",
+    "checks": [
+      "historical source guard",
+      "scoped secret scan",
+      "backend typecheck",
+      "backend build",
+      "backend tests"
+    ]
+  },
+  "runs": [
+    {
+      "postgres": "16",
+      "jobId": 136175361623,
+      "status": "PASS",
+      "acceptanceGroups": 20,
+      "ledger": 38,
+      "tables": 98,
+      "policiesIncludingAuth": 88
+    },
+    {
+      "postgres": "17",
+      "jobId": 136175361617,
+      "status": "PASS",
+      "acceptanceGroups": 20,
+      "ledger": 38,
+      "tables": 98,
+      "policiesIncludingAuth": 88
+    }
+  ],
+  "additionalVerified": [
+    "Canonical auth.context_exchange_tickets and auth.session_contexts reused",
+    "legacy Family context redemption rejects workspace-only tickets",
+    "same-backend legacy rebind clears workspace_session_id and workspace_binding_id",
+    "workspace redemption rejects legacy tickets",
+    "separate binder and reader LOGINs",
+    "cross-organization and cross-principal denial",
+    "membership disable, role revoke, logout and identity session revoke",
+    "audit allow/deny, atomic rollback and checksum drift rejection"
+  ],
+  "data": "synthetic only",
+  "environment": "disposable GitHub Actions PostgreSQL containers",
+  "realIdentityIntegration": "HOLD",
+  "sharedNonProductionInstall": "NOT RUN",
+  "production": "NOT RUN",
+  "deployment": "NOT APPROVED"
+}

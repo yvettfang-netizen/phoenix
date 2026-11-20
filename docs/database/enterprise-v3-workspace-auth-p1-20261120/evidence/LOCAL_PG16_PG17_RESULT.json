@@ -1,35 +1,6 @@
 {
-  "schemaVersion": "phoenix-enterprise-v3-workspace-auth-local-summary.v1",
-  "candidate": {
-    "number": "0042",
-    "sha256": "0d4a3de80b56ccb167049a846e17b9b6fc4ef3e152b57aa4600d87367a33cb65"
-  },
-  "runs": [
-    {
-      "postgres": "16.15 (Debian 16.15-1.pgdg13+2)",
-      "startedAt": "2026-11-20T03:17:16.889Z",
-      "finishedAt": "2026-11-20T03:17:32.062Z",
-      "status": "PASS",
-      "ledger": 38,
-      "tables": 100,
-      "policiesIncludingAuth": 90,
-      "checkGroups": 20,
-      "httpRequests": 34
-    },
-    {
-      "postgres": "17.11 (Debian 17.11-1.pgdg13+2)",
-      "startedAt": "2026-11-20T03:17:36.279Z",
-      "finishedAt": "2026-11-20T03:17:50.704Z",
-      "status": "PASS",
-      "ledger": 38,
-      "tables": 100,
-      "policiesIncludingAuth": 90,
-      "checkGroups": 20,
-      "httpRequests": 34
-    }
-  ],
-  "data": "synthetic only",
-  "network": "local Docker socket and loopback only",
-  "production": "NOT RUN",
-  "deployment": "NOT RUN"
+  "evidence_status": "HISTORICAL_SUPERSEDED",
+  "applies_to_sha": "0d4a3de80b56ccb167049a846e17b9b6fc4ef3e152b57aa4600d87367a33cb65",
+  "not_evidence_for_current_sha": "bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea",
+  "note": "This earlier local PG16/17 run predates Canonical context-table consolidation. Use GITHUB_ACTIONS_PG16_PG17_RESULT.json for the current candidate."
 }
