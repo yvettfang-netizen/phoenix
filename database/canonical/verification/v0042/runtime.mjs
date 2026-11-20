@@ -23,7 +23,8 @@ export async function startWorkspaceApi(db,passwords) {
   const aliases = {
     multi: fixtureIds.principals.multi,
     partnerB: fixtureIds.principals.partnerB,
-    auxiliary: fixtureIds.principals.auxiliary
+    auxiliary: fixtureIds.principals.auxiliary,
+    teacher: fixtureIds.principals.teacher
   }
   const issue = (alias) => {
     assert(Object.hasOwn(aliases,alias))

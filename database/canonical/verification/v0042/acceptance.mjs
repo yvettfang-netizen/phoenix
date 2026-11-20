@@ -55,9 +55,9 @@ async function run() {
 
   const passwords = seedWorkspaceAuthorization(db)
   assert.equal(db.sql("SELECT string_agg(workspace_organization_kind,',' ORDER BY workspace_organization_kind) FROM core.organization_workspace_profiles"),
-    'CHANNEL_AGENT,FRANCHISEE,HEADQUARTERS,REGIONAL_PARTNER,REGIONAL_PARTNER,SUB_PARTNER')
-  assert.equal(db.sql("SELECT count(*) FROM core.organization_memberships WHERE status='ACTIVE'"),'6')
-  assert.equal(db.sql("SELECT count(*) FROM auth.workspace_role_bindings WHERE status='ACTIVE'"),'11')
+    'CHANNEL,CHANNEL,CHANNEL,CHANNEL,CHANNEL,HEADQUARTERS')
+  assert.equal(db.sql("SELECT count(*) FROM core.organization_memberships WHERE status='ACTIVE'"),'7')
+  assert.equal(db.sql("SELECT count(*) FROM auth.workspace_role_bindings WHERE status='ACTIVE'"),'12')
   check('organization kinds, invitation acceptance and role bindings use Canonical people and organizations')
   const finiteRole = asWorkspaceAdmin(db,`SELECT auth.assign_workspace_role(
     '${id(1699)}','${fixtureIds.principals.multi}','${fixtureIds.memberships.hq}',NULL,
@@ -77,10 +77,10 @@ async function run() {
   const multiList = expectStatus(result,200)
   assert.equal(multiList.contractVersion,'workspace-list.v1')
   assert.deepEqual([...new Set(multiList.workspaces.map((item) => item.workspaceKind))].sort(),
-    ['FAMILY','FOUNDER','PARTNER','STAFF'])
+    ['CHANNEL','FAMILY','FOUNDER','STAFF'])
   assert.equal(multiList.workspaces.length,5)
   assert.equal(JSON.stringify(multiList).includes('person_id'),false)
-  check('one natural person receives only its Founder, Staff, Partner and Family bindings')
+  check('one natural person receives independent Founder, Staff, Channel and Family roles')
 
   result = await capture('partnerB','/v1/me/workspaces')
   const partnerBList = expectStatus(result,200)
@@ -88,8 +88,19 @@ async function run() {
     [fixtureIds.bindings.familyB,fixtureIds.bindings.partnerB,fixtureIds.bindings.partnerBStaff].sort())
   result = await capture('auxiliary','/v1/me/workspaces')
   assert.deepEqual(expectStatus(result,200).workspaces.map((item) => item.organizationCode).sort(),
-    ['PHX_CHANNEL','PHX_FRANCHISE','PHX_SUBPARTNER'])
-  check('two partner identities and all approved organization types remain independently scoped')
+    ['PHX_CHANNEL_C','PHX_CHANNEL_D','PHX_CHANNEL_E'])
+  result = await capture('teacher','/v1/me/workspaces')
+  const teacherList = expectStatus(result,200)
+  assert.deepEqual(teacherList.workspaces.map((item) => ({
+    workspaceKind:item.workspaceKind,role:item.role
+  })),[{workspaceKind:'STAFF',role:'STAFF_TEACHER'}])
+  const teacherContext = await capture('teacher','/v1/workspace-contexts',{
+    method:'POST',body:{workspaceBindingId:fixtureIds.bindings.teacher}
+  })
+  assert.equal((await capture('teacher','/v1/staff/projects',{
+    cookie:cookieToken(teacherContext.setCookie)
+  })).response.status,403)
+  check('Channel legal entities remain separate; Teacher cannot inherit Staff project access')
 
   assert.equal((await capture('multi','/v1/me/workspaces?role=FOUNDER')).response.status,400)
   assert.equal((await capture('multi','/v1/me/workspaces',{headers:{'x-role':'FOUNDER'}})).response.status,403)
