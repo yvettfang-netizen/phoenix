@@ -229,6 +229,8 @@ async function run() {
     await appClient.query('SELECT auth.clear_context()')
     assert.equal(db.sql(`SELECT count(*) FROM auth.session_contexts
       WHERE backend_pid=${Number(backendPid)}`),'0')
+    await appClient.query('RESET ROLE')
+    await appClient.query('SET ROLE phoenix_canonical_workspace_reader')
     await expectDatabaseReject(() => appClient.query(
       'SELECT auth.redeem_workspace_context_ticket($1,$2)',
       [issued.rows[0].ticket_id,fixtureIds.principals.partnerB]
