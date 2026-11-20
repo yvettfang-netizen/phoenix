@@ -43,7 +43,8 @@ export function seedWorkspaceAuthorization(db) {
     app: randomBytes(32).toString('hex'),
     binder: randomBytes(32).toString('hex'),
     legacyApp: randomBytes(32).toString('hex'),
-    legacyBinder: randomBytes(32).toString('hex')
+    legacyBinder: randomBytes(32).toString('hex'),
+    rebindProbe: randomBytes(32).toString('hex')
   })
   db.sql(`
     CREATE ROLE workspace_test_app LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE
@@ -54,8 +55,11 @@ export function seedWorkspaceAuthorization(db) {
       NOREPLICATION NOBYPASSRLS PASSWORD ${quote(passwords.legacyApp)};
     CREATE ROLE workspace_legacy_binder LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE
       NOREPLICATION NOBYPASSRLS PASSWORD ${quote(passwords.legacyBinder)};
+    CREATE ROLE workspace_context_rebind_probe LOGIN NOINHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE
+      NOREPLICATION NOBYPASSRLS PASSWORD ${quote(passwords.rebindProbe)};
     GRANT CONNECT ON DATABASE phoenix_canonical_dev TO workspace_test_app,
-      workspace_test_binder,workspace_legacy_app,workspace_legacy_binder;
+      workspace_test_binder,workspace_legacy_app,workspace_legacy_binder,
+      workspace_context_rebind_probe;
     GRANT phoenix_canonical_workspace_reader TO workspace_test_app
       WITH INHERIT FALSE,SET TRUE;
     GRANT USAGE ON SCHEMA auth TO workspace_test_binder;
@@ -68,6 +72,8 @@ export function seedWorkspaceAuthorization(db) {
     GRANT phoenix_canonical_app TO workspace_legacy_app WITH INHERIT FALSE,SET TRUE;
     GRANT phoenix_canonical_context_binder TO workspace_legacy_binder
       WITH INHERIT FALSE,SET TRUE;
+    GRANT phoenix_canonical_workspace_reader,phoenix_canonical_app
+      TO workspace_context_rebind_probe WITH INHERIT FALSE,SET TRUE;
 
     INSERT INTO auth.principals(principal_id,person_id,principal_kind,status,service_label)
     VALUES(${quote(fixtureIds.admin)},NULL,'SERVICE','ACTIVE','canonical_workspace_admin_v1');

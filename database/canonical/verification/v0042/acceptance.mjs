@@ -154,49 +154,110 @@ async function run() {
   const tokenValue = ticketCookie.slice(ticketCookie.indexOf('=')+1)
   const identitySession = runtime.sessions.get(runtime.tokens.partnerB)
   const binderClient = await runtime.binder.connect()
-  const appClient = await runtime.app.connect()
+  const rebindPool = new runtime.Pool(runtime.connection(
+    'workspace_context_rebind_probe',passwords.rebindProbe
+  ))
+  const appClient = await rebindPool.connect()
+  const legacyBinderPool = new runtime.Pool(runtime.connection(
+    'workspace_legacy_binder',passwords.legacyBinder
+  ))
+  const legacyBinderClient = await legacyBinderPool.connect()
   try {
     const issued = await binderClient.query(
       "SELECT * FROM auth.issue_workspace_context_ticket($1,$2,$3,clock_timestamp()+interval '30 seconds',$4,$1)",
       [fixtureIds.principals.partnerB,sha256(identitySession.sessionRef),sha256(tokenValue),id(7001)]
     )
     assert.equal(issued.rows.length,1)
+
+    // A legacy Family redemption must not consume a workspace-only ticket.
+    await appClient.query('SET ROLE phoenix_canonical_app')
+    await expectDatabaseReject(() => appClient.query(
+      'SELECT auth.redeem_context_ticket($1,$2)',
+      [issued.rows[0].ticket_id,fixtureIds.principals.partnerB]
+    ),/CONTEXT_TICKET_INVALID_OR_ALREADY_USED/)
+    await appClient.query('RESET ROLE')
+
     await appClient.query('SET ROLE phoenix_canonical_workspace_reader')
     await appClient.query('SELECT auth.redeem_workspace_context_ticket($1,$2)',
       [issued.rows[0].ticket_id,fixtureIds.principals.partnerB])
     const backendPid = (await appClient.query('SELECT pg_backend_pid() AS pid')).rows[0].pid
-    const unifiedContext = await appClient.query(
-      "SELECT concat(channel,'|',coalesce(family_id::text,'NULL'),'|',(workspace_session_id IS NOT NULL)::text,'|',workspace_binding_id::text) AS value FROM auth.session_contexts WHERE backend_pid=$1",
-      [backendPid]
-    )
-    assert.equal(unifiedContext.rows[0].value,'STAFF|NULL|t|' + fixtureIds.bindings.partnerBStaff)
+    const unifiedContext = db.sql(`SELECT concat(channel,'|',coalesce(family_id::text,'NULL'),'|',
+      (workspace_session_id IS NOT NULL)::text,'|',workspace_binding_id::text)
+      FROM auth.session_contexts WHERE backend_pid=${Number(backendPid)}`)
+    assert.equal(unifiedContext,
+      `STAFF|NULL|t|${fixtureIds.bindings.partnerBStaff}`)
+
     const projection = (await appClient.query(
       'SELECT service.read_staff_workspace_projects() AS value'
     )).rows[0].value
     assert.equal(projection.status,'ALLOW')
     assert.deepEqual(projectCodes(projection.data),['SYN_WS_PARTNER_B'])
-    await appClient.query('SELECT auth.clear_workspace_context()')
-    const clearedContext = await appClient.query(
-      'SELECT count(*)::int AS n FROM auth.session_contexts WHERE backend_pid=$1',[backendPid]
+
+    // Redeem a legacy Family ticket on this same backend. The upsert must
+    // replace the workspace context and explicitly null both workspace references.
+    await legacyBinderClient.query('SET ROLE phoenix_canonical_context_binder')
+    const legacyTicket = await legacyBinderClient.query(
+      "SELECT auth.issue_context_ticket($1,$2,$3,'FAMILY',clock_timestamp()+interval '30 seconds',$4,$1) AS value",
+      [fixtureIds.principals.multi,fixtureIds.people.multi,fixtureIds.families.a,id(7003)]
     )
-    assert.equal(clearedContext.rows[0].n,0)
-    await expectDatabaseReject(() => appClient.query('SELECT auth.redeem_workspace_context_ticket($1,$2)',
-      [issued.rows[0].ticket_id,fixtureIds.principals.partnerB]),/WORKSPACE_TICKET_INVALID_OR_ALREADY_USED/)
+    await appClient.query('RESET ROLE')
+    await appClient.query('SET ROLE phoenix_canonical_app')
+    await appClient.query('SELECT auth.redeem_context_ticket($1,$2)',
+      [legacyTicket.rows[0].value,fixtureIds.principals.multi])
+    const legacyIdentity = (await appClient.query(
+      'SELECT auth.current_family_id() AS family_id,auth.current_channel() AS channel'
+    )).rows[0]
+    assert.equal(legacyIdentity.family_id,fixtureIds.families.a)
+    assert.equal(legacyIdentity.channel,'FAMILY')
+    const legacyRebind = db.sql(`SELECT concat(channel,'|',family_id::text,'|',
+      coalesce(workspace_session_id::text,'NULL'),'|',
+      coalesce(workspace_binding_id::text,'NULL'))
+      FROM auth.session_contexts WHERE backend_pid=${Number(backendPid)}`)
+    assert.equal(legacyRebind,
+      `FAMILY|${fixtureIds.families.a}|NULL|NULL`)
+
+    // The old workspace projection must now fail closed on the same connection.
+    await appClient.query('RESET ROLE')
+    await appClient.query('SET ROLE phoenix_canonical_workspace_reader')
+    const afterLegacyRebind = (await appClient.query(
+      'SELECT service.read_staff_workspace_projects() AS value'
+    )).rows[0].value
+    assert.equal(afterLegacyRebind.status,'DENY')
+
+    await appClient.query('RESET ROLE')
+    await appClient.query('SET ROLE phoenix_canonical_app')
+    await appClient.query('SELECT auth.clear_context()')
+    assert.equal(db.sql(`SELECT count(*) FROM auth.session_contexts
+      WHERE backend_pid=${Number(backendPid)}`),'0')
+    await expectDatabaseReject(() => appClient.query(
+      'SELECT auth.redeem_workspace_context_ticket($1,$2)',
+      [issued.rows[0].ticket_id,fixtureIds.principals.partnerB]
+    ),/WORKSPACE_TICKET_INVALID_OR_ALREADY_USED/)
+
+    await appClient.query('RESET ROLE')
+    await appClient.query('SET ROLE phoenix_canonical_workspace_reader')
     const expiring = await binderClient.query(
       "SELECT * FROM auth.issue_workspace_context_ticket($1,$2,$3,clock_timestamp()+interval '300 milliseconds',$4,$1)",
       [fixtureIds.principals.partnerB,sha256(identitySession.sessionRef),sha256(tokenValue),id(7002)]
     )
     await new Promise((resolve) => setTimeout(resolve,500))
-    await expectDatabaseReject(() => appClient.query('SELECT auth.redeem_workspace_context_ticket($1,$2)',
-      [expiring.rows[0].ticket_id,fixtureIds.principals.partnerB]),/WORKSPACE_TICKET_INVALID_OR_ALREADY_USED/)
+    await expectDatabaseReject(() => appClient.query(
+      'SELECT auth.redeem_workspace_context_ticket($1,$2)',
+      [expiring.rows[0].ticket_id,fixtureIds.principals.partnerB]
+    ),/WORKSPACE_TICKET_INVALID_OR_ALREADY_USED/)
     await appClient.query('RESET ROLE')
     await appClient.query('DISCARD ALL')
     await binderClient.query('DISCARD ALL')
+    await legacyBinderClient.query('DISCARD ALL')
   } finally {
     appClient.release(true)
     binderClient.release(true)
+    legacyBinderClient.release(true)
+    await rebindPool.end()
+    await legacyBinderPool.end()
+    await runtime.binder.end()
   }
-  check('separate LOGIN credentials enforce one-use, expiring workspace tickets')
+  check('separate LOGINs, one-use tickets, cross-flow rejection and same-backend legacy rebind are enforced')
 
   const permissionApp = new runtime.Pool(runtime.connection('workspace_test_app',passwords.app))
   const permissionBinder = new runtime.Pool(runtime.connection('workspace_test_binder',passwords.binder))

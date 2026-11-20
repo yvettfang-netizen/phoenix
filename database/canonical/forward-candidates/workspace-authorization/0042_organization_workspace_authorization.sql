@@ -936,6 +936,9 @@ RETURN coalesce(EXISTS(
     AND c.workspace_session_id IS NOT NULL
     AND c.workspace_binding_id=s.workspace_binding_id
     AND c.principal_id=s.principal_id
+    AND c.actor_person_id IS NOT DISTINCT FROM b.actor_person_id
+    AND c.family_id IS NOT DISTINCT FROM b.family_id
+    AND c.channel=CASE WHEN b.workspace_kind='FAMILY' THEN 'FAMILY' ELSE 'STAFF' END
     AND c.expires_at>clock_timestamp()
     AND s.status='ACTIVE' AND s.expires_at>clock_timestamp()
     AND b.binding_authorization_version=s.binding_authorization_version

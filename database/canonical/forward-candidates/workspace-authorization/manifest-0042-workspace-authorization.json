@@ -5,7 +5,7 @@
   "historical_migrations": 37,
   "candidate_number": "0042",
   "file": "0042_organization_workspace_authorization.sql",
-  "sha256": "9109e1fb3f9ee767f454b474eecc5a6b75bc178d7b0edadbd35eebace72fd253",
+  "sha256": "bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea",
   "isolated_ledger_rows": 38,
   "isolated_tables": 98,
   "isolated_policies_including_auth": 88,
