@@ -15,12 +15,10 @@ BEGIN
      OR NOT (regexp_replace(COALESCE(array_to_string(v_config,','),''),'[[:space:]]','','g') LIKE '%search_path=pg_catalog,auth,core,learning%') THEN
     RAISE EXCEPTION 'S1_FUNCTION_ATTRIBUTES_DRIFT_REFUSED';
   END IF;
-  IF position('auth.write_context_is_live()' in v_definition)=0
-     OR position('current_actor_person_id()' in v_definition)=0
-     OR position('core.has_verified_guardian_authority' in v_definition)=0
-     OR position('learning.teacher_has_class_access' in v_definition)=0
-     OR (position('core.family_memberships' in v_definition)>0
-         AND position('m.valid_until' in v_definition)=0) THEN
+  IF md5(v_definition) NOT IN (
+    '4b65b734551738529b6cbc3935217bab',
+    '8c9c51f1e022af796318c90abddffca2'
+  ) THEN
     RAISE EXCEPTION 'S1_FUNCTION_SOURCE_DRIFT_REFUSED';
   END IF;
 END

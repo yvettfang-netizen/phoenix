@@ -124,13 +124,12 @@ try{
 
  const candidate=readFileSync(path.join(root,'database/canonical/forward-candidates/family-membership-revocation/0045_family_membership_live_revocation.sql'),'utf8');
  const rollback=readFileSync(path.join(root,'database/canonical/forward-candidates/family-membership-revocation/rollback_0045_family_membership_live_revocation.sql'),'utf8');
- const oldHash=sourceHash(db);
- console.log('S1_BASE_FUNCTION_DEFINITION_MD5='+oldHash);
+ const oldHash='4b65b734551738529b6cbc3935217bab';
+ const newHash='8c9c51f1e022af796318c90abddffca2';
  const beforeMeta=functionMeta(db);
+ assert.equal(sourceHash(db),oldHash,'UNEXPECTED_0037_FUNCTION_DEFINITION');
  sql(db,candidate);
- const newHash=sourceHash(db);
- console.log('S1_CANDIDATE_FUNCTION_DEFINITION_MD5='+newHash);
- assert.notEqual(newHash,oldHash,'S1_FORWARD_FUNCTION_NOT_CHANGED');
+ assert.equal(sourceHash(db),newHash,'S1_FORWARD_FUNCTION_DEFINITION_MISMATCH');
  assert.equal(functionMeta(db),beforeMeta,'S1_FORWARD_MUST_PRESERVE_OWNER_ACL_AND_ATTRIBUTES');
  sql(db,candidate);
  assert.equal(sourceHash(db),newHash,'S1_REPEAT_MUST_BE_IDEMPOTENT');

@@ -2,9 +2,9 @@
   "status": "DEVELOPMENT CANDIDATE; NOT APPROVED FOR INSTALLATION, MERGE OR DEPLOYMENT",
   "candidate": "0045",
   "file": "0045_family_membership_live_revocation.sql",
-  "sha256": "8bd89a4689071b08bc0a7390b9b8454f70f262b5b5d8ad6a999a78ad76f1dc25",
+  "sha256": "2fb5a438d16118367ce8392134a80244d29717e25416052b482d74ad0591d41c",
   "rollback_file": "rollback_0045_family_membership_live_revocation.sql",
-  "rollback_sha256": "2ad87951040891a70848878b157eecc3d0d1b17270bed528b3a734649d89881b",
+  "rollback_sha256": "96746aa567899f9c8b8e843a7a7852179590ae7ea71418b51bb3ba5dbc80827d",
   "formal_base": {
     "migrations": 37,
     "last": "0037_scoped_public_id_projection_read_audit.sql"
@@ -15,9 +15,9 @@
     "language": "sql",
     "volatility": "VOLATILE",
     "security_definer": true,
-    "allowed_pre_implementation_prosrc_md5": "replaced by pg_get_functiondef MD5; CI evidence pending",
-    "allowed_post_implementation_prosrc_md5": "replaced by pg_get_functiondef MD5; CI evidence pending",
-    "drift": "Function definition must retain the existing context, guardian, self-read and Teacher checks; if a live membership clause exists it must include the valid_until wall-clock guard."
+    "drift": "Exact pg_get_functiondef MD5 is checked; any other source or function-attribute fingerprint is refused.",
+    "allowed_pre_implementation_pg_get_functiondef_md5": "4b65b734551738529b6cbc3935217bab",
+    "allowed_post_implementation_pg_get_functiondef_md5": "8c9c51f1e022af796318c90abddffca2"
   },
   "changed_objects": [
     "learning.can_read_sensitive(uuid,uuid,uuid)"
