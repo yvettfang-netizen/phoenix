@@ -1,0 +1,77 @@
+name: Enterprise V3 DB-03 study review candidate without DB-02 dependency
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/study-lifecycle/**'
+      - 'database/canonical/verification/v0044/**'
+      - 'docs/database/enterprise-v31-db03-20261120/**'
+      - '.github/workflows/enterprise-v31-db03-study-review.yml'
+      - '.gitattributes'
+permissions:
+  contents: read
+concurrency:
+  group: enterprise-v31-db03-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-and-backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Historical source and 0042/0044 hash guards
+        run: node database/canonical/verification/v0044/verify-source.mjs
+      - name: Candidate secret scan
+        run: |
+          image='ghcr.io/gitleaks/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f'
+          for path in \
+            'database/canonical/forward-candidates/study-lifecycle' \
+            'database/canonical/verification/v0044' \
+            'docs/database/enterprise-v31-db03-20261120' \
+            '.github/workflows/enterprise-v31-db03-study-review.yml'; do
+            docker run --rm --network none --mount "type=bind,source=$PWD/$path,target=/scan,readonly" "$image" dir /scan --redact=100 --no-banner --exit-code=1
+          done
+      - name: Existing backend typecheck build and tests
+        working-directory: Phoenix Compass/education compass/server
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npm test
+
+  study-review:
+    needs: source-and-backend
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16', '17']
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Prepare existing PostgreSQL test dependency
+        working-directory: Phoenix Compass/education compass/server
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Fresh upgrade repeat drift and default-deny acceptance
+        env:
+          STUDY_REVIEW_EVIDENCE_DIR: ${{ runner.temp }}/study-review/pg${{ matrix.pg }}
+        run: node database/canonical/verification/v0044/acceptance.mjs '${{ matrix.pg }}'
+      - name: Synthetic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: enterprise-v31-db03-pg${{ matrix.pg }}
+          path: ${{ runner.temp }}/study-review/pg${{ matrix.pg }}/*.json
+          if-no-files-found: error

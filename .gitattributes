@@ -1,0 +1,4 @@
+database/canonical/forward-candidates/study-lifecycle/*.sql text eol=lf
+database/canonical/forward-candidates/study-lifecycle/*.json text eol=lf
+database/canonical/verification/v0044/*.mjs text eol=lf
+.github/workflows/enterprise-v31-db03-study-review.yml text eol=lf
