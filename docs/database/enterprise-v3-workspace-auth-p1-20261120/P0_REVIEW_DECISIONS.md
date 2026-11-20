@@ -30,15 +30,17 @@ Safety requirements now tested:
 
 ## P0-B｜0043: do not add a second task-transfer authority
 
-Formal migration 0035 already defines `service.transfer_task(uuid,uuid,text,uuid)`. It locks the task row, checks the task/project state and same-project active assignment, changes the assignee, writes the immutable `TRANSFERRED` task event and records the write decision.
+Formal migration 0035 already defines `service.transfer_task(uuid,uuid,text,uuid)`. It locks the task row, checks task/project state and a same-project assignment whose status is ACTIVE and whose `valid_until` has not passed, changes the assignee, writes the immutable `TRANSFERRED` task event and records the write decision.
 
-The isolated 0043 candidate is not a pure duplicate: it adds a proposal/accept/reject/cancel/expire lifecycle, recipient inbox, concurrency control, and stricter same-organization Staff membership/workspace checks. However, its accept function directly updates `service.tasks` and inserts a `TRANSFERRED` row instead of reusing the formal transfer function. It therefore introduces a second task-mutation/event path.
+**Important boundary found in the actual 0035 SQL:** the existing function does not check `valid_from <= now()`, recipient Principal status, or a permitted assignment-role set. Its authorization path also requires `service.is_service_management_service()` and the current Family context to match the project. It is therefore the existing service-managed transfer authority, not a drop-in Staff-workspace transfer API.
 
-**Decision for current phase:** no Founder-approved requirement for a two-party approval inbox has been established. Ordinary transfer should continue through formal `service.transfer_task()`; do not promote 0043 into the Canonical migration sequence.
+The isolated 0043 candidate is not a pure duplicate: it adds a proposal/accept/reject/cancel/expire lifecycle, recipient inbox, concurrency control, and stricter same-organization Staff membership/workspace checks. Its `task_handoff_party_is_current()` additionally checks `valid_from`, `valid_until`, Principal status, active organization membership, workspace role and allowed assignment roles. However, its accept function directly updates `service.tasks` and inserts a `TRANSFERRED` row instead of reusing the formal transfer function. It therefore introduces a second task-mutation/event path.
+
+**Decision for current phase:** no Founder-approved requirement for a two-party approval inbox has been established. Ordinary service-managed transfer should continue through formal `service.transfer_task()`; do not promote 0043 into the Canonical migration sequence. If Staff workspace task transfer is required, first extend the existing transfer authority or factor one private shared mutation helper, add the missing `valid_from`/Principal/role checks, and make any approval wrapper call that single authority.
 
 **Repository state:** PR [#78](https://github.com/yvettfang-netizen/phoenix/pull/78) is closed and unmerged. PR [#82](https://github.com/yvettfang-netizen/phoenix/pull/82) is based directly on 0042 and explicitly excludes 0043.
 
-If a recipient-acceptance workflow is later required, open a new scoped design gate. It must reuse the existing transfer mutation/event authority rather than duplicate `UPDATE service.tasks` and `TRANSFERRED` insertion. Any Staff-specific authorization extension to `service.transfer_task()` must be separately reviewed; the current formal function's service-management/family context is not automatically equivalent to a Staff workspace context.
+If a recipient-acceptance workflow is later required, open a new scoped design gate. It must not create a second task-update/event path. Any Staff-specific authorization extension to `service.transfer_task()` must be separately reviewed; the current formal function's service-management/family context is not automatically equivalent to a Staff workspace context.
 
 ## Release boundary
 

@@ -16,7 +16,7 @@
 
 ## 0043 复审决定
 
-当前不引入 0043。正式 0035 的 `service.transfer_task()` 足以承接普通任务转派；0043 的双边提议/接受/收件箱属于额外审批流程，并且当前实现重复了任务更新和 TRANSFERRED 事件写入。PR #78 已关闭未合并，PR #82 不再依赖 0043。若未来确需接收方审批，应重新立项，并将 0035 的转移函数作为唯一任务状态变更入口。
+当前不引入 0043。正式 0035 的 `service.transfer_task()` 已承接既有 service-managed 转派；但它当前不检查 assignment `valid_from`、recipient Principal status/role，也不是 Staff workspace 的直接授权入口。0043 增加双边审批与更严格 Staff/Organization 检查，却重复实现 task 更新和 TRANSFERRED 事件。PR #78 已关闭未合并，PR #82 不再依赖 0043。若未来确需 Staff 转派或接收方审批，应先扩展/抽取唯一转移 authority，再由审批层调用。
 
 ## Jimson 可执行的非生产准备步骤
 

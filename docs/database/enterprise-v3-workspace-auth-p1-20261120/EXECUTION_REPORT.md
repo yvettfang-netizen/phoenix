@@ -38,9 +38,9 @@ Source/backend job：historical source guard、scoped secret scan、backend type
 
 ## P0｜0043 task handoff review
 
-- 正式 0035 已有 `service.transfer_task()`，包含 task row lock、同项目 active assignment 检查、任务 assignee 更新、审计及不可变 `TRANSFERRED` 事件。
-- 0043 另加的是提议/接受/拒绝/取消/过期/收件箱审批流程，并在 accept 函数中自行更新 task、插入 `TRANSFERRED` 事件，没有复用正式转移函数。
-- 0043 不是纯粹重复：它增加双边审批语义及更严格的 Staff/Organization 资格检查。但目前没有 Founder 明确要求此审批流程，因此不纳入当前 Canonical 升级。
+- 正式 0035 的 `service.transfer_task()` 已有 task row lock、同项目 ACTIVE assignment 检查、任务 assignee 更新、审计及不可变 `TRANSFERRED` 事件；但实际 SQL 未检查 assignment `valid_from`、recipient Principal status 或 assignment role，且授权路径要求 service-management service + Family context。
+- 0043 另加的是提议/接受/拒绝/取消/过期/收件箱审批流程；其 Staff/Organization 资格检查更严格，但 accept 函数自行更新 task、插入 `TRANSFERRED` 事件，没有复用正式转移函数。
+- 因此 0043 并非纯粹重复。当前没有 Founder 明确要求双边审批，也没有批准 Staff workspace 任务转派扩展，所以不纳入当前 Canonical 升级。若以后需要 Staff 转派，应先扩展/抽取唯一转移 authority，再让审批层调用它。
 - PR [#78](https://github.com/yvettfang-netizen/phoenix/pull/78) 已关闭、未合并；PR [#82](https://github.com/yvettfang-netizen/phoenix/pull/82) 已直接基于 0042，明确排除 0043。
 - 未来如需双边审批，应单独立项，并复用 0035 转移逻辑，不再复制 task mutation/event authority。
 
