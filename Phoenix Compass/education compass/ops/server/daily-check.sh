@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 原独立 Education PostgreSQL、PM2 API/Agent、数据库备份和 COS 同步均已退役。
-# 本脚本只保留宿主机 HTTPS 证书与磁盘空间巡检；不代表 Canonical PostgreSQL 的备份/灾备监控。
+# 本脚本只保留宿主机 HTTPS 证书与磁盘空间巡检；公网 API 2 分钟探测由 ops/monitoring/public-api-health-check.sh 独立负责。
+# 不代表 Canonical PostgreSQL 的备份/灾备监控。
 set -uo pipefail
 
 NODE_BIN=/home/ubuntu/.nvm/versions/node/v24.20.0/bin
