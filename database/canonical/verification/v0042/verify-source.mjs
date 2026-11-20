@@ -41,7 +41,7 @@ for (const token of [
   'auth.rotate_workspace_session','auth.issue_workspace_context_ticket',
   'auth.redeem_workspace_context_ticket','service.read_staff_workspace_projects',
   'ALTER TABLE auth.context_exchange_tickets','ALTER TABLE auth.session_contexts',
-  'workspace_session_id=NULL','workspace_binding_id=NULL',
+  'workspace_session_id=NULL','workspace_binding_id=NULL','workspace_session_id IS NULL',
   'pg_stat_activity','backend_start'
 ]) assert(sql.includes(token),token)
 assert(!sql.includes('CREATE TABLE auth.workspace_context_tickets'))

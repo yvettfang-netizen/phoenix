@@ -191,6 +191,7 @@ BEGIN
   DELETE FROM auth.context_exchange_tickets
    WHERE ticket_id=p_ticket_id
      AND intended_principal_id=p_expected_principal_id
+     AND workspace_session_id IS NULL
      AND expires_at>clock_timestamp()
    RETURNING * INTO v_ticket;
   IF NOT FOUND THEN RAISE EXCEPTION 'CONTEXT_TICKET_INVALID_OR_ALREADY_USED'; END IF;
