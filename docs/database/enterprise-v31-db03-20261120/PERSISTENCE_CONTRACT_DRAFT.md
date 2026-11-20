@@ -1,6 +1,6 @@
 # DB-03 persistence contract draft
 
-**Design only; no SQL migration, runtime worker or customer contact.** This draft carries forward the approved architecture direction from PR #76 and the measured gaps in [the readiness audit](READINESS_AUDIT.md). Business source, consent and assignment details remain HOLD.
+**Target design; isolated review-only 0044 candidate exists, with no runtime worker or customer contact.** This draft carries forward the architecture direction from PR #76 and the measured gaps in [the readiness audit](READINESS_AUDIT.md). Business source, consent and assignment details remain HOLD. Fields below that are absent from 0044 are future contract proposals, not implemented capabilities.
 
 ## Table proposal
 
@@ -18,9 +18,13 @@
 
 Preserve source corrections as events or an equivalent immutable history; do not overwrite a verified entry/graduation fact without an audit event. A transferred student can have another enrollment row but not another `core.student_profiles` row.
 
+0044 currently contains `SOURCE_REVIEW_REQUIRED` rows only, an opaque `source_review_ref`, immutable dates and optional existing institution/program FKs. It has no verified lifecycle status, correction event, academic calendar or runtime write grant. The 0026 temporal family-membership change removed the former composite unique key, so 0044 checks and locks a current family membership at insert instead of relying on a historical FK.
+
 ### Lifecycle occurrence metadata
 
 The minimum stable key is unique `(study_enrollment_id, journey_cycle_id, rule_key)`. It excludes the mutable due date, expected graduation and rule version. Store an occurrence revision, current due date, rule/calendar/source revisions, proposed owner queue, terminal state and exactly one linked actionable `crm.follow_ups` or `service.tasks` ID when actually assigned. A separate event table records CREATE, RESCHEDULE, SUPPRESS and review decisions. A repeat from the same source event returns the original result; the same event ID with changed payload is a conflict.
+
+0044 implements only immutable `REVIEW_REQUIRED` occurrences and the stable unique key. It deliberately does not implement revisions, terminal transitions, an assignee queue, events, CRM followups, dispatch or idempotent source-event replay; these remain HOLD pending approved source and permission contracts.
 
 `journey_cycle_id` is minted and bound by a trusted server from a reviewed study/project context. The browser cannot change it to bypass dedupe. Two workers use unique-key insertion and row-version compare inside one transaction; a failed transaction leaves neither occurrence nor message event. Existing completed history is immutable. New Service Project creation remains under the existing contract/opening rules.
 
@@ -36,4 +40,4 @@ Fresh and upgrade migrations; repeat and drift rejection; bad FK and cross-famil
 
 ## Promotion gate
 
-An isolated migration number may be assigned only after Jimson checks newer candidates and Founder confirms it. The actual SQL candidate should be reviewed for exact source/status/consent semantics, then run in disposable PG16/17. Until then, status is **HOLD** for persistence and **NOT RUN** for E2E.
+Founder confirmed isolated candidate number 0044. Local PG16/17 tests cover the implemented review-only schema; see [DB-03 execution](DB03_EXECUTION_REPORT.md). Independent review, source/status/consent semantics, runtime API, contact dispatch and installation remain **HOLD**. Real identity and E2E remain **NOT RUN**.

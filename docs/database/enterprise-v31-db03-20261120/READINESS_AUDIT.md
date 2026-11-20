@@ -1,6 +1,6 @@
 # DB-03 readiness audit — university study and long-term followup
 
-**Status: DESIGN / HOLD.** This file is an evidence-backed design gate, not a numbered migration or installed database capability. It is stacked conceptually after DB-01 [PR #77](https://github.com/yvettfang-netizen/phoenix/pull/77) and DB-02 [PR #78](https://github.com/yvettfang-netizen/phoenix/pull/78). No real student or contact data was read.
+**Status: CONDITIONAL isolated schema candidate / HOLD active lifecycle.** Founder approved 0044 as an isolated number on 2026-11-20. It is stacked after DB-01 [PR #77](https://github.com/yvettfang-netizen/phoenix/pull/77) and DB-02 [PR #78](https://github.com/yvettfang-netizen/phoenix/pull/78). It is not a formal migration or installed nonproduction capability. No real student or contact data was read.
 
 ## Checked source
 
@@ -18,14 +18,14 @@
 | Existing | Reuse | Gap | Proposed separate DB-03 object / action |
 |---|---|---|---|
 | `core.people`, `core.student_profiles`, `core.families` | Canonical student and family FK | None | No new person/student master |
-| `education.academic_record`, `education.institution`, `education.program`, `docs.documents` | Evidence and reviewed institution/program references | Actual in-study dates and source revision | `education.study_enrollments` only after source and status semantics are approved |
-| `crm.clients`, `crm.follow_ups` | Existing client and followup business task | No stable lifecycle key or HQ queue; non-null assignee | Occurrence metadata linked to one existing followup only when a real assignee is authorized |
+| `education.academic_record`, `education.institution`, `education.program`, `docs.documents` | Evidence and reviewed institution/program references | Actual in-study dates and source revision | 0044 stores only `SOURCE_REVIEW_REQUIRED` enrollment candidates; no runtime grant or verified status |
+| `crm.clients`, `crm.follow_ups` | Existing client and followup business task | No stable lifecycle key or HQ queue; non-null assignee | 0044 stores only immutable `REVIEW_REQUIRED` occurrences; no actionable followup FK or assignment |
 | `consent.grants`, guardian/capacity state | Existing education/document permission | Future contact and marketing basis absent | Distinct approved purpose/authority contract before dispatch |
 | `service.projects`, `service.tasks` | Signed successor delivery | Interest is not a contract | New Service Project only after separate signed/opened event |
 
 ## Safe implementation boundary
 
-The first SQL candidate may establish evidence-backed study and stable occurrence storage with no automatic sends, no customer contact and no project creation. An authorized human must verify the study source; a later executor must recheck live contact permission before creating or dispatching a followup. A stale or revoked permission suppresses any unsent task. Two workers must contend on `(study_enrollment_id, journey_cycle_id, rule_key)`; changing graduation date must revise the same unfinished occurrence rather than create another.
+The isolated [0044 SQL candidate](../../../database/canonical/forward-candidates/study-lifecycle/0044_study_review_foundation.sql) establishes review-only study and stable occurrence storage with no runtime table grants or RLS allow policy. It cannot automatically send, contact, assign or create a project. The immutable occurrence has a unique `(study_enrollment_id, journey_cycle_id, rule_key)` key; a changed due date cannot create a second occurrence for that key. Authorized correction, rescheduling and active dispatch still require a later forward contract and migration. An executor must recheck current student, guardian, Consent, organization and recipient scope before any future action.
 
 ## Specific required decisions before active reminders
 
@@ -33,6 +33,6 @@ The first SQL candidate may establish evidence-backed study and stable occurrenc
 2. Approve distinct educational service followup versus marketing contact purposes, notice/withdrawal text, student majority and guardian-to-student handover, delivery channels and retention.
 3. Define HQ review owner, assignment authority, escalation SLA, permitted recipient Staff roles and fallback if no eligible assignee exists.
 4. Define source version, journey cycle creation authority, rule registry and jurisdiction/calendar offsets; a planner output alone is not a business fact.
-5. Reconcile concurrent candidate numbering and SQL dependencies before a numbered migration. An isolated 0044 proposal was requested, but no number is assumed in this document.
+5. Before promotion, reconcile 0038–0043 candidate dependencies with current main and independently review 0044. Number approval is only for this isolated Draft candidate.
 
-**No new SQL, queue, contact, notification or production change is made by this audit.**
+**No queue, contact, notification, runtime grant or production change is made by 0044.** Local PG16/17 structural acceptance is recorded in [the execution report](DB03_EXECUTION_REPORT.md); active lifecycle remains HOLD.

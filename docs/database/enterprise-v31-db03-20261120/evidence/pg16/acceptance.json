@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "enterprise-v31-db03-study-review.v1",
+  "postgres": "16",
+  "candidate": {
+    "number": "0044",
+    "sha256": "0c36ec5d50e8ef299e80f1906ac75b7e79f64e58703369041c00d4409897f1e6"
+  },
+  "startedAt": "2026-11-20T04:37:01.350Z",
+  "checks": [
+    {
+      "name": "PG fresh 0001-0037 plus isolated 0042-0044, exact ledger and repeat",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:09.547Z"
+    },
+    {
+      "name": "reuses canonical student and family identities; source is review-required",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:10.247Z"
+    },
+    {
+      "name": "cross-family, expired membership and mismatched program rejected",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:10.658Z"
+    },
+    {
+      "name": "date chronology and immutable unapproved source record",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:10.972Z"
+    },
+    {
+      "name": "stable enrollment-cycle-rule key rejects due-date duplication; review only",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:11.569Z"
+    },
+    {
+      "name": "failed transaction rolls back the candidate occurrence atomically",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:11.769Z"
+    },
+    {
+      "name": "real restricted LOGIN cannot read; no runtime grants or RLS allow policy",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:12.104Z"
+    },
+    {
+      "name": "FORCE RLS remains default deny even with test-only SELECT; no followup or task dispatched",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:12.422Z"
+    },
+    {
+      "name": "existing 0037+0042 baseline upgrades through 0043/0044",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:22.701Z"
+    },
+    {
+      "name": "0044 checksum drift rejected and original repeat safe",
+      "status": "PASS",
+      "at": "2026-11-20T04:37:27.016Z"
+    }
+  ],
+  "status": "PASS",
+  "finishedAt": "2026-11-20T04:37:27.398Z"
+}

@@ -1,0 +1,16 @@
+{
+  "state": "ISOLATED_FORWARD_CANDIDATE_NOT_MERGE_OR_RUNTIME_APPROVAL",
+  "candidate_number": "0044",
+  "candidate_file": "0044_study_review_foundation.sql",
+  "sha256": "0c36ec5d50e8ef299e80f1906ac75b7e79f64e58703369041c00d4409897f1e6",
+  "requires_candidate": "0043_scoped_task_handoff.sql",
+  "requires_sha256": "6e043ffdeeb228dac59c605ba763e95f052bdedcdae37b652cba9b6666d18a3a",
+  "historical_migrations": 37,
+  "isolated_ledger_rows": 40,
+  "isolated_tables": 104,
+  "isolated_policies_all_schemas": 92,
+  "scope": "review-only study evidence and stable lifecycle occurrence storage",
+  "runtime_grants": "NONE",
+  "contact_dispatch": "HOLD",
+  "deployment_status": "NOT_APPROVED"
+}
