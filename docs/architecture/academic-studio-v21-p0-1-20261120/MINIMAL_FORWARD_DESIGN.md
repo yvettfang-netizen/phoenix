@@ -113,7 +113,8 @@ Existing `learning.register_staff_principal()` must not create a second Principa
 
 - `auth.validate_context_request()`: derive STUDENT, FAMILY and STAFF access from current Canonical facts, not solely `principal_kind`.
 - `learning.current_staff_kind()`: resolve Founder/Admin grant first, then active Teacher capability; retain any legacy SUPERVISOR behavior only under an explicit compatibility decision.
-- `learning.teacher_has_class_access()`: validate active teacher identity, active assignment, exact class/student relationship and Consent. It must not require the Principal's single kind to equal TEACHER.
+- `learning.teacher_has_class_access()`: validate active teacher identity, active assignment, exact class/student relationship and subject-scoped Consent. It must not require the Principal's single kind to equal TEACHER.
+- Student self projections: add a dedicated `core.read_student_self_summary()` (or a strictly equivalent branch in the private projection) that requires STUDENT channel and actor=subject, and never returns siblings or Family summary.
 - `learning.can_manage_learning()`: allow only internal service or active Academy Admin/Founder grant; do not let CRM Staff, Advisor, Partner or Teacher inherit management rights.
 - `learning.can_read_sensitive()` and published-report reads: support STUDENT self-only, FAMILY guardian-authorised, and STAFF assignment/admin-scoped reads. STAFF uses the new subject-scoped consent helper, not the current-family-bound helper.
 - `docs.can_read_document()` and new assessment evidence readers: add STUDENT self-only and STAFF assignment/consent paths without widening direct document access.
