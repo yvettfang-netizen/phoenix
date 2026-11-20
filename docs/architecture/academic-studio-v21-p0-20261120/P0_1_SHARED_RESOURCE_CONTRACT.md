@@ -13,7 +13,7 @@
 - Physical rooms are distinct real-world resources with stable IDs and location attributes. Location is a resource property, not a tenant boundary.
 - Online meeting-provider integration remains replaceable. Meeting credentials/links are private to authorized participants and never public catalogue data.
 - A hybrid lesson reserves every applicable resource: teacher, enrolled student(s), physical room if used, and online session/provider capacity if that provider exposes such a constraint.
-- The teacher (or an explicitly authorized teaching administrator) determines the delivery mode for each scheduled session. A student/parent cannot self-select or change Online/Onsite participation.
+- The assigned teacher determines the delivery mode for each scheduled session. A student/parent cannot self-select or change Online/Onsite participation.
 - For a Hybrid session, the teacher assigns each enrolled student to Online or Onsite participation. This is one lesson slot and one roster, not duplicate classes or student-selected attendance modes.
 - A mode/participation change is a teacher-controlled schedule change: record actor, time, prior value, new value and reason; notify affected students/parents; re-check resource conflicts and capacity atomically.
 
