@@ -21,11 +21,11 @@ const record={
  harness:'isolated esbuild React component harness; not the built Worker/Sites runtime',
  syntheticOnly:true,
  routeMocking:false,
- transport:'browser -> isolated UI proxy -> server-owned customer bridge -> P0 BFF -> real PostgreSQL; D1 cookie is a real Miniflare D1 session',
+ transport:'browser -> isolated UI proxy -> server-owned customer bridge -> P0 BFF -> real PostgreSQL; synthetic trusted Canonical identity authority supplies test sessions',
  checks:[],
  screenshots:[],
  status:'FAIL',
- realIdentity:{status:'BLOCKED',reason:'This evidence uses D1 test accounts and synthetic Canonical mappings only.'}
+ realIdentity:{status:'BLOCKED',reason:'This evidence uses a synthetic trusted Canonical identity authority and synthetic mappings only.'}
 }
 let fixture,uiServer,browser,lastPage
 const check=(name,details={})=>{record.checks.push({name,status:'PASS',...details});console.log('PASS browser '+name)}
