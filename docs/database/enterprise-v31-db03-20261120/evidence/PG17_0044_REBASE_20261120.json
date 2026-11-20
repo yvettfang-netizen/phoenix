@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "enterprise-v31-db03-study-review.v1",
+  "postgres": "17",
+  "candidate": {
+    "number": "0044",
+    "sha256": "026c400325d1edeedb9f66e431f8cf79de3bbb8da2a5a2e6bebdf66a2548b4e0"
+  },
+  "startedAt": "2026-11-20T10:38:05.319Z",
+  "checks": [
+    {
+      "name": "PG fresh 0001-0037 plus isolated 0042+0044, exact ledger and repeat",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:18.948Z"
+    },
+    {
+      "name": "reuses canonical student and family identities; source is review-required",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:19.784Z"
+    },
+    {
+      "name": "stable source identity is idempotent for identical replay and refuses changed version or payload",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:20.512Z"
+    },
+    {
+      "name": "cross-family, expired membership and mismatched program rejected",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:21.048Z"
+    },
+    {
+      "name": "date chronology and immutable unapproved source record",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:21.410Z"
+    },
+    {
+      "name": "stable enrollment-cycle-rule key rejects due-date duplication; review only",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:22.141Z"
+    },
+    {
+      "name": "lifecycle occurrence identical replay is idempotent; changed due date is review conflict",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:22.667Z"
+    },
+    {
+      "name": "failed transaction rolls back the candidate occurrence atomically",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:22.917Z"
+    },
+    {
+      "name": "real restricted LOGIN cannot read; no runtime grants and explicit restrictive deny",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:23.770Z"
+    },
+    {
+      "name": "FORCE RLS remains default deny even with test-only SELECT; no followup or task dispatched",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:24.140Z"
+    },
+    {
+      "name": "existing 0037+0042 baseline upgrades directly through 0044",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:34.892Z"
+    },
+    {
+      "name": "0044 checksum drift rejected and original repeat safe",
+      "status": "PASS",
+      "at": "2026-11-20T10:38:39.235Z"
+    }
+  ],
+  "status": "PASS",
+  "finishedAt": "2026-11-20T10:38:39.680Z"
+}
