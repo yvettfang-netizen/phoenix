@@ -11,7 +11,7 @@
 | Numbering | Founder confirmed 0043 isolated candidate. 0038–0041 preserved for other branches. |
 | 0043 SHA-256 | `6e043ffdeeb228dac59c605ba763e95f052bdedcdae37b652cba9b6666d18a3a` |
 | Objects | Two new Service tables, eight new functions including a restricted inbox, two FORCE RLS tables with two policies, immutable event trigger and one-open-request unique index. No new master data. |
-| Branch | `codex/enterprise-v31-db02-handoff-20261120` based on PR #77; independent Draft PR pending publication. |
+| Branch / Draft PR | `codex/enterprise-v31-db02-handoff-20261120` based on PR #77; [Draft PR #78](https://github.com/yvettfang-netizen/phoenix/pull/78), first published commit `0786e08366343ffca05c546b463c9880a33653d2` |
 
 The code review caught and removed a broad schema-wide function REVOKE before final tests. The final SQL revokes PUBLIC only on the eight newly introduced functions. An idempotent rejection/cancellation replay and a restricted audited inbox were added before fixing the candidate SHA.
 

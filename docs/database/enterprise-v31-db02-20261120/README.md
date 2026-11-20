@@ -2,6 +2,8 @@
 
 **Status: isolated candidate; Draft PR; no merge, deployment, real identity, or real data.**
 
+Review target: [Draft PR #78](https://github.com/yvettfang-netizen/phoenix/pull/78), stacked on Draft PR #77. The first published candidate commit is `0786e08366343ffca05c546b463c9880a33653d2`.
+
 This package depends on DB-01 [PR #77](https://github.com/yvettfang-netizen/phoenix/pull/77) at `9f51b430164515d2aa5c92c2a2569a6fd6c549e4` and its 0042 candidate. The Founder confirmed **0043 as an isolated candidate number**, without authorizing a mainline migration or installation. The live main migration authority remains `database/canonical/migrations/` and formally ends at 0037 in the checked baseline. Reserved 0038–0041 are not copied or overwritten.
 
 ## Package boundary
