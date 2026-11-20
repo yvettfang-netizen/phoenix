@@ -255,7 +255,6 @@ async function run() {
     legacyBinderClient.release(true)
     await rebindPool.end()
     await legacyBinderPool.end()
-    await runtime.binder.end()
   }
   check('separate LOGINs, one-use tickets, cross-flow rejection and same-backend legacy rebind are enforced')
 
