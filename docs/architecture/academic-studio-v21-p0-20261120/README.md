@@ -39,8 +39,9 @@ The follow-on contract package is prepared for Codex/Jimson review:
 - [Commercial options — HOLD, discussion only](P0_1_COMMERCIAL_OPTIONS_HOLD.md)
 - [Migration impact and negative acceptance matrix](P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md)
 - [P0.1 gate plan](P0_1_GATE_PLAN.md)
+- [P0.1 Technical Evidence Review — Codex source audit and direct Xuanwu security pass](P0_1_TECHNICAL_EVIDENCE_REVIEW.md)
 
-P0.1 status: **contract drafts prepared; Jimson review pending; no migration authorized**. The commercial rules remain HOLD.
+P0.1 status: **Codex source review and direct Xuanwu-style security pass complete; Founder contract decisions pending; no Jimson manual exception identified; no migration authorized**. The commercial rules remain HOLD.
 
 
 ## Engineering delegation rule
