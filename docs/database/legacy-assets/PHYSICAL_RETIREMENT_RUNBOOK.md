@@ -54,7 +54,7 @@ Read only the `host`, `port` and database name from the old `.env` and `.env.uat
 List database metadata:
 
 ```bash
-sudo -u postgres psql -X -At -c "SELECT datname || E'\\t' || pg_get_userbyid(datdba) || E'\\t' || pg_size_pretty(pg_database_size(datname)) FROM pg_database WHERE NOT datistemplate ORDER BY datname;"
+sudo -u postgres psql -X -c "SELECT datname, pg_get_userbyid(datdba), pg_size_pretty(pg_database_size(datname)) FROM pg_database WHERE NOT datistemplate ORDER BY datname;"
 ```
 
 **STOP condition:** if the old Education URLs do not resolve exactly to `compass` and/or `phoenix_uat`, if either name is used by a Canonical service, or if Canonical database identity is ambiguous, do not drop anything. Return the sanitized inventory for direct resolution.
@@ -88,13 +88,15 @@ Run only the line(s) for database(s) that were present and verified as legacy. D
 After the database drop is verified, list the exact old dump files, then delete only the Education legacy dumps:
 
 ```bash
-find /home/ubuntu/backups/db -maxdepth 1 -type f \\( -name 'compass-*.dump' -o -name 'phoenix_uat-*.dump' \\) -print
+find /home/ubuntu/backups/db -maxdepth 1 -type f -name 'compass-*.dump' -print
+find /home/ubuntu/backups/db -maxdepth 1 -type f -name 'phoenix_uat-*.dump' -print
 ```
 
 After checking the printed list:
 
 ```bash
-find /home/ubuntu/backups/db -maxdepth 1 -type f \\( -name 'compass-*.dump' -o -name 'phoenix_uat-*.dump' \\) -delete
+find /home/ubuntu/backups/db -maxdepth 1 -type f -name 'compass-*.dump' -delete
+find /home/ubuntu/backups/db -maxdepth 1 -type f -name 'phoenix_uat-*.dump' -delete
 ```
 
 If the old COS bucket configuration exists, list `cos:$BUCKET/db` and delete only object names beginning `compass-` or `phoenix_uat-` and ending `.dump`. Do not delete the bucket or unrelated objects. If the bucket cannot be identified with certainty, leave it untouched and report UNVERIFIED.
@@ -104,7 +106,8 @@ If the old COS bucket configuration exists, list `cos:$BUCKET/db` and delete onl
 Search only the old application worktrees and explicitly configured data paths; do not run a broad filesystem-wide deletion:
 
 ```bash
-find /home/ubuntu/phoenix /home/ubuntu/education-compass -type f \\( -name 'phoenix-family-os.sqlite' -o -name 'askwise.db' \\) -print 2>/dev/null
+find /home/ubuntu/phoenix /home/ubuntu/education-compass -type f -name 'phoenix-family-os.sqlite' -print 2>/dev/null
+find /home/ubuntu/phoenix /home/ubuntu/education-compass -type f -name 'askwise.db' -print 2>/dev/null
 ```
 
 For each exact file confirmed to belong to the retired applications, remove the database and its SQLite sidecars (`-wal`, `-shm`). Do not remove unrelated `.db` or `.sqlite` files.
