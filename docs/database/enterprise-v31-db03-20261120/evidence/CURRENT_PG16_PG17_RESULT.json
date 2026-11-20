@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "enterprise-v31-db03-current-ci.v1",
+  "sourceCommit": "77d8026748006bc12cf8eaca38b164f7bd5412dc",
+  "pullRequest": 82,
+  "workflowRunId": 44721181075,
+  "workflowRunUrl": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44721181075",
+  "candidateSha256": {
+    "0042": "9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991",
+    "0044": "026c400325d1edeedb9f66e431f8cf79de3bbb8da2a5a2e6bebdf66a2548b4e0"
+  },
+  "jobs": [
+    {"name": "source-and-backend", "jobId": 136237018397, "conclusion": "success"},
+    {"name": "study-review (16)", "jobId": 136237454592, "conclusion": "success", "acceptanceChecks": 12, "artifactId": 14622650145, "artifactDigest": "sha256:a86b0859a477b9f10bf4ede7b8628780fdff74969fd13a928661ea2c6d39ef16"},
+    {"name": "study-review (17)", "jobId": 136237454300, "conclusion": "success", "acceptanceChecks": 12, "artifactId": 14622141400, "artifactDigest": "sha256:424d2e4698e6ed57a4c9f01ecc2dfc2f94c9ed25608cb049f44813000ebdc4ca"}
+  ],
+  "data": "synthetic only",
+  "namedNonProduction": "NOT RUN",
+  "deployment": "NOT APPROVED"
+}

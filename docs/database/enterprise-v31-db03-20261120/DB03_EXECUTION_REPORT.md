@@ -1,6 +1,6 @@
 # DB-03 revised candidate — 0044 without 0043
 
-**Status: updated 0042 dependency and 0044 idempotency verified locally on PG16/17; current GitHub Actions pending.** PR [#82](https://github.com/yvettfang-netizen/phoenix/pull/82), 2026-11-20. Earlier workflow [44705376689](https://github.com/yvettfang-netizen/phoenix/actions/runs/44705376689) is historical for the previous 0042 SHA.
+**Status: updated 0042 dependency and 0044 idempotency verified locally and in GitHub Actions on PG16/17.** PR [#82](https://github.com/yvettfang-netizen/phoenix/pull/82), exact code/evidence commit `77d8026748006bc12cf8eaca38b164f7bd5412dc`, 2026-11-20. Earlier workflow [44705376689](https://github.com/yvettfang-netizen/phoenix/actions/runs/44705376689) is historical for the previous 0042 SHA.
 
 ## Rebase facts
 
@@ -21,9 +21,11 @@ Earlier DB-03 PASS evidence from workflows 44698019286 and 44705376689 used supe
 | Existing backend typecheck/build/tests | PASS; 148 tests |
 | PG16 fresh/repeat/drift/source and occurrence replay/conflict/RLS/rollback | 12/12 PASS |
 | PG17 fresh/repeat/drift/source and occurrence replay/conflict/RLS/rollback | 12/12 PASS |
-| Current GitHub Actions | NOT RUN at this SHA; will run after push |
+| GitHub Actions at `77d8026` | [44721181075](https://github.com/yvettfang-netizen/phoenix/actions/runs/44721181075): source/backend, PG16 and PG17 PASS |
 
 Local commands: `node database/canonical/verification/v0044/verify-source.mjs`, `node database/canonical/verification/v0044/acceptance.mjs 16`, `node database/canonical/verification/v0044/acceptance.mjs 17`, and in `Phoenix Compass/education compass/server`: `npm run typecheck`, `npm run build`, `npm test`. Raw structured synthetic receipts: [PG16](evidence/PG16_0044_REBASE_20261120.json) and [PG17](evidence/PG17_0044_REBASE_20261120.json). All disposable owned containers were cleaned; no shared non-production database was changed.
+
+GitHub job IDs: source/backend `136237018397`, PG16 `136237454592`, PG17 `136237454300`. GitHub logs show `RESULT PASS PG16 checks=12` and `RESULT PASS PG17 checks=12`. Artifact digests and exact run association are in [current CI receipt](evidence/CURRENT_PG16_PG17_RESULT.json). The documentation update after `77d8026` does not alter SQL or test code; its own CI status must be checked separately.
 
 ## Scope retained
 
