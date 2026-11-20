@@ -9,7 +9,7 @@
 - One active Principal maps to one Person even when the person has Student + Parent + Teacher capabilities.
 - Student capability is derived from the actor's own Student Profile.
 - Student channel creates a self-only context with no family_id.
-- Parent channel is explicitly selected and uses a valid Family context.
+- Parent channel is explicitly selected and uses a valid Family context only after membership plus at least one active verified Guardian Authority in that family.
 - Parent can list only children with current verified Guardian Authority and applicable Consent.
 - Teacher can enter STAFF global context using the existing Principal plus active Teacher identity.
 - Administrator and Founder can enter STAFF global context only with their respective active Academy grant.
