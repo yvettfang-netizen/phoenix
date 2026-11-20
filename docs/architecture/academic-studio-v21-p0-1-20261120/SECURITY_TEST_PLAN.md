@@ -74,7 +74,7 @@
 - Self-reported result is visibly labelled and cannot appear as verified.
 - AI_PROPOSAL cannot be PUBLISHED without a qualified human reviewer.
 - Parent reads only PUBLISHED results for subjects backed by active Guardian Authority and Consent.
-- Student reads only their own published results.
+- Student reads only their own published results; the student-self projection never returns siblings or family summary.
 - Teacher reads/reviews only the assigned student's permitted result.
 - Evidence document must match family, subject and EDUCATION data class and must not be withdrawn.
 - Correction appends a superseding attempt; original remains unchanged.
