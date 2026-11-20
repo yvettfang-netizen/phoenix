@@ -25,6 +25,8 @@
 - Parent authority expired/revoked or Consent withdrawn → next protected read DENY.
 - Teacher record inactive or assignment expired/revoked → next student/class read/write DENY.
 - Teacher attempts to enumerate an unassigned student by changing an ID → DENY.
+- Teacher/Admin/Founder has no active Consent grant for the exact subject and data class → sensitive student data DENY, even in global STAFF context.
+- A Consent grant for another family/subject/purpose/data class cannot be replayed in global STAFF context.
 - Partner referral, CRM assignment or channel membership → no teaching capability.
 - Staff account with no Teacher record or Admin/Founder grant → STAFF context DENY.
 - Administrator cannot grant Founder to self; Administrator cannot change/revoke Founder grant.
