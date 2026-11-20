@@ -173,6 +173,40 @@ try{
  assert.equal(naturalAfter.card,'0','NATURALLY_EXPIRED_MEMBER_CARD_MUST_DENY');
  assert.equal(naturalAfter.report,'0','NATURALLY_EXPIRED_MEMBER_REPORT_MUST_DENY');
  console.log('PASS PG'+version+' same bound FAMILY backend: wall-clock membership expiry denies next card/report read');
+ // Guardian authority revocation is independent of family membership.
+ sql(db,"UPDATE core.family_memberships SET valid_until=NULL WHERE membership_id='"+id(303)+"'");
+ await bind(app,binder,id(204),id(4),id(100),'FAMILY');
+ const guardianBefore=await readCounts(app,id(1007),id(1009));
+ assert.equal(guardianBefore.card,'1');assert.equal(guardianBefore.report,'1');
+ sql(db,"UPDATE core.guardian_authorities SET revoked_at=clock_timestamp(),lifecycle_status='REVOKED' WHERE authority_id='"+id(702)+"'");
+ const guardianAfter=await readCounts(app,id(1007),id(1009));
+ assert.equal(guardianAfter.pid,appPid);
+ assert.equal(guardianAfter.card,'0','REVOKED_GUARDIAN_CARD_DENIED');
+ assert.equal(guardianAfter.report,'0','REVOKED_GUARDIAN_REPORT_DENIED');
+ console.log('PASS PG'+version+' revoked guardian authority denies both published Learning records');
+
+ // Consent withdrawal must deny without removing valid family membership.
+ sql(db,"UPDATE core.family_memberships SET valid_until=NULL WHERE membership_id='"+id(301)+"'");
+ await bind(app,binder,id(201),id(1),id(100),'FAMILY');
+ const consentBefore=await readCounts(app,id(1007),id(1009));
+ assert.equal(consentBefore.card,'1');assert.equal(consentBefore.report,'1');
+ sql(db,"UPDATE consent.grants SET status='WITHDRAWN',withdrawn_at=clock_timestamp() WHERE consent_id='"+id(801)+"'");
+ const consentAfter=await readCounts(app,id(1007),id(1009));
+ assert.equal(consentAfter.pid,appPid);
+ assert.equal(consentAfter.card,'0','WITHDRAWN_CONSENT_CARD_DENIED');
+ assert.equal(consentAfter.report,'0','WITHDRAWN_CONSENT_REPORT_DENIED');
+ console.log('PASS PG'+version+' withdrawn Learning Consent denies both published records');
+
+ // A valid membership of Family B must not unlock Family A's publications.
+ sql(db,"INSERT INTO core.families(family_id,display_name) VALUES('"+id(101)+"','Synthetic S1 Family B')");
+ sql(db,"INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from) VALUES('"+id(304)+"','"+id(101)+"','"+id(4)+"','MEMBER',clock_timestamp()-interval '1 day')");
+ await bind(app,binder,id(204),id(4),id(101),'FAMILY');
+ const crossFamily=await readCounts(app,id(1007),id(1009));
+ assert.equal(crossFamily.pid,appPid);
+ assert.equal(crossFamily.card,'0','CROSS_FAMILY_CARD_DENIED');
+ assert.equal(crossFamily.report,'0','CROSS_FAMILY_REPORT_DENIED');
+ console.log('PASS PG'+version+' cross-family Learning records remain inaccessible');
+
 
  await bind(app,binder,id(202),id(2),id(100),'FAMILY');
  const selfRead=await readCounts(app,id(1007),id(1009));
@@ -190,6 +224,17 @@ try{
  assert(Number(decisions)>=4,'DENIED_LEARNING_READS_MUST_BE_AUDITED');
  assert.equal(sql(db,'SELECT count(*) FROM auth.session_contexts'),'1','ONE_BOUND_APP_CONTEXT_EXPECTED');
  console.log('PASS PG'+version+' Teacher assignment path unchanged; denied card/report reads audited; one app context remains');
+ await assert.rejects(app.query('SELECT * FROM learning.after_class_card'),e=>e.code==='42501');
+ await assert.rejects(app.query('SELECT * FROM learning.stage_report'),e=>e.code==='42501');
+ console.log('PASS PG'+version+' existing ACL denies direct Learning table reads');
+
+ sql(db,"UPDATE learning.teacher_assignment SET status='REVOKED',revoked_at=clock_timestamp() WHERE assignment_id='"+id(1004)+"'");
+ const teacherAfter=await readCounts(app,id(1007),id(1009));
+ assert.equal(teacherAfter.pid,appPid);
+ assert.equal(teacherAfter.card,'0','REVOKED_TEACHER_CARD_DENIED');
+ assert.equal(teacherAfter.report,'0','REVOKED_TEACHER_REPORT_DENIED');
+ console.log('PASS PG'+version+' Teacher assignment revocation denies both published records');
+
 
  await app.query('SELECT auth.clear_context()');
  await app.query('RESET ROLE');
