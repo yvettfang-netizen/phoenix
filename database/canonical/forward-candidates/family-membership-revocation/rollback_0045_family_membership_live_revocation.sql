@@ -1,10 +1,10 @@
 BEGIN;
 -- Operational rollback for candidate 0045 only; preserves existing owner and ACL.
 DO $precondition$
-DECLARE v_source text; v_language text; v_volatility "char"; v_security_definer boolean; v_config text[];
+DECLARE v_definition text; v_language text; v_volatility "char"; v_security_definer boolean; v_config text[];
 BEGIN
-  SELECT p.prosrc,l.lanname,p.provolatile,p.prosecdef,p.proconfig
-    INTO v_source,v_language,v_volatility,v_security_definer,v_config
+  SELECT pg_catalog.pg_get_functiondef(p.oid),l.lanname,p.provolatile,p.prosecdef,p.proconfig
+    INTO v_definition,v_language,v_volatility,v_security_definer,v_config
     FROM pg_catalog.pg_proc p
     JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
     JOIN pg_catalog.pg_language l ON l.oid=p.prolang
@@ -15,8 +15,12 @@ BEGIN
      OR NOT (regexp_replace(COALESCE(array_to_string(v_config,','),''),'[[:space:]]','','g') LIKE '%search_path=pg_catalog,auth,core,learning%') THEN
     RAISE EXCEPTION 'S1_FUNCTION_ATTRIBUTES_DRIFT_REFUSED';
   END IF;
-  v_source := regexp_replace(v_source,E'^[[:space:]]+|[[:space:]]+$','','g');
-  IF md5(v_source) NOT IN ('cd414150847fad2d1f8f6318f2e21ebf','e8a483fadc17d2768c7398f0cd40ae3c') THEN
+  IF position('auth.write_context_is_live()' in v_definition)=0
+     OR position('auth.current_actor_person_id()=p_subject_id' in v_definition)=0
+     OR position('core.has_verified_guardian_authority' in v_definition)=0
+     OR position('learning.teacher_has_class_access' in v_definition)=0
+     OR (position('core.family_memberships' in v_definition)>0
+         AND position('m.valid_until' in v_definition)=0) THEN
     RAISE EXCEPTION 'S1_FUNCTION_SOURCE_DRIFT_REFUSED';
   END IF;
 END
