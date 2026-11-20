@@ -30,6 +30,8 @@ jobs:
           bash -n "Phoenix Compass/education compass/ops/server/daily-check.sh"
           bash -n "Phoenix Compass/education compass/ops/server/set-feishu-alert.sh"
           bash -n "ops/monitoring/public-api-health-check.sh"
+          bash -n "ops/monitoring/test-public-api-health-check.sh"
+          bash "ops/monitoring/test-public-api-health-check.sh"
       - run: node .github/scripts/verify-canonical-only.mjs
 
   askwise-retirement:
