@@ -1,14 +1,14 @@
 {
-  "schemaVersion": "phoenix-enterprise-v3-workspace-auth-ci.v2",
-  "workflowRunId": 44702823335,
-  "workflowRunUrl": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44702823335",
-  "commitSha": "5af10a0f9d22dc1810b3b46e1576c8902887800f",
+  "schemaVersion": "phoenix-enterprise-v3-workspace-auth-ci.v3",
+  "workflowRunId": 44719124928,
+  "workflowRunUrl": "https://github.com/yvettfang-netizen/phoenix/actions/runs/44719124928",
+  "commitSha": "b110c0c7fdcca6e14fda575dbfaeffdb51e6ae91",
   "candidate": {
     "number": "0042",
-    "sha256": "bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea"
+    "sha256": "9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991"
   },
   "sourceAndBackend": {
-    "jobId": 136175068637,
+    "jobId": 136230002813,
     "status": "PASS",
     "checks": [
       "historical source guard",
@@ -21,21 +21,25 @@
   "runs": [
     {
       "postgres": "16",
-      "jobId": 136175361623,
+      "jobId": 136230495661,
       "status": "PASS",
       "acceptanceGroups": 20,
       "ledger": 38,
       "tables": 98,
-      "policiesIncludingAuth": 88
+      "policiesIncludingAuth": 88,
+      "artifactId": 14621342028,
+      "artifactSha256": "0db9c899c6a86c87d1d8c618d2305a184ad08cac723ff0cdc52e0e6573250384"
     },
     {
       "postgres": "17",
-      "jobId": 136175361617,
+      "jobId": 136230495648,
       "status": "PASS",
       "acceptanceGroups": 20,
       "ledger": 38,
       "tables": 98,
-      "policiesIncludingAuth": 88
+      "policiesIncludingAuth": 88,
+      "artifactId": 14620918189,
+      "artifactSha256": "574a5255d6aabb540c90e075a04a9c8fc3916363d7237476fbcaca0665f46bab"
     }
   ],
   "additionalVerified": [
@@ -45,6 +49,7 @@
     "workspace redemption rejects legacy tickets",
     "separate binder and reader LOGINs",
     "cross-organization and cross-principal denial",
+    "STAFF_TEACHER denied Staff project projection",
     "membership disable, role revoke, logout and identity session revoke",
     "audit allow/deny, atomic rollback and checksum drift rejection"
   ],

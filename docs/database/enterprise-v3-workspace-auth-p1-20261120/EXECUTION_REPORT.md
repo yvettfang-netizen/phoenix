@@ -16,9 +16,9 @@
 ## P1｜0042 Canonical context consolidation
 
 - PR：[#77](https://github.com/yvettfang-netizen/phoenix/pull/77)，Draft，未合并。
-- Current commit：`5af10a0f9d22dc1810b3b46e1576c8902887800f`
-- Candidate SQL SHA-256：`bd319e3074e1b51862dfd14eeeb72531d400aff0f8277cde8e886f501cff58ea`
-- GitHub Actions：[44702823335](https://github.com/yvettfang-netizen/phoenix/actions/runs/44702823335)
+- Code commit：`b110c0c7fdcca6e14fda575dbfaeffdb51e6ae91`
+- Candidate SQL SHA-256：`9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991`
+- GitHub Actions：[44719124928](https://github.com/yvettfang-netizen/phoenix/actions/runs/44719124928)（source/backend、PG16、PG17 三项 PASS；其余 PR 检查另行核验）
 
 | 项目 | PG16 | PG17 |
 |---|---:|---:|
@@ -35,6 +35,8 @@
 Source/backend job：historical source guard、scoped secret scan、backend typecheck/build/tests 全部 PASS。
 
 本轮从候选中删除两个重复临时表，改为复用既有 `auth.context_exchange_tickets` 与 `auth.session_contexts`。正式 0001–0037 未修改。详细结构见对象权限矩阵和 P0 决策记录。
+
+最新修复：删除导致 0042 安装失败的多余 `END IF;`，并使 `STAFF_TEACHER` 被 Staff 项目读取函数显式拒绝。PG16/17 从正式 0037 重新安装，20/20 合成验收通过。见[修复执行报告](CI_FIX_EXECUTION_REPORT_20261120.md)。
 
 ## P0｜0043 task handoff review
 
