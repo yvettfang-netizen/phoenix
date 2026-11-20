@@ -18,7 +18,8 @@
 
 ### Negative
 - Student attempts to read sibling or parent-only data → DENY.
-- Student forges FAMILY context without a valid active family membership → DENY.
+- Student/member forges FAMILY context without a valid active family membership → DENY.
+- Family member with no active verified Guardian Authority attempts to open Parent / FAMILY context → DENY.
 - Student/Parent attempts to read family finance from STUDENT context → DENY.
 - Parent authority expired/revoked or Consent withdrawn → next protected read DENY.
 - Teacher record inactive or assignment expired/revoked → next student/class read/write DENY.
