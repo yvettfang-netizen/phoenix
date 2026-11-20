@@ -1,0 +1,44 @@
+.shell {
+  min-height: 100vh;
+  padding: 0 clamp(20px, 5vw, 80px) 32px;
+  color: var(--brand-ink);
+  background: var(--surface-ivory);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.header nav { display: flex; flex-wrap: wrap; gap: 24px; font-size: 14px; }
+.header a:focus-visible, .footer a:focus-visible, .action:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 5px; }
+.intro { max-width: 1360px; margin: 0 auto; padding: clamp(40px, 6vw, 80px) 0 36px; }
+.eyebrow { font-size: 11px; letter-spacing: 0.18em; font-weight: 600; }
+.intro h1 { margin: 16px 0; font-family: var(--serif); font-size: clamp(32px, 4.2vw, 58px); line-height: 1.2; font-weight: 500; }
+.intro > p:last-of-type { max-width: 760px; font-size: 18px; line-height: 1.8; }
+.notice { display: flex; gap: 14px; align-items: baseline; max-width: 980px; margin-top: 32px; padding: 16px 20px; border-left: 3px solid var(--brand-champagne); background: var(--surface-moon); font-size: 14px; line-height: 1.8; }
+.notice strong { flex-shrink: 0; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 1360px; margin: 0 auto; }
+.card { display: flex; flex-direction: column; padding: clamp(24px, 2.5vw, 36px); border: 1px solid var(--line); background: var(--white); }
+.card h2 { margin: 12px 0; font-family: var(--serif); font-size: clamp(24px, 2.2vw, 30px); font-weight: 500; }
+.card > p:not(.eyebrow) { font-size: 15px; line-height: 1.8; color: var(--muted); }
+.card ul { margin: 8px 0 28px; padding-left: 20px; font-size: 14px; line-height: 2; }
+.cardEnd { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--line); }
+.status { font-size: 12px; line-height: 1.7; color: var(--muted); }
+.action { display: inline-block; margin-top: 8px; font-size: 14px; font-weight: 600; line-height: 1.7; }
+.action:hover { text-decoration: underline; text-underline-offset: 4px; }
+.footer { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 16px; max-width: 1360px; margin: 40px auto 0; padding-top: 24px; border-top: 1px solid var(--line); font-size: 13px; line-height: 1.8; color: var(--muted); }
+.footer p { max-width: 760px; }
+
+@media (max-width: 960px) {
+  .grid { grid-template-columns: 1fr; }
+  .notice { display: block; }
+  .notice strong { display: block; margin-bottom: 4px; }
+}

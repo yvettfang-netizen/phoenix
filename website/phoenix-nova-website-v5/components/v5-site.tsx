@@ -36,7 +36,7 @@ const routeLabels = {
   compass: ["凤启罗盘", "Compass"],
   lighthouse: ["成长灯塔", "Growth Lighthouse"],
   services: ["专业服务", "Services"],
-  insights: ["资讯洞察", "Insights"],
+  insights: ["洞察", "Insights"],
   oriental: ["凤启东方", "Phoenix Oriental"],
   about: ["关于我们", "About Us"],
   "family-center": ["家庭中心", "My Family Center"],
@@ -62,9 +62,8 @@ const primaryNavigation = [
   { id: "home", kind: "internal", page: "home" },
   { id: "education", kind: "internal", page: "education" },
   { id: "identity", kind: "internal", page: "identity" },
-  { id: "wealth", kind: "anchor", hash: "wealth" },
   { id: "health", kind: "internal", page: "health" },
-  { id: "about", kind: "internal", page: "about" },
+  { id: "wealth", kind: "anchor", hash: "wealth" },
   { id: "insights", kind: "internal", page: "insights" },
 ] as const;
 
@@ -251,9 +250,9 @@ export function SiteHeader({ locale, page, inverse = false, appearance = "v3", l
                 </Link>
               ))}
               <Link href={portalHref}>
-                <span>08</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
+                <span>07</span>{routeLabels["family-center"][locale === "zh" ? 0 : 1]}
               </Link>
-              {localized && <HealthPartnerSectionLink href={partnersHref}><span>09</span>{pick(locale, "合作伙伴工作台 · 受控预览", "Partner workspace · Controlled preview")}</HealthPartnerSectionLink>}
+              {localized && <HealthPartnerSectionLink href={partnersHref}><span>08</span>{pick(locale, "合作伙伴工作台 · 受控预览", "Partner workspace · Controlled preview")}</HealthPartnerSectionLink>}
               {localized ? <HealthLocaleLink className="mobile-locale" href={localeHref}>{locale === "zh" ? "English" : "中文"}</HealthLocaleLink> : <Link className="mobile-locale" href={localeHref}>{locale === "zh" ? "English" : "中文"}</Link>}
             </nav>
           </details>
@@ -277,6 +276,8 @@ export function SiteFooter({ locale, appearance = "v3", consultationPath = "/ide
           {primaryNavigation.map((item) => (
             <Link href={navigationHref(locale, item)} key={item.id}>{navigationLabel(locale, item)}</Link>
           ))}
+          <Link href={hrefFor(locale, "about")}>{routeLabels.about[locale === "zh" ? 0 : 1]}</Link>
+          <Link href={hrefFor(locale, "services")}>{routeLabels.services[locale === "zh" ? 0 : 1]}</Link>
         </nav>
         <div className="site-footer__company">
           <small>{pick(locale, "公司主体", "Company")}</small>
