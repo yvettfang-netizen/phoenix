@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
-import styles from "./company-os-preview.module.css";
+import styles from "./corporate-os-preview.module.css";
 
-export function CompanyOsPreview({ locale }: { locale: "zh" | "en" }) {
+export function CorporateOsPreview({ locale }: { locale: "zh" | "en" }) {
   const zh = locale === "zh";
   const workspaces = [
     {
@@ -31,16 +31,16 @@ export function CompanyOsPreview({ locale }: { locale: "zh" | "en" }) {
     },
   ];
 
-  return <main className={styles.shell} data-company-os-preview>
+  return <main className={styles.shell} data-corporate-os-preview>
     <header className={styles.header}>
       <BrandMark href={`/${locale}`} />
       <nav aria-label={zh ? "平台入口" : "Platform links"}>
         <Link href={`/${locale}/family-center`}>{zh ? "家庭成长系统" : "Family OS"}</Link>
-        <Link href={`/${zh ? "en" : "zh"}/company-os`} lang={zh ? "en" : "zh"}>{zh ? "EN" : "中文"}</Link>
+        <Link href={`/${zh ? "en" : "zh"}/corporate-os`} lang={zh ? "en" : "zh"}>{zh ? "EN" : "中文"}</Link>
       </nav>
     </header>
     <section className={styles.intro}>
-      <p className={styles.eyebrow}>PHOENIX COMPANY OS™</p>
+      <p className={styles.eyebrow}>PHOENIX CORPORATE OS™</p>
       <h1>{zh ? "凤启企业运营系统" : "One place to coordinate your work"}</h1>
       <p>{zh ? "让每个团队成员看见自己的责任与下一步。" : "Give every team member a clear view of their responsibilities and next steps."}</p>
       <div className={styles.notice} role="note">
@@ -61,7 +61,7 @@ export function CompanyOsPreview({ locale }: { locale: "zh" | "en" }) {
       </article>)}
     </section>
     <footer className={styles.footer}>
-      <p>{zh ? "Family OS 连接家庭与学生；Company OS 连接总部、员工与合作伙伴。" : "Family OS connects families and students; Company OS connects headquarters, staff and partners."}</p>
+      <p>{zh ? "Family OS 连接家庭与学生；Corporate OS 连接总部、员工与合作伙伴。" : "Family OS connects families and students; Corporate OS connects headquarters, staff and partners."}</p>
       <Link href={`/${locale}`}>{zh ? "返回凤启首页" : "Back to Phoenix Nova"}</Link>
     </footer>
   </main>;

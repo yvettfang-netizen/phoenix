@@ -6,7 +6,7 @@
 
 ## 1. 已有接口与新契约的区分
 
-已有浏览器 `/api/service-workbench/*`、`/api/family-services/summary`、`/api/canonical/*` 及 `/{locale}/my-services` 保持原合约。本轮 Company 设计页不调用新 API，纯生命周期模块不被 index/route/worker 导入。
+已有浏览器 `/api/service-workbench/*`、`/api/family-services/summary`、`/api/canonical/*` 及 `/{locale}/my-services` 保持原合约。本轮 Corporate 设计页不调用新 API，纯生命周期模块不被 index/route/worker 导入。
 
 下列 `/v1/...` 是待实施服务端契约；浏览器仍通过各自 BFF 调用，不能把路径存在的设计文档当成可用后端。
 
@@ -37,7 +37,7 @@
 
 写请求携带 `Idempotency-Key` 和 `expectedRevision`。幂等键作用域至少包括当前 principal/已核验工作区/操作种类；相同 key 不同 payload 摘要拒绝为 409。不能在处理结果返回前标记成功；事务提交后可重试查询同一结果。
 
-身份由可信 provider/broker/session 形成。`role`、`organization_id`、`family_id`、`subject_id` 即使在浏览器请求里出现，也只是待核验目标，不是授权证据。Company 汇总不是让浏览器自选任意 family 后使用 SERVICE 凭据；授权条件必须在服务与数据库敏感写入处校验。
+身份由可信 provider/broker/session 形成。`role`、`organization_id`、`family_id`、`subject_id` 即使在浏览器请求里出现，也只是待核验目标，不是授权证据。Corporate 汇总不是让浏览器自选任意 family 后使用 SERVICE 凭据；授权条件必须在服务与数据库敏感写入处校验。
 
 常用错误：无认证 401；已知操作不允许 403；资源不存在或不可见统一 404；版本/幂等冲突 409；事实缺失/不适用 422；额度/频率限制 429；依赖服务未接通 503。错误不泄漏别的家庭/机构是否存在。日志使用原因码、主体/资源受控标识、授权版本和 requestId，不记录密码、下载签名或全文材料。
 

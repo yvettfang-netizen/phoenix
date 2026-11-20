@@ -5,17 +5,17 @@
 **工作项：[Issue #75](https://github.com/yvettfang-netizen/phoenix/issues/75)。**  
 **核验主线：`9db147ac3a5d135d50b90bfea5a7316ce747d90b`。**
 
-本报告执行本轮 Founder 指令：Family OS + Company OS；优先复用 Canonical PostgreSQL；保留 Growth OS 的人的能力成长语义。正文按要求分成七部分。完整逐表清单见 [DATABASE_REUSE_MATRIX.md](DATABASE_REUSE_MATRIX.md)，接口与状态机见 [API_CONTRACTS.md](API_CONTRACTS.md)，实际执行证据见 [VALIDATION.md](VALIDATION.md)。
+本报告执行本轮 Founder 指令：Family OS + Corporate OS；优先复用 Canonical PostgreSQL；保留 Growth OS 的人的能力成长语义。正文按要求分成七部分。完整逐表清单见 [DATABASE_REUSE_MATRIX.md](DATABASE_REUSE_MATRIX.md)，接口与状态机见 [API_CONTRACTS.md](API_CONTRACTS.md)，实际执行证据见 [VALIDATION.md](VALIDATION.md)。
 
 ## 第一部分：Founder Executive Decision Brief
 
 ### 1.1 核心判断
 
-现有数据库基础足以承接双 OS 升级。需要补齐的是**多组织多身份的工作上下文、跨角色业务交接、材料的授权复用、长期跟进调度，以及现有模块的真实运行接线**。重新创建 Company OS 主库、再造学生主档或整体改名 schema 都没有必要。
+现有数据库基础足以承接双 OS 升级。需要补齐的是**多组织多身份的工作上下文、跨角色业务交接、材料的授权复用、长期跟进调度，以及现有模块的真实运行接线**。重新创建 Corporate OS 主库、再造学生主档或整体改名 schema 都没有必要。
 
 当前最重要的六项裁决：
 
-1. **两个产品门户，共用服务端和主数据。** Family OS 服务家庭/学生；Company OS 内含 Founder、Staff、Partner 工作区。两者都是客户端，分别经 BFF/API 访问 Phoenix Core。Company OS 本身不是 Family OS 的数据库或后端。
+1. **两个产品门户，共用服务端和主数据。** Family OS 服务家庭/学生；Corporate OS 内含 Founder、Staff、Partner 工作区。两者都是客户端，分别经 BFF/API 访问 Phoenix Core。Corporate OS 本身不是 Family OS 的数据库或后端。
 2. **组织归属、商业来源、交付责任、资料访问分别管理。** “某渠道推荐的学生”只能证明来源，不能推导出四年后的联系方式、成绩单或家庭私档读取权。
 3. **一人多角色需要身份兼容工程。** 当前 `auth.principals.person_id` 唯一，`principal_kind` 单值，现有上下文按 FAMILY/ADVISOR/CHANNEL/STAFF 固定绑定；不能只增加一个页面切换按钮或新角色表就宣布完成。
 4. **沿用现有服务工作台。** PR #65 已把服务工作台相关代码合入 main。`0038/0039` 的 SQL 虽在主线目录树中，仍是 forward candidates；源码合并与数据库安装必须分开认定。
@@ -28,10 +28,10 @@
 
 | 事项 | 裁决 |
 |---|---|
-| 产品命名 | Family OS + Company OS；Founder Dashboard 为 Company OS 内部角色视图 |
+| 产品命名 | Family OS + Corporate OS；Founder Dashboard 为 Corporate OS 内部角色视图 |
 | 唯一身份 | 沿用 `core.people`、`core.student_profiles`、`core.families` 和已有公开 ID 映射 |
 | 数据库业务域 | 保留 `core/auth/consent/crm/service/education/learning/docs/audit/integration/operations_ref` 等现有域 |
-| Growth OS | 保留能力、证据、成长审核语义；不改名 Company OS，不用成长等级授予管理权限 |
+| Growth OS | 保留能力、证据、成长审核语义；不改名 Corporate OS，不用成长等级授予管理权限 |
 | 业务主事实 | CRM 管获客/客户关系，Service 管签约后的交付，Education 管教育事实与申请，Learning 管课程教学 |
 | 对象文件 | 原文件继续在私有对象存储；Canonical 管版本、元数据、授权和证据链接，不把二进制全塞进数据库 |
 | 外部事实 | 真实支付、退款、院校回执由对应权威来源形成；Canonical 保存经过验证的引用和业务状态，不虚构原始外部事实 |
@@ -57,7 +57,7 @@
 ```mermaid
 flowchart TB
   F[Family OS] --> FB[家庭 BFF]
-  C[Company OS] --> CB[企业 BFF]
+  C[Corporate OS] --> CB[企业 BFF]
   FB --> I[身份与用途授权]
   CB --> I
   I --> D[领域服务 API]
@@ -72,7 +72,7 @@ flowchart TB
 
 图为目标结构，不表示这些接线均已运行。AI 的文件读取必须由同一授权服务发放用途受限的读取能力；图中的连线不是开放对象存储权限。已核验事实的回写要经人工批准和领域 API。优先采用现有模块化服务，只有容量或部署边界有证据要求时再拆独立服务。
 
-### 2.2 Company OS 的三个工作区
+### 2.2 Corporate OS 的三个工作区
 
 | 工作区 | 首页重点 | 数据边界 |
 |---|---|---|
@@ -109,7 +109,7 @@ flowchart TB
 3. 已有版本允许在获授权的新项目中引用。校验文件权限、保留期及本次使用范围；新项目审核状态独立。
 4. 受控 AI 生成带文档页码/字段来源的待核验事实。顾问逐项接受/修正/拒绝，通过既有领域写接口追加事实。
 5. CRM 跟进与 Service Project 交付分别落在既有任务体系；交接记录提出人、接收人、范围、原因、接受时间、版本和超时处理。
-6. Company OS 处理；Family OS 只显示被批准发布、与本人相关的状态。所有更改有审计、幂等键和版本冲突处理。
+6. Corporate OS 处理；Family OS 只显示被批准发布、与本人相关的状态。所有更改有审计、幂等键和版本冲突处理。
 
 交接采用“提出→接受/拒绝→原负责人结束/新负责人生效”的原子流程；接受前原负责人仍承担责任。账号离职或撤权不能等待交接才停权：立即停权，未交付责任返回总部待处理队列。
 
@@ -147,7 +147,7 @@ flowchart TB
 
 ### 2.7 Academy、ASKWISE、鳌鱼和 Growth OS
 
-Academy 管课程、教师、课节、课后任务和教学摘要；ASKWISE 管 session/attempt/diagnosis/hint/retry/evidence；鳌鱼只展示已确认事件；Core 管身份、授权和权益。Family OS 展示已发布的学习摘要，Company OS 为教师/顾问提供岗位视图。独立 ASKWISE 使用路径保留，不新增强制课程购买前提。
+Academy 管课程、教师、课节、课后任务和教学摘要；ASKWISE 管 session/attempt/diagnosis/hint/retry/evidence；鳌鱼只展示已确认事件；Core 管身份、授权和权益。Family OS 展示已发布的学习摘要，Corporate OS 为教师/顾问提供岗位视图。独立 ASKWISE 使用路径保留，不新增强制课程购买前提。
 
 保留已有 `AcademyToAskwiseAssignmentV1` / `AskwiseToAcademyLearningSummaryV1` 的语义；连接 source event、student、task、contract version，旧摘要不得覆盖新结果；换账号清缓存，重复证据不重复庆祝。Growth OS 如记录能力证据，只保存引用及其本领域审核，不复制全部 ASKWISE 学习事实或映射成系统权限。
 
@@ -160,7 +160,7 @@ Academy 管课程、教师、课节、课后任务和教学摘要；ASKWISE 管 
 | Canonical 0001–0037 | 已合并但尚未完成生产验证 | 37 个正式文件；源码可复核；#74 附 11/19 隔离非生产升级报告 | 本轮未直接连接该环境；不是生产验收 |
 | Service Project 基础 | 已合并但尚未完成生产验证 | 0028/0034/0035，含责任、状态、交付版本及审计 | 不等于公司完整运营台已开放 |
 | Workbench UI/API 与 0038/0039 | 代码已合入；迁移仍属开发候选 | #65 已合并；main 中有候选 SQL 和 UI/BFF | 不能把候选 SQL 写成已安装正式迁移 |
-| Company 多组织/多角色工作区 | 业务运行能力尚未实现；本轮骨架属候选 | 页面方案和受控本地预览 | 机构登录、Partner ACL、Founder 全局投影未完成 |
+| Corporate 多组织/多角色工作区 | 业务运行能力尚未实现；本轮骨架属候选 | 页面方案和受控本地预览 | 机构登录、Partner ACL、Founder 全局投影未完成 |
 | Education 申请与学术记录 | 已合并但尚未完成生产验证 | `education.applications`、学校专业、学术记录已有 | #74 问卷/报告候选不是全部大学申请模块 |
 | 教育问卷/报告 Canonical 持久化 | 开发候选/未合并 PR | #74 Draft，确切 head 的七个工作流成功 | 不代表候选 SQL 已部署或真实付款/身份已验收 |
 | ASKWISE | 已合并代码，持久化统一待完成 | 学习引擎和 SQLite 路径仍在 main；交接契约 RESERVED | 不能声称 Canonical 已承接学习记录 |
@@ -233,7 +233,7 @@ erDiagram
   auth_principals ||--o{ auth_workspace_role_bindings : "选定工作上下文"
 ```
 
-此图仅表示 Company 人类成员；非自然人的 SERVICE principal 不套用图中的 person 基数。角色绑定是能力依据，仍需额外通过每条资源的授权检查。
+此图仅表示 Corporate 人类成员；非自然人的 SERVICE principal 不套用图中的 person 基数。角色绑定是能力依据，仍需额外通过每条资源的授权检查。
 
 **从大学在读到下一次服务。** `study_enrollments` 与 `lifecycle_occurrences` 新增；学生、CRM 跟进和 service task 均复用。
 
@@ -286,14 +286,14 @@ PG16/17 都执行 fresh、从现有 0037 升级、重复运行校验、checksum 
 
 沿用 `BrandMark` 和当前资源 `/brand/official/v3/phoenix-nova-bilingual-b@2x.png`；颜色和字体从现有 `app/globals.css` 读取，不新建另一套 token。当前可复用色包括深海青 `#003b46`、墨青 `#123f48`、青灰 `#8caea4`、香槟金 `#c99b50`、象牙白 `#f8f6f1`、海军蓝 `#0d1b2a`。
 
-公共主导航只保留六项。Family OS/Company OS 是账户入口及登录后的工作区，不占据新增一排业务导航。现有财富入口经 `navigationHref()` 到批准的 Wealth 域名，保留该路由，不凭路径名猜成主站锚点。关于、服务、探索和支持在现有页脚体系中保留。
+公共主导航只保留六项。Family OS/Corporate OS 是账户入口及登录后的工作区，不占据新增一排业务导航。现有财富入口经 `navigationHref()` 到批准的 Wealth 域名，保留该路由，不凭路径名猜成主站锚点。关于、服务、探索和支持在现有页脚体系中保留。
 
 ### 5.2 页面清单与建设次序
 
 | 门户/工作区 | 页面 | 复用来源及新工作 |
 |---|---|---|
 | Family OS | 首页、家庭成员、学生成长、服务项目、申请列表/详情、材料库、学习、消息、授权与隐私 | 复用 family-center、my-services、已有 docs/education/learning 投影；补跨项目文档引用和生命周期时间线 |
-| Company 通用 | 登录、机构定位、允许工作区选择、我的账户、安全/退出 | 复用认证提供方；新增服务端工作区上下文，不用浏览器下拉框模拟权限 |
+| Corporate 通用 | 登录、机构定位、允许工作区选择、我的账户、安全/退出 | 复用认证提供方；新增服务端工作区上下文，不用浏览器下拉框模拟权限 |
 | Founder | 观澜台、今日三件事、经营摘要、渠道/交付预警、待审批、九灵状态 | 接只读受限投影，显示来源/as_of；无真实数据时明确空态 |
 | Staff | 我的工作、客户、项目、交接箱、审核材料、学校申请、任务/日历 | 复用 service 工作台领域能力；按任务/责任组织信息 |
 | Partner | 机构成员、邀请、推荐客户、获授权进度、跟进箱、下级伙伴、结算摘要 | 新建最小伙伴投影，按授权显示字段和动作；不复制员工后台 |
@@ -303,9 +303,9 @@ PG16/17 都执行 fresh、从现有 0037 升级、重复运行校验、checksum 
 
 ### 5.3 本轮 P1 已实现边界
 
-本轮仅改变共享导航、增加 `/{locale}/company-os` 本地设计骨架，以及开发用规则计算器。Company 页面显示三个角色的拟定职责，沿用品牌，并链接已有 `/my-services` 候选；没有新增真实账户、客户数据请求、经营数字或角色授权。
+本轮仅改变共享导航、增加 `/{locale}/corporate-os` 本地设计骨架（旧 `/{locale}/company-os` 只在同等本地合成条件下跳转到新路径），以及开发用规则计算器。Corporate 页面显示三个角色的拟定职责，沿用品牌，并链接已有 `/my-services` 候选；没有新增真实账户、客户数据请求、经营数字或角色授权。
 
-页面要求开发模式、已有 workbench/synthetic 开关、非真实 customer-bridge 模式与 loopback Host；生产默认不开放。**Host 是请求头，不是身份验证或 TCP 来源证明**，预览还必须显式绑定 `127.0.0.1`，不使用公开隧道。后续真实 Company 页面必须接入可信账户与授权 API，不能延用这个预览门禁作为认证。
+页面要求开发模式、已有 workbench/synthetic 开关、非真实 customer-bridge 模式与 loopback Host；生产默认不开放。**Host 是请求头，不是身份验证或 TCP 来源证明**，预览还必须显式绑定 `127.0.0.1`，不使用公开隧道。后续真实 Corporate 页面必须接入可信账户与授权 API，不能延用这个预览门禁作为认证。
 
 ## 第六部分：Codex Implementation Plan
 
@@ -313,7 +313,7 @@ PG16/17 都执行 fresh、从现有 0037 升级、重复运行校验、checksum 
 
 | PR 包 | 依赖与范围 | 最低验收 | 当前状态 |
 |---|---|---|---|
-| A 本轮架构/P1 候选 | 精确 main；导航、Company 骨架、生命周期纯计算、只读核验、完整交接 | 构建/类型/现有回归；预览关态；迁移原字节不变；无生产动作 | 见 VALIDATION |
+| A 本轮架构/P1 候选 | 精确 main；导航、Corporate 骨架、生命周期纯计算、只读核验、完整交接 | 构建/类型/现有回归；预览关态；迁移原字节不变；无生产动作 | 见 VALIDATION |
 | B 身份与组织 v2 | A 的权限契约；机构成员/角色/上下文，选一个只读岗位接口先接通 | 同人三角色隔离、跨家庭/组织、离职/撤权、角色切换、旧 API 兼容、PG16/17 | 待实施 |
 | C 服务工作台运行接线 | B；确认 0038/0039 候选与现有部署账本，补受控 staging 入口 | 真实受控身份→BFF→API→Canonical→审计；保持失败关闭与无敏感缓存 | 待实施 |
 | D 伙伴最小闭环 | B+C；机构邀请/受限名单/总部交接/授权状态摘要 | A/B 伙伴隔离，上级不自动下钻；同名学生待去重；成员停用即时失效 | 待实施 |
@@ -373,7 +373,7 @@ npm run build
 npm test
 ```
 
-目录命令分别从仓库根目录开始；不是在上一个子目录继续相对跳转。完整实际命令与本轮结果详见 VALIDATION。Company 本地预览使用既有 synthetic flags 并绑定 127.0.0.1；正常生产配置访问该页应失败关闭。不要为了演示把运行模式伪装成 development。
+目录命令分别从仓库根目录开始；不是在上一个子目录继续相对跳转。完整实际命令与本轮结果详见 VALIDATION。Corporate 本地预览使用既有 synthetic flags 并绑定 127.0.0.1；正常生产配置访问该页应失败关闭。不要为了演示把运行模式伪装成 development。
 
 ### 7.4 非生产数据库只读核对
 
@@ -400,7 +400,7 @@ node database/canonical/verification/v0038/acceptance.mjs 16
 node database/canonical/verification/v0038/acceptance.mjs 17
 ```
 
-新增迁移必须有独立候选清单及 PG16/17 验证。真实浏览器测试还需对应 browser.mjs、固定 Playwright、已构建后端及隔离 PG；不可把 Company 纯页面渲染替代整个业务闭环。
+新增迁移必须有独立候选清单及 PG16/17 验证。真实浏览器测试还需对应 browser.mjs、固定 Playwright、已构建后端及隔离 PG；不可把 Corporate 纯页面渲染替代整个业务闭环。
 
 最低负例：伙伴 A 对 B 的名单/详情/下载/导出/API 都拒绝；家长不能读成年学生未授权资料；组织管理员不能升级 Founder；退出、换角色、撤权后旧 session/票据/缓存/下载失效；材料在新项目重新审核；任务并发领取/调度不重复；毕业延期/退订/跨年度恢复；院校真实 SUBMITTED 状态有对应递交版本和回执依据。
 

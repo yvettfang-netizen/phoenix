@@ -5,7 +5,7 @@ import { workbenchEnabled, type WorkbenchEnv } from "./service-workbench-bff";
  * server-owned organisation and workspace contracts are independently ready.
  * Pass the actual Host header, not a forwarded host or browser-selected role.
  */
-export function companyOsPreviewEnabled(
+export function corporateOsPreviewEnabled(
   env: WorkbenchEnv,
   mode: string | undefined,
   host: string | null,

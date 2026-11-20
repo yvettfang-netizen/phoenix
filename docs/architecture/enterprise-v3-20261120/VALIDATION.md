@@ -5,7 +5,7 @@
 ## 1. 本次实际完成的改动
 
 - 共享网站导航调整为 首页｜教育｜身份｜健康｜财富｜洞察，保留批准的财富外部入口；关于/服务留在现有页脚。
-- 增加双语 Company OS 设计预览：Founder / Staff / Partner 三个工作区说明，复用 Logo/设计 tokens 和原有 `/my-services` 候选；无真实客户查询、角色切换授权或经营数字。
+- 增加双语 Corporate OS 设计预览：Founder / Staff / Partner 三个工作区说明，复用 Logo/设计 tokens 和原有 `/my-services` 候选；无真实客户查询、角色切换授权或经营数字。
 - 增加纯类型化生命周期规划器及 16 项测试。支持不同日期锚点、校历、延期改期、稳定自然键、撤权/退订、旧版本拒绝、已完成历史保留与 CRM→Service 路由变化审查。没有 runtime route/worker 导入。
 - 增加正式迁移源文件核验脚本和非生产只读 catalog/ledger 预检 SQL。
 - 交付七部分架构报告、逐表矩阵、API 契约、迁移设计、PR 工作包和 Jimson 操作步骤。
@@ -16,10 +16,10 @@
 |---|---|---|
 | 固定依赖安装 | Website、backend 各自 `npm ci`，原 lockfile | 通过；未修改依赖清单或 lockfile |
 | Website 类型 | `npm run typecheck` | PASS，exit 0 |
-| Website 构建 | `./node_modules/.bin/vinext build` | PASS，Build complete，包含 Company route |
+| Website 构建 | `./node_modules/.bin/vinext build` | PASS，Build complete，包含 Corporate route |
 | Website 全套已有 Node 测试 | 构建后 `node --import ./tests/register-typescript.mjs --test tests/*.test.mjs` | **156 项：152 PASS，0 FAIL，4 SKIP** |
 | Website lint | `node node_modules/eslint/bin/eslint.js . --ignore-pattern dist --ignore-pattern .next` | exit 0；两个既有 warning，零 error |
-| Company/原 Workbench/客户桥接范围测试 | 三个对应 test 文件 | 11 PASS，0 FAIL，0 SKIP；已包含在全套中，不能重复累计 |
+| Corporate/原 Workbench/客户桥接范围测试 | 三个对应 test 文件 | 11 PASS，0 FAIL，0 SKIP；已包含在全套中，不能重复累计 |
 | Server 类型与构建 | `npm run typecheck`、`npm run build` | PASS，exit 0 |
 | Server 全套测试 | `npm test` | **162 PASS，0 FAIL，0 SKIP** |
 | 生命周期单独范围 | 现有 runner `--test=student-lifecycle-planner.test.js` | 16 PASS，已包含在 server 162 中 |
@@ -41,10 +41,10 @@
 2. 默认配置 `/en/company-os` → 404。
 3. 公共首页 HTML 确实渲染六项导航及批准的财富 URL。
 4. 关于链接保留。
-5. 本地 synthetic 开关后中文 Company 页面 → 200、三个工作区、已有 `/my-services` 链接。
-6. 同配置英文 Company 页面 → 200、三个工作区。
+5. 本地 synthetic 开关后中文 Corporate 页面 → 200、三个工作区、已有 `/my-services` 链接。
+6. 同配置英文 Corporate 页面 → 200、三个工作区。
 7. 不支持 locale → 404。
-8. foreign Host → 403，未返回 Company 预览内容。
+8. foreign Host → 403，未返回 Corporate 预览内容。
 
 测试临时配置仅含既有 synthetic 开关，测试后删除；受控 Vite 进程停止。无真实身份、材料或学生数据。
 
@@ -73,3 +73,9 @@
 独立审查发现并修正了：CRM 任务签约后路由变化不能静默 KEEP；抑制旧任务必须保留 occurrence/revision；关闭的新项目不能接任务；同日期新依据需版本刷新；晚到旧版本不能回退计划；联系同意需绑定学生/家庭/用途。最终审查未发现这些纯候选文件的剩余阻塞问题。
 
 后续必须按新权限契约实现组织上下文 v2，真实受限账户/两个伙伴的负例以及数据库/浏览器/恢复测试；图表、设计页和纯计算不能替代该验收。每个新迁移包需要独立 PG16/17 证据。生产发布仍按 Founder 对具体版本的批准执行。
+
+## 7. Corporate OS 命名修订与证据边界（2026-11-20）
+
+Founder 将正式产品名称由 Company OS 调整为 **Phoenix Corporate OS™｜凤启企业运营系统**。当前候选页面路径变更为 `/{locale}/corporate-os`，旧开发预览路径 `/{locale}/company-os` 仅在相同合成预览门禁通过后才跳转，新路径在生产配置仍默认关闭。源码文件、组件、类型函数及测试名同步采用 `corporate-os` / `CorporateOs`。
+
+**历史执行证据不能静默改写：**前述 8 个 HTTP 检查在重命名前的确切候选中针对旧 `/company-os` 页面执行。它们仍是原提交的真实记录，**不构成重命名后新路径已通过 HTTP 或桌面/手机浏览器测试的证明**。新 head 必须重新执行 TypeScript、构建、Node 测试、默认关闭与本地开关的 `/zh/corporate-os`、`/en/corporate-os` HTTP，以及旧路径受控跳转。新 head 的远程 CI 状态另外核验，不把历史本地测试搬成新提交的 PASS。数据库正式迁移和生产部署均未因此变化。
