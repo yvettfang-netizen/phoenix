@@ -41,7 +41,7 @@ The following is a proposed contract, not an approved enum or SQL:
 - Hybrid means both remote and onsite participation are supported for the same scheduled session; it does not imply duplicate course bookings.
 - The teacher assigns the participation mode (Online or Onsite) for each enrolled student in that Hybrid session. Students and parents have read-only visibility; they may request a change through the teacher but cannot mutate the assignment.
 - For an ONLINE or ONSITE session, the teacher sets the mode for the whole session. Students/parents cannot override it.
-- Only the assigned teacher or an explicitly authorized teaching administrator may create or change the session mode or an individual student's Hybrid participation assignment. Every change is audited and triggers a notice to affected participants.
+- Only the assigned teacher may create or change the session mode or an individual student's Hybrid participation assignment. Every change is audited and triggers a notice to affected participants.
 - A mode change must atomically re-check the applicable room/provider capacity and resource conflicts. If the new allocation cannot be satisfied, reject it and preserve the previous assignment.
 - Each scheduled session stores an explicit IANA timezone for presentation and local business rules while storing authoritative instants in timestamptz.
 - DST gaps/folds must be handled explicitly; do not silently shift or duplicate local times.
