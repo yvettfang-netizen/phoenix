@@ -27,3 +27,17 @@ The page previews are static design artifacts. All people, dates, course codes a
 | Parent growth report | [PNG](evidence/parent-growth-desktop.png) | [PNG](evidence/parent-growth-mobile.png) |
 | Teacher workbench | [PNG](evidence/teacher-workbench-desktop.png) | [PNG](evidence/teacher-workbench-mobile.png) |
 | Teaching admin workbench | [PNG](evidence/admin-workbench-desktop.png) | [PNG](evidence/admin-workbench-mobile.png) |
+
+## Founder P0.1 decisions and next gate
+
+Founder approved the P0 choices on 2026-11-20. See [Founder Decision Record](FOUNDER_DECISIONS.md).
+
+The follow-on contract package is prepared for Codex/Jimson review:
+- [Identity contract — Student default, explicit Parent switch](P0_1_IDENTITY_CONTRACT.md)
+- [Shared teaching resource contract](P0_1_SHARED_RESOURCE_CONTRACT.md)
+- [Separate assessment and growth timeline contract](P0_1_ASSESSMENT_CONTRACT.md)
+- [Commercial options — HOLD, discussion only](P0_1_COMMERCIAL_OPTIONS_HOLD.md)
+- [Migration impact and negative acceptance matrix](P0_1_MIGRATION_IMPACT_AND_NEGATIVE_TESTS.md)
+- [P0.1 gate plan](P0_1_GATE_PLAN.md)
+
+P0.1 status: **contract drafts prepared; Jimson review pending; no migration authorized**. The commercial rules remain HOLD.
