@@ -25,6 +25,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24.19.0'
+      - name: Verify retired Education host scripts are absent and remaining alert scripts parse
+        run: |
+          bash -n "Phoenix Compass/education compass/ops/server/daily-check.sh"
+          bash -n "Phoenix Compass/education compass/ops/server/set-feishu-alert.sh"
       - run: node .github/scripts/verify-canonical-only.mjs
 
   askwise-retirement:
