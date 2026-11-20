@@ -1,0 +1,52 @@
+COMMAND rg -n 'person_id uuid NOT NULL UNIQUE|CREATE TABLE auth\.principals|CREATE TABLE core\.(people|families|student_profiles)' database/canonical/migrations
+database/canonical/migrations\0003_core_consent_access.sql:26:CREATE TABLE core.people (
+database/canonical/migrations\0003_core_consent_access.sql:31:CREATE TABLE core.families (
+database/canonical/migrations\0003_core_consent_access.sql:46:CREATE TABLE core.student_profiles (
+database/canonical/migrations\0003_core_consent_access.sql:65:CREATE TABLE auth.principals (
+database/canonical/migrations\0003_core_consent_access.sql:67:  person_id uuid NOT NULL UNIQUE REFERENCES core.people,
+RG_EXIT=0
+COMMAND rg -n 'CREATE TABLE learning\.(teacher|class|enrollment|schedule_slot|attendance_record)|room_label text|EXCLUDE USING gist|CREATE FUNCTION learning\.(create_schedule_slot|place_enrollment_in_class|can_read_sensitive|teacher_has_class_access)' database/canonical/migrations/0022_learning_core.sql
+52:CREATE TABLE learning.teacher (
+59:CREATE TABLE learning.class (
+73:CREATE TABLE learning.enrollment (
+89:CREATE TABLE learning.enrollment_status_event (
+99:CREATE TABLE learning.teacher_assignment (
+119:CREATE TABLE learning.enrollment_class (
+137:CREATE TABLE learning.schedule_slot (
+143:  room_label text CHECK (room_label IS NULL OR length(btrim(room_label)) BETWEEN 1 AND 100),
+149:  EXCLUDE USING gist (
+155:CREATE TABLE learning.attendance_record (
+441:CREATE FUNCTION learning.teacher_has_class_access(p_class_id uuid,p_subject_id uuid) RETURNS boolean
+454:CREATE FUNCTION learning.can_read_sensitive(p_family_id uuid,p_subject_id uuid,p_class_id uuid) RETURNS boolean
+621:CREATE FUNCTION learning.create_schedule_slot(
+702:CREATE FUNCTION learning.place_enrollment_in_class(p_enrollment_id uuid,p_class_id uuid) RETURNS boolean
+RG_EXIT=0
+COMMAND rg -n 'CREATE TABLE (education\.study_enrollments|learning\.(room|lesson_package|assessment_instrument|slot_booking))' database/canonical/migrations
+RG_EXIT=1
+COMMAND rg -n 'CREATE TABLE (education\.(score_record|language_test)|learning\.stage_report)|instrument_code|CAT4|IELTS|JLPT|CANTONESE' database/canonical/migrations
+database/canonical/migrations\0019_education_master_and_records.sql:50:CREATE TABLE education.score_record (
+database/canonical/migrations\0019_education_master_and_records.sql:63:CREATE TABLE education.language_test (
+database/canonical/migrations\0022_learning_core.sql:210:CREATE TABLE learning.stage_report (
+RG_EXIT=0
+COMMAND rg -n 'CREATE FUNCTION learning\.(read_published_card|read_published_stage_report)|REVOKE ALL ON ALL TABLES IN SCHEMA learning|GRANT EXECUTE ON FUNCTION learning|CREATE OR REPLACE FUNCTION auth\.validate_context_request' database/canonical/migrations/0022_learning_core.sql
+301:CREATE OR REPLACE FUNCTION auth.validate_context_request(
+884:CREATE FUNCTION learning.read_published_card(p_card_id uuid)
+904:CREATE FUNCTION learning.read_published_stage_report(p_report_id uuid)
+933:REVOKE ALL ON ALL TABLES IN SCHEMA learning FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
+938:GRANT EXECUTE ON FUNCTION learning.register_staff_principal(uuid,uuid,text),
+959:GRANT EXECUTE ON FUNCTION learning.list_published_courses(),
+RG_EXIT=0
+COMMAND rg -n 'v1/learning|canonical/|academic-studio' Phoenix Compass/education compass/server/src/http/app.ts
+202:      if (url.pathname.startsWith('/v1/canonical/projections/') || url.pathname.startsWith('/v1/canonical/session-projections/')) {
+203:        const sessionMode = url.pathname.startsWith('/v1/canonical/session-projections/')
+218:      if (url.pathname === '/v1/learning/catalog') {
+RG_EXIT=0
+COMMAND git show origin/pr-77-head:.../0042_organization_workspace_authorization.sql | rg -n session/context declarations
+120:CREATE TABLE auth.workspace_sessions (
+146:  ADD COLUMN workspace_session_id uuid REFERENCES auth.workspace_sessions ON DELETE CASCADE,
+149:  ADD COLUMN workspace_session_id uuid REFERENCES auth.workspace_sessions ON DELETE CASCADE,
+767:CREATE FUNCTION auth.rotate_workspace_session(
+828:CREATE FUNCTION auth.issue_workspace_context_ticket(
+876:CREATE FUNCTION auth.redeem_workspace_context_ticket(
+1015:CREATE FUNCTION auth.clear_workspace_context() RETURNS void
+RG_EXIT=0
