@@ -32,5 +32,10 @@ jobs:
           test "$(find database/canonical/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)" -eq 37
           test -f database/canonical/forward-candidates/academic-studio/001_identity_context.sql
           test ! -f database/canonical/migrations/001_identity_context.sql
+      - name: Install existing backend PostgreSQL test driver
+        working-directory: Phoenix Compass/education compass/server
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Install formal Canonical 0001-0037 and smoke candidate on disposable PostgreSQL
         run: node database/canonical/verification/academic-studio/package-a-smoke.mjs ${{ matrix.version }}
+      - name: Verify Founder bootstrap and grant lifecycle using separate LOGINs
+        run: node database/canonical/verification/academic-studio/package-a-authorization.mjs ${{ matrix.version }}
