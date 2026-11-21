@@ -716,6 +716,14 @@ $fn$;
 
 -- No direct table access; only the narrow audited API is exposed.
 REVOKE ALL ON learning.academy_staff_grants FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
+-- Newly created SECURITY DEFINER functions have PostgreSQL's default PUBLIC
+-- EXECUTE unless explicitly revoked; GRANT alone does not remove that right.
+REVOKE EXECUTE ON FUNCTION learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text),
+  learning.revoke_academy_staff_capability(uuid,text),
+  learning.protect_academy_staff_grant(),
+  core.read_student_self_summary(),
+  auth.can_open_parent_view(uuid)
+FROM PUBLIC,phoenix_canonical_reader,phoenix_canonical_context_binder;
 REVOKE EXECUTE ON FUNCTION learning.has_academy_capability(text),
   learning.current_staff_kind(),learning.has_learning_consent_for_subject(uuid,uuid),
   learning.teacher_has_class_access(uuid,uuid),learning.can_manage_learning(),
