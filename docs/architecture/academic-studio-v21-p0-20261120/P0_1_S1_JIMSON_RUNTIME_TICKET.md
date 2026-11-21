@@ -16,7 +16,7 @@ After confirming the alias points to the named nonproduction instance:
 
 ```sh
 psql 'service=phoenix_nonprod' -X -v ON_ERROR_STOP=1 \
-  -f docs/architecture/academic-studio-v21-p0-20261120/p01-evidence/s1-runtime-readonly-preflight.sql
+  -f database/canonical/verification/v0045/s1-runtime-readonly-preflight.sql
 ```
 
 Use protected local service/pgpass configuration. Never put passwords, tokens or connection secrets in the command line or receipt.
