@@ -497,7 +497,60 @@ BEGIN
         v_status := CASE WHEN v_allowed THEN 'ALLOW' ELSE 'UNAVAILABLE' END;
         v_reason := CASE WHEN v_allowed THEN 'AUTHORIZED' ELSE 'ID_MAPPING_UNAVAILABLE' END;
       END IF;
-    ELSIF p_operation='student' AND (p_public_id IS NULL OR p_public_id !~ '^stu_[0-9a-f]{32}
+    ELSIF p_operation='student' AND (p_public_id IS NULL OR p_public_id !~ '^stu_[0-9a-f]{32}$') THEN
+      v_reason := 'SUBJECT_UNAVAILABLE';
+    ELSE
+      FOR v_item IN
+        SELECT s.person_id,p.display_name FROM core.student_profiles s
+        JOIN core.people p ON p.person_id=s.person_id
+        JOIN core.family_memberships m ON m.person_id=s.person_id AND m.family_id=v_context.family_id
+        WHERE m.valid_from<=clock_timestamp() AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp())
+          AND (s.person_id=v_context.actor_person_id OR EXISTS(
+            SELECT 1 FROM core.guardian_authorities g
+            WHERE g.family_id=v_context.family_id AND g.guardian_person_id=v_context.actor_person_id
+              AND g.subject_person_id=s.person_id AND g.evidence_level='VERIFIED'
+              AND g.scope IN ('EDUCATION','GENERAL') AND g.lifecycle_status='ACTIVE'
+              AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()))
+          AND (p_operation='students' OR EXISTS(
+            SELECT 1 FROM integration.public_ids i WHERE i.entity_kind='STUDENT_PROFILE'
+              AND i.canonical_id=s.person_id AND i.public_id=p_public_id))
+        ORDER BY s.person_id LIMIT 101
+      LOOP
+        v_ids := array_append(v_ids,v_item.person_id);
+        v_public := integration.lookup_projection_public_id('STUDENT_PROFILE',v_item.person_id);
+        IF v_public IS NULL THEN
+          v_status := 'UNAVAILABLE'; v_reason := 'ID_MAPPING_UNAVAILABLE'; EXIT;
+        END IF;
+        v_items := v_items||jsonb_build_array(jsonb_build_object('studentRef',v_public,'displayName',v_item.display_name));
+      END LOOP;
+      IF v_status<>'UNAVAILABLE' THEN
+        IF cardinality(v_ids)>100 THEN
+          v_status := 'UNAVAILABLE'; v_reason := 'RESULT_LIMIT_EXCEEDED';
+        ELSIF p_operation='student' AND cardinality(v_ids)<>1 THEN
+          v_status := 'NOT_FOUND'; v_reason := 'SUBJECT_UNAVAILABLE';
+        ELSE
+          v_allowed := true; v_status := 'ALLOW'; v_reason := 'AUTHORIZED';
+          v_data := CASE WHEN p_operation='student'
+            THEN jsonb_build_object('schemaVersion','student-summary.v2','item',v_items->0)
+            ELSE jsonb_build_object('schemaVersion','student-summary.v2','items',v_items) END;
+          IF p_operation='student' THEN v_id := v_ids[1]; END IF;
+        END IF;
+      END IF;
+    END IF;
+    IF v_context.expires_at<=clock_timestamp() THEN
+      v_allowed := false; v_status := 'DENY'; v_reason := 'NO_TRUSTED_CONTEXT';
+    END IF;
+  END IF;
+  PERFORM audit.record_write_decision('READ',v_resource,
+    CASE WHEN v_allowed THEN v_id ELSE NULL END,v_allowed,v_reason);
+  IF v_allowed AND p_operation='students' THEN
+    FOREACH v_id IN ARRAY v_ids LOOP
+      PERFORM audit.record_write_decision('READ','STUDENT_SUMMARY',v_id,true,'AUTHORIZED');
+    END LOOP;
+  END IF;
+  RETURN jsonb_build_object('status',v_status,'data',CASE WHEN v_allowed THEN v_data ELSE NULL END);
+END $fn$;
+
 CREATE FUNCTION core.read_student_self_summary()
 RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
