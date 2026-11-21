@@ -99,10 +99,13 @@ try{
   const denied=sql(allOnline).split('\n').filter(x=>x==='t'||x==='f');
   check(denied.join(',')==='t,t,t,f','all-online roster cannot finalize as Hybrid');
   check(sql("SELECT delivery_status FROM learning.schedule_slot WHERE slot_id='01910000-0000-7000-8000-000000000420'")==='DRAFT','denied Hybrid finalization leaves prior draft state intact');
+  // Use a fresh, otherwise assignable slot: this negative tests actor authority
+  // rather than accidentally denying because an earlier roster was finalized.
+  sql("INSERT INTO learning.schedule_slot(slot_id,class_id,teacher_person_id,starts_at,ends_at,created_by_principal_id) SELECT '01910000-0000-7000-8000-000000000430',class_id,teacher_person_id,clock_timestamp()+interval '7 hours',clock_timestamp()+interval '8 hours',created_by_principal_id FROM learning.schedule_slot WHERE slot_id='01910000-0000-7000-8000-000000000406'");
   // A guardian with a valid FAMILY context has no teacher-mode authority.
   const parentContext="SELECT auth.bind_context('01910000-0000-7000-8000-000000000103','01910000-0000-7000-8000-000000000003','01910000-0000-7000-8000-000000000100','FAMILY',clock_timestamp()+interval '10 minutes',gen_random_uuid());\n";
   const forbidden=sql(parentContext+
-    "SELECT learning.set_slot_delivery('01910000-0000-7000-8000-000000000420','ONLINE',NULL,'Asia/Hong_Kong','01910000-0000-7000-8000-000000000627','GUARDIAN_FORGED_MODE');\n"+
+    "SELECT learning.set_slot_delivery('01910000-0000-7000-8000-000000000430','ONLINE',NULL,'Asia/Hong_Kong','01910000-0000-7000-8000-000000000627','GUARDIAN_FORGED_MODE');\n"+
     "SELECT auth.clear_context();");
   check(forbidden.trim()==='f','Parent cannot change teacher-assigned session mode');
   console.log(JSON.stringify({status:'PASS',postgres:version,candidate_sha256:digest,formal_migrations:37,fixtures:'synthetic'}));
