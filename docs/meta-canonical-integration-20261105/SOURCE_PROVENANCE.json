@@ -1,0 +1,13 @@
+{
+  "task": "PHOENIX-META-CANONICAL-INTEGRATION-20261105",
+  "main_initial": "b9bf574f4f2649f58f8935953bc826a038715cce",
+  "main_refreshed": "19feef190dcba13ccc9181c998d4c82527377803",
+  "site_project_id": "appgprj_6a8ed46a2cdc8191aa6b40b88a9e551d",
+  "site_version": 67,
+  "site_base_sha": "a96de29bbfdf32558b202123f15a3ca3c5b2a9a3",
+  "site_candidate_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+  "site_candidate_branch": "codex/meta-canonical-readonly-20261105",
+  "patch_sha256": "6cd6c6ceda181b878f5516975fe2506ed5cab8e37e60cb0ed552f5e28f320ba0",
+  "status": "LOCAL_CANDIDATE_REAL_INTEGRATION_HOLD",
+  "production_actions": []
+}
