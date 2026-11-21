@@ -1,0 +1,32 @@
+{
+  "status": "UNNUMBERED A1 CANDIDATE — NO INSTALL / MERGE AUTHORIZATION",
+  "scope": "Academy Administrator / Founder grant rows and governance functions only",
+  "file": "database/canonical/forward-candidates/academic-studio/academy_staff_grants.sql",
+  "candidate_git_blob_sha1": "390ccd3742355c6b5b1757583c31c3686fe2cadf",
+  "formal_base": {
+    "count": 37,
+    "last": "0037_scoped_public_id_projection_read_audit.sql",
+    "main": "f1d8af3f9338b4cb8a1afca48c6d85f1396d9da3"
+  },
+  "new_tables": [
+    "learning.academy_staff_grants"
+  ],
+  "new_functions": [
+    "learning.protect_academy_staff_grant()",
+    "learning.is_academy_bootstrap_service()",
+    "learning.has_academy_staff_grant(text)",
+    "learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text)",
+    "learning.revoke_academy_staff_capability(uuid,text)"
+  ],
+  "existing_tables_modified": [],
+  "context_tables_added": 0,
+  "business_data_migrated": false,
+  "scope_exclusions": [
+    "Student/Parent/Teacher contexts are Package A2",
+    "Teacher scheduling is Package B",
+    "Assessment scores are Package C",
+    "Lesson-hour commercial rules HOLD",
+    "No PR77 / 0042 dependency"
+  ],
+  "testing": "Synthetic disposable PG16/PG17 only; no shared database or production install"
+}
