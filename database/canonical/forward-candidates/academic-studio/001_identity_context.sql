@@ -61,6 +61,7 @@ CREATE TABLE learning.academy_staff_grants (
   granted_by_principal_id uuid NOT NULL REFERENCES auth.principals,
   revoked_by_principal_id uuid REFERENCES auth.principals,
   revoked_at timestamptz,
+  revoked_reason_code text CHECK (revoked_reason_code IS NULL OR length(btrim(revoked_reason_code)) BETWEEN 1 AND 200),
   reason_code text NOT NULL CHECK (length(btrim(reason_code)) BETWEEN 1 AND 200),
   created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   CHECK (valid_until IS NULL OR valid_until>valid_from),
@@ -93,10 +94,12 @@ BEGIN
   IF OLD.status<>'ACTIVE' OR NEW.status NOT IN ('REVOKED','EXPIRED') THEN
     RAISE EXCEPTION 'ACADEMY_STAFF_GRANT_TRANSITION_INVALID';
   END IF;
-  IF NEW.status='REVOKED' AND (NEW.revoked_at IS NULL OR NEW.revoked_by_principal_id IS NULL) THEN
+  IF NEW.status='REVOKED' AND (NEW.revoked_at IS NULL OR NEW.revoked_by_principal_id IS NULL
+      OR length(btrim(NEW.revoked_reason_code)) NOT BETWEEN 1 AND 200) THEN
     RAISE EXCEPTION 'ACADEMY_STAFF_GRANT_REVOCATION_EVIDENCE_REQUIRED';
   END IF;
-  IF NEW.status='EXPIRED' AND (NEW.revoked_at IS NOT NULL OR NEW.revoked_by_principal_id IS NOT NULL) THEN
+  IF NEW.status='EXPIRED' AND (NEW.revoked_at IS NOT NULL OR NEW.revoked_by_principal_id IS NOT NULL
+      OR NEW.revoked_reason_code IS NOT NULL) THEN
     RAISE EXCEPTION 'ACADEMY_STAFF_GRANT_EXPIRY_EVIDENCE_INVALID';
   END IF;
   RETURN NEW;
@@ -212,7 +215,7 @@ BEGIN
   UPDATE learning.academy_staff_grants
      SET status='REVOKED',revoked_at=clock_timestamp(),
          revoked_by_principal_id=auth.current_principal_id(),
-         reason_code=btrim(reason_code)
+         revoked_reason_code=btrim(p_reason_code)
    WHERE grant_id=p_grant_id;
   RETURN audit.record_write_decision('REVOKE','ACADEMY_STAFF_CAPABILITY',p_grant_id,true,'REVOKED');
 END
@@ -497,7 +500,6 @@ LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth,learning
 RETURN coalesce(
   auth.current_channel()='STAFF'
-  AND learning.current_staff_kind()='TEACHER'
   AND EXISTS (
     SELECT 1
     FROM learning.teacher t
@@ -570,6 +572,15 @@ RETURN coalesce(
     )
   ),false);
 
+-- Administrative attendance corrections must not pretend the admin is a Teacher.
+-- Preserve the old teacher reference for actual teachers, add the Principal actor.
+ALTER TABLE learning.attendance_correction
+  ALTER COLUMN corrected_by_teacher_person_id DROP NOT NULL,
+  ADD COLUMN corrected_by_principal_id uuid REFERENCES auth.principals;
+ALTER TABLE learning.attendance_correction
+  ADD CONSTRAINT attendance_correction_actor_required
+  CHECK (corrected_by_teacher_person_id IS NOT NULL OR corrected_by_principal_id IS NOT NULL);
+
 CREATE OR REPLACE FUNCTION learning.correct_attendance(
   p_id uuid,p_attendance_id uuid,p_status text,p_reason text
 ) RETURNS boolean
@@ -589,8 +600,16 @@ BEGIN
       )) IS NOT TRUE THEN
     RETURN audit.record_write_decision('CORRECT','LEARNING_ATTENDANCE',p_id,false,'STAFF_ASSIGNMENT_OR_CONSENT_DENIED');
   END IF;
-  INSERT INTO learning.attendance_correction(correction_id,attendance_id,new_status,reason_code,corrected_by_teacher_person_id)
-  VALUES(p_id,p_attendance_id,p_status,p_reason,auth.current_actor_person_id());
+  INSERT INTO learning.attendance_correction(
+    correction_id,attendance_id,new_status,reason_code,
+    corrected_by_teacher_person_id,corrected_by_principal_id
+  ) VALUES (
+    p_id,p_attendance_id,p_status,p_reason,
+    CASE WHEN EXISTS (
+      SELECT 1 FROM learning.teacher t WHERE t.teacher_person_id=auth.current_actor_person_id()
+    ) THEN auth.current_actor_person_id() ELSE NULL END,
+    auth.current_principal_id()
+  );
   RETURN audit.record_write_decision('CORRECT','LEARNING_ATTENDANCE',p_id,true,'CORRECTION_APPENDED');
 END
 $fn$;
