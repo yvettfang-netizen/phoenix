@@ -145,6 +145,24 @@ try {
 
   fixture(db);
   sql(db,"INSERT INTO auth.principals(principal_id,person_id,principal_kind,status,service_label) VALUES('"+id(899)+"',NULL,'SERVICE','ACTIVE','other_internal_service_v1')");
+  sql(db,`INSERT INTO core.people(person_id,display_name) VALUES('01910000-0000-7000-8000-000000000004','Synthetic Subject Learner');
+INSERT INTO core.student_profiles(person_id) VALUES('01910000-0000-7000-8000-000000000003'),('01910000-0000-7000-8000-000000000004');
+INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from) VALUES('01910000-0000-7000-8000-000000001104','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000004','MEMBER',clock_timestamp()-interval '1 day');
+INSERT INTO integration.public_ids(entity_kind,public_id,canonical_id) VALUES('STUDENT_PROFILE','stu_01910000000070008000000000000003','01910000-0000-7000-8000-000000000003');
+INSERT INTO core.guardian_authorities(authority_id,family_id,guardian_person_id,subject_person_id,evidence_level,scope,valid_from,valid_until) VALUES('01910000-0000-7000-8000-000000003100','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000001','01910000-0000-7000-8000-000000000004','VERIFIED','LEARNING',clock_timestamp()-interval '1 day',clock_timestamp()+interval '1 day');
+INSERT INTO consent.grants(consent_id,family_id,grantor_person_id,grantee_person_id,subject_person_id,purpose,data_class,status,granted_at,expires_at) VALUES
+('01910000-0000-7000-8000-000000003101','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000001','01910000-0000-7000-8000-000000000003','01910000-0000-7000-8000-000000000004','LEARNING_RECORD','LEARNING','ACTIVE',clock_timestamp()-interval '1 day',clock_timestamp()+interval '1 day'),
+('01910000-0000-7000-8000-000000003102','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000001','01910000-0000-7000-8000-000000000001','01910000-0000-7000-8000-000000000004','LEARNING_RECORD','LEARNING','ACTIVE',clock_timestamp()-interval '1 day',clock_timestamp()+interval '1 day');
+INSERT INTO learning.teacher(teacher_person_id,status,created_by_principal_id) VALUES('01910000-0000-7000-8000-000000000003','ACTIVE','01910000-0000-7000-8000-000000000903');
+INSERT INTO learning.course(course_id,course_code,title,status,created_by_principal_id) VALUES('01910000-0000-7000-8000-000000003200','ACADEMY-DUAL-CAP','Dual capability synthetic course','PUBLISHED','01910000-0000-7000-8000-000000000901');
+INSERT INTO learning.course_version(course_version_id,course_id,version_no,effective_from,status,created_by_principal_id) VALUES('01910000-0000-7000-8000-000000003201','01910000-0000-7000-8000-000000003200',1,clock_timestamp()-interval '1 day','ACTIVE','01910000-0000-7000-8000-000000000901');
+INSERT INTO learning.class(class_id,course_version_id,class_code,capacity,status,starts_on,ends_on,created_by_principal_id) VALUES('01910000-0000-7000-8000-000000003202','01910000-0000-7000-8000-000000003201','ACADEMY-DUAL-CLASS',5,'OPEN',current_date-1,current_date+30,'01910000-0000-7000-8000-000000000901');
+INSERT INTO learning.teacher_assignment(assignment_id,class_id,teacher_person_id,role,valid_from,valid_until,created_by_principal_id) VALUES('01910000-0000-7000-8000-000000003203','01910000-0000-7000-8000-000000003202','01910000-0000-7000-8000-000000000003','LEAD',clock_timestamp()-interval '1 day',clock_timestamp()+interval '30 days','01910000-0000-7000-8000-000000000901');
+INSERT INTO learning.enrollment(enrollment_id,family_id,student_person_id,course_version_id,status,created_by_principal_id) VALUES('01910000-0000-7000-8000-000000003204','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000004','01910000-0000-7000-8000-000000003201','ACTIVE','01910000-0000-7000-8000-000000000901');
+INSERT INTO learning.enrollment_class(enrollment_id,class_id,family_id,student_person_id,course_version_id,status) VALUES('01910000-0000-7000-8000-000000003204','01910000-0000-7000-8000-000000003202','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000004','01910000-0000-7000-8000-000000003201','ACTIVE');
+INSERT INTO learning.schedule_slot(slot_id,class_id,teacher_person_id,starts_at,ends_at,created_by_principal_id) VALUES('01910000-0000-7000-8000-000000003205','01910000-0000-7000-8000-000000003202','01910000-0000-7000-8000-000000000003',clock_timestamp()+interval '1 hour',clock_timestamp()+interval '2 hours','01910000-0000-7000-8000-000000000901');
+INSERT INTO learning.after_class_card(card_id,slot_id,class_id,enrollment_id,family_id,student_person_id,author_teacher_person_id,summary_text,status) VALUES('01910000-0000-7000-8000-000000003206','01910000-0000-7000-8000-000000003205','01910000-0000-7000-8000-000000003202','01910000-0000-7000-8000-000000003204','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000004','01910000-0000-7000-8000-000000000003','Subject-scoped Learning Consent synthetic card','PUBLISHED');
+INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,acted_by_principal_id) VALUES('01910000-0000-7000-8000-000000003207','01910000-0000-7000-8000-000000003206','01910000-0000-7000-8000-000000000100','PUBLISHED','01910000-0000-7000-8000-000000000901');`);
   app=await connect(db,'academy_a1_app',appPassword);
   binder=await connect(db,'academy_a1_binder',binderPassword);
   await app.query('SET ROLE phoenix_canonical_app');
@@ -194,6 +212,29 @@ try {
   const mutated=sql(db,"UPDATE learning.academy_staff_grants SET principal_id='"+id(903)+"' WHERE grant_id='"+id(2101)+"'",true);
   assert.notEqual(mutated.status,0,'IMMUTABLE_GRANT_IDENTITY_CHANGED');
   console.log('PASS PG'+version+' restricted revoke, immutable grant identity, audit decisions='+audit);
+
+  // One Principal is simultaneously Family member, Student Profile and active Teacher.
+  await bind(id(903),id(3),id(100),'FAMILY');
+  assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'FAMILY');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'FAMILY_MEMBER_WITHOUT_VERIFIED_GUARDIAN_CANNOT_READ_OTHER_STUDENT');
+  await bind(id(903),id(3),null,'STUDENT');
+  assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'STUDENT');
+  const self=(await app.query('SELECT core.read_student_self_summary() AS summary')).rows[0].summary;
+  assert.equal(self?.item?.studentRef,'stu_01910000000070008000000000000003');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'STUDENT_SELF_CONTEXT_MUST_NOT_EXPOSE_OTHER_LEARNER');
+  await bind(id(903),id(3),null,'STAFF');
+  assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'STAFF');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
+    'ASSIGNED_TEACHER_WITH_EXACT_SUBJECT_CONSENT_CAN_READ');
+  sql(db,"UPDATE consent.grants SET status='WITHDRAWN',withdrawn_at=clock_timestamp() WHERE consent_id='01910000-0000-7000-8000-000000003101';");
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'GLOBAL_STAFF_CONSENT_WITHDRAWAL_DENIES_NEXT_READ');
+  await bind(id(901),id(1),id(100),'FAMILY');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
+    'EXACT_VERIFIED_GUARDIAN_WITH_ACTIVE_PARENT_CONSENT_CAN_READ');
+  console.log('PASS PG'+version+' SAME PRINCIPAL FAMILY→STUDENT→GLOBAL STAFF; subject consent, withdrawal and guardian isolation');
 
   await app.query('SELECT auth.clear_context()');
   assert.equal(one(db,'SELECT count(*) FROM auth.session_contexts'),'0');
