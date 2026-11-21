@@ -216,6 +216,8 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   // One Principal is simultaneously Family member, Student Profile and active Teacher.
   await bind(id(903),id(3),id(100),'FAMILY');
   assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'FAMILY');
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,false,
+    'FAMILY_MEMBER_WITHOUT_VERIFIED_GUARDIAN_MUST_NOT_SWITCH_TO_PARENT');
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
     'FAMILY_MEMBER_WITHOUT_VERIFIED_GUARDIAN_CANNOT_READ_OTHER_STUDENT');
   await bind(id(903),id(3),null,'STUDENT');
@@ -232,6 +234,8 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
     'GLOBAL_STAFF_CONSENT_WITHDRAWAL_DENIES_NEXT_READ');
   await bind(id(901),id(1),id(100),'FAMILY');
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,true,
+    'VERIFIED_GUARDIAN_MUST_BE_ABLE_TO_OPEN_PARENT_VIEW');
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
     'EXACT_VERIFIED_GUARDIAN_WITH_ACTIVE_PARENT_CONSENT_CAN_READ');
   console.log('PASS PG'+version+' SAME PRINCIPAL FAMILY→STUDENT→GLOBAL STAFF; subject consent, withdrawal and guardian isolation');
