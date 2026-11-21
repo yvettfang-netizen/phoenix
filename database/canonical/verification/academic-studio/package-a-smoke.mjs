@@ -55,8 +55,8 @@ try{
   check(sql("SELECT md5(string_agg(migration_name||sha256,',' ORDER BY migration_name)) FROM canonical_migrations.applied;\n")===ledger,'historical ledger checksums unchanged');
   check(sql("SELECT relrowsecurity::text||':'||relforcerowsecurity::text FROM pg_class WHERE oid='learning.academy_staff_grants'::regclass;\n")==='true:true','new grant table FORCE RLS');
   check(sql("SELECT has_table_privilege('phoenix_canonical_app','learning.academy_staff_grants','SELECT');\n")==='f','direct app table SELECT denied');
-  check(sql("SELECT has_function_privilege('public','learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text)','EXECUTE');\n")==='f','public cannot invoke academy grants');
-  check(sql("SELECT has_function_privilege('public','core.read_student_self_summary()','EXECUTE');\n")==='f','public cannot invoke student projection');
+  check(sql("SELECT EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE p.oid='learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text)'::regprocedure AND a.grantee=0 AND a.privilege_type='EXECUTE');\n")==='f','public cannot invoke academy grants');
+  check(sql("SELECT EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE p.oid='core.read_student_self_summary()'::regprocedure AND a.grantee=0 AND a.privilege_type='EXECUTE');\n")==='f','public cannot invoke student projection');
   check(sql("SELECT pg_get_function_result('core.read_student_self_summary()'::regprocedure);\n")==='jsonb','student self result is opaque JSON, not raw UUID table');
   check(sql("SELECT attnotnull FROM pg_attribute WHERE attrelid='learning.attendance_correction'::regclass AND attname='corrected_by_teacher_person_id';\n")==='f','admin correction no longer requires teacher FK');
   check(sql("SELECT count(*) FROM pg_attribute WHERE attrelid='learning.attendance_correction'::regclass AND attname='corrected_by_principal_id';\n")==='1','admin correction retains Principal attribution');
