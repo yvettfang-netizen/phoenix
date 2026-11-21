@@ -48,7 +48,9 @@
 - HYBRID is one slot and one roster; teacher assigns each participant ONLINE or ONSITE.
 - Student/Parent attempts to change session mode or participation mode → DENY and no state change.
 - Unassigned teacher attempts to change mode → DENY.
-- Assigned teacher mode change records actor, timestamp, old/new values and reason.
+- Active LEAD teacher mode change records actor, timestamp, old/new values and reason.
+- ASSISTANT teacher attempts to change delivery mode or Hybrid participant mode → DENY.
+- HYBRID with all participants assigned ONLINE or all assigned ONSITE cannot be finalized as HYBRID.
 - Mode/room/time change that creates a teacher/student/room conflict or capacity breach → DENY atomically; prior assignment remains unchanged.
 - Rescheduling a slot updates participant conflict ranges atomically.
 - Cancelling a slot releases active student/room reservations but retains immutable cancellation evidence.
@@ -73,10 +75,12 @@
 - No cross-instrument average, conversion or ranking is computed.
 - Self-reported result is visibly labelled and cannot appear as verified.
 - AI_PROPOSAL cannot be PUBLISHED without a qualified human reviewer.
-- Parent reads only PUBLISHED results for subjects backed by active Guardian Authority and Consent.
+- Parent reads only PUBLISHED results for subjects backed by active Guardian Authority and Consent in the currently selected family; the assessment record itself has no single family owner.
+- Two distinct current family contexts with valid authority/Consent can read the same student assessment subject without duplicating the assessment record.
 - Student reads only their own published results; the student-self projection never returns siblings or family summary.
 - Teacher reads/reviews only the assigned student's permitted result.
-- Evidence document must match family, subject and EDUCATION data class and must not be withdrawn.
+- Evidence document access is checked independently under its existing document/family authorization; the assessment attempt is subject-owned, not family-owned.
+- Every assessment lifecycle transition has an immutable attempt event with actor, timestamp and reason.
 - Correction appends a superseding attempt; original remains unchanged.
 - Retraction hides the result from future projections while retaining required audit/provenance.
 
