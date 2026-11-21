@@ -751,6 +751,10 @@ FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
 GRANT EXECUTE ON FUNCTION learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text),
   learning.revoke_academy_staff_capability(uuid,text)
 TO phoenix_canonical_app;
+-- Parent-switch capability guard is invoked by the application after a fresh
+-- FAMILY binding. Do not expose it to reader/binder/PUBLIC.
+GRANT EXECUTE ON FUNCTION auth.can_open_parent_view(uuid)
+TO phoenix_canonical_app;
 GRANT EXECUTE ON FUNCTION core.read_student_self_summary()
 TO phoenix_canonical_app,phoenix_canonical_reader;
 
