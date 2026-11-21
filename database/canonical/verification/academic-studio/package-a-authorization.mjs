@@ -118,7 +118,7 @@ function fixture(db) {
 }
 
 const base=readFileSync(candidatePath,'utf8');
-assert(base.startsWith('BEGIN;') && base.trim().endsWith('COMMIT;'));
+assert(/^\s*(?:--[^\n]*\n\s*)*BEGIN;/.test(base) && base.trim().endsWith('COMMIT;'),'SQL_TRANSACTION_WRAPPED');
 assert.equal(readdirSync(migrationPath).filter(x=>/^\d{4}_.*\.sql$/.test(x)).length,37);
 assert(!/CREATE TABLE auth[.]principals|CREATE TABLE core[.]people|CREATE TABLE auth[.]session_contexts/i.test(base));
 console.log('SOURCE SHA256 '+createHash('sha256').update(base).digest('hex')+' (unnumbered candidate; synthetic only)');
