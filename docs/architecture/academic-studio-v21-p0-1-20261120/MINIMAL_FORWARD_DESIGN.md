@@ -105,7 +105,7 @@ Student self access uses a separate STUDENT-only predicate and does not inherit 
 | `authorization_version` | Increment on revoke/change |
 | `reason_code`, `created_at` | Audit reason and timestamp |
 
-No region, company, organization, franchise or tenant column. The initial Founder grant must be bootstrapped through the existing controlled internal-service path; it must not be self-granted through the browser. Founder must approve the bootstrap authority before SQL.
+No region, company, organization, franchise or tenant column. The initial Founder grant must be bootstrapped through the existing controlled internal-service path; it must not be self-granted through the browser. Founder has approved this bootstrap boundary.
 
 Existing `learning.register_staff_principal()` must not create a second Principal for a person who already has one. Existing person Principal is reused; Teacher is registered in `learning.teacher`; Administrator/Founder is granted through the new capability grant. Any legacy SUPERVISOR rows must be inventoried and explicitly mapped; do not silently elevate them to Founder.
 
@@ -204,13 +204,13 @@ This preserves the required before/after evidence. Existing access-decision audi
 2. For ONLINE or ONSITE, the teacher sets the mode for the entire session.
 3. For HYBRID, the teacher assigns every enrolled student to ONLINE or ONSITE within the same slot and class roster.
 4. A student/parent cannot create, change or override the mode or participation assignment. They may request a change through the teacher.
-5. The assigned LEAD teacher is the recommended single authority where a class has multiple teachers. Founder should confirm whether an ASSISTANT may ever change the mode.
+5. The active LEAD teacher is the sole authority for setting/changing delivery mode and Hybrid participation. ASSISTANT teachers are read-only for these fields.
 6. A mode/room/time change is atomic: lock slot and applicable room, re-check teacher/student/room/provider capacity and conflicts, append event, then publish the new state. If any check fails, keep the old assignment unchanged.
 7. ONSITE and HYBRID require a stable room. ONLINE does not reserve a room.
 8. Room overlap is enforced at database level using the same time-range exclusion approach as teacher overlap.
 9. Student overlap across all classes is enforced at database level using a GiST exclusion on the active per-student slot reservation time range.
 10. Room capacity counts only ONSITE participants. Class capacity remains the existing enrollment/class capacity.
-11. A HYBRID session is one slot, not duplicated Online and Onsite classes. Recommended finalization rule: at least one participant is assigned to each mode; if not, teacher changes the session to ONLINE or ONSITE.
+11. A HYBRID session is one slot, not duplicated Online and Onsite classes. Binding Founder rule: HYBRID is valid only when at least one active participant is assigned to each mode. If all participants are in one mode, the LEAD teacher must set the slot to ONLINE or ONSITE.
 12. Students/parents receive the latest schedule through the Family OS read projection. Publish a Family Timeline event for material schedule changes using the existing append-only event contract; new event types must be added to the approved event registry before use. Do not create a second notification or timeline database.
 
 ### 4.5 Time and meeting provider
@@ -218,7 +218,7 @@ This preserves the required before/after evidence. Existing access-decision audi
 - Store authoritative instants as `timestamptz`.
 - Store an IANA `timezone_name` for local display and DST interpretation.
 - Reject nonexistent or ambiguous local times unless the teacher explicitly selects a valid offset.
-- Proposed timezone default: physical room's timezone for ONSITE/HYBRID; teacher-selected schedule timezone for ONLINE. Founder confirmation remains pending.
+- Founder-approved timezone rule: physical room's IANA timezone for ONSITE/HYBRID; LEAD teacher explicitly selects the IANA schedule timezone for ONLINE. Store UTC instants, reject DST gaps, require explicit offset for folds. No default travel/setup buffer.
 - Do not assume travel/setup buffers; none is included by default.
 - Keep the meeting provider behind an adapter. Do not add provider-specific credentials or meeting tables until a provider and secret-handling contract are selected. Meeting links must be private to authorised participants.
 
@@ -242,9 +242,11 @@ This preserves the required before/after evidence. Existing access-decision audi
 
 ### 5.3 Minimum proposed normalized pair
 
-**Add `education.assessment_attempt`** for one instrument sitting/assessment event:
+**Add `education.assessment_attempt`** for one instrument sitting/assessment event. The attempt belongs to the Canonical Student subject, not to one Family; do not store a single family_id as its ownership key. Parent access is dynamically resolved against the current family context, exact Guardian Authority and Consent. Evidence documents keep their existing independent document/family authorization.
+
+Fields:
 - attempt_id UUIDv7;
-- family_id and student_person_id;
+- student_person_id (FK to `core.student_profiles.person_id`);
 - instrument_code: CAT4 / DSE / A_LEVEL / IELTS / JLPT / CANTONESE;
 - instrument_version and awarding_body/provider where applicable;
 - assessed_on;
@@ -271,11 +273,11 @@ No universal score or cross-instrument conversion field.
 - Preserve the exact original score, grade, scale, dimension, instrument edition and source.
 - IELTS Overall and four bands remain IELTS bands; CAT4 standard age scores remain CAT4; DSE and A-Level grades remain their own grade systems; JLPT level/section scores remain JLPT; Cantonese results retain the rubric version and skill dimension.
 - No cross-instrument average, ranking, percentile conversion or normalized “overall ability” score.
-- Official/self-reported/teacher-assessed/AI-proposed sources are visibly distinct.
+- Official/self-reported/teacher-assessed/AI-proposed sources are visibly distinct. Official results are verified by an authorized Academy Administrator/Founder or a separately approved qualified reviewer; assigned teachers may submit/review teacher assessments only within their assignment. AI_PROPOSAL cannot be published as a formal result without qualified human review.
 - AI_PROPOSAL cannot become PUBLISHED without qualified human review and a recorded reviewer.
 - Student sees only their own permitted records; the student-self projection never returns siblings or Family summary. Parent sees only PUBLISHED records for children backed by current Guardian Authority and Consent. Teacher sees only assigned student records needed for the teaching task. Admin/Founder access is audited and grant-scoped.
 - The assessment read function branches explicitly: STUDENT self-only; FAMILY exact child + verified Guardian Authority + EDUCATION Consent; STAFF exact assignment or Admin/Founder grant + subject-scoped EDUCATION Consent. Direct table access remains denied.
-- Corrections append a superseding attempt/event; no silent overwrite or delete.
+- Add an append-only `education.assessment_attempt_event` for SUBMITTED / VERIFIED / REVIEWED / PUBLISHED / REJECTED / RETRACTED / SUPERSEDED transitions, actor, timestamp, reason and superseding attempt reference. Corrections append a superseding attempt/event; no silent overwrite or delete.
 - Use `docs.documents` for evidence; do not copy raw assessment answers or full report binaries into Family Timeline.
 - Use existing Family Timeline event contract as the presentation layer. New event types require registry review; do not create a second timeline table.
 - Existing Canonical score_record/language_test rows remain intact. No bulk copy or deletion is proposed. After cutover, new supported standardized assessments should write to the new attempt/result authority, while old rows remain historical/legacy until a separate read-compatibility decision.
@@ -292,11 +294,11 @@ Reuse existing `learning.enrollment` and `operations_ref` course entitlement val
 |---|---|---|
 | A — Identity/context | Add STUDENT channel; allow global STAFF context with NULL family_id; update existing ticket/context constraints and validator; add `learning.academy_staff_grants`; update staff/teacher authorization functions and projections | No new Person, Student, Principal, login, session, ticket or workspace-session table |
 | B — Scheduling | Add `learning.room`, slot delivery fields, `learning.schedule_slot_participant`, append-only `learning.schedule_slot_event`, conflict/capacity functions | No duplicate class/enrollment/attendance; no student-selected mode; no vendor-specific meeting credentials |
-| C — Assessment | Add `education.assessment_attempt` and `education.assessment_result`, audited lifecycle and projections | No single universal score, no automatic cross-scale conversion, no raw ASKWISE answer copying |
+| C — Assessment | Add `education.assessment_attempt` and `education.assessment_result`, audited lifecycle and projections | No single universal score, no automatic cross-scale conversion, no raw ASKWISE answer copying; assessment_attempt_event preserves lifecycle provenance |
 | Commercial | NONE | All lesson-hour purchase/debit/refund/settlement logic remains HOLD |
 
 Each package needs its own Draft PR, candidate migration, PG16/17 fresh/repeat/drift, separate LOGIN, RLS/ACL, negative, concurrency, revoke/expiry, pool-reuse, restore and rollback evidence. Founder approval is required before SQL authoring and before any installation.
 
 ## 8. Current conclusion
 
-The minimum design is an extension of Canonical PostgreSQL, not a new education database. The core course/teacher/enrollment/attendance model is reused. The only proposed new domain objects are one Academy Admin/Founder grant, room and per-student schedule assignment/event records, and a normalized assessment attempt/result pair. All remain proposals until Founder closes the remaining decisions.
+The minimum design is an extension of Canonical PostgreSQL, not a new education database. The core course/teacher/enrollment/attendance model is reused. The only proposed new domain objects are one Academy Admin/Founder grant, room and per-student schedule assignment/event records, and a normalized assessment attempt/result/event set. All remain proposals until Founder closes the remaining decisions.
