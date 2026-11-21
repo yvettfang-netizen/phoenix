@@ -1,0 +1,6 @@
+{
+  "evidence_status": "HISTORICAL_SUPERSEDED",
+  "applies_to_sha": "0d4a3de80b56ccb167049a846e17b9b6fc4ef3e152b57aa4600d87367a33cb65",
+  "not_evidence_for_current_sha": "9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991",
+  "note": "This earlier local PG16/17 run predates Canonical context-table consolidation. Use GITHUB_ACTIONS_PG16_PG17_RESULT.json for the current candidate."
+}

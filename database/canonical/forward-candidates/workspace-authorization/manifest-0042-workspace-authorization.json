@@ -1,0 +1,33 @@
+{
+  "state": "ISOLATED_FORWARD_CANDIDATE_NOT_MERGE_OR_RUNTIME_APPROVAL",
+  "base_branch": "main",
+  "base_commit": "9db147ac3a5d135d50b90bfea5a7316ce747d90b",
+  "historical_migrations": 37,
+  "candidate_number": "0042",
+  "file": "0042_organization_workspace_authorization.sql",
+  "sha256": "9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991",
+  "isolated_ledger_rows": 38,
+  "isolated_tables": 98,
+  "isolated_policies_including_auth": 88,
+  "reserved_candidates": [
+    {
+      "number": "0038",
+      "source": "database/canonical/forward-candidates/service-workbench/0038_service_project_workbench.sql"
+    },
+    {
+      "number": "0039",
+      "source": "database/canonical/forward-candidates/service-workbench/0039_service_project_workbench.sql"
+    },
+    {
+      "number": "0040",
+      "source": "historical PR #61 candidate; not imported or modified by this package"
+    },
+    {
+      "number": "0041",
+      "source": "concurrent PR #74 candidate; not imported or modified by this package"
+    }
+  ],
+  "scope": "single Phoenix platform with Headquarters, Staff, Teacher, Family and Channel workspace roles; legal organizations remain distinct; Canonical session tickets and backend contexts reused",
+  "real_identity_status": "HOLD",
+  "deployment_status": "NOT_APPROVED"
+}

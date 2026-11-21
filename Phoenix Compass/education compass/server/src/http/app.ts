@@ -16,6 +16,7 @@ import { routeAgentRequest } from './agent-routes'
 import { InMemoryRateLimiter, RateLimiter } from './rate-limiter'
 import { LearningCatalog } from '../services/canonical-learning-catalog'
 import { FamilyProjection } from '../services/canonical-family-projection'
+import { CanonicalWorkspaceAccess } from '../services/canonical-workspace-access'
 import { randomUUID } from 'node:crypto'
 
 export interface AppDependencies {
@@ -38,6 +39,8 @@ export interface AppDependencies {
   sessionFamilyProjection?: FamilyProjection
   /** Explicit composition only. No production or legacy identity fallback. */
   serviceWorkbench?: { handle(request: IncomingMessage, response: ServerResponse): Promise<void> }
+  /** Explicit composition only. Disabled until a verified identity session resolver is supplied. */
+  workspaceAccess?: CanonicalWorkspaceAccess
   logger?: { error(message: string, context?: Record<string, unknown>): void }
 }
 
@@ -195,6 +198,10 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
     try {
       const url = new URL(request.url ?? '/', 'http://localhost')
       route = url.pathname
+      if (['/v1/me/workspaces','/v1/workspace-contexts','/v1/staff/projects'].includes(route)) {
+        invariant(deps.workspaceAccess, 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        return deps.workspaceAccess.handle(request, response)
+      }
       if (route.startsWith('/v1/service-workbench/')) {
         invariant(deps.serviceWorkbench, 404, 'ROUTE_NOT_FOUND', '接口不存在')
         return deps.serviceWorkbench.handle(request, response)
