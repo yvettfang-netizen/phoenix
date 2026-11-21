@@ -1,0 +1,31 @@
+name: Academic Studio B1 teacher-controlled scheduling candidate
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/academic-studio/b1_*'
+      - 'database/canonical/verification/academic-studio/b1-*'
+      - '.github/workflows/academic-studio-b1-scheduling.yml'
+permissions:
+  contents: read
+concurrency:
+  group: academic-b1-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  isolated-pg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['16','17']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - name: Check isolated B1 harness syntax
+        run: node --check database/canonical/verification/academic-studio/b1-smoke.mjs
+      - name: Fresh formal 0001-0037 plus B1 SQL / permissions / GiST checks
+        run: node database/canonical/verification/academic-studio/b1-smoke.mjs '${{ matrix.version }}'
