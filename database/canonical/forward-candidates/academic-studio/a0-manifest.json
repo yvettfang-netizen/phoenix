@@ -9,9 +9,9 @@
     "last": "0037_scoped_public_id_projection_read_audit.sql"
   },
   "file": "a0-live-family-access.sql",
-  "sha256": "1e5f290e6fbcf12cc477fde053f1dde702bc6a73c3e214baa7dff8197ede07ac",
+  "sha256": "3d550391fc1d8f22141aecd264de0bb7aca5392b30d18b69c112f18774aca3c7",
   "rollback_file": "a0-live-family-access-rollback.sql",
-  "rollback_sha256": "f092123541efda532d63e40bb370466fcbf857b7c1ff7cf44fc311de9456265c",
+  "rollback_sha256": "1ce21afa3c7f3aca532180c3af979709983f4b3356f117a294aa703d0d8a7119",
   "added_tables": 0,
   "added_columns": 0,
   "added_indexes": 0,
