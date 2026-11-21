@@ -112,7 +112,7 @@ BEGIN
     OR (p_capability='ACADEMY_ADMIN' AND (v_bootstrap OR v_founder))
   ) IS NOT TRUE
      OR core.is_uuid_v7(p_grant_id) IS NOT TRUE
-     OR length(btrim(p_reason)) NOT BETWEEN 1 AND 100
+     OR p_reason IS NULL OR length(btrim(p_reason)) NOT BETWEEN 1 AND 100
      OR (p_valid_until IS NOT NULL AND p_valid_until<=clock_timestamp())
      OR NOT EXISTS (
        SELECT 1 FROM auth.principals p
@@ -155,7 +155,7 @@ BEGIN
    WHERE grant_id=p_grant_id FOR UPDATE;
   IF (
     FOUND AND v_grant.status='ACTIVE'
-    AND length(btrim(p_reason)) BETWEEN 1 AND 100
+    AND p_reason IS NOT NULL AND length(btrim(p_reason)) BETWEEN 1 AND 100
     AND (
       v_bootstrap
       OR (v_grant.capability_code='ACADEMY_ADMIN'
