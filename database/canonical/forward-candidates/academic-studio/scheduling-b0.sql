@@ -109,7 +109,13 @@ CREATE FUNCTION learning.teacher_can_schedule_slot(p_slot_id uuid) RETURNS boole
 LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,auth,learning
 RETURN coalesce(
  auth.write_context_is_live() AND auth.current_channel()='STAFF'
- AND learning.current_staff_kind()='TEACHER'
+ -- Dual-role Academy Admin/Founder may also be the assigned LEAD teacher.
+ -- Check the active human Principal and the real teaching assignment instead
+ -- of the priority-ordered current_staff_kind() label.
+ AND EXISTS (SELECT 1 FROM auth.principals p
+   WHERE p.principal_id=auth.current_principal_id()
+     AND p.person_id=auth.current_actor_person_id()
+     AND p.person_id IS NOT NULL AND p.status='ACTIVE')
  AND EXISTS(
   SELECT 1 FROM learning.schedule_slot s
   JOIN learning.teacher_assignment a
