@@ -578,18 +578,31 @@ RETURN coalesce(
     AND core.current_actor_is_family_member()
     AND (
       auth.current_actor_person_id()=p_subject_id
-      OR EXISTS (
-        SELECT 1 FROM core.guardian_authorities g
-        WHERE g.family_id=p_family_id
-          AND g.guardian_person_id=auth.current_actor_person_id()
-          AND g.subject_person_id=p_subject_id
-          AND g.evidence_level='VERIFIED'
-          AND g.scope IN ('GENERAL','LEARNING')
-          AND g.lifecycle_status='ACTIVE'
-          AND g.revoked_at IS NULL
-          AND g.valid_from<=clock_timestamp()
-          AND g.valid_until>clock_timestamp()
-      ) AND learning.has_learning_consent(p_subject_id)
+      OR (
+        -- S1 live revocation: old FAMILY contexts must not preserve an expired
+        -- guardian membership in a later request. Keep this extra check
+        -- specifically on the guardian-to-child branch, not Student self-read.
+        EXISTS (
+          SELECT 1 FROM core.family_memberships m
+          WHERE m.family_id=p_family_id
+            AND m.person_id=auth.current_actor_person_id()
+            AND m.valid_from<=clock_timestamp()
+            AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp())
+        )
+        AND EXISTS (
+          SELECT 1 FROM core.guardian_authorities g
+          WHERE g.family_id=p_family_id
+            AND g.guardian_person_id=auth.current_actor_person_id()
+            AND g.subject_person_id=p_subject_id
+            AND g.evidence_level='VERIFIED'
+            AND g.scope IN ('GENERAL','LEARNING')
+            AND g.lifecycle_status='ACTIVE'
+            AND g.revoked_at IS NULL
+            AND g.valid_from<=clock_timestamp()
+            AND g.valid_until>clock_timestamp()
+        )
+        AND learning.has_learning_consent(p_subject_id)
+      )
     )
   )
   OR (
@@ -757,5 +770,9 @@ GRANT EXECUTE ON FUNCTION auth.can_open_parent_view(uuid)
 TO phoenix_canonical_app;
 GRANT EXECUTE ON FUNCTION core.read_student_self_summary()
 TO phoenix_canonical_app,phoenix_canonical_reader;
+-- Parent switch is an explicit application operation. The server can ask
+-- the existing protected guardian-view guard; no generic reader/binder grant.
+GRANT EXECUTE ON FUNCTION auth.can_open_parent_view(uuid)
+TO phoenix_canonical_app;
 
 COMMIT;
