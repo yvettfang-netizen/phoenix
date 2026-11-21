@@ -21,23 +21,40 @@ SELECT md5(pg_catalog.pg_get_functiondef(
  WHERE p.oid='learning.can_read_sensitive(uuid,uuid,uuid)'::regprocedure;
 
 -- Role-level and database/role-level overrides only; no secret fields.
-SELECT r.rolname,r.rolcanlogin,r.rolinherit,r.rolsuper,r.rolbypassrls,r.rolconfig
+SELECT r.rolname,r.rolcanlogin,r.rolinherit,r.rolsuper,r.rolbypassrls
   FROM pg_catalog.pg_roles r
  WHERE r.rolname IN ('phoenix_canonical_app','phoenix_canonical_reader',
    'phoenix_canonical_projection_reader','phoenix_canonical_service_workbench',
    'phoenix_canonical_context_binder',current_user)
  ORDER BY r.rolname;
 
+-- Return only transaction-related GUCs, never arbitrary custom role/database settings.
+SELECT r.rolname,setting AS transaction_override
+  FROM pg_catalog.pg_roles r
+ CROSS JOIN LATERAL unnest(COALESCE(r.rolconfig,ARRAY[]::text[])) AS setting
+ WHERE r.rolname IN ('phoenix_canonical_app','phoenix_canonical_reader',
+   'phoenix_canonical_projection_reader','phoenix_canonical_service_workbench',
+   'phoenix_canonical_context_binder',current_user)
+   AND (setting LIKE 'default_transaction_isolation=%'
+     OR setting LIKE 'default_transaction_read_only=%'
+     OR setting LIKE 'transaction_isolation=%')
+ ORDER BY r.rolname,transaction_override;
+
 SELECT COALESCE(d.datname,'ALL_DATABASES') AS database_scope,
-       COALESCE(r.rolname,'ALL_ROLES') AS role_scope,s.setconfig AS configured_overrides
+       COALESCE(r.rolname,'ALL_ROLES') AS role_scope,
+       setting AS transaction_override
   FROM pg_catalog.pg_db_role_setting s
   LEFT JOIN pg_catalog.pg_database d ON d.oid=s.setdatabase
   LEFT JOIN pg_catalog.pg_roles r ON r.oid=s.setrole
+ CROSS JOIN LATERAL unnest(s.setconfig) AS setting
  WHERE (s.setdatabase=0 OR s.setdatabase=(SELECT oid FROM pg_database WHERE datname=current_database()))
    AND (s.setrole=0 OR r.rolname IN ('phoenix_canonical_app','phoenix_canonical_reader',
      'phoenix_canonical_projection_reader','phoenix_canonical_service_workbench',
      'phoenix_canonical_context_binder',current_user))
- ORDER BY database_scope,role_scope;
+   AND (setting LIKE 'default_transaction_isolation=%'
+     OR setting LIKE 'default_transaction_read_only=%'
+     OR setting LIKE 'transaction_isolation=%')
+ ORDER BY database_scope,role_scope,transaction_override;
 
 -- No SQL text or row-level application data is exposed.
 SELECT usename,application_name,state,backend_type,xact_start,
