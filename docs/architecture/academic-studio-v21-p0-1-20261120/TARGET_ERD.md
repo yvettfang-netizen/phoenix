@@ -25,9 +25,9 @@ erDiagram
   learning_schedule_slot ||--o{ P_schedule_slot_event : "proposed immutable changes"
 
   core_student_profiles ||--o{ education_assessment_attempt : "proposed attempt"
-  core_families ||--o{ education_assessment_attempt : "proposed family scope"
   docs_documents ||--o{ education_assessment_attempt : "existing evidence authority"
   education_assessment_attempt ||--o{ education_assessment_result : "proposed dimension results"
+  education_assessment_attempt ||--o{ P_assessment_attempt_event : "proposed immutable lifecycle"
 
   learning_schedule_slot }o--|| learning_after_class_card : "existing lesson feedback"
   learning_enrollment ||--o{ learning_stage_report : "existing stage report"
@@ -50,5 +50,6 @@ erDiagram
 | `P_learning.schedule_slot_event` | PROPOSED | Immutable mode/room/time change history |
 | `P_education.assessment_attempt` | PROPOSED | Instrument/version/source/review/evidence lifecycle |
 | `P_education.assessment_result` | PROPOSED | One explicit scale/dimension/value per attempt |
+| `P_education.assessment_attempt_event` | PROPOSED | Immutable review/publication/retraction/supersession history |
 
 The ERD intentionally contains no tenant, organization, franchise, duplicate student, duplicate teacher, workspace-session, package-hour, payment, refund or settlement object.
