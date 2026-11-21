@@ -78,6 +78,10 @@ CREATE TABLE learning.academy_staff_grants (
 );
 CREATE UNIQUE INDEX academy_staff_grants_one_active
   ON learning.academy_staff_grants(principal_id,capability_code) WHERE status='ACTIVE';
+-- Do not rely on a check-then-insert in concurrent Founder bootstraps.
+CREATE UNIQUE INDEX academy_single_active_founder
+  ON learning.academy_staff_grants(capability_code)
+  WHERE status='ACTIVE' AND capability_code='ACADEMY_FOUNDER';
 ALTER TABLE learning.academy_staff_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE learning.academy_staff_grants FORCE ROW LEVEL SECURITY;
 CREATE POLICY academy_staff_grants_no_direct_access
@@ -179,11 +183,21 @@ BEGIN
    WHERE principal_id=p_target_principal_id AND person_id IS NOT NULL AND status='ACTIVE';
 
   IF p_capability_code='ACADEMY_FOUNDER' THEN
-    IF learning.is_academy_bootstrap_service() IS NOT TRUE
-       OR EXISTS (SELECT 1 FROM learning.academy_staff_grants
-         WHERE capability_code='ACADEMY_FOUNDER' AND status='ACTIVE'
-           AND valid_from<=clock_timestamp() AND (valid_until IS NULL OR valid_until>clock_timestamp())) THEN
+    IF learning.is_academy_bootstrap_service() IS NOT TRUE THEN
       RETURN audit.record_write_decision('GRANT','ACADEMY_STAFF_CAPABILITY',p_grant_id,false,'FOUNDER_BOOTSTRAP_INTERNAL_ONLY');
+    END IF;
+    -- Serialize two simultaneous Founder bootstrap requests in the same DB.
+    PERFORM pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended('phoenix.academy.founder.bootstrap.v1',0));
+    UPDATE learning.academy_staff_grants
+       SET status='EXPIRED',authorization_version=authorization_version+1
+     WHERE capability_code='ACADEMY_FOUNDER' AND status='ACTIVE'
+       AND valid_until IS NOT NULL AND valid_until<=clock_timestamp();
+    IF EXISTS (
+      SELECT 1 FROM learning.academy_staff_grants
+      WHERE capability_code='ACADEMY_FOUNDER' AND status='ACTIVE'
+    ) THEN
+      RETURN audit.record_write_decision('GRANT','ACADEMY_STAFF_CAPABILITY',p_grant_id,false,'ACTIVE_FOUNDER_ALREADY_EXISTS');
     END IF;
   ELSE
     IF learning.has_academy_capability('ACADEMY_FOUNDER') IS NOT TRUE

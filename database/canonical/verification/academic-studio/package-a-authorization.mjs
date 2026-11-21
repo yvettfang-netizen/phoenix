@@ -197,6 +197,9 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   await bind(id(900),null,null,'INTERNAL');
   assert.equal(await grant(id(2101),id(901),'ACADEMY_FOUNDER',null,'INITIAL_FOUNDER'),true);
   assert.equal(await grant(id(2101),id(901),'ACADEMY_FOUNDER',null,'DUPLICATE_FOUNDER'),false);
+  assert.equal(await grant(id(2119),id(903),'ACADEMY_FOUNDER',null,'SECOND_FOUNDER_DENIED'),false);
+  assert.equal(one(db,"SELECT count(*) FROM learning.academy_staff_grants WHERE status='ACTIVE' AND capability_code='ACADEMY_FOUNDER'"),'1',
+    'ONLY_ONE_ACTIVE_FOUNDER');
   await bind(id(901),id(1),null,'STAFF');
   assert.equal(await grant(id(2102),id(902),'ACADEMY_ADMIN',null,'INITIAL_ADMIN'),true);
   assert.equal(await grant(id(2103),id(903),'ACADEMY_FOUNDER',null,''),false);

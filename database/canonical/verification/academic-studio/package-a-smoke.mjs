@@ -56,6 +56,7 @@ try{
   check(sql("SELECT count(*) FROM canonical_migrations.applied;\n")==='37','unnumbered candidate did not enter formal ledger');
   check(sql("SELECT md5(string_agg(migration_name||sha256,',' ORDER BY migration_name)) FROM canonical_migrations.applied;\n")===ledger,'historical ledger checksums unchanged');
   check(sql("SELECT relrowsecurity::text||':'||relforcerowsecurity::text FROM pg_class WHERE oid='learning.academy_staff_grants'::regclass;\n")==='true:true','new grant table FORCE RLS');
+  check(sql("SELECT count(*) FROM pg_indexes WHERE schemaname='learning' AND indexname='academy_single_active_founder';\n")==='1','DB unique index enforces single active Founder');
   check(sql("SELECT has_table_privilege('phoenix_canonical_app','learning.academy_staff_grants','SELECT');\n")==='f','direct app table SELECT denied');
   check(sql("SELECT EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE p.oid='learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text)'::regprocedure AND a.grantee=0 AND a.privilege_type='EXECUTE');\n")==='f','public cannot invoke academy grants');
   check(sql("SELECT EXISTS(SELECT 1 FROM pg_proc p CROSS JOIN LATERAL aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE p.oid='core.read_student_self_summary()'::regprocedure AND a.grantee=0 AND a.privilege_type='EXECUTE');\n")==='f','public cannot invoke student projection');
