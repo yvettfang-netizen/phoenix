@@ -1,0 +1,37 @@
+name: Academic Studio C0 six-scale assessment isolated verification
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/academic-studio/assessments-c0.sql'
+      - 'database/canonical/verification/academic-studio-c0/**'
+      - '.github/workflows/academic-studio-c0.yml'
+      - 'database/canonical/migrations/**'
+permissions:
+  contents: read
+concurrency:
+  group: academic-c0-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  candidate-isolated-pg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['16','17']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - name: Verify no new formal migration, source syntax and SHA
+        run: |
+          set -euo pipefail
+          test "$(find database/canonical/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)" -eq 37
+          test ! -f database/canonical/migrations/assessments-c0.sql
+          node --check database/canonical/verification/academic-studio-c0/acceptance.mjs
+          sha256sum database/canonical/forward-candidates/academic-studio/assessments-c0.sql
+      - name: Test distinct source scales, immutable rows and student ownership
+        run: node database/canonical/verification/academic-studio-c0/acceptance.mjs '${{ matrix.version }}'
