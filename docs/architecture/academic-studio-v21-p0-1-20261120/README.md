@@ -13,7 +13,8 @@ PR #88 has been merged to the current `main`. This package refreshes the P0.1 de
 - [Minimal forward design and reuse decisions](MINIMAL_FORWARD_DESIGN.md)
 - [Proposed ERD](TARGET_ERD.md)
 - [Security, concurrency and PG16/17 acceptance plan](SECURITY_TEST_PLAN.md)
-- [Founder decisions still required](FOUNDER_DECISIONS_REQUIRED.md)
+- [Founder approval record](FOUNDER_APPROVAL_RECORD.md)
+- [Founder decisions — now closed](FOUNDER_DECISIONS_REQUIRED.md)
 
 ## Binding boundaries
 
