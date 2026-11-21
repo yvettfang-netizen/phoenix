@@ -84,10 +84,10 @@ CREATE TABLE learning.schedule_slot_participant (
 );
 
 CREATE TABLE learning.schedule_slot_event (
- event_id uuid PRIMARY KEY CHECK(core.is_uuid_v7(event_id)),
+ event_id uuid PRIMARY KEY,
  slot_id uuid NOT NULL REFERENCES learning.schedule_slot,
  enrollment_id uuid,
- event_kind text NOT NULL CHECK(event_kind IN ('DELIVERY_SET','PARTICIPANT_ASSIGNED','PARTICIPANT_CHANGED','FINALIZED')),
+ event_kind text NOT NULL CHECK(event_kind IN ('DELIVERY_SET','PARTICIPANT_ASSIGNED','PARTICIPANT_CHANGED','FINALIZED','CANCELLED','COMPLETED')),
  previous_mode text,
  next_mode text,
  previous_room_id uuid,
@@ -99,6 +99,32 @@ CREATE TABLE learning.schedule_slot_event (
 CREATE TRIGGER schedule_slot_event_immutable
  BEFORE UPDATE OR DELETE ON learning.schedule_slot_event
  FOR EACH ROW EXECUTE FUNCTION learning.reject_history_change();
+
+
+-- An existing audited slot-complete/cancel operation must release per-student
+-- reservations, even if the caller uses the formal 0022 API. No standalone
+-- deletion or second cancellation state machine is introduced.
+CREATE FUNCTION learning.release_slot_reservations() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,auth,learning
+AS $fn$
+BEGIN
+ IF OLD.status='SCHEDULED' AND NEW.status IN ('COMPLETED','CANCELLED') THEN
+   IF auth.current_principal_id() IS NULL
+   THEN RAISE EXCEPTION 'ACADEMY_SLOT_RELEASE_ACTOR_REQUIRED'; END IF;
+   UPDATE learning.schedule_slot_participant SET status='CANCELLED'
+    WHERE slot_id=NEW.slot_id AND status='ASSIGNED';
+   NEW.delivery_finalized:=false;
+   INSERT INTO learning.schedule_slot_event(event_id,slot_id,event_kind,
+       previous_mode,next_mode,reason_code,actor_principal_id)
+   VALUES(gen_random_uuid(),NEW.slot_id,NEW.status,OLD.delivery_mode,NEW.delivery_mode,
+       'EXISTING_SLOT_STATE_CHANGE',auth.current_principal_id());
+ END IF;
+ RETURN NEW;
+END $fn$;
+CREATE TRIGGER learning_slot_release_reservations
+ BEFORE UPDATE OF status ON learning.schedule_slot
+ FOR EACH ROW EXECUTE FUNCTION learning.release_slot_reservations();
 
 CREATE FUNCTION learning.lead_teacher_owns_slot(p_slot_id uuid) RETURNS boolean
 LANGUAGE sql VOLATILE SECURITY DEFINER
@@ -240,12 +266,12 @@ BEGIN
 END $rls$;
 REVOKE ALL ON learning.room,learning.schedule_slot_participant,learning.schedule_slot_event
  FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
-REVOKE EXECUTE ON FUNCTION learning.validate_room_timezone(),learning.lead_teacher_owns_slot(uuid),
+REVOKE EXECUTE ON FUNCTION learning.validate_room_timezone(),learning.release_slot_reservations(),learning.lead_teacher_owns_slot(uuid),
  learning.set_slot_delivery(uuid,uuid,text,uuid,text,text),
  learning.assign_slot_participant(uuid,uuid,uuid,text,text),
  learning.finalize_slot_delivery(uuid,uuid,text)
  FROM PUBLIC,phoenix_canonical_reader,phoenix_canonical_context_binder;
-REVOKE EXECUTE ON FUNCTION learning.validate_room_timezone(),learning.lead_teacher_owns_slot(uuid)
+REVOKE EXECUTE ON FUNCTION learning.validate_room_timezone(),learning.release_slot_reservations(),learning.lead_teacher_owns_slot(uuid)
  FROM phoenix_canonical_app;
 GRANT EXECUTE ON FUNCTION learning.set_slot_delivery(uuid,uuid,text,uuid,text,text),
  learning.assign_slot_participant(uuid,uuid,uuid,text,text),
