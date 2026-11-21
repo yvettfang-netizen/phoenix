@@ -108,6 +108,20 @@ try{
     "SELECT learning.set_slot_delivery('01910000-0000-7000-8000-000000000430','ONLINE',NULL,'Asia/Hong_Kong','01910000-0000-7000-8000-000000000627','GUARDIAN_FORGED_MODE');\n"+
     "SELECT auth.clear_context();");
   check(forbidden.trim()==='f','Parent cannot change teacher-assigned session mode');
+  // Cross-candidate A/B compatibility: a LEAD teacher may also have an Academy
+  // Admin/Founder capability, which takes priority in current_staff_kind().
+  // Simulate that label on this disposable B0-only cluster; the real authority
+  // must still come from active Principal + live LEAD assignment.
+  sql("CREATE OR REPLACE FUNCTION learning.current_staff_kind() RETURNS text LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,auth RETURN 'ACADEMY_ADMIN'::text;");
+  const dualRole=sql(teacherContext+
+    "SELECT learning.teacher_can_schedule_slot('01910000-0000-7000-8000-000000000430');\\n"+
+    "SELECT auth.clear_context();");
+  check(dualRole.trim()==='t','dual-role Admin + LEAD Teacher retains scheduling authority');
+  const disabledPrincipal=sql(teacherContext+
+    "UPDATE auth.principals SET status='DISABLED' WHERE principal_id='01910000-0000-7000-8000-000000000101';\\n"+
+    "SELECT learning.teacher_can_schedule_slot('01910000-0000-7000-8000-000000000430');\\n"+
+    "SELECT auth.clear_context();");
+  check(disabledPrincipal.trim()==='f','disabled Principal denies LEAD scheduling even with active assignment');
   console.log(JSON.stringify({status:'PASS',postgres:version,candidate_sha256:digest,formal_migrations:37,fixtures:'synthetic'}));
 }finally{
   if(id){
