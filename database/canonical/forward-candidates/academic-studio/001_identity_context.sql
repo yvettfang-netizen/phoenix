@@ -736,6 +736,14 @@ RETURN coalesce(
             AND g.valid_from<=clock_timestamp()
             AND g.valid_until>clock_timestamp()
         )
+        -- Guardian Authority / Consent must never outlive the subject's
+        -- current membership in the same Canonical family.
+        AND EXISTS (
+          SELECT 1 FROM core.family_memberships sm
+          WHERE sm.family_id=p_family_id AND sm.person_id=p_subject_id
+            AND sm.valid_from<=clock_timestamp()
+            AND (sm.valid_until IS NULL OR sm.valid_until>clock_timestamp())
+        )
         AND learning.has_learning_consent(p_subject_id)
       )
     )
