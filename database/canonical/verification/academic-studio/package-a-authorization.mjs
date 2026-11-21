@@ -287,6 +287,49 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
     'COMMITTED_GUARDIAN_MEMBERSHIP_END_MUST_DENY_SAME_BACKEND_NEXT_READ');
   console.log('PASS PG'+version+' same-backend next-request FAMILY guardian membership end denies Parent view and published Learning record');
 
+  // Synthetic fixture reset to independently test current child family membership.
+  sql(db,"UPDATE core.family_memberships SET valid_until=NULL WHERE membership_id='"+id(1101)+"';");
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,true);
+  sql(db,"UPDATE core.family_memberships SET valid_until=clock_timestamp() WHERE membership_id='"+id(1104)+"';");
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,false,
+    'CHILD_DEPARTURE_INVALIDATES_PARENT_VIEW_NEXT_REQUEST');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'CHILD_DEPARTURE_INVALIDATES_PARENT_LEARNING_READ_NEXT_REQUEST');
+  sql(db,"UPDATE core.family_memberships SET valid_until=NULL WHERE membership_id='"+id(1104)+"';");
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,true,
+    'SYNTHETIC_CHILD_MEMBERSHIP_RESET_RESTORES_PARENT_VIEW');
+  sql(db,"UPDATE auth.principals SET status='DISABLED' WHERE principal_id='"+id(901)+"';");
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,false,
+    'PRINCIPAL_DISABLED_PARENT_VIEW_DENIED_SAME_BACKEND');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'PRINCIPAL_DISABLED_PARENT_CARD_DENIED_NEXT_READ');
+  console.log('PASS PG'+version+' live child departure and disabled Parent Principal deny next read');
+
+  // Student self-card is a separate synthetic enrollment on the existing class.
+  sql(db,`INSERT INTO learning.enrollment(enrollment_id,family_id,student_person_id,course_version_id,status,created_by_principal_id)
+    VALUES ('${id(3211)}','${id(100)}','${id(3)}','${id(3201)}','ACTIVE','${id(903)}');
+    INSERT INTO learning.enrollment_class(enrollment_id,class_id,family_id,student_person_id,course_version_id,status)
+    VALUES ('${id(3211)}','${id(3202)}','${id(100)}','${id(3)}','${id(3201)}','ACTIVE');
+    INSERT INTO learning.after_class_card(card_id,slot_id,class_id,enrollment_id,family_id,student_person_id,author_teacher_person_id,summary_text,status)
+    VALUES ('${id(3212)}','${id(3205)}','${id(3202)}','${id(3211)}','${id(100)}','${id(3)}','${id(3)}','Synthetic student self card','PUBLISHED');
+    INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,acted_by_principal_id)
+    VALUES ('${id(3213)}','${id(3212)}','${id(100)}','PUBLISHED','${id(903)}');`);
+  await bind(id(903),id(3),null,'STUDENT');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3212)])).rows[0].n,1,
+    'ACTIVE_STUDENT_SELF_CARD_ALLOWED');
+  assert.equal((await app.query('SELECT core.can_read_subject_basics($1::uuid) AS allowed',[id(3)])).rows[0].allowed,true,
+    'ACTIVE_STUDENT_SELF_BASICS_ALLOWED');
+  sql(db,"UPDATE auth.principals SET status='DISABLED' WHERE principal_id='"+id(903)+"';");
+  assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'STUDENT',
+    'STALE_STUDENT_CONTEXT_REMAINS_BOUND_FOR_NEGATIVE_TEST');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3212)])).rows[0].n,0,
+    'PRINCIPAL_DISABLED_STUDENT_SELF_CARD_DENIED_NEXT_READ');
+  assert.equal((await app.query('SELECT core.can_read_subject_basics($1::uuid) AS allowed',[id(3)])).rows[0].allowed,false,
+    'PRINCIPAL_DISABLED_STUDENT_BASICS_DENIED_NEXT_READ');
+  assert.equal((await app.query('SELECT core.read_student_self_summary() AS summary')).rows[0].summary,null,
+    'PRINCIPAL_DISABLED_STUDENT_SUMMARY_DENIED_NEXT_READ');
+  console.log('PASS PG'+version+' disabled Student Principal loses same-backend protected reads before context expiry');
+
   await app.query('SELECT auth.clear_context()');
   assert.equal(one(db,'SELECT count(*) FROM auth.session_contexts'),'0');
   assert.equal(one(db,'SELECT count(*) FROM auth.context_exchange_tickets'),'0');
