@@ -1,0 +1,36 @@
+name: Academic Studio P0.1 Package A isolated PostgreSQL smoke
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/academic-studio/**'
+      - 'database/canonical/verification/academic-studio/**'
+      - '.github/workflows/academic-studio-p01-package-a.yml'
+permissions:
+  contents: read
+concurrency:
+  group: academic-p01-package-a-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  candidate-isolated-pg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['16','17']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.19.0'
+      - name: Verify isolated candidate has not entered formal migration directory
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find database/canonical/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)" -eq 37
+          test -f database/canonical/forward-candidates/academic-studio/001_identity_context.sql
+          test ! -f database/canonical/migrations/001_identity_context.sql
+      - name: Install formal Canonical 0001-0037 and smoke candidate on disposable PostgreSQL
+        run: node database/canonical/verification/academic-studio/package-a-smoke.mjs ${{ matrix.version }}
