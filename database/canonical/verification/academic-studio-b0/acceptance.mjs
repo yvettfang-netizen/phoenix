@@ -75,6 +75,36 @@ try{
   check(sql("INSERT INTO learning.schedule_slot_participant(participant_id,slot_id,class_id,enrollment_id,family_id,student_person_id,participation_mode,starts_at,ends_at,set_by_principal_id) SELECT '01910000-0000-7000-8000-000000000506',s.slot_id,s.class_id,'01910000-0000-7000-8000-000000000405','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000002','ONLINE',s.starts_at,s.ends_at,'01910000-0000-7000-8000-000000000104' FROM learning.schedule_slot s WHERE s.slot_id='01910000-0000-7000-8000-000000000505'",true),'student collision in overlapping slots rejected');
   sql("UPDATE learning.schedule_slot SET status='CANCELLED' WHERE slot_id='01910000-0000-7000-8000-000000000406'");
   check(sql("SELECT status FROM learning.schedule_slot_participant WHERE slot_id='01910000-0000-7000-8000-000000000406'")==='CANCELLED','cancellation releases student reservation');
+
+  // B0 Hybrid: same teacher slot, two students, teacher assigns onsite/online.
+  // The physical room has capacity=1; only ONSITE participants count.
+  sql("\nINSERT INTO core.people(person_id,display_name) VALUES('01910000-0000-7000-8000-000000000005','Synthetic student B');\nINSERT INTO core.student_profiles(person_id) VALUES('01910000-0000-7000-8000-000000000005');\nINSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from)\n VALUES('01910000-0000-7000-8000-000000000203','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000005','MEMBER',clock_timestamp()-interval '1 day');\nINSERT INTO consent.grants(consent_id,family_id,grantor_person_id,grantee_person_id,subject_person_id,purpose,data_class,status,granted_at,expires_at)\n VALUES('01910000-0000-7000-8000-000000000302','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000003','01910000-0000-7000-8000-000000000001','01910000-0000-7000-8000-000000000005','LEARNING_RECORD','LEARNING','ACTIVE',clock_timestamp()-interval '1 day',clock_timestamp()+interval '2 days');\nINSERT INTO learning.enrollment(enrollment_id,family_id,student_person_id,course_version_id,status,created_by_principal_id)\n VALUES('01910000-0000-7000-8000-000000000408','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000005','01910000-0000-7000-8000-000000000402','ACTIVE','01910000-0000-7000-8000-000000000101');\nINSERT INTO learning.enrollment_class(enrollment_id,class_id,family_id,student_person_id,course_version_id,status)\n VALUES('01910000-0000-7000-8000-000000000408','01910000-0000-7000-8000-000000000403','01910000-0000-7000-8000-000000000100','01910000-0000-7000-8000-000000000005','01910000-0000-7000-8000-000000000402','ACTIVE');\nINSERT INTO learning.schedule_slot(slot_id,class_id,teacher_person_id,starts_at,ends_at,created_by_principal_id)\n VALUES('01910000-0000-7000-8000-000000000410','01910000-0000-7000-8000-000000000403','01910000-0000-7000-8000-000000000001',clock_timestamp()+interval '3 hours',clock_timestamp()+interval '4 hours','01910000-0000-7000-8000-000000000101');\nINSERT INTO learning.schedule_slot(slot_id,class_id,teacher_person_id,starts_at,ends_at,created_by_principal_id)\n VALUES('01910000-0000-7000-8000-000000000420','01910000-0000-7000-8000-000000000403','01910000-0000-7000-8000-000000000001',clock_timestamp()+interval '5 hours',clock_timestamp()+interval '6 hours','01910000-0000-7000-8000-000000000101');\n");
+  const teacherContext="SELECT auth.bind_context('01910000-0000-7000-8000-000000000101','01910000-0000-7000-8000-000000000001','01910000-0000-7000-8000-000000000100','STAFF',clock_timestamp()+interval '10 minutes',gen_random_uuid());\n";
+  const hybrid=teacherContext+
+    "SELECT learning.set_slot_delivery('01910000-0000-7000-8000-000000000410','HYBRID','01910000-0000-7000-8000-000000000407','Asia/Hong_Kong','01910000-0000-7000-8000-000000000601','HYBRID_CLASS');\n"+
+    "SELECT learning.assign_slot_participant('01910000-0000-7000-8000-000000000602','01910000-0000-7000-8000-000000000410','01910000-0000-7000-8000-000000000405','ONSITE','01910000-0000-7000-8000-000000000603','TEACHER_ONSITE');\n"+
+    "SELECT learning.assign_slot_participant('01910000-0000-7000-8000-000000000604','01910000-0000-7000-8000-000000000410','01910000-0000-7000-8000-000000000408','ONLINE','01910000-0000-7000-8000-000000000605','TEACHER_ONLINE');\n"+
+    "SELECT learning.finalize_slot_delivery('01910000-0000-7000-8000-000000000410','01910000-0000-7000-8000-000000000606','HYBRID_READY');\n"+
+    "SELECT auth.clear_context();";
+  check(sql(hybrid).split('\n').filter(x=>x==='t').length===4,'LEAD teacher assigns one Hybrid slot with onsite and online students');
+  check(sql("SELECT count(DISTINCT participation_mode) FROM learning.schedule_slot_participant WHERE slot_id='01910000-0000-7000-8000-000000000410' AND status='ASSIGNED'")==='2','Hybrid roster preserves both participant modes');
+  check(sql("SELECT delivery_mode||':'||delivery_status FROM learning.schedule_slot WHERE slot_id='01910000-0000-7000-8000-000000000410'")==='HYBRID:FINALIZED','Hybrid finalizes only after both modes assigned');
+  const allOnline=teacherContext+
+    "SELECT learning.set_slot_delivery('01910000-0000-7000-8000-000000000420','HYBRID','01910000-0000-7000-8000-000000000407','Asia/Hong_Kong','01910000-0000-7000-8000-000000000621','HYBRID_UNIFORM');\n"+
+    "SELECT learning.assign_slot_participant('01910000-0000-7000-8000-000000000622','01910000-0000-7000-8000-000000000420','01910000-0000-7000-8000-000000000405','ONLINE','01910000-0000-7000-8000-000000000623','TEACHER_ONLINE');\n"+
+    "SELECT learning.assign_slot_participant('01910000-0000-7000-8000-000000000624','01910000-0000-7000-8000-000000000420','01910000-0000-7000-8000-000000000408','ONLINE','01910000-0000-7000-8000-000000000625','TEACHER_ONLINE');\n"+
+    "SELECT learning.finalize_slot_delivery('01910000-0000-7000-8000-000000000420','01910000-0000-7000-8000-000000000626','UNIFORM_DENIED');\n"+
+    "SELECT auth.clear_context();";
+  check(allOnline.split('\n').length>4,'hybrid denial fixture is present');
+  const denied=sql(allOnline).split('\n').filter(x=>x==='t'||x==='f');
+  check(denied.join(',')==='t,t,t,f','all-online roster cannot finalize as Hybrid');
+  check(sql("SELECT delivery_status FROM learning.schedule_slot WHERE slot_id='01910000-0000-7000-8000-000000000420'")==='DRAFT','denied Hybrid finalization leaves prior draft state intact');
+  // A guardian with a valid FAMILY context has no teacher-mode authority.
+  const parentContext="SELECT auth.bind_context('01910000-0000-7000-8000-000000000103','01910000-0000-7000-8000-000000000003','01910000-0000-7000-8000-000000000100','FAMILY',clock_timestamp()+interval '10 minutes',gen_random_uuid());\n";
+  const forbidden=sql(parentContext+
+    "SELECT learning.set_slot_delivery('01910000-0000-7000-8000-000000000420','ONLINE',NULL,'Asia/Hong_Kong','01910000-0000-7000-8000-000000000627','GUARDIAN_FORGED_MODE');\n"+
+    "SELECT auth.clear_context();");
+  check(forbidden.trim()==='f','Parent cannot change teacher-assigned session mode');
   console.log(JSON.stringify({status:'PASS',postgres:version,candidate_sha256:digest,formal_migrations:37,fixtures:'synthetic'}));
 }finally{
   if(id){
