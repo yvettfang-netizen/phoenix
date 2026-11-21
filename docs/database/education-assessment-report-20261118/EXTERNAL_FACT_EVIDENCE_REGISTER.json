@@ -1,0 +1,68 @@
+{
+  "registerVersion": "education-live-integration-facts.v1",
+  "asOf": "2026-11-19",
+  "environment": "controlled-nonproduction",
+  "candidateReviewBaseSha": "6720f620578a34e78cc30dd12552f52e528889e5",
+  "overallStatus": "HOLD",
+  "rule": "A synthetic mechanism PASS does not satisfy an external fact gate. Add only redacted, independently reproducible receipt references; never add secrets, tokens, passwords, pgpass content or real person identifiers.",
+  "gates": [
+    {
+      "id": "I-1",
+      "name": "provider session and protected runtime configuration",
+      "mechanismStatus": "PASS",
+      "externalFactStatus": "HOLD",
+      "evidenceRefs": [],
+      "requiredReferences": [
+        "provider_session_validation_ref",
+        "runtime_config_acl_ref",
+        "runtime_commit_sha",
+        "observed_at_utc",
+        "reviewer_and_result"
+      ],
+      "containsSecretsOrRealIdentifiers": false
+    },
+    {
+      "id": "I-2",
+      "name": "controlled customer, student, guardian and staff mappings",
+      "mechanismStatus": "PASS",
+      "externalFactStatus": "HOLD",
+      "evidenceRefs": [],
+      "requiredReferences": [
+        "controlled_account_mapping_sets_ref",
+        "mapping_contract_version",
+        "cross_family_negative_receipt",
+        "same_family_unauthorized_subject_negative_receipt",
+        "advisor_overreach_negative_receipt"
+      ],
+      "containsSecretsOrRealIdentifiers": false
+    },
+    {
+      "id": "H-1",
+      "name": "controlled device handoff and Consent/Assent receipts",
+      "mechanismStatus": "PASS",
+      "externalFactStatus": "HOLD",
+      "evidenceRefs": [],
+      "requiredReferences": [
+        "device_handoff_and_assent_receipts_ref",
+        "consent_copy_version_and_sha256",
+        "assent_copy_version_and_sha256",
+        "withdrawal_expiry_and_replay_negative_receipts"
+      ],
+      "containsSecretsOrRealIdentifiers": false
+    },
+    {
+      "id": "P-1",
+      "name": "authoritative settlement, refund and Operations reconciliation",
+      "mechanismStatus": "PASS",
+      "externalFactStatus": "HOLD",
+      "evidenceRefs": [],
+      "requiredReferences": [
+        "settlement_refund_validation_ref",
+        "operations_reconciliation_ref",
+        "source_signature_validation_ref",
+        "paid_refunding_refunded_and_negative_event_receipts"
+      ],
+      "containsSecretsOrRealIdentifiers": false
+    }
+  ]
+}

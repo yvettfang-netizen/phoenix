@@ -1,0 +1,42 @@
+{
+  "manifestVersion": "education-assessment-report-forward-candidate.v1",
+  "status": "FORWARD_CANDIDATE_ONLY",
+  "proposedMigration": "0041",
+  "proposalRule": "Use 0041 only if the independently reviewed 0038, 0039 and 0040 candidates are accepted in that order; otherwise renumber before promotion.",
+  "activePredecessor": "0037",
+  "activeLedgerExpected": 37,
+  "source": "database/canonical/forward-candidates/education-assessment-report/education_assessment_report.sql",
+  "sourceSha256Lf": "c02cd90ea37d800571772d54ac50bfb7597c919fc675c0ed3fe93b1d8e7692f6",
+  "reservationEvidence": [
+    {
+      "migration": "0038",
+      "owner": "service-project-workbench",
+      "github": "https://github.com/yvettfang-netizen/phoenix/pull/59"
+    },
+    {
+      "migration": "0039",
+      "owner": "service-project-summary",
+      "github": "https://github.com/yvettfang-netizen/phoenix/pull/59"
+    },
+    {
+      "migration": "0040",
+      "owner": "hk-identity-workbench",
+      "github": "https://github.com/yvettfang-netizen/phoenix/pull/61"
+    }
+  ],
+  "reviewBaseSha": "6720f620578a34e78cc30dd12552f52e528889e5",
+  "reviewedAtUtc": "2026-11-19T06:34:46Z",
+  "deployment": {
+    "mainMigrationLedger": false,
+    "tencentNonProduction": false,
+    "production": false
+  },
+  "promotionGates": [
+    "independent database and security review of the exact candidate digest",
+    "I-1 provider session and protected runtime configuration evidence",
+    "I-2 controlled customer, student, guardian and staff mapping evidence",
+    "H-1 controlled device handoff and Consent/Assent receipts",
+    "P-1 authoritative settlement, refund and Operations reconciliation receipts",
+    "Founder approval of the final migration number and target environment"
+  ]
+}

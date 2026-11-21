@@ -1,0 +1,117 @@
+{
+  "registerVersion": "education-canonical-business-completion.v1",
+  "asOf": "2026-11-19",
+  "overallStatus": "HOLD",
+  "engineeringCandidateStatus": "PASS",
+  "controlledBusinessUseStatus": "HOLD",
+  "productionStatus": "HOLD",
+  "businessReady": false,
+  "productionReady": false,
+  "formalMigrationLedger": "0037",
+  "candidateMigration": "0041",
+  "candidateSha256Lf": "c02cd90ea37d800571772d54ac50bfb7597c919fc675c0ed3fe93b1d8e7692f6",
+  "requiredExternalGates": ["I-1", "I-2", "H-1", "P-1"],
+  "c2PolicyApproval": {
+    "status": "PARTIAL_PASS",
+    "record": "docs/database/education-assessment-report-20261118/C2_POLICY_APPROVAL_REGISTER_20261119.json",
+    "approved": [
+      "consent product copy",
+      "refund product policy",
+      "current retention and deletion behavior",
+      "support and third-party deletion SLA values"
+    ],
+    "holds": [
+      "formal verified Source Catalog payload",
+      "qualified privacy, legal and minor-protection signatures",
+      "maximum retention period for ordinary personal data",
+      "processor identity, contact details and guardian verification method"
+    ]
+  },
+  "phases": [
+    {
+      "id": "C0",
+      "name": "unique source and migration authority",
+      "status": "PASS",
+      "remaining": "none"
+    },
+    {
+      "id": "C1",
+      "name": "canonical foundation, RLS, roles, audit and restore baseline",
+      "status": "PASS",
+      "remaining": "none for the 0037 foundation"
+    },
+    {
+      "id": "C2",
+      "name": "final business, legal and education content contracts",
+      "status": "HOLD",
+      "remaining": "formal verified Source Catalog payload; qualified privacy, legal and minor-protection signatures; ordinary personal-data maximum retention; processor identity, contact details and guardian verification method"
+    },
+    {
+      "id": "C3",
+      "name": "real provider session and controlled principal mappings",
+      "status": "HOLD",
+      "remaining": "I-1 and I-2 redacted reproducible receipts"
+    },
+    {
+      "id": "C4",
+      "name": "real guardian Consent, student Assent and device handoff",
+      "status": "HOLD",
+      "remaining": "H-1 redacted reproducible receipts"
+    },
+    {
+      "id": "C5",
+      "name": "authoritative settlement, refund and Operations reconciliation",
+      "status": "HOLD",
+      "remaining": "P-1 redacted reproducible receipts"
+    },
+    {
+      "id": "C6",
+      "name": "Education forward migration candidate",
+      "status": "PASS",
+      "remaining": "independent review and final migration number before formal promotion"
+    },
+    {
+      "id": "C7",
+      "name": "PG16 and PG17 synthetic, negative and old-database-off acceptance",
+      "status": "PASS",
+      "remaining": "rerun after the final formal migration bytes are fixed"
+    },
+    {
+      "id": "C8",
+      "name": "controlled nonproduction real integration",
+      "status": "NOT_RUN",
+      "remaining": "C2 through C5 and approved protected runtime configuration"
+    },
+    {
+      "id": "C9",
+      "name": "Education backup, restore, monitoring, alerting and rollback rehearsal",
+      "status": "PARTIAL",
+      "remaining": "0037 foundation passed; formal Education migration and application receipts are not available"
+    },
+    {
+      "id": "C10",
+      "name": "business UAT and iOS Android controlled payment journey",
+      "status": "NOT_RUN",
+      "remaining": "approved release build, controlled accounts, real provider sandbox and human evidence"
+    },
+    {
+      "id": "C11",
+      "name": "Founder production go or no-go",
+      "status": "NOT_RUN",
+      "remaining": "all prior gates and P0 decisions must be closed"
+    },
+    {
+      "id": "C12",
+      "name": "production cutover and post-deploy verification",
+      "status": "NOT_RUN",
+      "remaining": "explicit production authorization and approved rollback window"
+    },
+    {
+      "id": "C13",
+      "name": "legacy database retirement",
+      "status": "NOT_RUN",
+      "remaining": "observed zero dependency, retention approval, backup and reversible retirement receipt"
+    }
+  ],
+  "uniqueNextAction": "First produce and independently sign the formal verified Source Catalog and exact Consent or retention legal package; then complete I-1, I-2, H-1 and P-1 against the exact candidate digest. Do not promote, deploy or retire legacy storage before they pass."
+}

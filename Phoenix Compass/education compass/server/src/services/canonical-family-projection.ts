@@ -6,18 +6,30 @@ import { AppError } from '../domain/errors'
 import { createSyntheticFamilyVerifier } from '../auth/synthetic-family-identity'
 import { createSessionFamilyResolver, ResolvedFamilyIdentity, SessionBridgeDependencies } from '../auth/session-family-bridge'
 
-export type ProjectionOperation = 'family' | 'students' | 'student'
+export type ProjectionOperation = 'family' | 'students' | 'student' | 'education-service-entitlement'
 export interface ProjectionAudit { requestId: string; operation: ProjectionOperation; decision: 'ALLOW' | 'DENY' | 'UNAVAILABLE' }
 export interface FamilyProjection {
   read(authorization: string | undefined, operation: ProjectionOperation, studentRef: string | undefined, requestId: string): Promise<unknown>
   close(): Promise<void>
 }
+interface ReadyFamilyProjection extends FamilyProjection {
+  readonly databasePort: number
+  assertEducationReady(): Promise<void>
+}
 const unavailable = () => new AppError(503, 'FAMILY_PROJECTION_UNAVAILABLE', '家庭资料暂不可用')
 const denied = () => new AppError(403, 'FAMILY_SCOPE_REQUIRED', '家庭资料访问未授权')
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-7[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i
 const publicStudent = /^stu_[a-f0-9]{32}$/
+const entitlementDecisions = new Map([
+  ['ENTITLEMENT_ACTIVE', true],
+  ['ENTITLEMENT_MISSING', false],
+  ['ENTITLEMENT_REVOKED', false],
+  ['ENTITLEMENT_EXPIRED', false],
+  ['ENTITLEMENT_NOT_YET_VALID', false],
+  ['CONTEXT_OR_SUBJECT_DENIED', false]
+])
 
-function auditedDto(value: unknown, operation: ProjectionOperation, studentRef?: string): unknown {
+function auditedDto(value: unknown, operation: Exclude<ProjectionOperation, 'education-service-entitlement'>, studentRef?: string): unknown {
   const v = value as Record<string, unknown>
   const name = (x: unknown) => typeof x === 'string' && x.length > 0 && x.length <= 200
   const student = (x: unknown) => { const s = x as Record<string, unknown>; return s && Object.keys(s).sort().join(',') === 'displayName,studentRef' && typeof s.studentRef === 'string' && publicStudent.test(s.studentRef) && name(s.displayName) }
@@ -105,9 +117,27 @@ async function guardRole(client: PoolClient, binder: boolean): Promise<void> {
   if (r.rows[0]?.allowed !== true) throw unavailable()
 }
 
+async function guardEducationEntitlement(client: PoolClient): Promise<void> {
+  const result = await client.query(`SELECT has_schema_privilege(current_user,'operations_ref','USAGE')
+    AND has_function_privilege(current_user,'operations_ref.check_entitlement(uuid,uuid,text,uuid)','EXECUTE')
+    AND NOT EXISTS (SELECT FROM pg_proc p WHERE p.pronamespace='operations_ref'::regnamespace
+      AND p.oid<>'operations_ref.check_entitlement(uuid,uuid,text,uuid)'::regprocedure
+      AND (has_function_privilege(current_user,p.oid,'EXECUTE')
+        OR has_function_privilege(session_user,p.oid,'EXECUTE'))) AS allowed`)
+  if (result.rows[0]?.allowed !== true) throw unavailable()
+}
+
+const logAudit = (event: ProjectionAudit): void => console.info('canonical_family_projection', JSON.stringify(event))
+
 export async function loadFamilyProjection(env: NodeJS.ProcessEnv = process.env,
-  audit: (event: ProjectionAudit) => void = event => console.info('canonical_family_projection', JSON.stringify(event))): Promise<FamilyProjection | undefined> {
+  audit: (event: ProjectionAudit) => void = logAudit): Promise<FamilyProjection | undefined> {
   return loadProjection(env, audit)
+}
+
+export async function loadIsolatedEducationProjection(env: NodeJS.ProcessEnv): Promise<ReadyFamilyProjection | undefined> {
+  if (env.CANONICAL_EDUCATION_ISOLATED !== 'true' || env.NODE_ENV !== 'test' ||
+      env.CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED !== 'true') throw unavailable()
+  return loadProjection(env, logAudit, undefined, true)
 }
 
 /** Explicitly injected local harness only. The normal application bootstrap never calls this. */
@@ -130,7 +160,8 @@ export async function loadApplicationSessionProjection(env: NodeJS.ProcessEnv,
 }
 
 async function loadProjection(env: NodeJS.ProcessEnv, audit: (event: ProjectionAudit) => void,
-  resolve?: (authorization: string | undefined, operation: string) => Promise<ResolvedFamilyIdentity>): Promise<FamilyProjection | undefined> {
+  resolve?: (authorization: string | undefined, operation: string) => Promise<ResolvedFamilyIdentity>,
+  isolatedEducation = false): Promise<ReadyFamilyProjection | undefined> {
   if (env.CANONICAL_FAMILY_PROJECTION_ENABLED !== 'true') return undefined
   const audited = env.CANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED === 'true'
   if (!['development','test'].includes(env.NODE_ENV ?? 'development') || (env.LISTEN_HOST ?? '127.0.0.1') !== '127.0.0.1') throw unavailable()
@@ -145,14 +176,31 @@ async function loadProjection(env: NodeJS.ProcessEnv, audit: (event: ProjectionA
   // Query rejection/cleanup still fails the request closed; the event must not terminate Node.
   for (const pool of [appPool, binderPool]) pool.on('connect', client => client.on('error', () => {}))
   return {
+    databasePort: Number(appConfig.port),
+    async assertEducationReady() {
+      const app = await appPool.connect()
+      try {
+        await guardAuditedRole(app)
+        await guardEducationEntitlement(app)
+        const result = await app.query(`SELECT has_function_privilege(current_user,'core.read_family_summary()','EXECUTE')
+          AND has_function_privilege(current_user,'core.list_student_summaries()','EXECUTE')
+          AND has_function_privilege(current_user,'core.read_student_summary(text)','EXECUTE') AS allowed`)
+        if (result.rows[0]?.allowed !== true) throw unavailable()
+      } finally { app.release(true) }
+      const binder = await binderPool.connect()
+      try { await guardRole(binder, true) } finally { binder.release(true) }
+    },
     async read(authorization, operation, studentRef, requestId) {
       let app: PoolClient | undefined, binder: PoolClient | undefined
       let appClean = false, binderClean = false
       let result: unknown, error: unknown
+      let entitlementDenied = false
       let identity: { iss: string; sub: string; application_family_id: string; exp: number; assertCurrent?: () => Promise<void> } | undefined
       try {
         identity = await verify(authorization, operation)
-        if (!['family','students','student'].includes(operation) || (operation === 'student' && !(audited ? publicStudent : uuid).test(studentRef ?? ''))) throw denied()
+        if (!(operation === 'education-service-entitlement' ? isolatedEducation
+          : ['family','students','student'].includes(operation)) ||
+          (operation === 'student' && !(audited ? publicStudent : uuid).test(studentRef ?? ''))) throw denied()
         app = await appPool.connect()
         if (audited) await guardAuditedRole(app)
         else await guardRole(app, false)
@@ -168,7 +216,18 @@ async function loadProjection(env: NodeJS.ProcessEnv, audit: (event: ProjectionA
         await app.query('SELECT auth.redeem_context_ticket($1,$2)', [context.ticket_id, context.principal_id])
         const trace = await app.query('SELECT auth.current_request_nonce()=$1::uuid AS allowed', [requestId])
         if (trace.rows[0]?.allowed !== true) throw denied()
-        if (audited) {
+        if (operation === 'education-service-entitlement') {
+          await guardEducationEntitlement(app)
+          // The resolver supplies the authenticated actor and family. No subject or product comes from the request.
+          const response = await app.query(`SELECT allowed,reason_code
+            FROM operations_ref.check_entitlement($1,$2,'EDUCATION_SERVICE',NULL)`,
+            [context.family_id, context.actor_person_id])
+          const decision = response.rows[0]
+          if (response.rows.length !== 1 || typeof decision.allowed !== 'boolean' ||
+              entitlementDecisions.get(decision.reason_code) !== decision.allowed) throw unavailable()
+          entitlementDenied = !decision.allowed
+          result = { allowed: decision.allowed, reasonCode: decision.reason_code }
+        } else if (audited) {
           await app.query('BEGIN')
           // Pin the transaction bound; DISCARD ALL restores reset defaults (including this connection's startup value).
           await app.query("SET LOCAL statement_timeout='2s'")
@@ -237,7 +296,7 @@ async function loadProjection(env: NodeJS.ProcessEnv, audit: (event: ProjectionA
         try { await identity?.assertCurrent?.() }
         catch (caught) { error = caught instanceof AppError ? caught : unavailable() }
       }
-      try { audit({ requestId, operation, decision: error ? (error instanceof AppError && error.status < 500 ? 'DENY' : 'UNAVAILABLE') : 'ALLOW' }) }
+      try { audit({ requestId, operation, decision: error ? (error instanceof AppError && error.status < 500 ? 'DENY' : 'UNAVAILABLE') : entitlementDenied ? 'DENY' : 'ALLOW' }) }
       catch { throw unavailable() }
       if (error) throw error
       return result

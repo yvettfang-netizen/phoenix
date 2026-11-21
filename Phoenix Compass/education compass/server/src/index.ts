@@ -30,8 +30,13 @@ import { ExportService } from './services/export-service'
 import { Store } from './store/store'
 import { loadLearningCatalog } from './services/canonical-learning-catalog'
 import { loadFamilyProjection, loadApplicationSessionProjection } from './services/canonical-family-projection'
+import { startIsolatedCanonicalEducation } from './services/canonical-education-runtime'
 
 async function main(): Promise<void> {
+  if (process.env.CANONICAL_EDUCATION_ISOLATED === 'true') {
+    await startIsolatedCanonicalEducation(process.env)
+    return
+  }
   const config = loadConfig()
   if (config.databaseUrl || config.nodeEnv === 'production') {
     throw new Error('LEGACY_EDUCATION_DATABASE_RETIRED: use the Canonical PostgreSQL service API, not an independent Education Store')
