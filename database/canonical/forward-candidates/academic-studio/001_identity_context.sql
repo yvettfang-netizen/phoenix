@@ -20,6 +20,13 @@ BEGIN
   IF to_regclass('learning.academy_staff_grants') IS NOT NULL THEN
     RAISE EXCEPTION 'ACADEMY_STAFF_GRANTS_ALREADY_PRESENT';
   END IF;
+  -- PR #89 (0045) and PR #91 (A0) modify the very same Learning-read
+  -- authority. Refuse a second install even if the formal ledger stayed 37.
+  IF md5(pg_catalog.pg_get_functiondef(
+       'learning.can_read_sensitive(uuid,uuid,uuid)'::regprocedure
+     )) <> '4b65b734551738529b6cbc3935217bab' THEN
+    RAISE EXCEPTION 'ACADEMIC_STUDIO_S1_OVERLAP_OR_DRIFT_REFUSED';
+  END IF;
 END
 $candidate_guard$;
 
@@ -383,6 +390,12 @@ RETURN coalesce(
   AND auth.current_family_id()=p_family_id
   AND auth.current_actor_person_id() IS NOT NULL
   AND EXISTS (
+    SELECT 1 FROM auth.principals p
+    WHERE p.principal_id=auth.current_principal_id()
+      AND p.person_id=auth.current_actor_person_id()
+      AND p.status='ACTIVE'
+  )
+  AND EXISTS (
     SELECT 1 FROM core.family_memberships m
     WHERE m.family_id=p_family_id AND m.person_id=auth.current_actor_person_id()
       AND m.valid_from<=clock_timestamp()
@@ -394,6 +407,12 @@ RETURN coalesce(
       AND g.evidence_level='VERIFIED' AND g.lifecycle_status='ACTIVE'
       AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp()
       AND g.valid_until>clock_timestamp()
+      AND EXISTS (
+        SELECT 1 FROM core.family_memberships sm
+        WHERE sm.family_id=g.family_id AND sm.person_id=g.subject_person_id
+          AND sm.valid_from<=clock_timestamp()
+          AND (sm.valid_until IS NULL OR sm.valid_until>clock_timestamp())
+      )
   ),false);
 
 CREATE OR REPLACE FUNCTION core.can_read_subject_basics(p_person_id uuid) RETURNS boolean
@@ -402,7 +421,13 @@ SET search_path=pg_catalog,auth,core,casework,integration
 RETURN CASE auth.current_channel()
   WHEN 'FAMILY' THEN core.current_actor_is_family_member() AND core.person_in_current_family(p_person_id)
   WHEN 'STUDENT' THEN auth.current_actor_person_id()=p_person_id
-    AND EXISTS (SELECT 1 FROM core.student_profiles s WHERE s.person_id=p_person_id)
+    AND EXISTS (
+      SELECT 1 FROM core.student_profiles s
+      JOIN auth.principals p ON p.person_id=s.person_id
+      WHERE s.person_id=p_person_id
+        AND p.principal_id=auth.current_principal_id()
+        AND p.status='ACTIVE'
+    )
   WHEN 'ADVISOR' THEN EXISTS (
     SELECT 1 FROM casework.cases c JOIN casework.advisor_assignments a ON a.case_id=c.case_id
     WHERE c.family_id=auth.current_family_id() AND c.subject_person_id=p_person_id
@@ -527,6 +552,10 @@ RETURN CASE
   WHEN learning.has_academy_capability('ACADEMY_FOUNDER') THEN 'ACADEMY_FOUNDER'
   WHEN learning.has_academy_capability('ACADEMY_ADMIN') THEN 'ACADEMY_ADMIN'
   WHEN auth.current_channel()='STAFF'
+    AND EXISTS (SELECT 1 FROM auth.principals p
+      WHERE p.principal_id=auth.current_principal_id()
+        AND p.person_id=auth.current_actor_person_id()
+        AND p.status='ACTIVE')
     AND EXISTS (SELECT 1 FROM learning.teacher t
       WHERE t.teacher_person_id=auth.current_actor_person_id() AND t.status='ACTIVE') THEN 'TEACHER'
   ELSE NULL
@@ -572,9 +601,16 @@ LANGUAGE sql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,auth,core,learning
 RETURN coalesce(
   auth.write_context_is_live()
+  AND EXISTS (
+    SELECT 1 FROM auth.principals p
+    WHERE p.principal_id=auth.current_principal_id()
+      AND p.person_id=auth.current_actor_person_id()
+      AND p.status='ACTIVE'
+  )
   AND (
-    auth.current_channel()='FAMILY'
-    AND auth.current_family_id()=p_family_id
+    (
+      auth.current_channel()='FAMILY'
+      AND auth.current_family_id()=p_family_id
     AND core.current_actor_is_family_member()
     AND (
       auth.current_actor_person_id()=p_subject_id
@@ -622,6 +658,7 @@ RETURN coalesce(
       )
       OR learning.teacher_has_class_access(p_class_id,p_subject_id)
     )
+  )
   ),false);
 
 -- Administrative attendance corrections must not pretend the admin is a Teacher.
@@ -770,9 +807,5 @@ GRANT EXECUTE ON FUNCTION auth.can_open_parent_view(uuid)
 TO phoenix_canonical_app;
 GRANT EXECUTE ON FUNCTION core.read_student_self_summary()
 TO phoenix_canonical_app,phoenix_canonical_reader;
--- Parent switch is an explicit application operation. The server can ask
--- the existing protected guardian-view guard; no generic reader/binder grant.
-GRANT EXECUTE ON FUNCTION auth.can_open_parent_view(uuid)
-TO phoenix_canonical_app;
 
 COMMIT;
