@@ -449,6 +449,468 @@ CREATE POLICY people_read ON core.people
         AND core.can_read_subject_basics(person_id))
   );
 
+-- Formal 0037 Family/student-summary projections are also a Parent-view path.
+-- The legacy Principal kind is not a capability: a verified Parent whose only
+-- existing Principal kind is TEACHER/SUPERVISOR must not be blocked solely by
+-- that legacy label. Preserve the existing backend-bound context, active
+-- Principal, current family membership, exact guardian and audit predicates.
+-- This replaces the original private 0037 function in-place; no parallel API.
+CREATE OR REPLACE FUNCTION core.read_projection_summary(p_operation text,p_public_id text) RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,core,integration,audit,pg_temp
+AS $fn$
+DECLARE
+  v_context auth.session_contexts%ROWTYPE;
+  v_item record;
+  v_items jsonb := '[]'::jsonb;
+  v_ids uuid[] := ARRAY[]::uuid[];
+  v_id uuid;
+  v_public text;
+  v_data jsonb;
+  v_resource text;
+  v_reason text := 'NO_TRUSTED_CONTEXT';
+  v_status text := 'DENY';
+  v_allowed boolean := false;
+BEGIN
+  v_resource := CASE p_operation WHEN 'family' THEN 'FAMILY_SUMMARY'
+    WHEN 'student' THEN 'STUDENT_SUMMARY' ELSE 'STUDENT_SUMMARY_LIST' END;
+  SELECT c.* INTO v_context FROM auth.session_contexts c
+    JOIN pg_catalog.pg_stat_activity a ON a.pid=c.backend_pid AND a.backend_start=c.backend_start
+    JOIN auth.principals p ON p.principal_id=c.principal_id AND p.person_id=c.actor_person_id
+      AND p.principal_kind<>'SERVICE' AND p.status='ACTIVE'
+    WHERE c.backend_pid=pg_backend_pid() AND c.channel='FAMILY'
+      AND c.expires_at>clock_timestamp() AND c.request_nonce IS NOT NULL
+      AND EXISTS(SELECT 1 FROM core.family_memberships m
+        WHERE m.family_id=c.family_id AND m.person_id=c.actor_person_id
+          AND m.valid_from<=clock_timestamp() AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp()));
+  IF FOUND AND p_operation IN ('family','students','student') THEN
+    IF p_operation='family' THEN
+      v_id := v_context.family_id;
+      v_public := integration.lookup_projection_public_id('FAMILY',v_id);
+      IF v_public IS NULL THEN
+        v_status := 'UNAVAILABLE'; v_reason := 'ID_MAPPING_UNAVAILABLE';
+      ELSE
+        SELECT jsonb_build_object('schemaVersion','family-summary.v2','family',
+          jsonb_build_object('familyRef',v_public,'displayName',f.display_name)) INTO v_data
+          FROM core.families f WHERE f.family_id=v_id;
+        v_allowed := v_data IS NOT NULL;
+        v_status := CASE WHEN v_allowed THEN 'ALLOW' ELSE 'UNAVAILABLE' END;
+        v_reason := CASE WHEN v_allowed THEN 'AUTHORIZED' ELSE 'ID_MAPPING_UNAVAILABLE' END;
+      END IF;
+    ELSIF p_operation='student' AND (p_public_id IS NULL OR p_public_id !~ '^stu_[0-9a-f]{32}
+CREATE FUNCTION core.read_student_self_summary()
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,core,integration,audit
+AS $fn$
+DECLARE v_allowed boolean; v_ref text; v_name text;
+BEGIN
+  v_allowed := auth.write_context_is_live()
+    AND auth.current_channel()='STUDENT'
+    AND auth.current_family_id() IS NULL
+    AND auth.current_actor_person_id() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM auth.principals p
+      JOIN core.student_profiles s ON s.person_id=p.person_id
+      WHERE p.principal_id=auth.current_principal_id()
+        AND p.person_id=auth.current_actor_person_id()
+        AND p.status='ACTIVE'
+    );
+  IF v_allowed THEN
+    v_ref := integration.lookup_projection_public_id('STUDENT_PROFILE',auth.current_actor_person_id());
+    SELECT display_name INTO v_name FROM core.people
+      WHERE person_id=auth.current_actor_person_id();
+    v_allowed := v_ref IS NOT NULL AND v_name IS NOT NULL;
+  END IF;
+  PERFORM audit.record_access_event('READ','STUDENT_SELF_SUMMARY',
+    auth.current_actor_person_id(),
+    CASE WHEN v_allowed THEN 'ALLOW' ELSE 'DENY' END,
+    CASE WHEN v_allowed THEN 'STUDENT_SELF_ONLY' ELSE 'STUDENT_CONTEXT_MAPPING_OR_SUBJECT_DENIED' END);
+  IF v_allowed THEN
+    RETURN jsonb_build_object('schemaVersion','student-summary.v2','item',
+      jsonb_build_object('studentRef',v_ref,'displayName',v_name));
+  END IF;
+  RETURN NULL;
+END
+$fn$;
+
+CREATE OR REPLACE FUNCTION consent.has_active_consent_for_subject(
+  p_family_id uuid,p_subject_person_id uuid,p_purpose text,p_data_class text
+) RETURNS boolean
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,core,consent
+RETURN coalesce(
+  auth.write_context_is_live()
+  AND auth.current_channel()='STAFF'
+  AND (auth.current_family_id() IS NULL OR auth.current_family_id()=p_family_id)
+  AND auth.current_actor_person_id() IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM auth.principals p
+    WHERE p.principal_id=auth.current_principal_id()
+      AND p.person_id=auth.current_actor_person_id()
+      AND p.status='ACTIVE'
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM consent.grants g
+    JOIN core.family_memberships sm
+      ON sm.family_id=g.family_id AND sm.person_id=g.subject_person_id
+    JOIN core.family_memberships gm
+      ON gm.family_id=g.family_id AND gm.person_id=g.grantor_person_id
+    WHERE g.family_id=p_family_id
+      AND g.grantee_person_id=auth.current_actor_person_id()
+      AND g.subject_person_id=p_subject_person_id
+      AND g.purpose=p_purpose AND g.data_class=p_data_class
+      AND g.status='ACTIVE' AND g.expires_at>clock_timestamp()
+      AND sm.valid_from<=clock_timestamp() AND (sm.valid_until IS NULL OR sm.valid_until>clock_timestamp())
+      AND gm.valid_from<=clock_timestamp() AND (gm.valid_until IS NULL OR gm.valid_until>clock_timestamp())
+      AND (
+        (g.grantor_person_id=g.subject_person_id
+          AND core.current_civil_capacity(g.subject_person_id)='ADULT_VERIFIED')
+        OR EXISTS (
+          SELECT 1 FROM core.guardian_authorities ga
+          WHERE ga.family_id=g.family_id
+            AND ga.guardian_person_id=g.grantor_person_id
+            AND ga.subject_person_id=g.subject_person_id
+            AND ga.evidence_level='VERIFIED'
+            AND ga.scope IN ('GENERAL',CASE g.data_class
+              WHEN 'EDUCATION' THEN 'EDUCATION'
+              WHEN 'IDENTITY_SENSITIVE' THEN 'IDENTITY'
+              WHEN 'LEARNING' THEN 'LEARNING'
+              ELSE 'GENERAL' END)
+            AND ga.lifecycle_status='ACTIVE' AND ga.revoked_at IS NULL
+            AND ga.valid_from<=clock_timestamp() AND ga.valid_until>clock_timestamp()
+        )
+      )
+  ),false);
+
+CREATE OR REPLACE FUNCTION learning.has_learning_consent_for_subject(
+  p_family_id uuid,p_subject_person_id uuid
+) RETURNS boolean
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,consent,learning
+RETURN consent.has_active_consent_for_subject(
+  p_family_id,p_subject_person_id,'LEARNING_RECORD','LEARNING'
+);
+
+CREATE OR REPLACE FUNCTION learning.current_staff_kind() RETURNS text
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,learning
+RETURN CASE
+  WHEN learning.has_academy_capability('ACADEMY_FOUNDER') THEN 'ACADEMY_FOUNDER'
+  WHEN learning.has_academy_capability('ACADEMY_ADMIN') THEN 'ACADEMY_ADMIN'
+  WHEN auth.current_channel()='STAFF'
+    AND EXISTS (SELECT 1 FROM auth.principals p
+      WHERE p.principal_id=auth.current_principal_id()
+        AND p.person_id=auth.current_actor_person_id()
+        AND p.status='ACTIVE')
+    AND EXISTS (SELECT 1 FROM learning.teacher t
+      WHERE t.teacher_person_id=auth.current_actor_person_id() AND t.status='ACTIVE') THEN 'TEACHER'
+  ELSE NULL
+END;
+
+CREATE OR REPLACE FUNCTION learning.teacher_has_class_access(
+  p_class_id uuid,p_subject_id uuid
+) RETURNS boolean
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,learning
+RETURN coalesce(
+  auth.current_channel()='STAFF'
+  AND EXISTS (
+    SELECT 1
+    FROM learning.teacher t
+    JOIN learning.teacher_assignment a ON a.teacher_person_id=t.teacher_person_id
+    JOIN learning.class c ON c.class_id=a.class_id
+    JOIN learning.enrollment_class ec ON ec.class_id=c.class_id
+    JOIN learning.enrollment e ON e.enrollment_id=ec.enrollment_id
+      AND e.family_id=ec.family_id AND e.student_person_id=ec.student_person_id
+    WHERE t.teacher_person_id=auth.current_actor_person_id()
+      AND t.status='ACTIVE'
+      AND a.class_id=p_class_id AND a.status='ACTIVE' AND a.revoked_at IS NULL
+      AND a.valid_from<=clock_timestamp() AND a.valid_until>clock_timestamp()
+      AND c.status IN ('OPEN','RUNNING')
+      AND ec.student_person_id=p_subject_id AND ec.status='ACTIVE'
+      AND e.status='ACTIVE'
+      AND learning.has_learning_consent_for_subject(ec.family_id,p_subject_id)
+  ),false);
+
+CREATE OR REPLACE FUNCTION learning.can_manage_learning() RETURNS boolean
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,learning
+RETURN coalesce(
+  auth.is_internal_service()
+  OR learning.has_academy_capability('ACADEMY_ADMIN')
+  OR learning.has_academy_capability('ACADEMY_FOUNDER'),false);
+
+CREATE OR REPLACE FUNCTION learning.can_read_sensitive(
+  p_family_id uuid,p_subject_id uuid,p_class_id uuid
+) RETURNS boolean
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,core,learning
+RETURN coalesce(
+  auth.write_context_is_live()
+  AND EXISTS (
+    SELECT 1 FROM auth.principals p
+    WHERE p.principal_id=auth.current_principal_id()
+      AND p.person_id=auth.current_actor_person_id()
+      AND p.status='ACTIVE'
+  )
+  AND (
+    (
+      auth.current_channel()='FAMILY'
+      AND auth.current_family_id()=p_family_id
+    AND core.current_actor_is_family_member()
+    AND (
+      auth.current_actor_person_id()=p_subject_id
+      OR (
+        -- S1 live revocation: old FAMILY contexts must not preserve an expired
+        -- guardian membership in a later request. Keep this extra check
+        -- specifically on the guardian-to-child branch, not Student self-read.
+        EXISTS (
+          SELECT 1 FROM core.family_memberships m
+          WHERE m.family_id=p_family_id
+            AND m.person_id=auth.current_actor_person_id()
+            AND m.valid_from<=clock_timestamp()
+            AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp())
+        )
+        AND EXISTS (
+          SELECT 1 FROM core.guardian_authorities g
+          WHERE g.family_id=p_family_id
+            AND g.guardian_person_id=auth.current_actor_person_id()
+            AND g.subject_person_id=p_subject_id
+            AND g.evidence_level='VERIFIED'
+            AND g.scope IN ('GENERAL','LEARNING')
+            AND g.lifecycle_status='ACTIVE'
+            AND g.revoked_at IS NULL
+            AND g.valid_from<=clock_timestamp()
+            AND g.valid_until>clock_timestamp()
+        )
+        AND learning.has_learning_consent(p_subject_id)
+      )
+    )
+  )
+  OR (
+    auth.current_channel()='STUDENT'
+    AND auth.current_family_id() IS NULL
+    AND auth.current_actor_person_id()=p_subject_id
+    AND EXISTS (SELECT 1 FROM core.student_profiles s WHERE s.person_id=p_subject_id)
+  )
+  OR (
+    auth.current_channel()='STAFF'
+    AND (auth.current_family_id() IS NULL OR auth.current_family_id()=p_family_id)
+    AND (
+      (
+        (learning.has_academy_capability('ACADEMY_ADMIN')
+         OR learning.has_academy_capability('ACADEMY_FOUNDER'))
+        AND learning.has_learning_consent_for_subject(p_family_id,p_subject_id)
+      )
+      OR learning.teacher_has_class_access(p_class_id,p_subject_id)
+    )
+  )
+  ),false);
+
+-- Administrative attendance corrections must not pretend the admin is a Teacher.
+-- Preserve the old teacher reference for actual teachers, add the Principal actor.
+ALTER TABLE learning.attendance_correction
+  ALTER COLUMN corrected_by_teacher_person_id DROP NOT NULL,
+  ADD COLUMN corrected_by_principal_id uuid REFERENCES auth.principals;
+ALTER TABLE learning.attendance_correction
+  ADD CONSTRAINT attendance_correction_actor_required
+  CHECK (corrected_by_teacher_person_id IS NOT NULL OR corrected_by_principal_id IS NOT NULL);
+
+CREATE OR REPLACE FUNCTION learning.correct_attendance(
+  p_id uuid,p_attendance_id uuid,p_status text,p_reason text
+) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,auth,core,learning,audit
+AS $fn$
+DECLARE v learning.attendance_record%ROWTYPE;
+BEGIN
+  SELECT * INTO v FROM learning.attendance_record WHERE attendance_id=p_attendance_id;
+  IF (FOUND AND core.is_uuid_v7(p_id) AND p_status IN ('PRESENT','ABSENT','LATE','LEAVE')
+      AND length(btrim(p_reason)) BETWEEN 1 AND 100
+      AND (
+        ((learning.has_academy_capability('ACADEMY_ADMIN')
+          OR learning.has_academy_capability('ACADEMY_FOUNDER'))
+          AND learning.has_learning_consent_for_subject(v.family_id,v.student_person_id))
+        OR learning.teacher_has_class_access(v.class_id,v.student_person_id)
+      )) IS NOT TRUE THEN
+    RETURN audit.record_write_decision('CORRECT','LEARNING_ATTENDANCE',p_id,false,'STAFF_ASSIGNMENT_OR_CONSENT_DENIED');
+  END IF;
+  INSERT INTO learning.attendance_correction(
+    correction_id,attendance_id,new_status,reason_code,
+    corrected_by_teacher_person_id,corrected_by_principal_id
+  ) VALUES (
+    p_id,p_attendance_id,p_status,p_reason,
+    CASE WHEN EXISTS (
+      SELECT 1 FROM learning.teacher t WHERE t.teacher_person_id=auth.current_actor_person_id()
+    ) THEN auth.current_actor_person_id() ELSE NULL END,
+    auth.current_principal_id()
+  );
+  RETURN audit.record_write_decision('CORRECT','LEARNING_ATTENDANCE',p_id,true,'CORRECTION_APPENDED');
+END
+$fn$;
+
+CREATE OR REPLACE FUNCTION learning.publish_after_class_card(
+  p_publication_id uuid,p_card_id uuid
+) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,auth,core,learning,audit
+AS $fn$
+DECLARE v learning.after_class_card%ROWTYPE;
+BEGIN
+  SELECT * INTO v FROM learning.after_class_card WHERE card_id=p_card_id FOR UPDATE;
+  IF (FOUND AND core.is_uuid_v7(p_publication_id)
+      AND (learning.has_academy_capability('ACADEMY_ADMIN')
+        OR learning.has_academy_capability('ACADEMY_FOUNDER'))
+      AND v.status IN ('SUBMITTED','RETRACTED')
+      AND learning.has_learning_consent_for_subject(v.family_id,v.student_person_id)) IS NOT TRUE THEN
+    RETURN audit.record_write_decision('PUBLISH','LEARNING_AFTER_CLASS_CARD',p_card_id,false,'ACADEMY_GRANT_CONSENT_OR_STATE_DENIED');
+  END IF;
+  INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,acted_by_principal_id)
+  VALUES(p_publication_id,p_card_id,v.family_id,'PUBLISHED',auth.current_principal_id());
+  UPDATE learning.after_class_card SET status='PUBLISHED',updated_at=clock_timestamp() WHERE card_id=p_card_id;
+  RETURN audit.record_write_decision('PUBLISH','LEARNING_AFTER_CLASS_CARD',p_card_id,true,'PUBLISHED');
+END
+$fn$;
+
+CREATE OR REPLACE FUNCTION learning.retract_after_class_card(
+  p_publication_id uuid,p_card_id uuid
+) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,auth,core,learning,audit
+AS $fn$
+DECLARE v learning.after_class_card%ROWTYPE; v_previous uuid;
+BEGIN
+  SELECT * INTO v FROM learning.after_class_card WHERE card_id=p_card_id FOR UPDATE;
+  SELECT publication_id INTO v_previous FROM learning.publication
+    WHERE card_id=p_card_id AND event_kind='PUBLISHED' ORDER BY acted_at DESC LIMIT 1;
+  IF (FOUND AND core.is_uuid_v7(p_publication_id)
+      AND (learning.has_academy_capability('ACADEMY_ADMIN')
+        OR learning.has_academy_capability('ACADEMY_FOUNDER'))
+      AND v.status='PUBLISHED'
+      AND learning.has_learning_consent_for_subject(v.family_id,v.student_person_id)
+      AND v_previous IS NOT NULL) IS NOT TRUE THEN
+    RETURN audit.record_write_decision('RETRACT','LEARNING_AFTER_CLASS_CARD',p_card_id,false,'ACADEMY_GRANT_CONSENT_OR_STATE_DENIED');
+  END IF;
+  INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,supersedes_publication_id,acted_by_principal_id)
+  VALUES(p_publication_id,p_card_id,v.family_id,'RETRACTED',v_previous,auth.current_principal_id());
+  UPDATE learning.after_class_card SET status='RETRACTED',updated_at=clock_timestamp() WHERE card_id=p_card_id;
+  RETURN audit.record_write_decision('RETRACT','LEARNING_AFTER_CLASS_CARD',p_card_id,true,'RETRACTED');
+END
+$fn$;
+
+CREATE OR REPLACE FUNCTION learning.advance_stage_report(p_id uuid,p_next text) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,auth,learning,audit
+AS $fn$
+DECLARE v learning.stage_report%ROWTYPE; v_class uuid; v_allowed boolean;
+BEGIN
+  SELECT * INTO v FROM learning.stage_report WHERE report_id=p_id FOR UPDATE;
+  SELECT class_id INTO v_class FROM learning.enrollment_class
+    WHERE enrollment_id=v.enrollment_id AND status='ACTIVE' LIMIT 1;
+  v_allowed :=
+      v.status='DRAFT' AND p_next='SUBMITTED'
+      AND v.author_teacher_person_id=auth.current_actor_person_id()
+      AND learning.teacher_has_class_access(v_class,v.student_person_id)
+    OR p_next IN ('PUBLISHED','RETRACTED')
+      AND (learning.has_academy_capability('ACADEMY_ADMIN')
+        OR learning.has_academy_capability('ACADEMY_FOUNDER'))
+      AND learning.has_learning_consent_for_subject(v.family_id,v.student_person_id)
+      AND (v.status='SUBMITTED' AND p_next='PUBLISHED'
+        OR v.status='PUBLISHED' AND p_next='RETRACTED'
+        OR v.status='RETRACTED' AND p_next='PUBLISHED');
+  IF (FOUND AND v_allowed) IS NOT TRUE THEN
+    RETURN audit.record_write_decision('ADVANCE','LEARNING_STAGE_REPORT',p_id,false,'STAFF_CONSENT_OR_STATE_DENIED');
+  END IF;
+  UPDATE learning.stage_report SET status=p_next,updated_at=clock_timestamp() WHERE report_id=p_id;
+  RETURN audit.record_write_decision('ADVANCE','LEARNING_STAGE_REPORT',p_id,true,'STATE_ADVANCED');
+END
+$fn$;
+
+-- No direct table access; only the narrow audited API is exposed.
+REVOKE ALL ON learning.academy_staff_grants FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
+-- Newly created SECURITY DEFINER functions have PostgreSQL's default PUBLIC
+-- EXECUTE unless explicitly revoked; GRANT alone does not remove that right.
+REVOKE EXECUTE ON FUNCTION learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text),
+  learning.revoke_academy_staff_capability(uuid,text),
+  learning.protect_academy_staff_grant(),
+  core.read_student_self_summary(),
+  auth.can_open_parent_view(uuid)
+FROM PUBLIC,phoenix_canonical_reader,phoenix_canonical_context_binder;
+REVOKE EXECUTE ON FUNCTION learning.is_academy_bootstrap_service(),
+  learning.has_academy_capability(text),
+  learning.current_staff_kind(),learning.has_learning_consent_for_subject(uuid,uuid),
+  learning.teacher_has_class_access(uuid,uuid),learning.can_manage_learning(),
+  learning.can_read_sensitive(uuid,uuid,uuid),
+  consent.has_active_consent_for_subject(uuid,uuid,text,text),
+  auth.validate_context_request(uuid,uuid,uuid,text)
+FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
+GRANT EXECUTE ON FUNCTION learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text),
+  learning.revoke_academy_staff_capability(uuid,text)
+TO phoenix_canonical_app;
+-- Parent-switch capability guard is invoked by the application after a fresh
+-- FAMILY binding. Do not expose it to reader/binder/PUBLIC.
+GRANT EXECUTE ON FUNCTION auth.can_open_parent_view(uuid)
+TO phoenix_canonical_app;
+GRANT EXECUTE ON FUNCTION core.read_student_self_summary()
+TO phoenix_canonical_app,phoenix_canonical_reader;
+
+COMMIT;
+) THEN
+      v_reason := 'SUBJECT_UNAVAILABLE';
+    ELSE
+      FOR v_item IN
+        SELECT s.person_id,p.display_name FROM core.student_profiles s
+        JOIN core.people p ON p.person_id=s.person_id
+        JOIN core.family_memberships m ON m.person_id=s.person_id AND m.family_id=v_context.family_id
+        WHERE m.valid_from<=clock_timestamp() AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp())
+          AND (s.person_id=v_context.actor_person_id OR EXISTS(
+            SELECT 1 FROM core.guardian_authorities g
+            WHERE g.family_id=v_context.family_id AND g.guardian_person_id=v_context.actor_person_id
+              AND g.subject_person_id=s.person_id AND g.evidence_level='VERIFIED'
+              AND g.scope IN ('EDUCATION','GENERAL') AND g.lifecycle_status='ACTIVE'
+              AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()))
+          AND (p_operation='students' OR EXISTS(
+            SELECT 1 FROM integration.public_ids i WHERE i.entity_kind='STUDENT_PROFILE'
+              AND i.canonical_id=s.person_id AND i.public_id=p_public_id))
+        ORDER BY s.person_id LIMIT 101
+      LOOP
+        v_ids := array_append(v_ids,v_item.person_id);
+        v_public := integration.lookup_projection_public_id('STUDENT_PROFILE',v_item.person_id);
+        IF v_public IS NULL THEN
+          v_status := 'UNAVAILABLE'; v_reason := 'ID_MAPPING_UNAVAILABLE'; EXIT;
+        END IF;
+        v_items := v_items||jsonb_build_array(jsonb_build_object('studentRef',v_public,'displayName',v_item.display_name));
+      END LOOP;
+      IF v_status<>'UNAVAILABLE' THEN
+        IF cardinality(v_ids)>100 THEN
+          v_status := 'UNAVAILABLE'; v_reason := 'RESULT_LIMIT_EXCEEDED';
+        ELSIF p_operation='student' AND cardinality(v_ids)<>1 THEN
+          v_status := 'NOT_FOUND'; v_reason := 'SUBJECT_UNAVAILABLE';
+        ELSE
+          v_allowed := true; v_status := 'ALLOW'; v_reason := 'AUTHORIZED';
+          v_data := CASE WHEN p_operation='student'
+            THEN jsonb_build_object('schemaVersion','student-summary.v2','item',v_items->0)
+            ELSE jsonb_build_object('schemaVersion','student-summary.v2','items',v_items) END;
+          IF p_operation='student' THEN v_id := v_ids[1]; END IF;
+        END IF;
+      END IF;
+    END IF;
+    IF v_context.expires_at<=clock_timestamp() THEN
+      v_allowed := false; v_status := 'DENY'; v_reason := 'NO_TRUSTED_CONTEXT';
+    END IF;
+  END IF;
+  PERFORM audit.record_write_decision('READ',v_resource,
+    CASE WHEN v_allowed THEN v_id ELSE NULL END,v_allowed,v_reason);
+  IF v_allowed AND p_operation='students' THEN
+    FOREACH v_id IN ARRAY v_ids LOOP
+      PERFORM audit.record_write_decision('READ','STUDENT_SUMMARY',v_id,true,'AUTHORIZED');
+    END LOOP;
+  END IF;
+  RETURN jsonb_build_object('status',v_status,'data',CASE WHEN v_allowed THEN v_data ELSE NULL END);
+END $fn$;
+
 -- Public client projection uses registered opaque Student refs, never raw Person UUIDs.
 CREATE FUNCTION core.read_student_self_summary()
 RETURNS jsonb
