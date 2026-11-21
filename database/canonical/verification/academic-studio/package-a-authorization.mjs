@@ -220,6 +220,13 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
     'FAMILY_MEMBER_WITHOUT_VERIFIED_GUARDIAN_MUST_NOT_SWITCH_TO_PARENT');
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
     'FAMILY_MEMBER_WITHOUT_VERIFIED_GUARDIAN_CANNOT_READ_OTHER_STUDENT');
+  // One and the same Principal becomes a verified Parent without any new login.
+  // The synthetic authority is issued by the fixture owner, not self-asserted in the app.
+  sql(db,"INSERT INTO core.guardian_authorities(authority_id,family_id,guardian_person_id,subject_person_id,evidence_level,scope,valid_from,valid_until) VALUES('"+id(3110)+"','"+id(100)+"','"+id(3)+"','"+id(4)+"','VERIFIED','LEARNING',clock_timestamp()-interval '1 day',clock_timestamp()+interval '1 day');");
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,true,
+    'SAME_PRINCIPAL_VERIFIED_PARENT_VIEW_ALLOWED');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
+    'SAME_PRINCIPAL_PARENT_SEES_ONLY_AUTHORIZED_CHILD');
   await bind(id(903),id(3),null,'STUDENT');
   assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'STUDENT');
   const self=(await app.query('SELECT core.read_student_self_summary() AS summary')).rows[0].summary;
@@ -230,6 +237,12 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'STAFF');
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
     'ASSIGNED_TEACHER_WITH_EXACT_SUBJECT_CONSENT_CAN_READ');
+  sql(db,"UPDATE learning.teacher_assignment SET status='REVOKED',revoked_at=clock_timestamp() WHERE assignment_id='"+id(3203)+"';");
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'REVOKED_TEACHER_ASSIGNMENT_DENIES_NEXT_STAFF_READ');
+  sql(db,"INSERT INTO learning.teacher_assignment(assignment_id,class_id,teacher_person_id,role,valid_from,valid_until,created_by_principal_id) VALUES('"+id(3210)+"','"+id(3202)+"','"+id(3)+"','LEAD',clock_timestamp()-interval '1 day',clock_timestamp()+interval '30 days','"+id(901)+"');");
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
+    'NEW_VERIFIED_TEACHER_ASSIGNMENT_RESTORES_AUTHORIZED_READ');
   sql(db,"UPDATE consent.grants SET status='WITHDRAWN',withdrawn_at=clock_timestamp() WHERE consent_id='01910000-0000-7000-8000-000000003101';");
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
     'GLOBAL_STAFF_CONSENT_WITHDRAWAL_DENIES_NEXT_READ');
