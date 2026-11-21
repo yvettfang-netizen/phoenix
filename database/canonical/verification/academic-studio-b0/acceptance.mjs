@@ -44,7 +44,7 @@ try{
   docker(['exec',id,'mkdir','-p','/opt/canonical-migrations','/opt/verification','/opt/academic']);
   docker(['cp',path.join(root,'database/canonical/migrations')+'/.',id+':/opt/canonical-migrations']);
   docker(['cp',path.join(root,'database/canonical/verification/migrate.sh'),id+':/opt/verification/migrate.sh']);
-  docker(['cp',path.join(root,candidate),id+':/opt/academic/001_identity_context.sql']);
+  docker(['cp',path.join(root,candidate),id+':/opt/academic/scheduling-b0.sql']);
   check(docker(['exec','-e','CANONICAL_EXPECTED_MIGRATIONS=37',id,'bash','/opt/verification/migrate.sh']).includes('PASS ledger=37 files=37 expected=37'),'formal 0001-0037 install on PG'+version);
   const ledger=sql("SELECT md5(string_agg(migration_name||sha256,',' ORDER BY migration_name)) FROM canonical_migrations.applied;");
   check(sql("SELECT count(*) FROM canonical_migrations.applied;")==='37','formal ledger=37');
@@ -78,7 +78,7 @@ try{
   console.log(JSON.stringify({status:'PASS',postgres:version,candidate_sha256:digest,formal_migrations:37,fixtures:'synthetic'}));
 }finally{
   if(id){
-    check(docker(['inspect','--format','{{index .Config.Labels "phoenix.academic.test"}}',id])===nonce,'owned container verified');
+    check(docker(['inspect','--format','{{index .Config.Labels "phoenix.academic.b0"}}',id])===nonce,'owned container verified');
     docker(['rm','-f','-v',id]);
   }
   rmSync(work,{recursive:true,force:true});
