@@ -62,6 +62,9 @@ try{
   check(sql("SELECT count(*) FROM pg_attribute WHERE attrelid='learning.attendance_correction'::regclass AND attname='corrected_by_principal_id';\n")==='1','admin correction retains Principal attribution');
   check(sql("SELECT position('current_staff_kind()' in pg_get_functiondef('learning.teacher_has_class_access(uuid,uuid)'::regprocedure));\n")==='0','teacher access is independent of admin role priority');
   check(sql("SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='auth' AND p.proname='can_open_parent_view';\n")==='1','explicit guardian view guard exists');
+  check(sql("SELECT has_function_privilege('phoenix_canonical_app','auth.can_open_parent_view(uuid)','EXECUTE');\n")==='t','app may invoke Parent-view guard');
+  check(sql("SELECT has_function_privilege('phoenix_canonical_reader','auth.can_open_parent_view(uuid)','EXECUTE');\n")==='f','reader may not invoke Parent-view guard');
+  check(sql("SELECT has_function_privilege('phoenix_canonical_context_binder','auth.can_open_parent_view(uuid)','EXECUTE');\n")==='f','binder may not invoke Parent-view guard');
   check(sql("SET phoenix.academic_studio_candidate='isolated';\n\\i /opt/academic/001_identity_context.sql\n",true),'repeat candidate refused without duplicate install');
   check(sql("SELECT count(*) FROM canonical_migrations.applied;\n")==='37','ledger intact after repeat denial');
   console.log(JSON.stringify({status:'PASS',postgres:version,candidate_sha256:digest,formal_ledger:37,fixtures:'synthetic only'}));
