@@ -239,6 +239,15 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
     'EXACT_VERIFIED_GUARDIAN_WITH_ACTIVE_PARENT_CONSENT_CAN_READ');
   console.log('PASS PG'+version+' SAME PRINCIPAL FAMILY→STUDENT→GLOBAL STAFF; subject consent, withdrawal and guardian isolation');
+  // S1 same-backend next-request guarantee. The already redeemed FAMILY context
+  // must not preserve a guardian's child read after an independently committed
+  // family membership end; the positive read above was made on this same app LOGIN.
+  sql(db,"UPDATE core.family_memberships SET valid_until=clock_timestamp() WHERE membership_id='"+id(1101)+"';");
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,false,
+    'COMMITTED_GUARDIAN_MEMBERSHIP_END_MUST_CLOSE_PARENT_VIEW');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'COMMITTED_GUARDIAN_MEMBERSHIP_END_MUST_DENY_SAME_BACKEND_NEXT_READ');
+  console.log('PASS PG'+version+' same-backend next-request FAMILY guardian membership end denies Parent view and published Learning record');
 
   await app.query('SELECT auth.clear_context()');
   assert.equal(one(db,'SELECT count(*) FROM auth.session_contexts'),'0');
