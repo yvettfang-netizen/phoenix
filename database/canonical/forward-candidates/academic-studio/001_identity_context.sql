@@ -299,15 +299,10 @@ BEGIN
     ) THEN
       RAISE EXCEPTION 'CONTEXT_FAMILY_MEMBERSHIP_INVALID';
     END IF;
-    IF NOT EXISTS (
-      SELECT 1 FROM core.guardian_authorities g
-      WHERE g.family_id=p_family_id AND g.guardian_person_id=p_actor_person_id
-        AND g.evidence_level='VERIFIED' AND g.lifecycle_status='ACTIVE'
-        AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp()
-        AND g.valid_until>clock_timestamp()
-    ) THEN
-      RAISE EXCEPTION 'CONTEXT_VERIFIED_GUARDIAN_REQUIRED';
-    END IF;
+    -- The FAMILY context is also used by existing self/family APIs, not only
+    -- by the new Parent view. Preserve generic membership semantics here.
+    -- Parent-view routing must independently call auth.can_open_parent_view();
+    -- every child read still rechecks exact Guardian Authority and Consent.
     RETURN;
   END IF;
 
@@ -363,6 +358,28 @@ BEGIN
 END
 $fn$;
 
+CREATE FUNCTION auth.can_open_parent_view(p_family_id uuid) RETURNS boolean
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth,core
+RETURN coalesce(
+  auth.write_context_is_live()
+  AND auth.current_channel()='FAMILY'
+  AND auth.current_family_id()=p_family_id
+  AND auth.current_actor_person_id() IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM core.family_memberships m
+    WHERE m.family_id=p_family_id AND m.person_id=auth.current_actor_person_id()
+      AND m.valid_from<=clock_timestamp()
+      AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp())
+  )
+  AND EXISTS (
+    SELECT 1 FROM core.guardian_authorities g
+    WHERE g.family_id=p_family_id AND g.guardian_person_id=auth.current_actor_person_id()
+      AND g.evidence_level='VERIFIED' AND g.lifecycle_status='ACTIVE'
+      AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp()
+      AND g.valid_until>clock_timestamp()
+  ),false);
+
 CREATE OR REPLACE FUNCTION core.can_read_subject_basics(p_person_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path=pg_catalog,auth,core,casework,integration
@@ -391,12 +408,13 @@ CREATE POLICY people_read ON core.people
         AND core.can_read_subject_basics(person_id))
   );
 
+-- Public client projection uses registered opaque Student refs, never raw Person UUIDs.
 CREATE FUNCTION core.read_student_self_summary()
-RETURNS TABLE(student_person_id uuid,display_name text,profile_created_at timestamptz)
+RETURNS jsonb
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
-SET search_path=pg_catalog,auth,core,audit
+SET search_path=pg_catalog,auth,core,integration,audit
 AS $fn$
-DECLARE v_allowed boolean;
+DECLARE v_allowed boolean; v_ref text; v_name text;
 BEGIN
   v_allowed := auth.write_context_is_live()
     AND auth.current_channel()='STUDENT'
@@ -409,16 +427,21 @@ BEGIN
         AND p.person_id=auth.current_actor_person_id()
         AND p.status='ACTIVE'
     );
+  IF v_allowed THEN
+    v_ref := integration.lookup_projection_public_id('STUDENT_PROFILE',auth.current_actor_person_id());
+    SELECT display_name INTO v_name FROM core.people
+      WHERE person_id=auth.current_actor_person_id();
+    v_allowed := v_ref IS NOT NULL AND v_name IS NOT NULL;
+  END IF;
   PERFORM audit.record_access_event('READ','STUDENT_SELF_SUMMARY',
     auth.current_actor_person_id(),
     CASE WHEN v_allowed THEN 'ALLOW' ELSE 'DENY' END,
-    CASE WHEN v_allowed THEN 'STUDENT_SELF_ONLY' ELSE 'STUDENT_CONTEXT_OR_SUBJECT_DENIED' END);
+    CASE WHEN v_allowed THEN 'STUDENT_SELF_ONLY' ELSE 'STUDENT_CONTEXT_MAPPING_OR_SUBJECT_DENIED' END);
   IF v_allowed THEN
-    RETURN QUERY
-      SELECT p.person_id,p.display_name,s.created_at
-      FROM core.people p JOIN core.student_profiles s ON s.person_id=p.person_id
-      WHERE p.person_id=auth.current_actor_person_id();
+    RETURN jsonb_build_object('schemaVersion','student-summary.v2','item',
+      jsonb_build_object('studentRef',v_ref,'displayName',v_name));
   END IF;
+  RETURN NULL;
 END
 $fn$;
 
