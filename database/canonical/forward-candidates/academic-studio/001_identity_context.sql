@@ -413,6 +413,20 @@ RETURN coalesce(
           AND sm.valid_from<=clock_timestamp()
           AND (sm.valid_until IS NULL OR sm.valid_until>clock_timestamp())
       )
+      -- Parent-view eligibility needs current purpose-specific Consent in
+      -- addition to Guardian Authority, not merely an old Family context.
+      AND (
+        (g.scope IN ('GENERAL','LEARNING')
+          AND consent.has_active_consent(g.subject_person_id,'LEARNING_RECORD','LEARNING'))
+        OR (g.scope IN ('GENERAL','EDUCATION')
+          AND consent.has_active_consent(g.subject_person_id,'EDUCATION_CASE','EDUCATION'))
+        OR (g.scope IN ('GENERAL','IDENTITY')
+          AND consent.has_active_consent(g.subject_person_id,'IDENTITY_CASE','IDENTITY_SENSITIVE'))
+        OR (g.scope IN ('GENERAL','EDUCATION')
+          AND consent.has_active_consent(g.subject_person_id,'DOCUMENT_READ','EDUCATION'))
+        OR (g.scope='GENERAL'
+          AND consent.has_active_consent(g.subject_person_id,'DOCUMENT_READ','GENERAL'))
+      )
   ),false);
 
 CREATE OR REPLACE FUNCTION core.can_read_subject_basics(p_person_id uuid) RETURNS boolean

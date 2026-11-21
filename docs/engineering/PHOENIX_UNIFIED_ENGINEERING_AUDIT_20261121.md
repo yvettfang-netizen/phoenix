@@ -33,6 +33,10 @@ Rows show evidence observed for a specific head at the time of audit. A green CI
 4. PR #77 / 0042 is a separate enterprise workspace candidate and is not a required Academic Studio dependency.
 5. Keep `main` formal migration history immutable. No numeric migration number is allocated in Package A; no SQL from PR #74/86 is pulled into standardized assessments.
 
+## Latest Parent Consent gate
+
+A new source-review finding: the original `auth.can_open_parent_view` checked current verified Guardian Authority but did not require an active matching Consent. Package A now additionally checks current purpose/data-class-matched Consent for the same subject in the corresponding Guardian Authority scope. PG16/17 negative tests assert Parent view closes immediately after the exact grantee's Learning Consent is withdrawn, even when Guardian Authority remains verified. Existing per-resource child read checks remain authoritative. This is a new source change and needs exact-head revalidation.
+
 ## Direct Xuanwu security review findings
 
 The first Package A candidate version had a subtle read-protection gap: `auth.write_context_is_live()` sat inside the FAMILY arm of a boolean OR; STUDENT and STAFF arms did not share a global live-context and ACTIVE Principal predicate. A disabled Student Principal might retain an already-bound STUDENT context until expiry. The new patch applies both common checks to all three branches of `learning.can_read_sensitive()`.

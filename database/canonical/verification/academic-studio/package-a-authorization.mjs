@@ -271,6 +271,9 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   sql(db,"UPDATE consent.grants SET status='WITHDRAWN',withdrawn_at=clock_timestamp() WHERE consent_id='01910000-0000-7000-8000-000000003101';");
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
     'GLOBAL_STAFF_CONSENT_WITHDRAWAL_DENIES_NEXT_READ');
+  await bind(id(903),id(3),id(100),'FAMILY');
+  assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,false,
+    'PARENT_VIEW_REQUIRES_CURRENT_SCOPE_MATCHED_CONSENT');
   await bind(id(901),id(1),id(100),'FAMILY');
   assert.equal((await app.query('SELECT auth.can_open_parent_view($1::uuid) AS allowed',[id(100)])).rows[0].allowed,true,
     'VERIFIED_GUARDIAN_MUST_BE_ABLE_TO_OPEN_PARENT_VIEW');
