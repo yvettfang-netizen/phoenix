@@ -56,6 +56,7 @@ CREATE TABLE learning.academy_staff_grants (
   principal_id uuid NOT NULL REFERENCES auth.principals,
   capability_code text NOT NULL CHECK (capability_code IN ('ACADEMY_ADMIN','ACADEMY_FOUNDER')),
   status text NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE','REVOKED','EXPIRED')),
+  authorization_version bigint NOT NULL DEFAULT 1 CHECK (authorization_version>0),
   valid_from timestamptz NOT NULL DEFAULT clock_timestamp(),
   valid_until timestamptz,
   granted_by_principal_id uuid NOT NULL REFERENCES auth.principals,
@@ -91,7 +92,8 @@ BEGIN
          OLD.granted_by_principal_id,OLD.reason_code,OLD.created_at) THEN
     RAISE EXCEPTION 'ACADEMY_STAFF_GRANT_IDENTITY_IMMUTABLE';
   END IF;
-  IF OLD.status<>'ACTIVE' OR NEW.status NOT IN ('REVOKED','EXPIRED') THEN
+  IF OLD.status<>'ACTIVE' OR NEW.status NOT IN ('REVOKED','EXPIRED')
+     OR NEW.authorization_version<>OLD.authorization_version+1 THEN
     RAISE EXCEPTION 'ACADEMY_STAFF_GRANT_TRANSITION_INVALID';
   END IF;
   IF NEW.status='REVOKED' AND (NEW.revoked_at IS NULL OR NEW.revoked_by_principal_id IS NULL
@@ -111,6 +113,20 @@ CREATE TRIGGER academy_staff_grant_protect_update
 CREATE TRIGGER academy_staff_grant_delete_denied
   BEFORE DELETE ON learning.academy_staff_grants
   FOR EACH ROW EXECUTE FUNCTION learning.reject_history_change();
+
+-- Only the dedicated internal bootstrap SERVICE can create or revoke Founder grants.
+CREATE FUNCTION learning.is_academy_bootstrap_service() RETURNS boolean
+LANGUAGE sql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,auth
+RETURN coalesce(
+  auth.is_internal_service()
+  AND auth.current_family_id() IS NULL
+  AND EXISTS (
+    SELECT 1 FROM auth.principals p
+    WHERE p.principal_id=auth.current_principal_id()
+      AND p.principal_kind='SERVICE' AND p.person_id IS NULL
+      AND p.status='ACTIVE' AND p.service_label='academy_founder_bootstrap_v1'
+  ),false);
 
 CREATE FUNCTION learning.has_academy_capability(p_capability_code text) RETURNS boolean
 LANGUAGE sql VOLATILE SECURITY DEFINER
@@ -156,7 +172,7 @@ BEGIN
    WHERE principal_id=p_target_principal_id AND person_id IS NOT NULL AND status='ACTIVE';
 
   IF p_capability_code='ACADEMY_FOUNDER' THEN
-    IF auth.is_internal_service() IS NOT TRUE
+    IF learning.is_academy_bootstrap_service() IS NOT TRUE
        OR EXISTS (SELECT 1 FROM learning.academy_staff_grants
          WHERE capability_code='ACADEMY_FOUNDER' AND status='ACTIVE'
            AND valid_from<=clock_timestamp() AND (valid_until IS NULL OR valid_until>clock_timestamp())) THEN
@@ -170,7 +186,7 @@ BEGIN
   END IF;
 
   UPDATE learning.academy_staff_grants
-     SET status='EXPIRED'
+     SET status='EXPIRED',authorization_version=authorization_version+1
    WHERE principal_id=p_target_principal_id
      AND capability_code=p_capability_code
      AND status='ACTIVE'
@@ -206,14 +222,14 @@ BEGIN
     RETURN audit.record_write_decision('REVOKE','ACADEMY_STAFF_CAPABILITY',p_grant_id,false,'GRANT_OR_INPUT_DENIED');
   END IF;
   IF v.capability_code='ACADEMY_FOUNDER' THEN
-    IF auth.is_internal_service() IS NOT TRUE THEN
+    IF learning.is_academy_bootstrap_service() IS NOT TRUE THEN
       RETURN audit.record_write_decision('REVOKE','ACADEMY_STAFF_CAPABILITY',p_grant_id,false,'FOUNDER_REVOCATION_INTERNAL_ONLY');
     END IF;
   ELSIF learning.has_academy_capability('ACADEMY_FOUNDER') IS NOT TRUE THEN
     RETURN audit.record_write_decision('REVOKE','ACADEMY_STAFF_CAPABILITY',p_grant_id,false,'FOUNDER_AUTHORITY_REQUIRED');
   END IF;
   UPDATE learning.academy_staff_grants
-     SET status='REVOKED',revoked_at=clock_timestamp(),
+     SET status='REVOKED',authorization_version=authorization_version+1,revoked_at=clock_timestamp(),
          revoked_by_principal_id=auth.current_principal_id(),
          revoked_reason_code=btrim(p_reason_code)
    WHERE grant_id=p_grant_id;
@@ -724,7 +740,8 @@ REVOKE EXECUTE ON FUNCTION learning.grant_academy_staff_capability(uuid,uuid,tex
   core.read_student_self_summary(),
   auth.can_open_parent_view(uuid)
 FROM PUBLIC,phoenix_canonical_reader,phoenix_canonical_context_binder;
-REVOKE EXECUTE ON FUNCTION learning.has_academy_capability(text),
+REVOKE EXECUTE ON FUNCTION learning.is_academy_bootstrap_service(),
+  learning.has_academy_capability(text),
   learning.current_staff_kind(),learning.has_learning_consent_for_subject(uuid,uuid),
   learning.teacher_has_class_access(uuid,uuid),learning.can_manage_learning(),
   learning.can_read_sensitive(uuid,uuid,uuid),
