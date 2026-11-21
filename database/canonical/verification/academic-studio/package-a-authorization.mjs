@@ -180,6 +180,18 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   console.log('PASS PG'+version+' unbound and Family-member role escalation denied');
 
   await bind(id(899),null,null,'INTERNAL');
+  // Existing Student/Parent/Teacher capabilities must never create a second
+  // Principal for one Person.
+  assert.equal((await app.query(
+    'SELECT learning.register_staff_principal($1::uuid,$2::uuid,$3::text) AS ok',
+    [id(903),id(3),'TEACHER'])).rows[0].ok,true,
+    'REGISTER_TEACHER_REUSES_CANONICAL_PRINCIPAL');
+  assert.equal((await app.query(
+    'SELECT learning.register_staff_principal($1::uuid,$2::uuid,$3::text) AS ok',
+    [id(904),id(3),'TEACHER'])).rows[0].ok,false,
+    'REGISTER_TEACHER_MUST_DENY_SECOND_PRINCIPAL');
+  assert.equal(one(db,"SELECT count(*) FROM auth.principals WHERE person_id='"+id(3)+"'"),'1');
+  console.log('PASS PG'+version+' one Principal reused, duplicate Teacher Principal denied');
   assert.equal(await grant(id(2099),id(901),'ACADEMY_FOUNDER',null,'UNAUTHORIZED_SERVICE'),false);
   console.log('PASS PG'+version+' generic INTERNAL service cannot mint Founder');
   await bind(id(900),null,null,'INTERNAL');
@@ -194,9 +206,22 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   await bind(id(901),id(1),null,'STAFF');
   assert.equal(await grant(id(2110),id(903),'ACADEMY_FOUNDER',null,'FOUNDER_FORGED'),false);
   assert.equal(await grant(id(2111),id(903),'ACADEMY_ADMIN',null,'FOUNDER_ADMIN'),true);
+  // Same Teacher Principal is not a global course manager except during the
+  // separately granted, currently ACTIVE Academy Admin capability.
+  await bind(id(903),id(3),null,'STAFF');
+  assert.equal((await app.query(
+    'SELECT learning.create_course($1::uuid,$2::text,$3::text) AS ok',
+    [id(3301),'ACADEMY-ADMIN-GRANTED','Synthetic granted admin course'])).rows[0].ok,true);
+  await bind(id(901),id(1),null,'STAFF');
   assert.equal(await revoke(id(2101),'SELF_REVOKE'),false);
   assert.equal(await revoke(id(2102),'FOUNDER_REMOVES_ADMIN'),true);
   assert.equal(await revoke(id(2111),'FOUNDER_REMOVES_ADMIN'),true);
+  await bind(id(903),id(3),null,'STAFF');
+  assert.equal((await app.query(
+    'SELECT learning.create_course($1::uuid,$2::text,$3::text) AS ok',
+    [id(3302),'ACADEMY-ADMIN-REVOKED','Synthetic revoked admin course'])).rows[0].ok,false,
+    'REVOKED_ADMIN_GRANT_MUST_DENY_NEXT_MANAGER_ACTION');
+  await bind(id(901),id(1),null,'STAFF');
   assert.equal(one(db,"SELECT authorization_version FROM learning.academy_staff_grants WHERE grant_id='"+id(2102)+"'"),'2');
   assert.equal(one(db,"SELECT count(*) FROM learning.academy_staff_grants WHERE status='ACTIVE'"),'1');
   console.log('PASS PG'+version+' Founder can govern Admin only; cannot self-revoke or mint Founder; revocation version increments');
