@@ -4,8 +4,10 @@ import { readFile, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { Script } from "node:vm";
+import { request as httpRequest } from "node:http";
 import { readStaffConsultationEmail } from "./staff-contact.mjs";
 import { createWebsiteConsultationGateway } from "./gateway.mjs";
+import { listenConsultationLoopback } from "./loopback-http.mjs";
 import { verifyBrowserConsultation } from "./verify-browser-form.mjs";
 import { handleWebsiteConsultation } from "../../../../website/phoenix-nova-website-v5/lib/website-consultation-intake.ts";
 
@@ -376,6 +378,50 @@ try {
       contact_erased_at IS NOT NULL AS recorded FROM crm.website_consultation_intake WHERE lead_id=$1
   `, [newLead])).rows, [{ no_contact: true, no_mac: true, recorded: true }]);
   console.log("PASS approved retention configuration, expiry denial and scoped contact erasure");
+
+  const listeners = [];
+  function requestLocal(listener, hostHeader, path, method = "GET", body, headers = {}) {
+    return new Promise((resolve, reject) => {
+      const req = httpRequest({
+        host, port: listener.port, path, method, headers: { host: hostHeader, ...headers },
+      }, res => {
+        const chunks = [];
+        res.on("data", chunk => chunks.push(chunk));
+        res.on("end", () => resolve({ status: res.statusCode, body: Buffer.concat(chunks).toString() }));
+        res.on("error", reject);
+      });
+      req.on("error", reject);
+      req.end(body);
+    });
+  }
+  try {
+    const intakeListener = await listenConsultationLoopback({ publicOrigin: receiverOrigin, handler: receiver });
+    listeners.push(intakeListener);
+    const staffListener = await listenConsultationLoopback({ publicOrigin: staffOrigin, handler: staffHttp });
+    listeners.push(staffListener);
+    const staffHost = new URL(staffOrigin).host;
+    const intakeHost = new URL(receiverOrigin).host;
+    assert.equal((await requestLocal(staffListener, intakeHost, "/internal/website-consultations/workbench")).status, 404);
+    assert.equal((await requestLocal(staffListener, staffHost, "/internal/website-consultations/workbench", "GET", undefined,
+      { "x-forwarded-host": staffHost, "x-principal-id": employee })).status, 401);
+    const dash = await requestLocal(staffListener, staffHost, "/internal/website-consultations/workbench", "GET", undefined,
+      { authorization: "Bearer synthetic-staff" });
+    assert.equal(dash.status, 200);
+    assert.match(dash.body, /官网咨询工作台/);
+    const id = "028347ec-7740-4000-a000-000000000019";
+    const payload = JSON.stringify({ schemaVersion: "website-consultation.v1", consentVersion: "website-consultation.v1",
+      source: "phoenix-nova-website", locale: "en", service: "health", requestId: id, email: "transport@example.test" });
+    const receipt = await requestLocal(intakeListener, intakeHost, "/v1/website-consultations", "POST", payload, {
+      "content-length": Buffer.byteLength(payload), "content-type": "application/json", authorization: "Bearer " + token,
+      "idempotency-key": id,
+    });
+    assert.equal(receipt.status, 202);
+    assert.deepEqual(JSON.parse(receipt.body), { status: "persisted", requestId: id });
+    assert.equal((await db.query("SELECT 1 FROM crm.website_consultation_intake WHERE request_id=$1", [id])).rowCount, 1);
+    console.log("PASS actual loopback HTTP transport, pinned hosts and persisted receipt");
+  } finally {
+    await Promise.all(listeners.map(listener => listener.close()));
+  }
 } finally {
   await Promise.allSettled([outside.end(), staff.end(), retention.end(), crmService.end(), binderPool.end(), writerPool.end(), gatewayPool.end(), db.end()]);
 }
