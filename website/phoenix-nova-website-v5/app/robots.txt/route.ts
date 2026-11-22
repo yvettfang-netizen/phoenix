@@ -1,2 +1,7 @@
-// Private Review: robots are crawl preferences, not access control.
-export function GET() { return new Response("User-agent: *\nDisallow: /\n", {headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}}); }
+import { env } from "cloudflare:workers";
+import { websiteRobots } from "@/lib/website-crawl-policy";
+
+export const dynamic = "force-dynamic";
+export function GET(request: Request) {
+  return websiteRobots(request, (env as Record<string, unknown>).WEBSITE_HOMEPAGE_INDEX_APPROVED);
+}

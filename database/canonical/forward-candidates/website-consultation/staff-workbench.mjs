@@ -1,0 +1,125 @@
+function runWorkbench() {
+  const endpoint = "/internal/website-consultations";
+  const list = document.querySelector("#lead-list");
+  const notice = document.querySelector("#workbench-status");
+  const refresh = document.querySelector("#refresh-queue");
+  const labels = { EDUCATION: "教育", IDENTITY: "身份", WEALTH: "财富", HEALTH: "健康" };
+
+  async function request(path = "", body) {
+    const response = await fetch(endpoint + path, body === undefined ? {
+      cache: "no-store",
+    } : {
+      method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(response.status === 401 ? "员工会话已失效，请重新登录。" : "当前操作未完成。请刷新队列后重试。");
+    return response.json();
+  }
+
+  function element(tag, text) {
+    const node = document.createElement(tag);
+    if (text) node.textContent = text;
+    return node;
+  }
+
+  function action(label, perform) {
+    const button = element("button", label);
+    button.type = "button";
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try { await perform(button); }
+      catch (error) { notice.textContent = error.message; }
+      finally { button.disabled = false; }
+    });
+    return button;
+  }
+
+  async function loadQueue() {
+    refresh.disabled = true;
+    list.replaceChildren();
+    notice.textContent = "正在读取线索…";
+    try {
+      const { items } = await request();
+      for (const item of items) {
+        const row = element("li");
+        const entry = element("article");
+        const path = "/" + encodeURIComponent(item.leadId);
+        entry.append(element("h2", (labels[item.service] ?? "服务") + "咨询"),
+          element("p", (item.status === "CONTACTED" ? "已联系" : item.status === "NEW" ? "新线索" : item.status) +
+            " · " + new Date(item.receivedAt).toLocaleString("zh-CN")),
+          element("code", item.leadId));
+        const controls = element("div");
+        controls.className = "actions";
+        const email = element("p");
+        email.setAttribute("aria-live", "polite");
+        controls.append(action("查看邮箱", async button => {
+          if (email.textContent) {
+            email.replaceChildren();
+            button.textContent = "查看邮箱";
+            return;
+          }
+          const result = await request(path + "/contact", {});
+          email.textContent = result.email;
+          button.textContent = "隐藏邮箱";
+        }));
+        if (!item.assigneeId && item.status === "NEW") {
+          const label = element("label", "顾问");
+          const adviser = element("select");
+          adviser.setAttribute("aria-label", "顾问");
+          adviser.append(new Option("请选择顾问", ""));
+          label.append(adviser);
+          controls.append(action("加载可分配顾问", async button => {
+            const { items: people } = await request(path + "/assignees");
+            if (!people.length) {
+              notice.textContent = "当前暂无可分配的顾问。";
+              return;
+            }
+            for (const { id, name } of people) adviser.append(new Option(name, id));
+            button.replaceWith(label, action("分配", async () => {
+              if (!adviser.value) throw new Error("请选择顾问。");
+              await request(path + "/assign", { assigneeId: adviser.value });
+              await loadQueue();
+              notice.textContent = "已分配跟进。";
+            }));
+          }));
+        }
+        if (item.assigneeId && item.status === "NEW") {
+          controls.append(action("完成首次跟进", async () => {
+            await request(path + "/complete", {});
+            await loadQueue();
+            notice.textContent = "已记录首次跟进。";
+          }));
+        }
+        entry.append(controls, email);
+        row.append(entry);
+        list.append(row);
+      }
+      notice.textContent = items.length ? "已载入获授权的线索。" : "暂无获授权的线索。";
+    } catch (error) {
+      notice.textContent = error.message;
+    } finally {
+      refresh.disabled = false;
+    }
+  }
+
+  refresh.addEventListener("click", loadQueue);
+  window.addEventListener("pagehide", () => list.replaceChildren());
+  window.addEventListener("pageshow", event => { if (event.persisted) void loadQueue(); });
+  void loadQueue();
+}
+
+export function workbenchHtml(nonce) {
+  return `<!doctype html><html lang="zh-Hans"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>官网咨询工作台｜Phoenix Nova</title>
+<style nonce="${nonce}">
+body{font:16px/1.5 system-ui,sans-serif;margin:0;background:#f8f6f1;color:#003b46}
+main{max-width:50rem;margin:auto;padding:1.25rem}ol{list-style:none;padding:0;display:grid;gap:1rem}
+article{background:white;padding:1rem;border-radius:.6rem}h2,p{margin:.5rem 0}code{overflow-wrap:anywhere}
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;align-items:end;margin-top:1rem}label{display:grid;gap:.25rem}
+button,select{font:inherit;min-height:44px;border:1px solid #003b46;border-radius:.4rem;padding:0 .65rem}
+select{max-width:100%;box-sizing:border-box}button{background:#003b46;color:white}button:disabled{opacity:.6}
+</style></head><body><main><h1>官网咨询工作台</h1>
+<button id="refresh-queue" type="button">刷新队列</button><p id="workbench-status" role="status">正在读取线索…</p>
+<ol id="lead-list" aria-label="咨询线索"></ol><noscript>此工作台需要 JavaScript。</noscript>
+</main><script nonce="${nonce}">(${runWorkbench.toString()})();</script></body></html>`;
+}

@@ -21,8 +21,9 @@ export function getCurrentLocale(path: string): SiteLocale | null {
   return match ? match[1] as SiteLocale : null;
 }
 
-/** Health and Insights share the same document language on the server and in the browser. */
+/** These localized routes share the same document language on server and client. */
 export function getDocumentLocale(pathname: string): SiteLocale | null {
-  const match = /^\/(zh|en)\/(?:health|compass\/health|insights)(?:\/|$)/.exec(pathname);
+  if (pathname === "/zh" || pathname === "/en") return pathname === "/zh" ? "zh" : "en";
+  const match = /^\/(zh|en)\/(?:consultation|health|compass\/health|insights)(?:\/|$)/.exec(pathname);
   return match ? match[1] as SiteLocale : null;
 }

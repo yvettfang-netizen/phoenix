@@ -46,6 +46,21 @@ test("connects Digital Phoenix to the approved immortal-guardian world", async (
   assert.match(html, /https:\/\/fengqi-research-institute\.yvettfang\.chatgpt\.site/);
 });
 
+test("links each homepage to a bilingual consultation page that fails closed when unconfigured", async () => {
+  for (const [locale, message] of [["zh", "在线咨询暂未开放"], ["en", "Online enquiries are currently unavailable"]]) {
+    const path = `/${locale}/consultation`;
+    assert.ok((await (await get(`/${locale}`)).text()).includes(`href="${path}"`));
+    const response = await get(path);
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.ok(html.includes(message));
+    assert.ok(!html.includes('name="email"'));
+    assert.match(html, /name="robots" content="[^"]*noindex/i);
+  }
+  const response = await worker.dispatchFetch("http://localhost/api/website-consultations", { method: "POST" });
+  assert.equal(response.status, 503);
+});
+
 test("renders every bilingual candidate destination", async () => {
   const pages = ["compass", "lighthouse", "services", "insights", "oriental", "about", "family-center", "admissions", "application"];
   for (const locale of ["zh", "en"]) {

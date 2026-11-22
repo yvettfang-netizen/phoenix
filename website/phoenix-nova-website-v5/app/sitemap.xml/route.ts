@@ -1,4 +1,7 @@
-// Empty until the domain and each content collection receive release approval.
-export function GET() {
-  return new Response('<?xml version="1.0" encoding="UTF-8"?><sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></sitemapindex>', {headers:{"content-type":"application/xml; charset=utf-8","x-robots-tag":"noindex, nofollow","cache-control":"no-store"}});
+import { env } from "cloudflare:workers";
+import { websiteSitemap } from "@/lib/website-crawl-policy";
+
+export const dynamic = "force-dynamic";
+export function GET(request: Request) {
+  return websiteSitemap(request, (env as Record<string, unknown>).WEBSITE_HOMEPAGE_INDEX_APPROVED);
 }
