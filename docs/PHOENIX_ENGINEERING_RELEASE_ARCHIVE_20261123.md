@@ -90,3 +90,10 @@ PostgreSQL、D1、BFF、Canonical、Sites、Staging、权限、安全和回滚�
 - ChatGPT “Phoenix 数据库18点验收”记录 PR #61 HEAD `59d744d5da03eddc2cc3ca75a346bce4abea938d`，CI 通过但实际数据库部署范围和 Jimson 独立验收未证实；保留。
 - 因部分 ChatGPT 正文、附件或截图未完整读取，相关窗口统一标记“待复核/权限疑问”，不得仅凭标题归档。
 
+
+
+## 9. 归档状态一致性复核
+
+- 本轮未调用归档/恢复写操作。
+- Codex 最近列表显示 `01a09674-64ed-7371-a51d-ea0e4a8c42b7` 为活动窗口，但 `list_archived_threads` 返回同一 ID；这是平台列表状态不一致，不能据此宣称已归档或已恢复。
+- 在平台状态一致性得到确认前，该窗口按活动/审计记录处理，继续保留。
