@@ -8,6 +8,7 @@
 - 正式域名只读复查中，HTTP 返回 308 并跳到 HTTPS。中英文首页返回 200，canonical 和文档语言正确。双方的咨询和隐私地址均返回 404，索引仍关闭。发布后使用 `node scripts/official-launch-preflight.mjs` 复跑这些检查。只有 Founder 明确批准首页索引后才使用 `--index-approved` 验收索引开放状态。
 - 统计候选仅记录官方主站白名单页面的成功文档请求，按页面和语言计数。不采集访客标识、URL 参数、来源地址或表单内容。Worker 使用可选 `WEBSITE_TRAFFIC` 数据集绑定。生产如果使用其他运行时，要在对应入口确认同一计数逻辑。
 - `/zh/privacy` 和 `/en/privacy` 从运行环境读取批准的双语纯文本。以空行分隔段落，设置 `WEBSITE_PRIVACY_POLICY_ZH`、`WEBSITE_PRIVACY_POLICY_EN` 及 `WEBSITE_PRIVACY_VERSION=website-consultation.v1`。留存 Founder 审阅的文本版本和引用后，才设置 `WEBSITE_PRIVACY_APPROVED=true`。使用这些内建隐私页时，任何一版缺失都会关闭咨询提交。验收夹具里的政策正文是合成文本。
+- 联系方式保留期限随 Canonical 接收契约配置。由有权限的配置角色调用 `crm.configure_website_contact_retention`，输入经批准的天数及该契约已登记的隐私保留政策摘要。没有配置时拒绝创建线索。仅为清理调度账号授予 `phoenix_website_contact_retention`，按批准频率调用 `crm.erase_expired_website_contacts()` 并记录批次结果。员工读取会即时拒绝过期数据，清理会去除加密邮箱及其摘要，留下线索、关联请求编号和清理时间。隔离夹具里的 30 天仅用于测试。
 
 ## Jimson 人工操作
 

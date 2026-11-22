@@ -30,6 +30,7 @@ const writerPool = new Pool({ host, port, user: "website_fixture_writer", databa
 const outside = new Client({ host, port, user: "website_fixture_outside", database });
 const crmService = new Client({ host, port, user: "website_fixture_crm_service", database });
 const staff = new Client({ host, port, user: "website_fixture_staff_gateway", database });
+const retention = new Client({ host, port, user: "website_fixture_contact_retention", database });
 const gatewayPool = new Pool({ host, port, user: "website_fixture_staff_gateway", database });
 const principal = "019347ec-7740-7000-a000-000000000001";
 const sourceId = "019347ec-7740-7000-a000-000000000002";
@@ -47,6 +48,9 @@ try {
     CREATE ROLE website_fixture_outside LOGIN;
     CREATE ROLE website_fixture_crm_service LOGIN;
     CREATE ROLE website_fixture_staff_gateway LOGIN;
+    CREATE ROLE website_fixture_contact_retention LOGIN;
+    GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_contact_retention;
+    GRANT phoenix_website_contact_retention TO website_fixture_contact_retention WITH INHERIT FALSE, SET TRUE;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_staff_gateway;
     GRANT phoenix_website_consultation_staff_gateway TO website_fixture_staff_gateway WITH INHERIT FALSE, SET TRUE;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_binder, website_fixture_writer, website_fixture_outside, website_fixture_crm_service;
@@ -143,6 +147,11 @@ try {
     body: JSON.stringify({ requestId,
       locale: "en", service, email, consent: true }),
   }), websiteConfig, (url, init) => receiver(new Request(url, init)));
+  assert.equal((await submit("education", undefined, "no-policy@example.test")).status, 503);
+  assert.equal((await db.query("SELECT crm.configure_website_contact_retention($1,30,$2) AS allowed",
+    [contractId, "f".repeat(64)])).rows[0].allowed, false);
+  assert.equal((await db.query("SELECT crm.configure_website_contact_retention($1,30,$2) AS allowed",
+    [contractId, hash])).rows[0].allowed, true);
   assert.equal((await submit("education")).status, 202);
   assert.equal((await submit("education")).status, 202);
   assert.equal((await submit("health")).status, 409);
@@ -354,6 +363,19 @@ try {
       await browser.close();
     }
   }
+  await db.query("UPDATE crm.website_consultation_intake SET contact_expires_at=clock_timestamp()-interval '1 second' WHERE lead_id=$1", [newLead]);
+  assert.equal((await post("contact", "synthetic-staff")).status, 404);
+  assert.equal((await submit("education", secondRequest)).status, 503);
+  await assert.rejects(staff.query("SELECT crm.erase_expired_website_contacts()"), /permission denied/);
+  await retention.connect();
+  await retention.query("SET ROLE phoenix_website_contact_retention");
+  assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 1);
+  assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 0);
+  assert.deepEqual((await db.query(`
+    SELECT contact_envelope IS NULL AS no_contact, payload_mac IS NULL AS no_mac,
+      contact_erased_at IS NOT NULL AS recorded FROM crm.website_consultation_intake WHERE lead_id=$1
+  `, [newLead])).rows, [{ no_contact: true, no_mac: true, recorded: true }]);
+  console.log("PASS approved retention configuration, expiry denial and scoped contact erasure");
 } finally {
-  await Promise.allSettled([outside.end(), staff.end(), crmService.end(), binderPool.end(), writerPool.end(), gatewayPool.end(), db.end()]);
+  await Promise.allSettled([outside.end(), staff.end(), retention.end(), crmService.end(), binderPool.end(), writerPool.end(), gatewayPool.end(), db.end()]);
 }

@@ -91,6 +91,39 @@ BEGIN
 END
 $fn$;
 
+-- A fixed policy belongs to the approved acquisition contract version.
+CREATE TABLE crm.website_contact_retention (
+  contract_id uuid PRIMARY KEY REFERENCES crm.acquisition_contract_revisions(contract_id),
+  contact_days integer NOT NULL CHECK (contact_days BETWEEN 1 AND 3660)
+);
+ALTER TABLE crm.website_contact_retention ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crm.website_contact_retention FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON crm.website_contact_retention FROM PUBLIC,phoenix_website_intake,phoenix_canonical_app,phoenix_canonical_reader;
+DO $policy$
+BEGIN
+  EXECUTE format(
+    'CREATE POLICY website_contact_retention_owner ON crm.website_contact_retention TO %I USING (true) WITH CHECK (true)',
+    current_user
+  );
+END
+$policy$;
+CREATE FUNCTION crm.configure_website_contact_retention(p_contract uuid,p_days integer,p_policy_sha256 text)
+RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm
+AS $configure$
+BEGIN
+  IF (p_days BETWEEN 1 AND 3660 AND EXISTS (
+      SELECT 1 FROM crm.acquisition_contract_revisions c JOIN crm.lead_sources s USING(lead_source_id)
+      WHERE c.contract_id=p_contract AND c.source_system='phoenix-nova-website' AND s.source_channel='WEBSITE'
+        AND c.revoked_at IS NULL AND c.retention_policy_sha256=p_policy_sha256
+  )) IS NOT TRUE THEN RETURN false; END IF;
+  INSERT INTO crm.website_contact_retention(contract_id,contact_days) VALUES(p_contract,p_days)
+    ON CONFLICT (contract_id) DO NOTHING;
+  RETURN EXISTS (SELECT 1 FROM crm.website_contact_retention WHERE contract_id=p_contract AND contact_days=p_days);
+END
+$configure$;
+REVOKE ALL ON FUNCTION crm.configure_website_contact_retention(uuid,integer,text) FROM PUBLIC,phoenix_canonical_app;
+GRANT EXECUTE ON FUNCTION crm.configure_website_contact_retention(uuid,integer,text) TO phoenix_canonical_migrator;
+
 -- A contact envelope belongs to an existing CRM lead, not a Person or Family.
 CREATE TABLE crm.website_consultation_intake (
   request_id uuid PRIMARY KEY,
@@ -100,11 +133,17 @@ CREATE TABLE crm.website_consultation_intake (
   locale text NOT NULL CHECK (locale IN ('zh','en')),
   consent_version text NOT NULL CHECK (consent_version='website-consultation.v1'),
   -- The trusted receiver computes a keyed digest over the stable request fields.
-  payload_mac bytea NOT NULL CHECK (octet_length(payload_mac)=32),
+  payload_mac bytea CHECK (octet_length(payload_mac)=32),
   -- Encrypted by the trusted receiver. The website and database have no decrypt key.
   contact_envelope bytea CHECK (octet_length(contact_envelope) BETWEEN 32 AND 4096),
-  recorded_at timestamptz NOT NULL DEFAULT clock_timestamp()
+  recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  contact_expires_at timestamptz NOT NULL,
+  contact_erased_at timestamptz,
+  CHECK ((contact_erased_at IS NOT NULL)=(contact_envelope IS NULL)),
+  CHECK ((contact_erased_at IS NOT NULL)=(payload_mac IS NULL))
 );
+CREATE INDEX website_contact_expiration_idx ON crm.website_consultation_intake(contact_expires_at)
+  WHERE contact_envelope IS NOT NULL;
 ALTER TABLE crm.website_consultation_intake ENABLE ROW LEVEL SECURITY;
 ALTER TABLE crm.website_consultation_intake FORCE ROW LEVEL SECURITY;
 REVOKE ALL ON crm.website_consultation_intake FROM PUBLIC,phoenix_canonical_app,
@@ -131,6 +170,7 @@ AS $fn$
 DECLARE
   previous crm.website_consultation_intake%ROWTYPE;
   actual_lead uuid;
+  retention_days integer;
 BEGIN
   IF (crm.is_crm_service() AND auth.current_family_id() IS NULL
       AND pg_has_role(session_user,'phoenix_website_intake','MEMBER')
@@ -156,6 +196,7 @@ BEGIN
 
   SELECT * INTO previous FROM crm.website_consultation_intake WHERE request_id=p_request;
   IF FOUND THEN
+    IF previous.contact_erased_at IS NOT NULL OR previous.contact_expires_at<=clock_timestamp() THEN RETURN 'denied'; END IF;
     IF previous.acquisition_contract_id=p_contract AND previous.service_domain=p_domain
       AND previous.locale=p_locale AND previous.consent_version=p_consent_version
       AND previous.payload_mac=p_payload_mac THEN
@@ -163,11 +204,14 @@ BEGIN
     END IF;
     RETURN 'conflict';
   END IF;
+  SELECT contact_days INTO retention_days FROM crm.website_contact_retention WHERE contract_id=p_contract;
+  IF NOT FOUND THEN RETURN 'denied'; END IF;
   actual_lead := crm.create_lead_v2(p_lead,p_contract,NULL,NULL,NULL,NULL,p_event,p_attribution,p_request::text);
   IF actual_lead IS NULL THEN RETURN 'denied'; END IF;
   INSERT INTO crm.website_consultation_intake(
-    request_id,lead_id,acquisition_contract_id,service_domain,locale,consent_version,payload_mac,contact_envelope
-  ) VALUES (p_request,actual_lead,p_contract,p_domain,p_locale,p_consent_version,p_payload_mac,p_contact_envelope);
+    request_id,lead_id,acquisition_contract_id,service_domain,locale,consent_version,payload_mac,contact_envelope,contact_expires_at
+  ) VALUES (p_request,actual_lead,p_contract,p_domain,p_locale,p_consent_version,p_payload_mac,p_contact_envelope,
+    clock_timestamp()+make_interval(hours=>24*retention_days));
   RETURN 'persisted';
 END
 $fn$;
@@ -224,4 +268,29 @@ END
 $rate$;
 REVOKE ALL ON FUNCTION crm.admit_website_consultation(text) FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
 GRANT EXECUTE ON FUNCTION crm.admit_website_consultation(text) TO phoenix_website_intake;
+
+CREATE ROLE phoenix_website_contact_retention NOLOGIN NOINHERIT NOSUPERUSER
+  NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+GRANT USAGE ON SCHEMA crm TO phoenix_website_contact_retention;
+CREATE FUNCTION crm.erase_expired_website_contacts()
+RETURNS integer LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm
+AS $erase$
+DECLARE erased integer; cutoff timestamptz := clock_timestamp();
+BEGIN
+  IF NOT pg_has_role(session_user,'phoenix_website_contact_retention','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    OR pg_has_role(session_user,'phoenix_canonical_app','MEMBER') THEN RETURN 0; END IF;
+  WITH due AS (
+    SELECT request_id FROM crm.website_consultation_intake
+      WHERE contact_envelope IS NOT NULL AND contact_expires_at<=cutoff
+      ORDER BY contact_expires_at LIMIT 500 FOR UPDATE SKIP LOCKED
+  )
+  UPDATE crm.website_consultation_intake i
+    SET contact_envelope=NULL,payload_mac=NULL,contact_erased_at=cutoff FROM due WHERE i.request_id=due.request_id;
+  GET DIAGNOSTICS erased = ROW_COUNT;
+  RETURN erased;
+END
+$erase$;
+REVOKE ALL ON FUNCTION crm.erase_expired_website_contacts() FROM PUBLIC,phoenix_canonical_app;
+GRANT EXECUTE ON FUNCTION crm.erase_expired_website_contacts() TO phoenix_website_contact_retention;
 COMMIT;

@@ -117,7 +117,7 @@ BEGIN
   JOIN crm.website_consultation_staff_grants g
     ON g.principal_id=employee AND g.service_domain=i.service_domain AND g.grant_kind='ADVISER'
   WHERE l.lead_id=p_lead AND l.lead_status NOT IN ('MERGED','DISQUALIFIED','LOST')
-    AND i.contact_envelope IS NOT NULL
+    AND i.contact_envelope IS NOT NULL AND i.contact_expires_at>clock_timestamp()
     AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
     AND (l.assigned_principal_id=employee OR EXISTS (
       SELECT 1 FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
@@ -126,7 +126,8 @@ BEGIN
   FOR SHARE OF i,l,g;
   IF NOT FOUND THEN RETURN; END IF;
   -- Recheck after acquiring any contended locks.
-  IF auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee
+  IF item.contact_expires_at<=clock_timestamp()
+    OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee
     OR NOT EXISTS (
       SELECT 1 FROM crm.website_consultation_staff_grants g
       WHERE g.principal_id=employee AND g.service_domain=item.service_domain
@@ -184,6 +185,10 @@ BEGIN
   ) THEN RETURN NULL; END IF;
 
   IF p_action='ASSIGN' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM crm.website_consultation_intake i WHERE i.lead_id=p_lead
+        AND i.contact_envelope IS NOT NULL AND i.contact_expires_at>clock_timestamp()
+    ) THEN RETURN NULL; END IF;
     IF NOT EXISTS (
       SELECT 1 FROM crm.website_consultation_staff_grants g JOIN auth.principals p USING(principal_id)
       WHERE g.principal_id=p_assignee AND p.principal_kind='ADVISOR' AND p.person_id IS NOT NULL
@@ -252,6 +257,7 @@ BEGIN
       AND target.principal_kind='ADVISOR' AND target.status='ACTIVE'
     JOIN core.people person ON person.person_id=target.person_id
     WHERE lead.lead_id=p_lead AND lead.lead_status='NEW' AND lead.assigned_principal_id IS NULL
+      AND intake.contact_envelope IS NOT NULL AND intake.contact_expires_at>clock_timestamp()
       AND lead.contact_person_id IS NULL AND lead.family_id IS NULL
       AND dispatched.revoked_at IS NULL AND eligible.revoked_at IS NULL
       AND dispatched.valid_from<=clock_timestamp() AND dispatched.valid_until>clock_timestamp()
