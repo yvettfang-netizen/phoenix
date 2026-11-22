@@ -84,6 +84,36 @@ try{
   check(sql("SELECT has_function_privilege('phoenix_canonical_context_binder','auth.can_open_parent_view(uuid)','EXECUTE');\n")==='f','binder may not invoke Parent-view guard');
   check(sql("SET phoenix.academic_studio_candidate='isolated';\n\\i /opt/academic/001_identity_context.sql\n",true),'repeat candidate refused without duplicate install');
   check(sql("SELECT count(*) FROM canonical_migrations.applied;\n")==='37','ledger intact after repeat denial');
+  // Backup/restore drill stays entirely within the owned disposable cluster.
+  // Restore into an independent empty database; never overwrite Canonical dev.
+  const restoreDb='phoenix_canonical_a2_restore';
+  docker(['exec','-e','PGPASSFILE=/tmp/canonical-premerge.pgpass',id,
+    'pg_dump','-h','127.0.0.1','-U','phoenix_bootstrap','-d','phoenix_canonical_dev',
+    '-Fc','-f','/tmp/academic-a2.dump']);
+  docker(['exec','-e','PGPASSFILE=/tmp/canonical-premerge.pgpass',id,
+    'createdb','-h','127.0.0.1','-U','phoenix_bootstrap',restoreDb]);
+  docker(['exec','-e','PGPASSFILE=/tmp/canonical-premerge.pgpass',id,
+    'pg_restore','--exit-on-error','-h','127.0.0.1','-U','phoenix_bootstrap',
+    '-d',restoreDb,'/tmp/academic-a2.dump']);
+  const restoredSql=query=>docker(['exec','-i','-e','PGPASSFILE=/tmp/canonical-premerge.pgpass',
+    id,'psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-h','127.0.0.1',
+    '-U','phoenix_bootstrap','-d',restoreDb],query);
+  check(restoredSql("SELECT count(*) FROM canonical_migrations.applied;\n")==='37',
+    'A2 restore preserves formal 37-row Canonical ledger');
+  check(restoredSql("SELECT md5(string_agg(migration_name||sha256,',' ORDER BY migration_name)) FROM canonical_migrations.applied;\n")===ledger,
+    'A2 restore preserves Canonical ledger checksums');
+  check(restoredSql("SELECT relrowsecurity::text||':'||relforcerowsecurity::text FROM pg_class WHERE oid='learning.academy_staff_grants'::regclass;\n")==='true:true',
+    'A2 restored academy grants preserve FORCE RLS');
+  check(restoredSql("SELECT has_table_privilege('phoenix_canonical_app','learning.academy_staff_grants','SELECT');\n")==='f',
+    'A2 restored grants deny direct app reads');
+  check(restoredSql("SELECT md5(pg_get_functiondef('learning.can_read_sensitive(uuid,uuid,uuid)'::regprocedure));\n")===
+    sql("SELECT md5(pg_get_functiondef('learning.can_read_sensitive(uuid,uuid,uuid)'::regprocedure));\n"),
+    'A2 restored sensitive-read function matches source');
+  check(restoredSql("SELECT count(*) FROM pg_indexes WHERE schemaname='learning' AND indexname='academy_single_active_founder';\n")==='1',
+    'A2 restored Founder uniqueness index present');
+  check(sql("SELECT count(*) FROM canonical_migrations.applied;\n")==='37',
+    'A2 source database ledger intact after restore');
+  console.log('PASS PG'+version+' A2 isolated backup/restore with RLS, ACL, ledger and function parity');
   console.log(JSON.stringify({status:'PASS',postgres:version,candidate_sha256:digest,formal_ledger:37,fixtures:'synthetic only'}));
 }finally{
   if(id){
