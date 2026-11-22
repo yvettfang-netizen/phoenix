@@ -11,7 +11,7 @@ const version=process.argv[2];
 assert(['16','17'].includes(version),'PG16_OR_17_REQUIRED');
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../../..');
 const require=createRequire(path.join(root,'Phoenix Compass/education compass/server/package.json'));
-const {Client}=require('pg');
+const {Client,Pool}=require('pg');
 const candidatePath=path.join(root,'database/canonical/forward-candidates/academic-studio/001_identity_context.sql');
 const migrationPath=path.join(root,'database/canonical/migrations');
 const work=mkdtempSync(path.join(tmpdir(),'phoenix-academy-integrated-'));
@@ -337,6 +337,32 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
     'A2_POOL_REUSED_TEACHER_REQUIRES_FRESH_SCOPE');
   console.log('PASS PG'+version+' A2 same-backend pool-return and Parent→Student→Teacher isolation');
+  // Actual node-postgres Pool(max:1) release/reacquire on one backend.
+  // Return connection A with a cleared context, then independently borrow B.
+  const actualPool=new Pool({host:'127.0.0.1',port:db.port,
+    database:'phoenix_canonical_dev',user:'academy_a1_app',password:appPassword,
+    max:1,application_name:'academy-a2-real-pool-reuse'});
+  try {
+    const first=await actualPool.connect();
+    let firstPid;
+    try {
+      await first.query('SET ROLE phoenix_canonical_app');
+      firstPid=(await first.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+      assert.equal((await first.query('SELECT auth.current_principal_id() AS principal')).rows[0].principal,null);
+      await first.query('SELECT auth.clear_context()');
+    } finally {first.release();}
+    const second=await actualPool.connect();
+    try {
+      assert.equal((await second.query('SELECT pg_backend_pid() AS pid')).rows[0].pid,firstPid,
+        'A2_REAL_POOL_REBORROW_USES_SAME_BACKEND');
+      assert.equal((await second.query('SELECT auth.current_principal_id() AS principal')).rows[0].principal,null,
+        'A2_REAL_POOL_REBORROW_NO_PRIOR_PRINCIPAL');
+      assert.equal((await second.query(
+        'SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+        'A2_REAL_POOL_REBORROW_CANNOT_READ_PROTECTED_CARD');
+    } finally {second.release();}
+  } finally {await actualPool.end();}
+  console.log('PASS PG'+version+' actual node-postgres Pool(max:1) release/reborrow isolates authorization');
   // A2 independent backend connection must not inherit the teacher's bound
   // STAFF context or see the same protected record on pool reuse.
   const unboundApp=await connect(db,'academy_a1_app',appPassword);
