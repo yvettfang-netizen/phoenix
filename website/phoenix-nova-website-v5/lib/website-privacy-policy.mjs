@@ -8,7 +8,8 @@ export function websitePrivacyPolicy(env) {
 
 /** @param {unknown} text */
 function policyParagraphs(text) {
-  if (typeof text !== "string" || text.length > 20000 || text.includes("\0")) return null;
+  if (typeof text !== "string" || text.length > 20000 || text.includes("\0") ||
+      /【[^】\n]+】|\[[^\]\n]+\]/.test(text)) return null;
   const paragraphs = text.trim().split(/\r?\n\s*\r?\n/).map(paragraph => paragraph.trim()).filter(Boolean);
   return paragraphs.length > 0 && paragraphs.length <= 60 ? paragraphs : null;
 }

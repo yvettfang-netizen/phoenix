@@ -56,6 +56,8 @@ test("rejects disabled intake, foreign origins, absent consent and unexpected pe
     [request(), {}, 503],
     [request(), { ...env, WEBSITE_CONSULTATION_PRIVACY_EN_URL: undefined }, 503],
     [request(), { ...env, WEBSITE_PRIVACY_POLICY_EN: "" }, 503],
+    [request(), { ...env, WEBSITE_PRIVACY_POLICY_EN: "Contact [privacy contact]." }, 503],
+    [request(), { ...env, WEBSITE_PRIVACY_POLICY_ZH: "请联系【隐私联系渠道】。" }, 503],
     [request(), { ...env, WEBSITE_PRIVACY_APPROVED: undefined }, 503],
     [request(), { ...env, WEBSITE_PRIVACY_VERSION: "website-consultation.v2" }, 503],
     [request(), { ...env, WEBSITE_CONSULTATION_PRIVACY_ZH_URL: "https://elsewhere.example/zh/privacy" }, 503],
