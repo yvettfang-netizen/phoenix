@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createRequire} from 'node:module';
+import {withCanonicalAcademyContext} from '../../forward-candidates/academic-studio/runtime/safe-context-pool.mjs';
 
 const version=process.argv[2];
 assert(['16','17'].includes(version),'PG16_OR_17_REQUIRED');
@@ -363,6 +364,71 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
     } finally {second.release();}
   } finally {await actualPool.end();}
   console.log('PASS PG'+version+' actual node-postgres Pool(max:1) release/reborrow isolates authorization');
+
+  // A2-POOL-01 adversarial test: intentionally return a live, context-bound
+  // backend WITHOUT auth.clear_context(). Safe checkout must erase the identity
+  // even when the previous borrower violated the normal cleanup discipline.
+  const dirtyPool=new Pool({host:'127.0.0.1',port:db.port,
+    database:'phoenix_canonical_dev',user:'academy_a1_app',password:appPassword,
+    max:1,application_name:'academy-a2-dirty-pool-negative'});
+  try {
+    const dirty=await dirtyPool.connect();
+    let dirtyBackendPid;
+    try {
+      await dirty.query('SET ROLE phoenix_canonical_app');
+      dirtyBackendPid=(await dirty.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+      const ticket=await binder.query(
+        'SELECT auth.issue_context_ticket($1::uuid,$2::uuid,$3::uuid,$4::text,$5::timestamptz,$6::uuid,$7::uuid) AS id',
+        [id(903),id(3),null,'STAFF',new Date(Date.now()+45000),randomUUID(),id(903)]);
+      await dirty.query('SELECT auth.redeem_context_ticket($1::uuid,$2::uuid)',
+        [ticket.rows[0].id,id(903)]);
+      assert.equal((await dirty.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',
+        [id(3206)])).rows[0].n,1,'A2_DIRTY_BACKEND_REALLY_HELD_A_LIVE_STAFF_CONTEXT');
+    } finally {
+      dirty.release(); // DELIBERATELY violates contract; red-team fixture
+    }
+    await withCanonicalAcademyContext(dirtyPool,async checked=>{
+      assert.equal((await checked.query('SELECT pg_backend_pid() AS pid')).rows[0].pid,dirtyBackendPid,
+        'A2_SAFE_CHECKOUT_SAME_DIRTY_PHYSICAL_BACKEND');
+      assert.equal((await checked.query('SELECT auth.current_principal_id() AS id')).rows[0].id,null,
+        'A2_SAFE_CHECKOUT_ERASES_DIRTY_STAFF_PRINCIPAL');
+      assert.equal((await checked.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',
+        [id(3206)])).rows[0].n,0,'A2_SAFE_CHECKOUT_DENIES_STALE_STAFF_READ');
+      const ticket=await binder.query(
+        'SELECT auth.issue_context_ticket($1::uuid,$2::uuid,$3::uuid,$4::text,$5::timestamptz,$6::uuid,$7::uuid) AS id',
+        [id(901),id(1),id(100),'FAMILY',new Date(Date.now()+45000),randomUUID(),id(901)]);
+      await checked.query('SELECT auth.redeem_context_ticket($1::uuid,$2::uuid)',
+        [ticket.rows[0].id,id(901)]);
+      assert.equal((await checked.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',
+        [id(3206)])).rows[0].n,1,'A2_SAFE_CHECKOUT_NEW_PARENT_CONTEXT_EXACT_SCOPE');
+      // Caller omits explicit clear; wrapper must clear at release.
+    });
+    await withCanonicalAcademyContext(dirtyPool,async checked=>{
+      assert.equal((await checked.query('SELECT auth.current_principal_id() AS id')).rows[0].id,null,
+        'A2_SAFE_CHECKIN_CLEARED_PARENT_PRINCIPAL');
+      assert.equal((await checked.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',
+        [id(3206)])).rows[0].n,0,'A2_SAFE_CHECKIN_DENIES_PARENT_ON_NEXT_BORROW');
+    });
+    // A backend left in an aborted transaction must never return to the pool.
+    await assert.rejects(withCanonicalAcademyContext(dirtyPool,async checked=>{
+      await checked.query('BEGIN');
+      const ticket=await binder.query(
+        'SELECT auth.issue_context_ticket($1::uuid,$2::uuid,$3::uuid,$4::text,$5::timestamptz,$6::uuid,$7::uuid) AS id',
+        [id(903),id(3),null,'STAFF',new Date(Date.now()+45000),randomUUID(),id(903)]);
+      await checked.query('SELECT auth.redeem_context_ticket($1::uuid,$2::uuid)',
+        [ticket.rows[0].id,id(903)]);
+      assert.equal((await checked.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',
+        [id(3206)])).rows[0].n,1);
+      await checked.query('SELECT 1/0'); // PostgreSQL aborts this transaction.
+    }),e=>e.code==='22012','A2_ABORTED_TRANSACTION_TEST_MUST_RAISE');
+    await withCanonicalAcademyContext(dirtyPool,async checked=>{
+      assert.equal((await checked.query('SELECT auth.current_principal_id() AS id')).rows[0].id,null,
+        'A2_ABORTED_TX_POOL_REBORROW_UNBOUND');
+      assert.equal((await checked.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',
+        [id(3206)])).rows[0].n,0,'A2_ABORTED_TX_POOL_REBORROW_DENIED');
+    });
+    console.log('PASS PG'+version+' A2 dirty checkout, safe release, and aborted-transaction connection discard');
+  } finally {await dirtyPool.end();}
   // A2 independent backend connection must not inherit the teacher's bound
   // STAFF context or see the same protected record on pool reuse.
   const unboundApp=await connect(db,'academy_a1_app',appPassword);
