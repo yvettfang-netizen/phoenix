@@ -50,6 +50,20 @@ try{
   check(sql("SELECT count(*) FROM canonical_migrations.applied;\n")==='37','37-row formal ledger');
   check(sql("SELECT md5(pg_get_functiondef('learning.can_read_sensitive(uuid,uuid,uuid)'::regprocedure));\n")==='4b65b734551738529b6cbc3935217bab',
     'formal S1 function matches exclusive pre-0045/A0 baseline');
+  // A2 overlap regression: PR #93 A1 independently creates the same grant table.
+  // If A1 was installed first, Package A must refuse BEFORE any context/ACL/ledger changes.
+  sql("CREATE TABLE learning.academy_staff_grants (grant_id uuid PRIMARY KEY);\n");
+  check(sql("SET phoenix.academic_studio_candidate='isolated';\n\\i /opt/academic/001_identity_context.sql\n",true),
+    'pre-existing A1 academy grants block Package A installation');
+  check(sql("SELECT to_regclass('learning.academy_staff_grants') IS NOT NULL;\n")==='t',
+    'A1 collision refusal retains existing grant table');
+  check(sql("SELECT count(*) FROM canonical_migrations.applied;\n")==='37',
+    'A1 collision refusal preserves canonical migration ledger');
+  check(sql("SELECT md5(string_agg(migration_name||sha256,',' ORDER BY migration_name)) FROM canonical_migrations.applied;\n")===ledger,
+    'A1 collision refusal preserves historical ledger checksums');
+  check(sql("SELECT md5(pg_get_functiondef('learning.can_read_sensitive(uuid,uuid,uuid)'::regprocedure));\n")==='4b65b734551738529b6cbc3935217bab',
+    'A1 collision refusal leaves S1 baseline function untouched');
+  sql("DROP TABLE learning.academy_staff_grants;\n");
   check(sql("\\i /opt/academic/001_identity_context.sql\n",true),'candidate refuses missing isolated flag');
   check(sql("SELECT to_regclass('learning.academy_staff_grants') IS NULL;\n")==='t','refusal has no schema changes');
   sql("SET phoenix.academic_studio_candidate='isolated';\n\\i /opt/academic/001_identity_context.sql\n");
