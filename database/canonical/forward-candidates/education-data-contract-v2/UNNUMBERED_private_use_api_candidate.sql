@@ -96,12 +96,19 @@ BEGIN
 
  -- Pending-only, per-project use. Repeated authorized calls return one stable
  -- reference but *never* reuse approval of another project.
- INSERT INTO service.education_document_uses(
-   use_id,service_project_id,version_id,family_id,subject_person_id,
-   purpose_code,requested_by_principal_id
- ) VALUES(p_use_id,p_project_id,p_version_id,v_family,v_subject,p_purpose,v_principal)
- ON CONFLICT (service_project_id,version_id,purpose_code) DO NOTHING
- RETURNING use_id INTO v_existing;
+ BEGIN
+   INSERT INTO service.education_document_uses(
+     use_id,service_project_id,version_id,family_id,subject_person_id,
+     purpose_code,requested_by_principal_id
+   ) VALUES(p_use_id,p_project_id,p_version_id,v_family,v_subject,p_purpose,v_principal)
+   ON CONFLICT (service_project_id,version_id,purpose_code) DO NOTHING
+   RETURNING use_id INTO v_existing;
+ EXCEPTION WHEN unique_violation THEN
+   -- A reused request UUID for a different project must not leak the other row
+   -- through raw unique-constraint details.
+   PERFORM audit.record_write_decision('REQUEST','EDC_PROJECT_DOCUMENT_USE',p_project_id,false,'EDC_SCOPE_DENIED');
+   RETURN jsonb_build_object('status','DENY');
+ END;
 
  IF v_existing IS NULL THEN
    SELECT use_id INTO v_existing
