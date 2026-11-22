@@ -55,6 +55,7 @@ export async function runApiAuthorization({port,sql,version}){
   // Student subject uses current formal FAMILY self route, not unmerged STUDENT channel.
   await bind(1,201,100,'FAMILY');
   assert.equal((await app.query('SELECT pg_backend_pid() AS pid')).rows[0].pid,pid);
+  assert.equal((await call(730,303)).status,'DENY','reused request UUID from another project fails closed');
   assert.equal((await call(760,303)).status,'PENDING_REVIEW','self document request creates a pending project link');
   const again=await call(761,303);
   assert.equal(again.status,'PENDING_REVIEW','authorized request replay');
