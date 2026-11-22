@@ -5,6 +5,7 @@ import {mkdtempSync,writeFileSync,readFileSync,readdirSync,rmSync} from 'node:fs
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {runApiAuthorization} from './api-auth.mjs';
 
 const version=process.argv[2];assert(['16','17'].includes(version));
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../../..');
@@ -28,8 +29,10 @@ function query(s){return sql(s).stdout.trim();}
 try{
  const env=path.join(work,'postgres.env');
  writeFileSync(env,'POSTGRES_DB=phoenix_canonical_dev\nPOSTGRES_USER=phoenix_bootstrap\nPOSTGRES_PASSWORD='+randomBytes(32).toString('hex')+'\nPOSTGRES_INITDB_ARGS=--auth-local=scram-sha-256 --auth-host=scram-sha-256\n',{mode:0o600});
- container=docker(['run','-d','--name','edc-v2-'+version+'-'+nonce,'--label','phoenix.edc-v2='+nonce,'--env-file',env,image]).stdout.trim();
+ container=docker(['run','-d','--name','edc-v2-'+version+'-'+nonce,'--label','phoenix.edc-v2='+nonce,'-p','127.0.0.1::5432','--env-file',env,image]).stdout.trim();
  assert.match(container,/^[a-f0-9]{64}$/);
+ const port=Number(docker(['port',container,'5432/tcp']).stdout.trim().split(':').at(-1));
+ assert(port>0&&port<=65535,'PG_LOOPBACK_PORT_REQUIRED');
  docker(['exec',container,'bash','-c','umask 077; printf "127.0.0.1:5432:*:phoenix_bootstrap:%s\\n" "$POSTGRES_PASSWORD" > /tmp/edc.pgpass']);
  let ready=false;
  for(let i=0;i<60;i++){
@@ -55,6 +58,17 @@ try{
  console.log('PASS PG'+version+' formal 0001-0037 fresh, candidate installed, repeat refused; ledger 37');
  sql(fixture);
  console.log('PASS PG'+version+' synthetic D01/D02/D03/D06/A04/A05 + FORCE RLS/ACL negatives');
+ const sourceDir=path.join(root,'database/canonical/forward-candidates/education-data-contract-v2');
+ const apiCandidate=readFileSync(path.join(sourceDir,'UNNUMBERED_private_use_api_candidate.sql'),'utf8');
+ const apiRollback=readFileSync(path.join(sourceDir,'rollback_UNNUMBERED_private_use_api_candidate.sql'),'utf8');
+ const actors=readFileSync(path.join(root,'database/canonical/verification/education-data-contract-v2/api_actors_synthetic.sql'),'utf8');
+ sql(apiCandidate);
+ const apiRepeat=sql(apiCandidate,false);
+ assert.notEqual(apiRepeat.status,0,'API_REPEAT_MUST_REFUSE');
+ sql(actors);
+ await runApiAuthorization({port,sql:query,version});
+ console.log('PASS PG'+version+' scoped API; separate app/binder LOGIN; live revocation; no direct table rights');
+ sql(apiRollback);
  sql(rollback);
  assert.equal(query("SELECT to_regclass('service.education_document_uses') IS NULL"),'t');
  assert.equal(query("SELECT to_regclass('learning.askwise_evidence_inbox') IS NULL"),'t');
