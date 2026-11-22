@@ -78,3 +78,15 @@ PostgreSQL、D1、BFF、Canonical、Sites、Staging、权限、安全和回滚�
 ## 7. 安全声明
 
 不合并未经批准 PR，不部署生产，不执行生产迁移，不改 DNS，不绑定正式域名，不开放索引，不导入真实客户或医疗资料，不把本报告或 Draft PR 写成 Founder 生产批准。
+
+
+## 8. 线程核验补充（Luna 只读盘点）
+
+- `01a1a282-4bad-7461-b944-1c999762643f` Wealth V3.0 工程基线与 `01a0344c-9c8e-7010-88db-3ce339e5e36c` Wealth Compass V1 handoff 仍可能含 #43 未迁移的独有文件/结论，保留并待逐项文件核对。
+- `01a00604-73c5-75f1-b612-d510f54385e0` Website V4.1 明确是 Candidate；`01a0062c-f4e8-7622-b5dc-ae4a7943915f` Website V3 可能含独有架构文件；两者均不归档。
+- `01a04e9b-dea6-7283-bd14-cbeee2351192` Phoenix 仓库盘点、`01a09551-b9c9-7410-a924-be5b742a0d5c` Meta Final Freeze Drift Audit、`01a121db-3432-7be0-b529-2eb2405c23ec` Jimson Desktop/controlled staging 记录，分别是总索引、治理和审批/回滚证据，保留。
+- 疑似重复组：PR #14 监控窗口 `6aa5630d-d690-83e8-b17b-8606175922d5` 与 `6aa256db-01a4-83ea-83f6-2f17f65b61ff`；Founder Gate/release queue `6aa9f959-6d2c-83ea-971b-3ca15dc427c1` 及旧审核窗口。它们含唯一 SHA/HOLD/Review，尚未满足归档条件。
+- ChatGPT “核对 GitHub 进度”记录 PR #89 Draft、六组 CI 通过但 Jimson 独立审查和非生产只读回执待补；“核对 Sites 接入条件”缺隧道 ID、客户端回执、HTTPS 证书链；“整理 Phoenix Nova 状态”要求锁定部署包/构建 SHA/部署时间/回滚版本。三者保留。
+- ChatGPT “Phoenix 数据库18点验收”记录 PR #61 HEAD `59d744d5da03eddc2cc3ca75a346bce4abea938d`，CI 通过但实际数据库部署范围和 Jimson 独立验收未证实；保留。
+- 因部分 ChatGPT 正文、附件或截图未完整读取，相关窗口统一标记“待复核/权限疑问”，不得仅凭标题归档。
+
