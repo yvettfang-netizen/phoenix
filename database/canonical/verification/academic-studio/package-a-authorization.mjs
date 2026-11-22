@@ -265,6 +265,32 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'STAFF');
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
     'ASSIGNED_TEACHER_WITH_EXACT_SUBJECT_CONSENT_CAN_READ');
+  // A2 independent backend connection must not inherit the teacher's bound
+  // STAFF context or see the same protected record on pool reuse.
+  const unboundApp=await connect(db,'academy_a1_app',appPassword);
+  try {
+    await unboundApp.query('SET ROLE phoenix_canonical_app');
+    assert.equal((await unboundApp.query(
+      'SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+      'A2_SEPARATE_LOGIN_CONNECTION_MUST_NOT_INHERIT_STAFF_CONTEXT');
+    assert.equal((await unboundApp.query(
+      'SELECT auth.current_principal_id() AS principal')).rows[0].principal,null,
+      'A2_NEW_BACKEND_PRINCIPAL_UNBOUND');
+  } finally {
+    await unboundApp.end();
+  }
+  // An unrelated family cannot be used to mint this actor's FAMILY ticket.
+  // Even a valid STAFF identity has no implicit membership in another family.
+  sql(db,"INSERT INTO core.families(family_id,display_name) VALUES('"+id(101)+"','Synthetic Isolated Family');");
+  await assert.rejects(
+    binder.query(
+      'SELECT auth.issue_context_ticket($1::uuid,$2::uuid,$3::uuid,$4::text,$5::timestamptz,$6::uuid,$7::uuid)',
+      [id(903),id(3),id(101),'FAMILY',new Date(Date.now()+45000),randomUUID(),id(903)]
+    ),
+    'A2_CROSS_FAMILY_TICKET_MUST_BE_DENIED');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
+    'A2_REJECTED_CROSS_FAMILY_TICKET_MUST_NOT_REVOKE_VALID_STAFF_SCOPE');
+  console.log('PASS PG'+version+' A2 fresh-backend isolation and cross-family FAMILY ticket refusal');
   sql(db,"UPDATE learning.teacher_assignment SET status='REVOKED',revoked_at=clock_timestamp() WHERE assignment_id='"+id(3203)+"';");
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
     'REVOKED_TEACHER_ASSIGNMENT_DENIES_NEXT_STAFF_READ');
