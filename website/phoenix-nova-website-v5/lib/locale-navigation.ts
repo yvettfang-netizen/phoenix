@@ -24,6 +24,6 @@ export function getCurrentLocale(path: string): SiteLocale | null {
 /** These localized routes share the same document language on server and client. */
 export function getDocumentLocale(pathname: string): SiteLocale | null {
   if (pathname === "/zh" || pathname === "/en") return pathname === "/zh" ? "zh" : "en";
-  const match = /^\/(zh|en)\/(?:consultation|health|compass\/health|insights)(?:\/|$)/.exec(pathname);
+  const match = /^\/(zh|en)\/(?:consultation|privacy|health|compass\/health|insights)(?:\/|$)/.exec(pathname);
   return match ? match[1] as SiteLocale : null;
 }

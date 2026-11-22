@@ -15,6 +15,10 @@ const config = {
   WEBSITE_CONSULTATION_PUBLIC_ORIGIN: origin,
   WEBSITE_CONSULTATION_PRIVACY_ZH_URL: origin + "/zh/privacy",
   WEBSITE_CONSULTATION_PRIVACY_EN_URL: origin + "/en/privacy",
+  WEBSITE_PRIVACY_APPROVED: "true",
+  WEBSITE_PRIVACY_VERSION: "website-consultation.v1",
+  WEBSITE_PRIVACY_POLICY_ZH: "合成验收政策，非正式文案。",
+  WEBSITE_PRIVACY_POLICY_EN: "Synthetic test policy, not approved publication copy.",
   WEBSITE_CONSULTATION_RECEIVER_URL: endpoint,
   WEBSITE_CONSULTATION_RECEIVER_TOKEN: token,
 };

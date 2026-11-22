@@ -61,6 +61,10 @@ export async function verifyBrowserConsultation({ browser, config, receiver }) {
         const policy = page.getByRole("link", { name: zh ? "阅读隐私政策" : "Read the privacy policy" });
         assert.equal(await policy.getAttribute("href"), config[zh ? "WEBSITE_CONSULTATION_PRIVACY_ZH_URL" : "WEBSITE_CONSULTATION_PRIVACY_EN_URL"]);
         assert.equal(await page.locator("html").getAttribute("lang"), zh ? "zh-Hans" : "en");
+        await Promise.all([page.waitForURL(origin + "/" + locale + "/privacy"), policy.click()]);
+        await page.getByText(config[zh ? "WEBSITE_PRIVACY_POLICY_ZH" : "WEBSITE_PRIVACY_POLICY_EN"], { exact: true }).waitFor();
+        assert.equal(await page.locator("html").getAttribute("lang"), zh ? "zh-Hans" : "en");
+        await page.goto(origin + "/" + locale + "/consultation");
         await page.getByLabel(zh ? "咨询方向" : "Service area").selectOption("wealth");
         const email = page.getByRole("textbox", { name: zh ? "电子邮箱" : "Email address", exact: true });
         await email.fill("browser-" + locale + "@example.test");
