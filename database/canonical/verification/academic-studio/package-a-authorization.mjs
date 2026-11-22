@@ -312,6 +312,31 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   assert.equal((await app.query('SELECT auth.current_channel() AS channel')).rows[0].channel,'STAFF');
   assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
     'ASSIGNED_TEACHER_WITH_EXACT_SUBJECT_CONSENT_CAN_READ');
+  // A2 physical backend reuse: the same application connection is returned
+  // to the logical pool after clearing its bound context. Verify no previous
+  // teacher access survives, then rebind Parent, Student, Teacher in sequence.
+  const reusedBackendPid=(await app.query('SELECT pg_backend_pid() AS pid')).rows[0].pid;
+  await app.query('SELECT auth.clear_context()');
+  assert.equal((await app.query('SELECT auth.current_principal_id() AS principal')).rows[0].principal,null,
+    'A2_POOL_RETURN_CLEARS_PRINCIPAL');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'A2_POOL_RETURN_DENIES_PREVIOUS_STAFF_RECORD');
+  await bind(id(901),id(1),id(100),'FAMILY');
+  assert.equal((await app.query('SELECT pg_backend_pid() AS pid')).rows[0].pid,reusedBackendPid,
+    'A2_POOL_REUSE_SAME_PHYSICAL_BACKEND_FOR_PARENT');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
+    'A2_POOL_REUSED_PARENT_ONLY_SEES_AUTHORIZED_CHILD');
+  await bind(id(903),id(3),null,'STUDENT');
+  assert.equal((await app.query('SELECT pg_backend_pid() AS pid')).rows[0].pid,reusedBackendPid,
+    'A2_POOL_REUSE_SAME_PHYSICAL_BACKEND_FOR_STUDENT');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,0,
+    'A2_POOL_REUSED_STUDENT_DENIED_OTHER_SUBJECT');
+  await bind(id(903),id(3),null,'STAFF');
+  assert.equal((await app.query('SELECT pg_backend_pid() AS pid')).rows[0].pid,reusedBackendPid,
+    'A2_POOL_REUSE_SAME_PHYSICAL_BACKEND_FOR_TEACHER');
+  assert.equal((await app.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',[id(3206)])).rows[0].n,1,
+    'A2_POOL_REUSED_TEACHER_REQUIRES_FRESH_SCOPE');
+  console.log('PASS PG'+version+' A2 same-backend pool-return and Parent→Student→Teacher isolation');
   // A2 independent backend connection must not inherit the teacher's bound
   // STAFF context or see the same protected record on pool reuse.
   const unboundApp=await connect(db,'academy_a1_app',appPassword);
