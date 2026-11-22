@@ -89,7 +89,9 @@ try{
   const restoreDb='phoenix_canonical_a2_restore';
   docker(['exec','-e','PGPASSFILE=/tmp/canonical-premerge.pgpass',id,
     'pg_dump','-h','127.0.0.1','-U','phoenix_bootstrap','-d','phoenix_canonical_dev',
-    '-Fc','-f','/tmp/academic-a2.dump']);
+    '-Fc','--exclude-table-data=auth.session_contexts',
+    '--exclude-table-data=auth.context_exchange_tickets',
+    '-f','/tmp/academic-a2.dump']);
   docker(['exec','-e','PGPASSFILE=/tmp/canonical-premerge.pgpass',id,
     'createdb','-h','127.0.0.1','-U','phoenix_bootstrap',restoreDb]);
   docker(['exec','-e','PGPASSFILE=/tmp/canonical-premerge.pgpass',id,
@@ -111,6 +113,22 @@ try{
     'A2 restored sensitive-read function matches source');
   check(restoredSql("SELECT count(*) FROM pg_indexes WHERE schemaname='learning' AND indexname='academy_single_active_founder';\n")==='1',
     'A2 restored Founder uniqueness index present');
+  // Restored security ownership, explicit private-function ACLs and
+  // application-denied behavior are part of the recovery gate.
+  const ownerSql="SELECT pg_get_userbyid(relowner) FROM pg_class WHERE oid='learning.academy_staff_grants'::regclass;\n";
+  check(restoredSql(ownerSql)===sql(ownerSql),'A2 restored academy grant table owner matches source');
+  const auditSql="SELECT count(*) FROM audit.access_events;\n";
+  check(restoredSql(auditSql)===sql(auditSql),'A2 restored audit event count matches source');
+  check(restoredSql("SELECT count(*) FROM auth.session_contexts;\n")==='0',
+    'A2 restore excludes stale backend-bound session contexts');
+  check(restoredSql("SELECT count(*) FROM auth.context_exchange_tickets;\n")==='0',
+    'A2 restore excludes single-use authentication tickets');
+  check(restoredSql("SELECT has_function_privilege('phoenix_canonical_reader','learning.grant_academy_staff_capability(uuid,uuid,text,timestamptz,text)','EXECUTE');\n")==='f',
+    'A2 restored reader cannot issue Academy Admin/Founder grants');
+  check(restoredSql("SELECT has_function_privilege('phoenix_canonical_app','learning.has_academy_capability(text)','EXECUTE');\n")==='f',
+    'A2 restored app cannot invoke private capability helper');
+  check(restoredSql("SET ROLE phoenix_canonical_app;\nSELECT auth.current_principal_id() IS NULL;\nRESET ROLE;\n")==='t',
+    'A2 restored unbound application Principal remains null');
   check(sql("SELECT count(*) FROM canonical_migrations.applied;\n")==='37',
     'A2 source database ledger intact after restore');
   console.log('PASS PG'+version+' A2 isolated backup/restore with RLS, ACL, ledger and function parity');
