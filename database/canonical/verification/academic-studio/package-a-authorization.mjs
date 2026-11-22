@@ -206,6 +206,38 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
   assert.equal(one(db,"SELECT count(*) FROM learning.academy_staff_grants WHERE status='ACTIVE'"),'2');
   console.log('PASS PG'+version+' dedicated SERVICE bootstrap, Founder/Admin grant, duplicate and invalid reason refusal');
 
+  // A2 true competing Founder-authorised Admin grants on two independent LOGIN
+  // connections. The partial unique index must permit exactly one live grant.
+  const competingFounder=await connect(db,'academy_a1_app',appPassword);
+  try {
+    await competingFounder.query('SET ROLE phoenix_canonical_app');
+    const competingTicket=await binder.query(
+      'SELECT auth.issue_context_ticket($1::uuid,$2::uuid,$3::uuid,$4::text,$5::timestamptz,$6::uuid,$7::uuid) AS id',
+      [id(901),id(1),null,'STAFF',new Date(Date.now()+45000),randomUUID(),id(901)]);
+    await competingFounder.query('SELECT auth.redeem_context_ticket($1::uuid,$2::uuid)',
+      [competingTicket.rows[0].id,id(901)]);
+    const grantQuery='SELECT learning.grant_academy_staff_capability($1::uuid,$2::uuid,$3::text,$4::timestamptz,$5::text) AS ok';
+    const responses=await Promise.allSettled([
+      app.query(grantQuery,[id(2190),id(903),'ACADEMY_ADMIN',null,'CONCURRENT_A']),
+      competingFounder.query(grantQuery,[id(2191),id(903),'ACADEMY_ADMIN',null,'CONCURRENT_B'])
+    ]);
+    const outcomes=responses.map(r=>{
+      if(r.status==='fulfilled')return r.value.rows[0].ok===true?'GRANTED':'DENIED';
+      if(r.reason?.code==='23505')return 'UNIQUE_DENIED';
+      throw r.reason;
+    });
+    assert.equal(outcomes.filter(x=>x==='GRANTED').length,1,
+      'A2_CONCURRENT_ADMIN_GRANTS_MUST_HAVE_EXACTLY_ONE_WINNER');
+    assert.equal(one(db,"SELECT count(*) FROM learning.academy_staff_grants WHERE principal_id='"+id(903)+"' AND capability_code='ACADEMY_ADMIN' AND status='ACTIVE'"),'1',
+      'A2_CONCURRENT_ADMIN_GRANT_UNIQUENESS_ENFORCED_IN_DB');
+    const winner=outcomes[0]==='GRANTED'?id(2190):id(2191);
+    assert.equal(await revoke(winner,'CONCURRENT_FIXTURE_CLEANUP'),true,
+      'A2_CONCURRENT_WINNER_CAN_BE_REVOKED');
+    console.log('PASS PG'+version+' competing Founder Admin grants single-winner and revocation');
+  } finally {
+    await competingFounder.end();
+  }
+
   await bind(id(901),id(1),null,'STAFF');
   assert.equal(await grant(id(2110),id(903),'ACADEMY_FOUNDER',null,'FOUNDER_FORGED'),false);
   assert.equal(await grant(id(2111),id(903),'ACADEMY_ADMIN',null,'FOUNDER_ADMIN'),true);
