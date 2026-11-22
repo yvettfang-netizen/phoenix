@@ -54,9 +54,27 @@ const extraLegacy = [
   'Phoenix Compass/education compass/ops/server/sync-backups-to-cos.sh',
   'Phoenix Compass/education compass/ops/server/setup-postgres-tls.sh',
   'Phoenix Compass/education compass/server/src/store/file-store.ts',
-  'Phoenix Compass/education compass/server/scripts/migrate.js'
+  'Phoenix Compass/education compass/server/scripts/migrate.js',
+  'Phoenix Compass/education compass/ops/server/phoenix_uat_start.sh',
+  'Phoenix Compass/education compass/ops/server/phoenix_uat_agent_worker_start.sh',
+  'Phoenix Compass/education compass/ops/server/update-education-compass.sh',
+  'Phoenix Compass/education compass/ops/server/set-uat-deepseek-key.sh',
+  'Phoenix Compass/education compass/ops/server/set-uat-wechat-secret.sh',
+  'Phoenix Compass/education compass/ops/server/set-virtual-payment.sh',
+  'Phoenix Compass/education compass/ops/server/health-check.sh',
+  'Phoenix Compass/education compass/ops/systemd/education-compass.service',
+  'Phoenix Compass/education compass/ops/systemd/education-compass-agent-worker.service'
 ];
 for (const path of extraLegacy) assert(!existsSync(join(root,path)),'Retired Education database operation reappeared: '+path);
+const publicMonitor=join(root,'ops/monitoring/public-api-health-check.sh');
+assert(existsSync(publicMonitor),'Public Phoenix API monitor missing after legacy health-check removal');
+const publicMonitorSource=readFileSync(publicMonitor,'utf8');
+assert(publicMonitorSource.includes('https://api.phoenixnova.com.cn/health'),'Public API health endpoint is not monitored');
+assert(!publicMonitorSource.includes('phoenix_uat')&&!publicMonitorSource.includes('3010/health'),'Public API monitor references retired Education UAT');
+const feishuAlertSource=readFileSync(join(root,'Phoenix Compass/education compass/ops/server/set-feishu-alert.sh'),'utf8');
+assert(feishuAlertSource.includes('/home/ubuntu/public-api-health-check.sh'),'2-minute public API monitor cron was removed');
+const educationEnv=readFileSync(join(root,'Phoenix Compass/education compass/server/.env.example'),'utf8');
+assert(!educationEnv.includes('DATABASE_URL='),'Retired standalone Education DATABASE_URL remains in env example');
 const site=JSON.parse(readFileSync(join(root,'website/phoenix-nova-website-v5/.openai/hosting.json'),'utf8'));
 assert(site.d1===null,'V5 D1 binding is not retired');
-console.log('PASS — Canonical-only database assets, non-Canonical SQL absent, D1/SQLite retired');
+console.log('PASS — Canonical-only database assets, legacy Education DB runtime retired, non-Canonical SQL absent, D1/SQLite retired');
