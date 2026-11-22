@@ -199,17 +199,29 @@ async function assertCrossBorderProcess(page, route) {
   const order = await page.evaluate(() => {
     const services = document.querySelector("#services");
     const crossBorder = document.querySelector("#cross-border-process");
+    const compass = document.querySelector("#health-compass");
+    const brandOrigin = document.querySelector("#brand-origin");
     const why = document.querySelector("#why-phoenix");
     const providers = document.querySelector("#providers");
+    const insurance = document.querySelector("#insurance-verification");
+    const specialty = document.querySelector("#specialty-planning");
     return {
-      whyBeforeServices: Boolean(why && services && (why.compareDocumentPosition(services) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      servicesBeforeProviders: Boolean(services && providers && (services.compareDocumentPosition(providers) & Node.DOCUMENT_POSITION_FOLLOWING)),
-      providersBeforeCrossBorder: Boolean(providers && crossBorder && (providers.compareDocumentPosition(crossBorder) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      compassBeforeServices: Boolean(compass && services && (compass.compareDocumentPosition(services) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      servicesBeforeBrandOrigin: Boolean(services && brandOrigin && (services.compareDocumentPosition(brandOrigin) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      brandOriginBeforeProviders: Boolean(brandOrigin && providers && (brandOrigin.compareDocumentPosition(providers) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      providersBeforeInsurance: Boolean(providers && insurance && (providers.compareDocumentPosition(insurance) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      insuranceBeforeSpecialty: Boolean(insurance && specialty && (insurance.compareDocumentPosition(specialty) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      specialtyBeforeCrossBorder: Boolean(specialty && crossBorder && (specialty.compareDocumentPosition(crossBorder) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      whyAfterBrandOrigin: Boolean(why && brandOrigin && (brandOrigin.compareDocumentPosition(why) & Node.DOCUMENT_POSITION_FOLLOWING)),
     };
   });
-  assert.equal(order.whyBeforeServices, true, `${route}: GBA value section must precede services`);
-  assert.equal(order.servicesBeforeProviders, true, `${route}: provider hub must follow services`);
-  assert.equal(order.providersBeforeCrossBorder, true, `${route}: cross-border process must follow provider hub`);
+  assert.equal(order.compassBeforeServices, true, `${route}: Health Compass must precede Global Health services`);
+  assert.equal(order.servicesBeforeBrandOrigin, true, `${route}: Post-APEC section must follow Global Health services`);
+  assert.equal(order.brandOriginBeforeProviders, true, `${route}: provider hub must follow Post-APEC section`);
+  assert.equal(order.providersBeforeInsurance, true, `${route}: insurance verification must follow provider hub`);
+  assert.equal(order.insuranceBeforeSpecialty, true, `${route}: specialty planning must follow insurance verification`);
+  assert.equal(order.specialtyBeforeCrossBorder, true, `${route}: cross-border process must follow specialty planning`);
+  assert.equal(order.whyAfterBrandOrigin, true, `${route}: GBA values must remain after Post-APEC section`);
 
   const details = process.locator("details");
   assert.equal(await details.count(), 6, `${route}: cross-border process must expose six native details`);
@@ -224,8 +236,24 @@ async function assertCrossBorderProcess(page, route) {
 
 async function assertConsultationPreparation(page, locale) {
   const context = page.locator("#consultation details");
-  assert.equal(await context.count(), 1, `${locale}: optional conversation context details missing`);
-  await context.locator("summary").click();
+  assert.equal(await context.count(), 2, `${locale}: consultation context and privacy boundary details must both be present`);
+  const optionalContext = context.nth(0);
+  const privacyBoundary = context.nth(1);
+  assert.equal(await optionalContext.locator("summary").count(), 1, `${locale}: optional conversation context summary missing`);
+  assert.match(await optionalContext.locator("summary").innerText(), /补充沟通背景|Additional conversation context/i, `${locale}: first details panel is not the optional conversation context`);
+  assert.equal(await privacyBoundary.locator('input[type="checkbox"]').count(), 1, `${locale}: privacy demo acknowledgement missing`);
+  assert.equal(await privacyBoundary.locator("button").count(), 1, `${locale}: formal submission control missing`);
+  assert.equal(await privacyBoundary.locator("button").isDisabled(), true, `${locale}: formal submission must remain disabled`);
+  await privacyBoundary.locator("summary").click();
+  assert.match(await privacyBoundary.innerText(), /联系与隐私授权边界|Contact and privacy permissions/i, `${locale}: privacy boundary panel missing`);
+  assert.match(await privacyBoundary.innerText(), /不是联系同意|not contact consent/i, `${locale}: privacy demo must not imply contact consent`);
+  assert.equal(await privacyBoundary.locator('input[type="email"], input[type="tel"], input[type="file"], textarea').count(), 0, `${locale}: privacy demo must not expose sensitive fields`);
+  const privacyAcknowledgement = privacyBoundary.locator('input[type="checkbox"]');
+  await privacyAcknowledgement.check();
+  assert.equal(await privacyAcknowledgement.isChecked(), true, `${locale}: privacy demo acknowledgement did not toggle`);
+  assert.equal(await privacyBoundary.locator("button").isDisabled(), true, `${locale}: acknowledgement must not enable formal submission`);
+  await privacyAcknowledgement.uncheck();
+  await optionalContext.locator("summary").click();
   const fieldSpecs = [
     { key: "region", label: /当前所在地区|Current region/i, names: ["client_region", "current_region", "currentregion"] },
     { key: "destination", label: /就医目的地|医疗目的地|Care destination|Destination/i, names: ["care_destination", "destination", "careDestination"] },
@@ -419,7 +447,7 @@ try {
     const noJsService = noScriptPage.locator("#consultation select").first();
     const noJsSource = noScriptPage.getByLabel(/咨询来源渠道|来源渠道|Referral source/i).first();
     assert.equal(await submit.isDisabled(), true, "No native submit before the local handler is attached");
-    await noScriptPage.locator('#consultation details summary').click();
+    await noScriptPage.locator('#consultation details summary').first().click();
     await noJsService.selectOption({ index: 1 });
     await noJsSource.selectOption({ index: 1 });
     await noScriptPage.locator('footer').scrollIntoViewIfNeeded();

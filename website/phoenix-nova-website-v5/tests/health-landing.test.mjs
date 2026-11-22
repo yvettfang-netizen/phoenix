@@ -177,9 +177,14 @@ test("Health landing contains six linked entries, six values, five services and 
 
   const servicesAt = html.indexOf('id="services"');
   const crossBorderAt = html.indexOf('id="cross-border-process"');
+  const compassAt = html.indexOf('id="health-compass"');
+  const brandOriginAt = html.indexOf('id="brand-origin"');
   const whyAt = html.indexOf('id="why-phoenix"');
   const providersAt = html.indexOf('id="providers"');
-  assert.ok(whyAt >= 0 && whyAt < servicesAt && servicesAt < providersAt && providersAt < crossBorderAt, "GBA values must precede services, provider hub must follow services, and process must follow both");
+  const insuranceAt = html.indexOf('id="insurance-verification"');
+  const specialtyAt = html.indexOf('id="specialty-planning"');
+  assert.ok(compassAt >= 0 && servicesAt > compassAt && brandOriginAt > servicesAt && providersAt > brandOriginAt && insuranceAt > providersAt && specialtyAt > insuranceAt && crossBorderAt > specialtyAt, "Health V6 must place Compass before Global Health, Post-APEC after services, and provider/insurance/specialty/process sections in order");
+  assert.ok(whyAt > brandOriginAt, "GBA values remain after the Post-APEC section");
   assert.match(html, /href="\/zh\/health\/providers"/);
   assert.match(html, /href="\/zh\/health\/providers\/hyzen-hospital"/);
   assert.match(html, /资料待逐项核验.{0,40}非凤启合作声明/s);
