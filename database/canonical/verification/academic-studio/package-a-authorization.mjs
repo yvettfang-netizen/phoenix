@@ -231,8 +231,23 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
     assert.equal(one(db,"SELECT count(*) FROM learning.academy_staff_grants WHERE principal_id='"+id(903)+"' AND capability_code='ACADEMY_ADMIN' AND status='ACTIVE'"),'1',
       'A2_CONCURRENT_ADMIN_GRANT_UNIQUENESS_ENFORCED_IN_DB');
     const winner=outcomes[0]==='GRANTED'?id(2190):id(2191);
-    assert.equal(await revoke(winner,'CONCURRENT_FIXTURE_CLEANUP'),true,
-      'A2_CONCURRENT_WINNER_CAN_BE_REVOKED');
+    // Both verified Founder connections race to revoke the same grant.
+    // Row locking must serialize this into one transition and one denial.
+    const revokeQuery='SELECT learning.revoke_academy_staff_capability($1::uuid,$2::text) AS ok';
+    const revokeResponses=await Promise.allSettled([
+      app.query(revokeQuery,[winner,'CONCURRENT_REVOKE_A']),
+      competingFounder.query(revokeQuery,[winner,'CONCURRENT_REVOKE_B'])
+    ]);
+    const revokeOutcomes=revokeResponses.map(r=>{
+      if(r.status==='fulfilled')return r.value.rows[0].ok===true?'REVOKED':'DENIED';
+      throw r.reason;
+    });
+    assert.equal(revokeOutcomes.filter(x=>x==='REVOKED').length,1,
+      'A2_CONCURRENT_REVOKE_EXACTLY_ONE_SUCCESS');
+    assert.equal(revokeOutcomes.filter(x=>x==='DENIED').length,1,
+      'A2_CONCURRENT_REVOKE_SECOND_DENIED');
+    assert.equal(one(db,"SELECT status||'|'||authorization_version FROM learning.academy_staff_grants WHERE grant_id='"+winner+"'"),'REVOKED|2',
+      'A2_CONCURRENT_REVOKE_SINGLE_VERSION_TRANSITION');
     console.log('PASS PG'+version+' competing Founder Admin grants single-winner and revocation');
   } finally {
     await competingFounder.end();
