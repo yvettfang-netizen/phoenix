@@ -409,17 +409,19 @@ INSERT INTO learning.publication(publication_id,card_id,family_id,event_kind,act
       assert.equal((await checked.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',
         [id(3206)])).rows[0].n,0,'A2_SAFE_CHECKIN_DENIES_PARENT_ON_NEXT_BORROW');
     });
-    // A backend left in an aborted transaction must never return to the pool.
+    // Ticket redemption must commit *before* starting a business transaction.
+    // Otherwise a business ROLLBACK also restores its one-use ticket.
+    // A backend left in an aborted business transaction must not be reused.
     await assert.rejects(withCanonicalAcademyContext(dirtyPool,async checked=>{
-      await checked.query('BEGIN');
       const ticket=await binder.query(
         'SELECT auth.issue_context_ticket($1::uuid,$2::uuid,$3::uuid,$4::text,$5::timestamptz,$6::uuid,$7::uuid) AS id',
         [id(903),id(3),null,'STAFF',new Date(Date.now()+45000),randomUUID(),id(903)]);
       await checked.query('SELECT auth.redeem_context_ticket($1::uuid,$2::uuid)',
-        [ticket.rows[0].id,id(903)]);
+        [ticket.rows[0].id,id(903)]); // committed one-use ticket
+      await checked.query('BEGIN');
       assert.equal((await checked.query('SELECT count(*)::integer AS n FROM learning.read_published_card($1::uuid)',
         [id(3206)])).rows[0].n,1);
-      await checked.query('SELECT 1/0'); // PostgreSQL aborts this transaction.
+      await checked.query('SELECT 1/0'); // PostgreSQL aborts only the business transaction.
     }),e=>e.code==='22012','A2_ABORTED_TRANSACTION_TEST_MUST_RAISE');
     await withCanonicalAcademyContext(dirtyPool,async checked=>{
       assert.equal((await checked.query('SELECT auth.current_principal_id() AS id')).rows[0].id,null,
