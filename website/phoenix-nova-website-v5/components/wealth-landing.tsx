@@ -583,7 +583,7 @@ export function WealthLanding({
           <div>
             {heading(
               "09",
-              "PHOENIX FAMILY OS™",
+              "FAMILY OS",
               t(
                 "把规划，带进家庭日常。",
                 "Bring your plan into everyday family life.",
@@ -610,13 +610,13 @@ export function WealthLanding({
               className={styles.primary}
               href={`${standalone ? MAIN_SITE_ORIGIN : ""}/${locale}/family-center`}
             >
-              {t("了解家庭中心", "Explore Family Center")}
+              {t("了解凤启家序", "Explore Family OS")}
               <ArrowRight size={16} />
             </Link>
             <p className={styles.footnote}>
               {t(
-                "家庭中心为受控预览。测评不会自动建立家庭档案；长期记录与资料共享须另行授权。",
-                "Family Center is a controlled preview. Assessments do not automatically create family records. Longitudinal records and sharing require separate authorisation.",
+                "凤启家序为受控预览。测评不会自动建立家庭档案；长期记录与资料共享须另行授权。",
+                "Family OS is a controlled preview. Assessments do not automatically create family records. Longitudinal records and sharing require separate authorisation.",
               )}
             </p>
           </div>
@@ -649,7 +649,7 @@ export function WealthLanding({
             </div>
             <small>
               {t(
-                "家庭中心功能示意 · 非真实家庭数据",
+                "凤启家序功能示意 · 非真实家庭数据",
                 "Illustrative interface · No real family data",
               )}
             </small>
