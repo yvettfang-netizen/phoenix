@@ -161,9 +161,9 @@ async function main(){
  await shot(view.page,'client-a-en-390')
  check('client A English Family Service Overview reads real PG summary', {identity:'client-a',locale:'en'})
 
- const navigation=view.page.getByRole('navigation',{name:'Family Center navigation'})
+ const navigation=view.page.getByRole('navigation',{name:'Family OS navigation'})
  assert.equal(await navigation.locator('button,a').count(),6,
-   'P1 unified Family Center retains three existing and three new scoped navigation items')
+   'P1 unified Family OS retains three existing and three new scoped navigation items')
  await navigation.getByRole('button',{name:/Access & Guardianship/}).click()
  await view.page.locator('[data-family-unified-panel="access"]').waitFor()
  await view.page.getByText('Live consent management is not available',{exact:false}).waitFor()
