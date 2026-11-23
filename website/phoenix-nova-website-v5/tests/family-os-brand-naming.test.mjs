@@ -29,6 +29,12 @@ test("all public UI copy uses 凤启家序 (Chinese) and Family OS (English)",()
   assert.deepEqual(violations,[],"Retired public name may not be reintroduced in web UI source");
 });
 
+test("Chinese and English brand labels do not mix or repeat the product name",()=>{
+  assert.doesNotMatch(source("components/homepage-v6.tsx"),/进入Family OS|Family OS 预览栏目/);
+  assert.doesNotMatch(source("components/health-landing.tsx"),/Family OS · Family OS/);
+  assert.doesNotMatch(source("lib/v5-metadata.ts"),/Family OS 凤启家序/);
+});
+
 test("website product labels keep one bilingual name without changing account routes",()=>{
   for(const path of [
     "components/homepage-v6.tsx","components/family-center-v2.tsx",
