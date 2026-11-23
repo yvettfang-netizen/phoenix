@@ -69,12 +69,11 @@ test("keeps the three admissions goals together and exposes no real intake endpo
   assert.match(intake, /name="robots" content="noindex, nofollow, nocache"/i);
 });
 
-test("Family OS foregrounds document milestones and keeps the prototype honest", async () => {
+test("Family OS shows service and learning entry points while account access is pending", async () => {
   const html = await (await get("/zh/family-center")).text();
-  for (const label of ["证件与节点", "学业与报告", "我的服务", "我的资料", "获准逗留期限", "回乡证"]) assert.ok(html.includes(label), label);
-  assert.match(html, /未接通真实账户/);
-  assert.match(html, /换领节点待核验/);
-  assert.match(html, /\/zh\/application/);
+  for (const label of ["凤启家序", "我的服务", "我的学习", "家庭账号与个人资料接入中"]) assert.ok(html.includes(label), label);
+  assert.match(html, /data-family-center-v2/);
+  assert.doesNotMatch(html, /获准逗留期限|回乡证|demo-xiao|选择测试会话/);
   assert.match(html, /name="robots" content="noindex, nofollow, nocache"/i);
 });
 
