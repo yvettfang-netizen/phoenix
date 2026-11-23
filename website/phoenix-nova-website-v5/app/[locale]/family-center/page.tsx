@@ -2,7 +2,7 @@ import {familyP1Auth, familyP1Enabled, readCustomerSession as readCanonicalSessi
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { SiteHeader, V5Site } from "@/components/v5-site";
+import { SiteHeader } from "@/components/v5-site";
 import { CustomerAccount } from "@/components/customer-account";
 import { customerAuthEnabled, customerAuthConfig } from "@/db/customer-auth";
 import { readCustomerSession } from "@/lib/customer-auth";
@@ -53,5 +53,5 @@ export default async function FamilyCenterPage({params}:{params:Promise<{locale:
   }
   if(customerAuthEnabled())return <ProtectedCenter locale={locale}/>;
   if(centerV2Enabled(env as unknown as Record<string,unknown>))return <NewCenter locale={locale}/>;
-  return <><div className="account-preview-link"><Link href={`/${locale}/account`}>{locale==="zh"?"账户登录入口":"Account sign-in"}</Link>{locale==="zh"?" · 以下为虚构家庭的界面预览。":" · The following preview uses a fictional family."}</div><V5Site locale={locale} page="family-center"/></>;
+  return <FamilyCenterV2 locale={locale} account workbench learningP1 reviewOnly/>;
 }

@@ -108,7 +108,10 @@ export function FamilyLearningP1({locale, reviewOnly = false}: {locale: 'zh' | '
     </div>}
     <div role="status" className="fc-learning-status">
       {view.state === 'loading' && t('正在核验学习资料…', 'Verifying access to learning records…')}
-      {view.state === 'unavailable' && t('学习资料暂不可用。', 'Learning records are temporarily unavailable.')}
+      {view.state === 'unavailable' && (reviewOnly
+        ? section === 'academy' ? t('账号接通后，可在这里查看孩子已发布的课程规划和老师安排。', 'Once account access is connected, published course plans and teacher arrangements will appear here.')
+          : t('练习服务接通后，可在这里查看获授权的练习进度。', 'Authorized practice progress will appear here once the practice service is connected.')
+        : t('学习资料暂不可用。', 'Learning records are temporarily unavailable.'))}
       {view.state === 'denied' && t('当前账号没有学习资料访问权限。', 'This account has no access to learning records.')}
       {view.state === 'sign-in' && <Link href={`/${locale}/account`}>{t('登录后查看学习资料', 'Sign in to see learning records')}</Link>}
       {view.state === 'ready' && !selected?.courses.length && t('暂无已分派课程。', 'No courses have been assigned.')}

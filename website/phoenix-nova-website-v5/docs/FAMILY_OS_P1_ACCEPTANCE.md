@@ -4,7 +4,7 @@
 
 - Sites V5 第 22 版 `173decf6dd2fa84467961234ee85594e7e97a8e6`。回退提交 `6b0c4e67d606a4ed5c2f3f1fec07818be2b978dc` 与其树一致。家序组件取自 `55ba708eb3556fa9adad457c61a921099d2c78d9`，交互参照 `family_os_service_center_target.html` 第 2 版。
 - 现有 `/{locale}/family-center` 通过开发环境开关进入候选。V5 公共页面以 Sites 第 22 版验收。此 PR 对主仓库采用最小差异，Sites 和 GitHub 主分支各自的历史独立。
-- 本地界面评审可设 `FAMILY_P1_ENABLED=1`、`FAMILY_P1_UI_REVIEW=1`。此模式无合成身份切换、无资料读取和写入。生产模式关闭候选开关。
+- 本地界面评审可设 `FAMILY_P1_ENABLED=1`、`FAMILY_P1_UI_REVIEW=1`。此模式无合成身份切换、无资料读取和写入。托管站展示家序界面及模块，Canonical 资料和写入开关保持开发环境限定，公开的家序界面不读取受保护资料。
 
 ## 验收表
 
