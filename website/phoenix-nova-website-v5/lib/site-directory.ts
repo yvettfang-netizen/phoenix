@@ -18,8 +18,8 @@ export const directoryGroups: readonly { title: Label; items: readonly Directory
     { label: ["导师入口", "Tutor entry"] },
   ] },
   { title: ["家庭与会员服务", "Family & membership"], items: [
-    { label: ["凤启家序 Family OS", "Family OS"] },
-    { label: ["家庭中心", "Family Center"], path: "/account", status: ["受控账户入口", "Controlled account entry"] },
+    { label: ["凤启家序", "Family OS"] },
+    { label: ["进入凤启家序", "Enter Family OS"], path: "/account", status: ["受控账户入口", "Controlled account entry"] },
     { label: ["家庭档案", "Family profile"] },
     { label: ["家庭成长与服务进度", "Growth & service progress"] },
   ] },

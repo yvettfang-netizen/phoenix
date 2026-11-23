@@ -516,8 +516,8 @@ export function WealthAssessment({
           </div>
           <p className={styles.footnote}>
             {t(
-              "结果不会自动同步至家庭中心或分享给机构。",
-              "Results are not automatically synced to Family Center or shared with institutions.",
+              "结果不会自动同步至凤启家序或分享给机构。",
+              "Results are not automatically synced to Family OS or shared with institutions.",
             )}
           </p>
         </div>

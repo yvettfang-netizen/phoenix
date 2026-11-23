@@ -44,7 +44,7 @@ async function assertLocaleSurface(page, locale, route) {
       "WHY CHOOSE",
       "GREATER BAY AREA",
       "Health Compass",
-      "Family Center",
+      "Family OS",
       "Partner workspace",
       "Hong Kong",
       "Shenzhen",
@@ -58,7 +58,7 @@ async function assertLocaleSurface(page, locale, route) {
       "医疗机构与预约协调",
       "健康罗盘",
       "合作伙伴工作台",
-      "家庭中心",
+      "凤启家序",
     ]) assert.ok(!text.includes(forbidden), `${route}: en page contains Chinese business copy ${forbidden}`);
   }
   const hrefs = await page.locator("a").evaluateAll(links => links.map(link => link.getAttribute("href") || ""));
@@ -83,7 +83,7 @@ async function assertHealthSurface(page, locale, route) {
   assert.equal(await page.locator("#cross-border-process details").count(), 6, `${route}: six cross-border process details required`);
   assert.equal(await page.locator("#partners").count(), 1, `${route}: partner section missing`);
   assert.equal(await page.locator('#partners button:disabled').count(), 1, `${route}: partner workspace must remain controlled`);
-  assert.equal(await page.locator(`a[href="/${locale}/family-center"]`).count() >= 1, true, `${route}: Family Center route missing`);
+  assert.equal(await page.locator(`a[href="/${locale}/family-center"]`).count() >= 1, true, `${route}: Family OS route missing`);
   await assertLocaleSurface(page, locale, route);
 }
 
@@ -177,7 +177,7 @@ async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
     const menu = page.locator(".mobile-menu");
     if (!(await menu.evaluate(element => element.open))) await page.locator(".mobile-menu summary").click();
     assert.ok(await page.locator(".mobile-menu nav").isVisible(), `${locale}: mobile navigation is not visible`);
-    assert.equal(await links.count(), 10, `${locale}: mobile navigation includes seven primary links, Family Center, partner introduction and locale switch`);
+    assert.equal(await links.count(), 10, `${locale}: mobile navigation includes seven primary links, Family OS, partner introduction and locale switch`);
   } else {
     assert.ok(await links.first().isVisible(), `${locale}: desktop navigation is not visible`);
     assert.equal(await links.count(), 7, `${locale}: desktop navigation must contain seven primary links`);
@@ -185,7 +185,7 @@ async function assertPrimaryNavigation(page, locale, { mobile = false } = {}) {
   const hrefs = await links.evaluateAll(anchors => anchors.map(anchor => anchor.getAttribute("href")));
   assert.deepEqual(hrefs.slice(0, expected.length), expected, `${locale}: primary navigation hrefs changed`);
   if (mobile) {
-    assert.equal(hrefs[7], `/${locale}/account`, `${locale}: mobile Family Center must use the controlled account entry`);
+    assert.equal(hrefs[7], `/${locale}/account`, `${locale}: mobile Family OS must use the controlled account entry`);
     assert.equal(hrefs[8], '#partners');
     assert.equal(hrefs[9], `/${locale === "zh" ? "en" : "zh"}/health`, `${locale}: mobile locale href must preserve Health`);
     await page.locator(".mobile-menu summary").click();

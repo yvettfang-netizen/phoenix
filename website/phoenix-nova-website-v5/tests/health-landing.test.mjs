@@ -38,7 +38,7 @@ function assertLocaleCopy(html, locale) {
       "WHY CHOOSE",
       "GREATER BAY AREA",
       "Health Compass",
-      "Family Center",
+      "Family OS",
       "Partner workspace",
       "International care resources",
       "Hong Kong",
@@ -53,7 +53,7 @@ function assertLocaleCopy(html, locale) {
       "医疗机构与预约协调",
       "健康罗盘",
       "合作伙伴工作台",
-      "家庭中心",
+      "凤启家序",
       "香港",
     ]) assert.ok(!text.includes(forbidden), `en page contains Chinese business copy: ${forbidden}`);
   }
