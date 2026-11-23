@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import {createHash} from 'node:crypto'
+import {createHash,randomBytes} from 'node:crypto'
 import {execFileSync} from 'node:child_process'
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs'
 import {createServer} from 'node:http'
@@ -270,6 +270,77 @@ async function run(){
   assert.equal(healthData.materials.length,0);assert.equal(healthData.messages.length,0);assert.equal(healthData.applications.length,0)
   check('Health patient boundary keeps raw clinical, questionnaire and claim data out of Family OS')
  }else assert.ok([403,404].includes(health.status))
+
+ // Verify the release-specific BFF restriction against the real disposable database.
+ // The student and guardian are distinct FAMILY principals pending the separate STUDENT context.
+ const verifyFamilyTasks=async()=>{
+  const service=project(310), student=8011, parent=8012, guardian=7701
+  db.sql(`INSERT INTO core.civil_capacity_history(capacity_record_id,person_id,capacity_status,evidence_ref,verified_by_principal_id)
+   VALUES('${id(7700)}','${id(1)}','MINOR_VERIFIED','synthetic://student-capacity','${id(900)}');
+   INSERT INTO core.guardian_authorities(authority_id,family_id,guardian_person_id,subject_person_id,evidence_level,scope,valid_from,valid_until)
+   VALUES('${id(guardian)}','${id(100)}','${id(2)}','${id(1)}','VERIFIED','EDUCATION',now()-interval '1 hour',now()+interval '1 hour');`)
+  for(const [task,actor,title] of [[student,201,'Synthetic student: complete interview practice'],[parent,202,'Synthetic guardian: confirm materials checklist']]){
+   db.sql(`INSERT INTO service.tasks(task_id,service_project_id,task_type,task_title,task_status,priority,assigned_principal_id,created_by_principal_id,updated_by_principal_id)
+    VALUES('${id(task)}','${service}','APPLICATION_ACTION','${title}','PENDING','MEDIUM','${id(actor)}','${id(900)}','${id(900)}');
+    INSERT INTO service.workbench_task_scope VALUES('${id(task)}','${id(1)}','CLIENT');`)
+  }
+  await register('family-student','client-a')
+  await register('family-parent','client-b')
+  const endpoint='projects/'+service
+  const snapshot=async alias=>snapshotData(expectStatus(await call(alias,endpoint),200))
+  const send=(alias,body,key)=>call(alias,endpoint+'/commands',{method:'POST',body,headers:{'idempotency-key':key}})
+  const command=(task,status,revision)=>({kind:'TASK_STATUS',payload:{id:id(task),status,revision,reason:'CLIENT_ACTION'}})
+  env.FAMILY_P1_ENABLED='1'
+  try {
+   for(const [alias,task,other,actor,routeAlias] of [['family-student',student,parent,201,'client-a'],['family-parent',parent,student,202,'client-b']]){
+    let current=await snapshot(alias)
+    assert.equal(current.project.viewerPrincipalId,id(actor))
+    assert.ok(current.milestones.length>0)
+    assert.ok(current.tasks.some(item=>item.id===id(task)))
+    assert.ok(!current.tasks.some(item=>item.id===id(other)))
+    expectStatus(await send(alias,command(other,'IN_PROGRESS',current.project.revision),randomBytes(16).toString('hex')),403)
+    expectStatus(await send(alias,command(task,'IN_PROGRESS',current.project.revision),randomBytes(16).toString('hex')),200)
+    current=await snapshot(alias)
+    const body=command(task,'COMPLETED',current.project.revision), key=randomBytes(16).toString('hex')
+    const first=expectStatus(await send(alias,body,key),200)
+    const replay=expectStatus(await send(alias,body,key),200)
+    assert.equal(first.replayed,false)
+    assert.equal(replay.replayed,true)
+    assert.equal(first.result.eventId,replay.result.eventId)
+    assert.equal(db.sql(`SELECT count(*) FROM service.task_events WHERE task_id='${id(task)}' AND to_status='COMPLETED' AND actor_principal_id='${id(actor)}' AND occurred_at IS NOT NULL`),'1')
+    assert.ok(Number(db.sql(`SELECT count(*) FROM audit.access_events WHERE principal_id='${id(actor)}' AND resource_id='${service}' AND action='TASK_STATUS' AND decision='ALLOW' AND reason_code='WORKBENCH_COMMAND_COMMITTED'`))>0)
+    authFixture.sessions.get(accounts[alias].sessionHash).valid_until=Date.now()-1000
+    expectStatus(await call(alias,endpoint),401)
+    expectStatus(await send(alias,body,key),401)
+    await register(alias+'-new-session',routeAlias)
+    assert.equal((await snapshot(alias+'-new-session')).tasks.find(item=>item.id===id(task))?.status,'COMPLETED')
+   }
+   await register('other-family','outsider')
+   assert.ok(!validateSummary(expectStatus(await summary('other-family'),200)).projects.some(item=>item.service_project_id===service))
+   expectStatus(await call('other-family',endpoint),403)
+   expectStatus(await send('other-family',command(student,'COMPLETED',1),randomBytes(16).toString('hex')),403)
+   const guardianAlias='family-parent-new-session'
+   const parentRevision=(await snapshot(guardianAlias)).project.revision
+   db.sql(`UPDATE core.family_memberships SET valid_until=clock_timestamp() WHERE family_id='${id(100)}' AND person_id='${id(2)}'`)
+   // The existing context-ticket issuer may return a generic unavailable status on expired membership.
+   for(const denied of [await call(guardianAlias,endpoint),
+    await send(guardianAlias,command(parent,'COMPLETED',parentRevision),randomBytes(16).toString('hex'))]){
+    assert.ok([403,503].includes(denied.status),JSON.stringify(denied.data))
+    assert.deepEqual(Object.keys(denied.data),['error'])
+   }
+   db.sql(`UPDATE core.family_memberships SET valid_until=NULL WHERE family_id='${id(100)}' AND person_id='${id(2)}'`)
+   await snapshot(guardianAlias)
+   db.sql(`UPDATE core.guardian_authorities SET revoked_at=clock_timestamp() WHERE authority_id='${id(guardian)}'`)
+   expectStatus(await call(guardianAlias,endpoint),403)
+   expectStatus(await send(guardianAlias,command(parent,'COMPLETED',parentRevision),randomBytes(16).toString('hex')),403)
+   check('V5 Family OS two principals complete assigned tasks in one real isolated PostgreSQL project, reverify after sign-in and enforce scope and expiry')
+  } finally {
+   delete env.FAMILY_P1_ENABLED
+   db.sql(`INSERT INTO core.civil_capacity_history(capacity_record_id,person_id,capacity_status,evidence_ref,verified_by_principal_id)
+    VALUES('${id(7702)}','${id(1)}','ADULT_VERIFIED','synthetic://baseline-restored','${id(900)}');`)
+  }
+ }
+ await verifyFamilyTasks()
 
  const beforeRevoke=await summary('client-a');assert.ok(validateSummary(expectStatus(beforeRevoke,200)).projects.some(x=>x.service_project_id===project(310)))
  db.sql("UPDATE service.project_subjects SET status='ENDED',valid_until=clock_timestamp(),ended_by_principal_id='"+id(900)+"' WHERE service_project_id='"+project(310)+"' AND subject_person_id='"+id(1)+"'")
