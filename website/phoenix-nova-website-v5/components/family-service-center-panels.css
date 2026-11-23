@@ -1,0 +1,34 @@
+.fc-v2 .fsv-panel{margin:16px 0 23px;color:#17373c}
+.fc-v2 .fsv-heading{background:linear-gradient(115deg,#e5f1eb,#f9f7ed);border:1px solid #d8e5dc;border-radius:15px;padding:23px 25px;display:flex;gap:18px;justify-content:space-between;align-items:center}
+.fc-v2 .fsv-heading small{display:block;color:#4c7972;letter-spacing:1.5px;font-size:10px}
+.fc-v2 .fsv-heading h2{margin:7px 0 0;font:600 25px Georgia,'Songti SC',serif;color:#173e43}
+.fc-v2 .fsv-heading svg{color:#2d7770}
+.fc-v2 .fsv-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:17px}
+.fc-v2 .fsv-card{background:#fffdfa;border:1px solid #dce8df;border-radius:13px;padding:23px;min-width:0}
+.fc-v2 .fsv-card>svg{color:#27766d}
+.fc-v2 .fsv-card h3{font:600 19px Georgia,'Songti SC',serif;margin:11px 0}
+.fc-v2 .fsv-card p{color:#657a76;font-size:13px;line-height:1.8;min-height:76px}
+.fc-v2 .fsv-note{background:#f3f7f2;color:#5f7770;display:flex;gap:9px;align-items:flex-start;padding:13px;border-radius:9px;font-size:12px}
+.fc-v2 .fsv-note svg{flex-shrink:0;color:#3e7c70}
+.fc-v2 .fsv-link{display:inline-flex;align-items:center;gap:8px;margin-top:20px;color:#285f59;font-weight:600;border-bottom:1px solid #c8a24a;padding-bottom:4px}
+.fc-v2 .fsv-intro{margin:18px 4px;color:#6d7d75;font-size:13px;line-height:1.75}
+.fc-v2 .fsv-state{padding:26px;margin:18px 0;border-radius:12px;background:#fffefa;border:1px solid #dde8df;color:#537069;font-size:13px}
+.fc-v2 .fsv-source{display:flex;align-items:center;gap:8px;color:#527d74;margin:16px 0;font-size:11px;flex-wrap:wrap}
+.fc-v2 .fsv-list{border:1px solid #e0e8e0;background:#fffefa;border-radius:14px;padding:4px 18px}
+.fc-v2 .fsv-entry{display:flex;align-items:center;gap:16px;padding:17px 6px;border-bottom:1px solid #e8efe8}
+.fc-v2 .fsv-entry:last-child{border-bottom:0}
+.fc-v2 .fsv-entry>svg:first-child{color:#34776e}
+.fc-v2 .fsv-entry>svg:last-child{margin-left:auto;color:#7e978b}
+.fc-v2 .fsv-entry strong{display:block;font-weight:600;font-size:14px}
+.fc-v2 .fsv-entry small{color:#708780;font-size:11px;display:block;margin-top:4px}
+.fc-v2 .fsv-assistant{background:#fffefa;border:1px solid #dce8df;border-radius:14px;padding:25px;line-height:1.8}
+.fc-v2 .fsv-assistant-heading{display:flex;gap:9px;align-items:center;font-size:17px;color:#2a635b}
+.fc-v2 .fsv-assistant p{color:#677d77;font-size:13px}
+.fc-v2 .fsv-assistant small{display:block;margin-top:15px;color:#84948b;font-size:11px}
+.fc-v2 .fsv-action{display:inline-flex;align-items:center;gap:9px;background:#235b54;color:#fff;border:0;padding:10px 20px;border-radius:30px;font-size:13px}
+.fc-v2 .fsv-guidance{margin-top:15px;padding:17px;background:#f3f8f1;border-left:3px solid #c8a24a;border-radius:8px;font-size:13px;color:#285e57}
+.fc-v2 .fsv-refresh{display:inline-flex;align-items:center;gap:7px;margin-top:15px;padding:8px 11px;border:1px solid #c7ddd2;color:#28695f;background:#f9fcf8;border-radius:9px;font-size:12px}
+.fc-v2 .fc-side-unified{background:#1d4c4c;color:#f7f3e8;border:1px solid #d2ae684f}
+.fc-v2 .fc-sidebar nav button.fc-side-unified[aria-current]{background:#e1efe8;color:#1c4d46}
+@media(max-width:850px){.fc-v2 .fsv-two{grid-template-columns:1fr}.fc-v2 .fsv-card p{min-height:0}}
+@media(max-width:460px){.fc-v2 .fsv-heading{padding:18px}.fc-v2 .fsv-heading h2{font-size:22px}.fc-v2 .fsv-card{padding:18px}.fc-v2 .fsv-entry{gap:10px}.fc-v2 .fsv-assistant{padding:18px}}
