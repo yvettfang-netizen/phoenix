@@ -20,7 +20,7 @@ function summary(){return {schemaVersion:"service-project-summary.v1",
 test("one canonical Family Center retains the existing Service Project summary and old preview",()=>{
  assert.match(center,/p1AccountWorkbench\?<FamilyServiceOverview locale=\{locale\}\/>/);
  assert.match(center,/p1AccountWorkbench&&\(view==='access'\|\|view==='updates'\|\|view==='assistant'\)/);
- assert.match(center,/FamilyServiceCenterPanels locale=\{locale\} panel=\{view\}/);
+ assert.match(center,/FamilyServiceCenterPanels key=.*locale=\{locale\} panel=\{view\}/);
  assert.match(center,/!p1AccountWorkbench&&<div className="fc-lower">/);
  assert.doesNotMatch(center,/FamilyServiceCenterTarget|synthetic-preview/);
 });
