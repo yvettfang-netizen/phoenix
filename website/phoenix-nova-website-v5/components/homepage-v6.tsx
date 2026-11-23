@@ -252,13 +252,13 @@ export function HomepageV6({ locale }: { locale: Locale }) {
             <div className={styles.familyCopy}>
               <h2 id="family-os-heading">{copy(locale, ["凤启家序", "Family OS"])}</h2>
               <p>{copy(locale, ["从家庭目标、重要节点到已授权的服务进度，为家庭协作保留统一入口。", "Family OS provides a dedicated space to organise family goals, plans and authorised service progress."])}</p>
-              <ul className={styles.familyMiniNav} aria-label={copy(locale, ["Family OS 预览栏目", "Family OS preview areas"])}>
+              <ul className={styles.familyMiniNav} aria-label={copy(locale, ["凤启家序预览栏目", "Family OS preview areas"])}>
                 {familyOsItems.map((item) => <li key={item[0]}>{copy(locale, item)}</li>)}
               </ul>
               <div className={styles.familyActions}>
               <span className={styles.previewNotice}>{copy(locale, ["预览／即将开放", "Preview / Coming Soon"])}</span>
               <Link className={styles.textLink} href={localizedHref(locale, "/account")}>
-                {copy(locale, ["进入Family OS", "Enter Family OS"])} <Arrow />
+                {copy(locale, ["进入凤启家序", "Enter Family OS"])} <Arrow />
               </Link>
               </div>
             </div>
