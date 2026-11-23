@@ -15,10 +15,26 @@ const allow = (payload, assertCurrent = async () => {}) => ({readAssignedProgres
 
 test('practice answer fields cannot enter the family summary; student projection is self only', () => {
   assert.deepEqual(projectFamilyLearning({role: 'PARENT', students: [student('a')]}).students[0].courses[0], {
-    title: 'Interview practice', practiceTitle: 'Introduce yourself', status: 'SUBMITTED',
+    title: 'Interview practice', teacherArrangement: null, practiceTitle: 'Introduce yourself', status: 'SUBMITTED',
   });
   assert.equal(projectFamilyLearning({role: 'STUDENT', students: [student('a'), student('b')]}), null);
   assert.equal(projectFamilyLearning({role: 'PARENT', students: [student('a'), student('a')]}), null);
+});
+
+
+test('only published study plans and teacher arrangements enter the family view', () => {
+  const child = student('a');
+  child.plan = {publication: 'PUBLISHED', period: 'Term 1', goals: ['Prepare for the interview'], internalNotes: 'private'};
+  const [course] = child.courses;
+  const publicArrangement = {teacherName: 'Synthetic teacher', meeting: 'Monday 16:30', delivery: 'ONLINE'};
+  course.teacherArrangement = {...publicArrangement, publication: 'DRAFT', phone: 'private'};
+  const project = () => projectFamilyLearning({role: 'PARENT', students: [child]}).students[0];
+  assert.deepEqual(project().plan, {period: 'Term 1', goals: ['Prepare for the interview']});
+  assert.equal(project().courses[0].teacherArrangement, null);
+  course.teacherArrangement.publication = 'PUBLISHED';
+  assert.deepEqual(project().courses[0].teacherArrangement, publicArrangement);
+  child.plan.publication = 'DRAFT';
+  assert.equal(project().plan, null);
 });
 
 test('server scoping receives the verified identity and rejects direct subject overrides', async () => {

@@ -17,3 +17,9 @@
 .fc-learning-child select{font:inherit;padding:6px 10px;max-width:100%}
 .fc-learning-status{margin:12px 0}
 @media(max-width:600px){.fc-learning-grid{grid-template-columns:1fr}}
+
+.fc-learning-nav{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.fc-learning-nav button{display:flex;gap:8px;align-items:center;min-height:44px;padding:8px 14px;font:inherit;color:#21544a;background:#fff;border:1px solid #bacfc6;border-radius:8px;cursor:pointer}
+.fc-learning-nav button[aria-pressed=true]{color:#123d34;background:#e1efe8;border-color:#739a89;font-weight:700}
+.fc-learning-arrangement+.fc-learning-arrangement{margin-top:12px;padding-top:12px;border-top:1px solid #dfe7e1}
+.fc-learning-arrangement p{margin:4px 0}

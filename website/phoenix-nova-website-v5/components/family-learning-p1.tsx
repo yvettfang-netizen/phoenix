@@ -11,6 +11,7 @@ export function FamilyLearningP1({locale, reviewOnly = false}: {locale: 'zh' | '
   const en = locale === 'en';
   const t = (zh: string, english: string) => en ? english : zh;
   const [view, setView] = useState<View>({state: reviewOnly ? 'unavailable' : 'loading'});
+  const [section, setSection] = useState<'academy' | 'practice'>('academy');
   const [subject, setSubject] = useState('');
   const [refresh, setRefresh] = useState(0);
   useEffect(() => {
@@ -67,15 +68,44 @@ export function FamilyLearningP1({locale, reviewOnly = false}: {locale: 'zh' | '
           {view.data.students.map(student => <option value={student.ref} key={student.ref}>{student.name}</option>)}
         </select>
       </label>}
-    <div className="fc-learning-grid">
-      <section><h3><BookOpen size={20} aria-hidden="true"/>{t('启明堂课程', 'Academy courses')}</h3>
-        {selected?.courses.map((course, index) => <p key={index}>{course.title}</p>)}
+    <nav className="fc-learning-nav" aria-label={t('学习模块', 'Learning sections')}>
+      <button type="button" aria-pressed={section === 'academy'} onClick={() => setSection('academy')}>
+        <BookOpen size={20} aria-hidden="true"/>{t('凤启学苑 · 启明堂', 'Phoenix Academic Studio')}
+      </button>
+      <button type="button" aria-pressed={section === 'practice'} onClick={() => setSection('practice')}>
+        <ClipboardCheck size={20} aria-hidden="true"/>ASKWISE {t('练习', 'practice')}
+      </button>
+    </nav>
+    {section === 'academy' ? <div className="fc-learning-grid">
+      <section aria-labelledby="fc-course-plan">
+        <h3 id="fc-course-plan">{t('课程规划', 'Course plan')}</h3>
+        {selected?.plan && <>
+          <p><strong>{selected.plan.period}</strong></p>
+          {selected.plan.goals.length > 0 && <ul>{selected.plan.goals.map((goal, index) => <li key={index}>{goal}</li>)}</ul>}
+        </>}
+        {selected && !selected.plan && <p>{t('暂未发布课程规划。', 'A course plan has not been published yet.')}</p>}
+        {selected && selected.courses.length > 0 && <ul>{selected.courses.map((course, index) => <li key={index}>{course.title}</li>)}</ul>}
       </section>
-      <section><h3><ClipboardCheck size={20} aria-hidden="true"/>ASKWISE {t('练习', 'practice')}</h3>
+      <section aria-labelledby="fc-teacher-arrangements">
+        <h3 id="fc-teacher-arrangements">{t('老师安排', 'Teacher arrangements')}</h3>
+        {selected?.courses.map((course, index) => {
+          const arrangement = course.teacherArrangement;
+          return <div className="fc-learning-arrangement" key={index}>
+            <strong>{course.title}</strong>
+            {arrangement ? <><p>{arrangement.teacherName}</p>
+              {arrangement.meeting && <p>{arrangement.meeting}</p>}
+              {arrangement.delivery && <p>{arrangement.delivery === 'ONLINE' ? t('线上', 'Online') : t('线下', 'In person')}</p>}
+            </> : <p>{t('老师安排待发布。', 'Teacher arrangement pending publication.')}</p>}
+          </div>;
+        })}
+      </section>
+    </div> : <div className="fc-learning-grid">
+      <section><h3>{t('练习进度', 'Practice progress')}</h3>
         {selected?.courses.map((course, index) => course.practiceTitle &&
           <div key={index}><p>{course.practiceTitle}</p><small>{statuses[course.status]}</small></div>)}
+        {selected && !selected.courses.some(course => course.practiceTitle) && <p>{t('暂无已分派练习。', 'No practice has been assigned.')}</p>}
       </section>
-    </div>
+    </div>}
     <div role="status" className="fc-learning-status">
       {view.state === 'loading' && t('正在核验学习资料…', 'Verifying access to learning records…')}
       {view.state === 'unavailable' && t('学习资料暂不可用。', 'Learning records are temporarily unavailable.')}

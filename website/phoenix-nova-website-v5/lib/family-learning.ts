@@ -1,11 +1,18 @@
 import {readCustomerSession, type AuthConfig} from './family-p1-session';
 
+export type PublishedTeacherArrangement = {
+  teacherName: string;
+  meeting: string | null;
+  delivery: 'ONLINE' | 'IN_PERSON' | null;
+};
+export type PublishedStudyPlan = {period: string; goals: string[]};
 export type LearningCourse = {
   title: string;
+  teacherArrangement: PublishedTeacherArrangement | null;
   practiceTitle: string | null;
   status: 'ASSIGNED' | 'SUBMITTED' | 'REVIEWED';
 };
-export type LearningSubject = {ref: string; name: string; courses: LearningCourse[]};
+export type LearningSubject = {ref: string; name: string; plan: PublishedStudyPlan | null; courses: LearningCourse[]};
 export type FamilyLearning = {role: 'STUDENT' | 'PARENT'; students: LearningSubject[]};
 
 /** A server-owned adapter must bind the session to an authorized Canonical Principal,
@@ -23,6 +30,19 @@ const failure = (status: number) => Response.json({error: 'FAMILY_LEARNING_UNAVA
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const label = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0 && v.length <= 180;
 
+function publishedPlan(raw: unknown): PublishedStudyPlan | null {
+  if (!record(raw) || raw.publication !== 'PUBLISHED' || !label(raw.period) ||
+      !Array.isArray(raw.goals) || raw.goals.length > 8 || !raw.goals.every(label)) return null;
+  return {period: raw.period, goals: raw.goals};
+}
+
+function publishedTeacher(raw: unknown): PublishedTeacherArrangement | null {
+  if (!record(raw) || raw.publication !== 'PUBLISHED' || !label(raw.teacherName) ||
+      !(raw.meeting === null || label(raw.meeting)) ||
+      (raw.delivery !== null && raw.delivery !== 'ONLINE' && raw.delivery !== 'IN_PERSON')) return null;
+  return {teacherName: raw.teacherName, meeting: raw.meeting, delivery: raw.delivery};
+}
+
 export function projectFamilyLearning(raw: unknown): FamilyLearning | null {
   if (!record(raw) || (raw.role !== 'STUDENT' && raw.role !== 'PARENT') || !Array.isArray(raw.students) ||
       raw.students.length > 20 || (raw.role === 'STUDENT' && raw.students.length > 1)) return null;
@@ -35,9 +55,10 @@ export function projectFamilyLearning(raw: unknown): FamilyLearning | null {
     for (const course of student.courses) {
       if (!record(course) || !label(course.title) || !(course.practiceTitle === null || label(course.practiceTitle)) ||
           (course.status !== 'ASSIGNED' && course.status !== 'SUBMITTED' && course.status !== 'REVIEWED')) return null;
-      courses.push({title: course.title, practiceTitle: course.practiceTitle, status: course.status});
+      courses.push({title: course.title, teacherArrangement: publishedTeacher(course.teacherArrangement),
+        practiceTitle: course.practiceTitle, status: course.status});
     }
-    students.push({ref: student.ref, name: student.name, courses});
+    students.push({ref: student.ref, name: student.name, plan: publishedPlan(student.plan), courses});
   }
   return {role: raw.role, students};
 }
