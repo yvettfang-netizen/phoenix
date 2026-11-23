@@ -28,6 +28,12 @@ export function inspectPrivateFamilyRuntime(
   const origin=env.CUSTOMER_AUTH_ORIGIN;
   if(typeof origin!=="string"||!validAuthOrigin(origin)||origin!==expectedOrigin)
     blockers.push("TRUSTED_CUSTOMER_ORIGIN_UNVERIFIED");
+  // The present preview must never be made reachable on a public host by
+  // flipping NODE_ENV=development; a hosted customer launch is another gate.
+  try {
+    const hostname=new URL(expectedOrigin).hostname;
+    if(!["127.0.0.1","localhost","[::1]"].includes(hostname))throw Error("public origin");
+  }catch{blockers.push("LOOPBACK_PREVIEW_SITE_ORIGIN_REQUIRED");}
   const auth=env.CANONICAL_CUSTOMER_AUTH_PROVIDER as Record<string,unknown>|undefined;
   if(!auth||typeof auth.verifySession!=="function"||typeof auth.recordAccess!=="function")
     blockers.push("TRUSTED_AUTH_VERIFIER_NOT_BOUND");
