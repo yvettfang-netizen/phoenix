@@ -248,10 +248,10 @@ export function HomepageV6({ locale }: { locale: Locale }) {
 
         <section className={`${styles.section} ${styles.familySection}`} aria-labelledby="family-os-heading">
           <div className={`${styles.container} ${styles.familyGrid}`}>
-            <div className={styles.familyVisual} aria-hidden="true"><span>{copy(locale, ["Phoenix Family OS™", "PHOENIX FAMILY OS"])}</span><div className={styles.familyOrb} /></div>
+            <div className={styles.familyVisual} aria-hidden="true"><span>{copy(locale, ["凤启家序", "Family OS"])}</span><div className={styles.familyOrb} /></div>
             <div className={styles.familyCopy}>
-              <h2 id="family-os-heading">{copy(locale, ["Phoenix Family OS™", "Phoenix Family OS™"])}</h2>
-              <p>{copy(locale, ["从家庭目标、重要节点到已授权的服务进度，为家庭协作保留统一入口。", "Phoenix Family OS provides a dedicated space to organise family goals, plans and authorised service progress."])}</p>
+              <h2 id="family-os-heading">{copy(locale, ["凤启家序", "Family OS"])}</h2>
+              <p>{copy(locale, ["从家庭目标、重要节点到已授权的服务进度，为家庭协作保留统一入口。", "Family OS provides a dedicated space to organise family goals, plans and authorised service progress."])}</p>
               <ul className={styles.familyMiniNav} aria-label={copy(locale, ["Family OS 预览栏目", "Family OS preview areas"])}>
                 {familyOsItems.map((item) => <li key={item[0]}>{copy(locale, item)}</li>)}
               </ul>
