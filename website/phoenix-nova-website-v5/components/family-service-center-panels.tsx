@@ -22,13 +22,13 @@ export function FamilyServiceCenterPanels({locale,panel}:Props){
   const [showGuidance,setShowGuidance]=useState(false);
   useEffect(()=>{
     // Permission management has no approved customer-facing write/read API yet.
-    if(panel==="access"){setData(null);setState("unavailable");return;}
+    if(panel==="access")return;
     let active=true;
     const abort=new AbortController();
     let expiry:ReturnType<typeof setTimeout>|undefined;
     const clear=()=>{active=false;abort.abort();if(expiry)clearTimeout(expiry);setData(null);setState("stale");};
     const hidden=()=>{if(document.visibilityState==="hidden")clear();};
-    setState("loading");setData(null);setShowGuidance(false);
+    // Parent gives this tab a unique key; no synchronous effect-state reset.
     window.addEventListener("blur",clear);
     window.addEventListener("pagehide",clear);
     document.addEventListener("visibilitychange",hidden);
@@ -60,7 +60,7 @@ export function FamilyServiceCenterPanels({locale,panel}:Props){
   const panelTitle=panel==="access"?t("共享与监护","Sharing & Guardianship"):
     panel==="updates"?t("服务通知与待办","Service Updates & To-dos"):t("家庭助理","Family Assistant");
   const panelIcon=panel==="access"?<ShieldCheck size={25}/>:panel==="updates"?<Bell size={25}/>:<Sparkles size={25}/>;
-  const summaryVisible=data!==null&&data.expiresAt>Date.now()&&(state==="ready"||state==="empty");
+  const summaryVisible=data!==null&&(state==="ready"||state==="empty");
   const guidance=summaryVisible?nextStepFromAuthorizedSummary(data,locale):null;
   return <section className="fsv-panel" data-family-unified-panel={panel}>
     <div className="fsv-heading"><div><small>PHOENIX FAMILY OS · SERVICE CENTER</small><h2>{panelTitle}</h2></div>{panelIcon}</div>
