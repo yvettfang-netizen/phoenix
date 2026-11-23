@@ -2,6 +2,8 @@
 
 **Status: UNVERIFIED / NOT RUN.** This ticket is limited to a private environment receipt that the assistant cannot derive from repository source or local disposable PG16/17. It is not a request for another architecture review or for repeated source/automated testing.
 
+The 2026-11-23 V7 continuation stopped before connection. Its [cross-window blocked receipt](p01-evidence/nonprod-manual/BLOCKED_RECEIPT_20261123.md) references the [Issue #97 evidence comment](https://github.com/yvettfang-netizen/phoenix/issues/97#issuecomment-7090274376). The required database stdout/stderr and installed ledger remain **NOT RUN**; candidate CI does not close this ticket.
+
 | Field | Requirement |
 | --- | --- |
 | Target | The **specifically designated** `canonical-nonprod` Canonical PostgreSQL instance and database, after Jimson verifies the service binding. The documented `phoenix_nonprod` libpq alias is a placeholder until configured. No production or legacy DB. |
