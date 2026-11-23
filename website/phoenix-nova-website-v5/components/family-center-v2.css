@@ -8,3 +8,12 @@
 
 .fc-p1-services .fc-sidebar nav .fc-service-link{display:flex;align-items:center;gap:12px;padding:14px 12px;border-radius:10px;font-size:14px}.fc-p1-services .fc-sidebar nav .fc-service-link:hover{background:#ffffff18}.fc-p1-services .fc-sidebar nav .fc-service-link small{display:block;margin-top:6px;font:11px Georgia,serif}
 @media(max-width:780px){.fc-p1-services .fc-sidebar nav{grid-template-columns:repeat(3,minmax(0,1fr))}.fc-p1-services .fc-sidebar nav .fc-service-link{display:grid;justify-items:center;text-align:center;padding:10px 3px;gap:8px;font-size:11px}.fc-p1-services .fc-sidebar nav .fc-service-link small{display:none}}
+
+.fc-learning-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:16px 0}
+.fc-learning-grid section{border:1px solid #dfe7e1;border-radius:12px;padding:16px;overflow-wrap:anywhere}
+.fc-learning-grid h3{display:flex;gap:8px;align-items:center;margin:0 0 8px}
+.fc-learning-grid small,.fc-learning-status{color:#41675c;font-size:1rem}
+.fc-learning-child{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.fc-learning-child select{font:inherit;padding:6px 10px;max-width:100%}
+.fc-learning-status{margin:12px 0}
+@media(max-width:600px){.fc-learning-grid{grid-template-columns:1fr}}

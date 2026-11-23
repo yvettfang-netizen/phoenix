@@ -32,7 +32,25 @@ export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mo
    try{for(;;){const item=await input.read();if(item.done)break;size+=item.value.byteLength;if(size>1000000){await input.cancel();return reply(413,"BODY_TOO_LARGE");}chunks.push(item.value);}}
    finally{clearTimeout(timer);input.releaseLock();}
    if(expired)return reply(408,"BODY_TIMEOUT");
-   const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}body=bytes.buffer;
+   const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength; }body=bytes.buffer;
+   if(env.FAMILY_P1_ENABLED==="1"){
+    try{
+     const command=JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
+     const data=command?.payload;
+     const key=request.headers.get("idempotency-key")??"";
+     if(!trustedToken||!resource.endsWith("/commands")||!/^[a-f0-9]{32}$/.test(key)||
+        Object.keys(command).sort().join(",")!=="kind,payload"||command.kind!=="TASK_STATUS"||
+        !data||Object.keys(data).sort().join(",")!=="id,reason,revision,status"||
+        typeof data.id!=="string"||!new RegExp("^"+uuid+"$").test(data.id)||data.reason!=="CLIENT_ACTION"||
+        !Number.isSafeInteger(data.revision)||data.revision<1||!["IN_PROGRESS","BLOCKED","COMPLETED"].includes(data.status))return reply(422,"INVALID_COMMAND");
+     const snapshotUrl=new URL(request.url);
+     snapshotUrl.pathname=snapshotUrl.pathname.replace(/\/commands$/, "");
+     const snapshot=await handleServiceWorkbench(new Request(snapshotUrl,{headers:request.headers}),env,mode,resource.replace(/\/commands$/, ""),trustedToken);
+     if(!snapshot.ok)return snapshot;
+     const view=await snapshot.json() as {project:{status:string;opened:boolean};tasks:{id:string}[]};
+     if(view.project.status!=="ACTIVE"||!view.project.opened||!view.tasks.some(task=>task.id===data.id))return reply(403,"ACCESS_DENIED");
+    }catch{return reply(400,"INVALID_JSON");}
+   }
   }
   const h:Record<string,string>={"Cache-Control":"no-store"};if(!login)h.Authorization="Bearer "+token;
   if(trustedToken)h["X-Phoenix-Customer-Bridge"]="p1";
@@ -55,6 +73,15 @@ export async function handleServiceWorkbench(request:Request,env:WorkbenchEnv,mo
    return Response.json({synthetic:true},{status:200,headers:{...headers,"Set-Cookie":"phoenix_workbench_session="+data.token+"; HttpOnly; SameSite=Strict; Path=/; Max-Age=900"}});
   }
   if(!(resource==="summary"?validFamilyServiceSummary(data):validWorkbenchResponse(resource,data)))return reply(503,"WORKBENCH_UNAVAILABLE");
+  if(env.FAMILY_P1_ENABLED==="1"&&resource==="summary")data.projects=data.projects.filter((item:{compass:string})=>item.compass==="EDUCATION");
+  if(env.FAMILY_P1_ENABLED==="1"&&resource==="projects")data.items=data.items.filter((item:{domain:string})=>item.domain==="EDUCATION");
+  if(env.FAMILY_P1_ENABLED==="1"&&resource.startsWith("projects/")&&request.method==="GET"){
+   const project=data.project;
+   if(project.domain!=="EDUCATION"||project.staff)return reply(403,"ACCESS_DENIED");
+   data.tasks=data.tasks.filter((task:{assignee:string})=>task.assignee===project.viewerPrincipalId);
+   data.applications=[];data.materials=[];data.messages=[];data.deliverables=[];data.events=[];
+   data.commercial={availability:"NOT_AUTHORIZED"};
+  }
   return Response.json(data,{status:200,headers});
  }catch{return reply(503,"WORKBENCH_UNAVAILABLE");}
 }
