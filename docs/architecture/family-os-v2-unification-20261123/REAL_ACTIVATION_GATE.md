@@ -10,7 +10,7 @@ Status: **PRIVATE SYNTHETIC TEST CANDIDATE; CUSTOMER PRODUCTION HOLD**
 ## This candidate's actual changes
 1. Expand the existing PG16/17 **real browser → synthetic Canonical trusted identity → P1 BFF → PostgreSQL** test with client B and C notification/assistant isolation.
 2. Prove a revoked Service Project disappears from the derived notification and assistant on the next read. The test must also delete the login's synthetic active server session and verify refresh returns an unauthorized state **without old cards or guidance**. These are synthetic accounts, never live students.
-3. Add `inspectPrivateFamilyRuntime`, a **nonsecret, fail-closed configuration shape check** for private development. It refuses absent identity verifier, mapping resolver, incorrect origin, public/credentialed BFF, disabled flags and production mode. A green result means only that runtime composition *looks complete*; it is not proof that the services are truly reachable or secure.
+3. Add `inspectPrivateFamilyRuntime`, a **nonsecret, fail-closed configuration shape check** for private development. It refuses absent identity verifier, mapping resolver, incorrect origin, public/credentialed BFF, public-facing preview site origin, disabled flags and production mode. This narrow P0 guard allows only a loopback development test; a private hosted staging URL requires a separately reviewed deployment adapter. A green result means only that runtime composition *looks complete*; it is not proof that the services are truly reachable or secure.
 4. Add negative tests for the preflight and ensure the existing website and P1 PostgreSQL workflows run against the exact PR head.
 
 ## Currently blocked live gates
