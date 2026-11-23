@@ -1,7 +1,7 @@
 export const pageDescriptions: Record<string, readonly [string,string]> = {
   admissions: ["了解本科、硕士与博士升学申请：申请目标、材料准备、简历优先登记及顾问跟进流程。Phoenix Nova V5 候选预览。","Explore undergraduate, master’s and doctoral admissions: goals, documents, CV-first intake and adviser follow-up. Phoenix Nova V5 candidate preview."],
   application: ["升学申请登记交互预览。按申请目标展开材料清单，仅使用虚构资料，不接收真实申请。","Interactive admissions intake preview. Degree-specific document steps using fictional data; no real application is accepted."],
-  "family-center": ["Family OS 凤启家序预览：证件节点、申请进度、学业报告与服务跟进。仅包含虚构资料。","Family OS preview: document milestones, application progress, learning reports and services. Fictional data only."],
+  "family-center": ["凤启家序预览：证件节点、申请进度、学业报告与服务跟进。仅包含虚构资料。","Family OS preview: document milestones, application progress, learning reports and services. Fictional data only."],
   compass: ["Phoenix Compass 教育、身份、财富与健康四类罗盘介绍及凤启家序关联说明。正式测评入口待接通。","Explore Education, Identity, Wealth and Health Compass and their planned Family OS connections. Live assessment entry is not connected."],
   services: ["Phoenix Nova 六大服务旅程：下一代成长、来港启程、家庭保障、企业发展、全球规划与家族传承。","Phoenix Nova services for next-generation growth, Hong Kong pathways, family protection, enterprise, global planning and legacy."],
   lighthouse: ["了解 Growth Blueprint 如何将资料、目标与专业判断整理为分阶段行动，并连接凤启家序与学习支持。","Learn how Growth Blueprint brings records, goals and professional judgement into sequenced actions and ongoing learning support."],
