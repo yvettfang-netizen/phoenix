@@ -17,7 +17,7 @@ export function FamilyDashboardPreview({ full = false, compassHref = "/zh/compas
 
   return (
     <div className={`family-dashboard-preview ${full ? "family-dashboard-preview--full" : ""}`}>
-      <div className="family-dashboard-device" aria-label={t("Phoenix Family OS 手机端预览", "Phoenix Family OS mobile preview")}>
+      <div className="family-dashboard-device" aria-label={t("凤启家序手机端预览", "Family OS mobile preview")}>
         <div className="family-dashboard-dynamic-island" aria-hidden="true" />
         <div className="family-dashboard-screen">
           <div className="dashboard-topline">
@@ -86,7 +86,7 @@ export function FamilyDashboardPreview({ full = false, compassHref = "/zh/compas
 
       {full && (
         <div className="family-dashboard-full-note">
-          <p>{t("这是 Phoenix Family OS™ 的产品预览。", "This is a product preview of Phoenix Family OS™.")}</p>
+          <p>{t("这是凤启家序的产品预览。", "This is a preview of Family OS.")}</p>
           <span>{t("当前 MVP 聚焦家庭档案、孩子档案、评估结果与家庭时间线，并逐步承接成长蓝图。", "The current MVP focuses on family and child profiles, assessment results and the family timeline, progressively carrying the Growth Blueprint forward.")}</span>
           <Link href={compassHref} className="text-link">{t("从家庭罗盘开始", "Begin with Family Compass")} <b aria-hidden="true">↗</b></Link>
         </div>
