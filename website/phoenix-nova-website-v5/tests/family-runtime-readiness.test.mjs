@@ -58,4 +58,9 @@ test("never accept forged public/credentialed BFF origin or mismatched customer 
   }
   const mismatch=inspectPrivateFamilyRuntime(syntheticBindings(),"development","http://127.0.0.1:4700");
   assert(mismatch.blockers.includes("TRUSTED_CUSTOMER_ORIGIN_UNVERIFIED"));
+  const publicOrigin="https://preview.public.example";
+  const publicSite=inspectPrivateFamilyRuntime({...syntheticBindings(),CUSTOMER_AUTH_ORIGIN:publicOrigin},
+    "development",publicOrigin);
+  assert.equal(publicSite.status,"HOLD");
+  assert(publicSite.blockers.includes("LOOPBACK_PREVIEW_SITE_ORIGIN_REQUIRED"));
 });
