@@ -88,7 +88,7 @@ export function HealthCompass({ locale }: { locale: HealthLocale }) {
         <div className={styles.panel}>
           <h2>{t("开始前，请了解", "Before you begin")}</h2>
           <p>{t("仅供成年使用者整理事务，不提供诊断、处方、医疗风险评分或保险推荐，也不适用于紧急情况。", "For adults organising tasks only. No diagnosis, prescription, medical risk score or insurance recommendation. Not for emergencies.")}</p>
-          <p>{t("所有题目均可跳过。不填写姓名、病史、检查结果、联系方式或保单资料。回答仅在当前页面内存中使用，不提交服务器、不保存到家庭中心；刷新、离开或清空会丢失回答。", "Every question can be skipped. Do not provide names, medical history, test results, contacts or policy details. Answers stay in this page's memory, are not sent to a server or Family Center, and are lost on refresh, exit or clear.")}</p>
+          <p>{t("所有题目均可跳过。不填写姓名、病史、检查结果、联系方式或保单资料。回答仅在当前页面内存中使用，不提交服务器、不保存到凤启家序；刷新、离开或清空会丢失回答。", "Every question can be skipped. Do not provide names, medical history, test results, contacts or policy details. Answers stay in this page's memory, are not sent to a server or Family OS, and are lost on refresh, exit or clear.")}</p>
           <label className={styles.consent}><input type="checkbox" checked={accepted} onChange={event => setAccepted(event.target.checked)} data-testid="health-consent" />{t("我已年满18岁，并了解上述使用边界。", "I am at least 18 and understand these limits.")}</label>
           <button type="button" className="button button--gold" disabled={!accepted} onClick={() => setStep("questions")} data-testid="health-start">{t("开始梳理", "Start organising")} <span aria-hidden="true">→</span></button>
         </div>
