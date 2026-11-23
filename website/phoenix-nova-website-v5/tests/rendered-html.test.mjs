@@ -69,7 +69,7 @@ test("keeps the three admissions goals together and exposes no real intake endpo
   assert.match(intake, /name="robots" content="noindex, nofollow, nocache"/i);
 });
 
-test("Family Center foregrounds document milestones and keeps the prototype honest", async () => {
+test("Family OS foregrounds document milestones and keeps the prototype honest", async () => {
   const html = await (await get("/zh/family-center")).text();
   for (const label of ["证件与节点", "学业与报告", "我的服务", "我的资料", "获准逗留期限", "回乡证"]) assert.ok(html.includes(label), label);
   assert.match(html, /未接通真实账户/);

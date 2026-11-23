@@ -11,7 +11,7 @@ type ViewState="loading"|"ready"|"empty"|"denied"|"unavailable"|"stale";
 type Props={locale:PortalLocale;panel:Panel};
 const safeStatus=(code:number):ViewState=>code===401||code===403?"denied":"unavailable";
 
-/** One component in the EXISTING Family Center, not another portal or authority.
+/** One component in the EXISTING Family OS, not another portal or authority.
  * Panel state is cleared on unmount, lost visibility and authorization expiry.
  */
 export function FamilyServiceCenterPanels({locale,panel}:Props){
@@ -63,7 +63,7 @@ export function FamilyServiceCenterPanels({locale,panel}:Props){
   const summaryVisible=data!==null&&(state==="ready"||state==="empty");
   const guidance=summaryVisible?nextStepFromAuthorizedSummary(data,locale):null;
   return <section className="fsv-panel" data-family-unified-panel={panel}>
-    <div className="fsv-heading"><div><small>PHOENIX FAMILY OS · SERVICE CENTER</small><h2>{panelTitle}</h2></div>{panelIcon}</div>
+    <div className="fsv-heading"><div><small>Family OS</small><h2>{panelTitle}</h2></div>{panelIcon}</div>
     {panel==="access"?<div className="fsv-two">
       <article className="fsv-card"><ShieldCheck size={24}/><h3>{t("我的资料与授权","My Data & Consent")}</h3>
         <p>{t("家庭成员关系不等于资料共享授权。真实授权必须由 Phoenix Core 核验本人、用途、有效期及撤销状态。","Family relationships do not grant access to private records. Phoenix Core checks the subject, purpose, expiry and revocation of every consent.")}</p>

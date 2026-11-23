@@ -272,7 +272,7 @@ try {
     await page.locator(".mobile-menu summary").click();
     assert.ok(await page.locator(".mobile-menu[open] nav").isVisible(), `${locale}: mobile menu did not open`);
     assert.ok(await page.locator(`.mobile-menu nav a[href="/${locale}/education"]`).isVisible(), `${locale}: mobile Education link is missing`);
-    assert.ok(await page.locator(".mobile-menu nav").getByRole("link", { name: locale === "zh" ? /家庭中心/ : /Family Center/ }).isVisible(), `${locale}: mobile Family Center link is missing`);
+    assert.ok(await page.locator(".mobile-menu nav").getByRole("link", { name: locale === "zh" ? /凤启家序/ : /Family OS/ }).isVisible(), `${locale}: mobile Family OS link is missing`);
     await page.locator(".mobile-menu .mobile-locale").click();
     await page.waitForURL(`**/${locale === "zh" ? "en" : "zh"}/education`);
     passed(`${locale}: mobile menu and locale-preserving switch`);
