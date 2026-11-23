@@ -17,7 +17,7 @@ function summary(){return {schemaVersion:"service-project-summary.v1",
  projects:[project(id)],as_of:new Date().toISOString(),
  expires_at:new Date(Date.now()+50000).toISOString(),next_cursor:null};}
 
-test("one canonical Family Center retains the existing Service Project summary and old preview",()=>{
+test("one canonical Family OS retains the existing Service Project summary and old preview",()=>{
  assert.match(center,/p1AccountWorkbench\?<FamilyServiceOverview locale=\{locale\}\/>/);
  assert.match(center,/p1AccountWorkbench&&\(view==='access'\|\|view==='updates'\|\|view==='assistant'\)/);
  assert.match(center,/FamilyServiceCenterPanels key=.*locale=\{locale\} panel=\{view\}/);
