@@ -15,6 +15,7 @@ const profile = {
 const credentials = '/run/a2-app'
 const cardPattern = /^\/v1\/academic-studio\/cards\/(01910000-0000-7000-8000-[0-9]{12})$/
 const fixtureId = /^01910000-0000-7000-8000-[0-9]{12}$/
+const protectedRequestTimeoutMs = 2500
 
 interface FixtureActor {
   principalId: string
@@ -30,9 +31,26 @@ interface RequestAudit {
   backendPid: number | null
   sqlState: string | null
   rows: number | null
+  failure: 'CLIENT_CANCELLED' | 'REQUEST_DEADLINE' | null
 }
 
-type ScopedLease = <T>(pool: Pool, request: (client: PoolClient) => Promise<T>) => Promise<T>
+type ScopedLease = <T>(
+  pool: Pool, request: (client: PoolClient) => Promise<T>, options: { signal: AbortSignal }
+) => Promise<T>
+
+async function untilAbort<T>(work: () => Promise<T>, signal: AbortSignal): Promise<T> {
+  signal.throwIfAborted()
+  let abort!: () => void
+  const cancelled = new Promise<never>((_, reject) => {
+    abort = () => reject(signal.reason)
+  })
+  signal.addEventListener('abort', abort, { once: true })
+  try {
+    return await Promise.race([cancelled, work()])
+  } finally {
+    signal.removeEventListener('abort', abort)
+  }
+}
 
 function readCredential(name: string): Buffer {
   const descriptor = openSync(join(credentials, name), constants.O_RDONLY | constants.O_NOFOLLOW)
@@ -98,7 +116,7 @@ async function main(): Promise<void> {
     throw new Error('A2_ISOLATED_RUNTIME_REQUIRED')
   }
 
-  // Deployment packages the unchanged candidate adapter next to the compiled entry.
+  // The isolated build packages the adapter next to the compiled entry.
   const { withCanonicalAcademyContext } = require('./safe-context-pool.mjs') as {
     withCanonicalAcademyContext: ScopedLease
   }
@@ -134,11 +152,13 @@ async function main(): Promise<void> {
   const binder = rolePool('binder', 'phoenix_canonical_context_binder')
   const reader = rolePool('reader', 'phoenix_canonical_reader')
 
-  async function bind(client: PoolClient, actor: FixtureActor, nonce: string): Promise<void> {
+  async function bind(client: PoolClient, actor: FixtureActor, nonce: string, signal: AbortSignal): Promise<void> {
     const ticket = await binder.query<{ id: string }>(
       'SELECT auth.issue_context_ticket($1::uuid,$2::uuid,$3::uuid,$4::text,$5::timestamptz,$6::uuid,$1::uuid) AS id',
       [actor.principalId, actor.actorId, actor.familyId, actor.channel, new Date(Date.now() + 30_000), nonce]
     )
+    // Ticket issuance uses a separate pool. A late ticket must not resume a cancelled lease.
+    signal.throwIfAborted()
     const id = ticket.rows[0]?.id
     if (ticket.rowCount !== 1 || !id) throw new Error('A2_TICKET_UNAVAILABLE')
     await client.query('SELECT auth.redeem_context_ticket($1::uuid,$2::uuid)', [id, actor.principalId])
@@ -153,8 +173,14 @@ async function main(): Promise<void> {
   const faultCard = '01910000-0000-7000-8000-000000003206'
   async function handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
     const audit: RequestAudit = {
-      requestId: randomUUID(), operation: 'unknown', status: 500, backendPid: null, sqlState: null, rows: null
+      requestId: randomUUID(), operation: 'unknown', status: 500, backendPid: null, sqlState: null, rows: null, failure: null
     }
+    const client = new AbortController()
+    const clientClosed = () => {
+      if (!response.writableFinished) client.abort()
+    }
+    response.once('close', clientClosed)
+    let deadline: AbortSignal | undefined
     response.setHeader('X-Request-ID', audit.requestId)
     try {
       const path = request.url ?? ''
@@ -179,15 +205,18 @@ async function main(): Promise<void> {
       const isFault = request.method === 'POST' && path === '/__a2/test/abort'
       if (!cardMatch && !isFault) throw new AppError(404, 'NOT_FOUND', 'Not found')
       audit.operation = isFault ? 'abort' : 'card_read'
+      deadline = AbortSignal.timeout(protectedRequestTimeoutMs)
+      const signal = AbortSignal.any([client.signal, deadline])
 
-      const identity = await verifier.verify(authorizationToken(request))
+      const token = authorizationToken(request)
+      const identity = await untilAbort(() => verifier.verify(token), signal)
       const actor = actors.get(identity.sub)
       if (!actor || (isFault && identity.sub !== 'usr_a2_fault')) throw accessDenied()
 
       const cardId = isFault ? faultCard : cardMatch![1]
       const card = await withCanonicalAcademyContext(app, async (client) => {
         audit.backendPid = (await client.query<{ pid: number }>('SELECT pg_backend_pid() AS pid')).rows[0].pid
-        await bind(client, actor, audit.requestId)
+        await bind(client, actor, audit.requestId, signal)
         const result = await client.query<{ id: string, summary: string }>(
           'SELECT card_id AS id,summary_text AS summary FROM learning.read_published_card($1::uuid)',
           [cardId]
@@ -199,20 +228,32 @@ async function main(): Promise<void> {
           await client.query('SELECT 1/0')
         }
         return result.rows[0]
-      })
+      }, { signal })
+      signal.throwIfAborted()
+      if (response.destroyed) throw new Error('A2_CLIENT_CLOSED')
       if (!card) throw accessDenied()
       audit.status = 200
       json(response, 200, { card })
     } catch (error) {
+      if (client.signal.aborted || response.destroyed) {
+        audit.status = 499
+        audit.failure = 'CLIENT_CANCELLED'
+        return
+      }
       const code = (error as { code?: unknown })?.code
-      if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) audit.sqlState = code
-      const body = errorEnvelope(error instanceof AppError
-        ? error
-        : new AppError(503, 'SERVICE_UNAVAILABLE', 'Service temporarily unavailable'))
+      let failure = error instanceof AppError ? error : new AppError(503, 'SERVICE_UNAVAILABLE', 'Service temporarily unavailable')
+      if (deadline?.aborted) {
+        audit.failure = 'REQUEST_DEADLINE'
+        failure = new AppError(504, 'REQUEST_DEADLINE_EXCEEDED', 'Request deadline exceeded')
+      } else if (typeof code === 'string' && /^[0-9A-Z]{5}$/.test(code)) {
+        audit.sqlState = code
+      }
+      const body = errorEnvelope(failure)
       audit.status = body.status
       json(response, body.status, body.body)
     } finally {
-      const decision = audit.status === 200 ? 'ALLOW' : audit.status >= 500 ? 'ERROR' : 'DENY'
+      response.removeListener('close', clientClosed)
+      const decision = audit.status === 200 ? 'ALLOW' : audit.failure || audit.status >= 500 ? 'ERROR' : 'DENY'
       process.stdout.write(JSON.stringify({ event: 'a2_request', utc: new Date().toISOString(), ...audit, decision }) + '\n')
     }
   }
