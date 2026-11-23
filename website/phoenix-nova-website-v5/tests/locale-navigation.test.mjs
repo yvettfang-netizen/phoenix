@@ -18,14 +18,21 @@ test("locale links preserve business paths, explicit locales, queries and fragme
   assert.equal(getCurrentLocale("/fr/identity"), null);
 });
 
-test("document language follows the locale on consultation, Insights and Health routes", () => {
+test("document language follows every localized public and customer route", () => {
   for (const locale of ["zh", "en"]) {
     assert.equal(getDocumentLocale(`/${locale}`), locale);
-    for (const path of ["/consultation", "/health", "/health/providers", "/compass/health", "/insights", "/insights/articles/sample"]) {
+    for (const path of [
+      "/about", "/account", "/admissions", "/application", "/compass/health",
+      "/consultation", "/education", "/education/schools", "/family-center",
+      "/health", "/health/providers", "/identity", "/insights",
+      "/insights/articles/sample", "/lighthouse", "/my-services",
+      "/my-services/01900000-0000-7000-8000-000000000000", "/oriental",
+      "/privacy", "/services", "/wealth",
+    ]) {
       assert.equal(getDocumentLocale(`/${locale}${path}`), locale);
     }
   }
   assert.equal(getDocumentLocale("/en/insights-archive"), null);
-  assert.equal(getDocumentLocale("/en/identity"), null);
+  assert.equal(getDocumentLocale("/en/unknown"), null);
   assert.equal(getDocumentLocale("/fr/insights"), null);
 });

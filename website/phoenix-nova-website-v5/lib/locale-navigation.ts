@@ -21,9 +21,15 @@ export function getCurrentLocale(path: string): SiteLocale | null {
   return match ? match[1] as SiteLocale : null;
 }
 
-/** These localized routes share the same document language on server and client. */
+/** Public localized routes share the same document language on server and client. */
 export function getDocumentLocale(pathname: string): SiteLocale | null {
   if (pathname === "/zh" || pathname === "/en") return pathname === "/zh" ? "zh" : "en";
-  const match = /^\/(zh|en)\/(?:consultation|privacy|health|compass\/health|insights)(?:\/|$)/.exec(pathname);
-  return match ? match[1] as SiteLocale : null;
+  const match = /^\/(zh|en)\/([^/?#]+)(?:\/|$)/.exec(pathname);
+  if (!match) return null;
+  const localizedSections = new Set([
+    "about", "account", "admissions", "application", "compass", "consultation",
+    "education", "family-center", "health", "identity", "insights", "lighthouse",
+    "my-services", "oriental", "privacy", "services", "wealth",
+  ]);
+  return localizedSections.has(match[2]) ? match[1] as SiteLocale : null;
 }
