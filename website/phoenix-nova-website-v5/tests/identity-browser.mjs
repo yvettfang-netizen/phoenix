@@ -40,7 +40,7 @@ try {
   for (const locale of ["zh", "en"]) {
     await page.setViewportSize({ width: 390, height: 844 }); await page.goto(`${origin}/${locale}/identity`, { waitUntil: "networkidle" }); await loaded();
     await page.locator('.mobile-menu summary').click();assert.ok(await page.locator('.mobile-menu[open] nav').isVisible());
-    assert.ok(await page.locator('.mobile-menu nav').getByRole('link', { name: locale === "zh" ? /家庭中心/ : /Family Center/ }).isVisible());
+    assert.ok(await page.locator('.mobile-menu nav').getByRole('link', { name: locale === "zh" ? /凤启家序/ : /Family OS/ }).isVisible());
     await page.locator('.mobile-menu .mobile-locale').click();await page.waitForURL(`**/${locale === "zh" ? "en" : "zh"}/identity`);passed(`${locale}: mobile menu and locale-preserving switch`);
     await page.goto(`${origin}/${locale}/identity`, { waitUntil: "networkidle" }); await loaded();
     for (const card of await page.getByTestId('identity-service').all()) { const detail=card.locator('details'); await detail.locator('summary').click();assert.equal(await detail.getAttribute('open')!==null,true); }
