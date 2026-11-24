@@ -30,8 +30,10 @@ $policy$;
 
 -- Queue metadata only. Dispatchers can see leads in their authorised domains.
 -- Advisers only see leads or follow-ups specifically assigned to them.
+-- The contact action always reauthorises and audits the read separately.
 CREATE FUNCTION crm.list_website_consultation_staff_queue(p_issuer text,p_subject text)
-RETURNS TABLE(lead_id uuid,service_domain text,locale text,received_at timestamptz,lead_status text,assignee_id uuid)
+RETURNS TABLE(lead_id uuid,service_domain text,locale text,received_at timestamptz,lead_status text,
+  assignee_id uuid,can_read_contact boolean)
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,crm,auth
 AS $queue$
@@ -52,16 +54,26 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  SELECT l.lead_id,i.service_domain,i.locale,i.recorded_at,l.lead_status,l.assigned_principal_id
+  SELECT l.lead_id,i.service_domain,i.locale,i.recorded_at,l.lead_status,l.assigned_principal_id,
+    (assignment.is_assigned AND l.lead_status NOT IN ('MERGED','DISQUALIFIED','LOST')
+      AND i.contact_envelope IS NOT NULL AND i.contact_expires_at>clock_timestamp()
+      AND EXISTS (
+        SELECT 1 FROM crm.website_consultation_staff_grants g
+        WHERE g.principal_id=employee AND g.service_domain=i.service_domain AND g.grant_kind='ADVISER'
+          AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
+      )) IS TRUE
     FROM crm.website_consultation_intake i JOIN crm.leads l ON l.lead_id=i.lead_id
+    CROSS JOIN LATERAL (
+      SELECT (l.assigned_principal_id=employee OR EXISTS (
+        SELECT 1 FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
+          AND f.assigned_principal_id=employee AND f.status='PENDING'
+      )) IS TRUE AS is_assigned
+    ) assignment
     WHERE EXISTS (
       SELECT 1 FROM crm.website_consultation_staff_grants g
       WHERE g.principal_id=employee AND g.service_domain=i.service_domain
         AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
-        AND (g.grant_kind='DISPATCHER' OR l.assigned_principal_id=employee OR EXISTS (
-          SELECT 1 FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
-            AND f.assigned_principal_id=employee AND f.status='PENDING'
-        ))
+        AND (g.grant_kind='DISPATCHER' OR assignment.is_assigned)
     )
     ORDER BY i.recorded_at DESC,l.lead_id DESC LIMIT 100;
 END
