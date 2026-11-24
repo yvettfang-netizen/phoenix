@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { AboutTrustSections } from "./about-trust";
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
 import { AdmissionsContent, AdmissionsShortcut, ApplicationIntake, FamilyHub } from "./customer-center";
@@ -581,14 +582,21 @@ function OrientalPage({ locale }: { locale: Locale }) {
 }
 
 function AboutPage({ locale }: { locale: Locale }) {
-  return (
-    <>
-      <PageHero locale={locale} page="about" eyebrow="About Phoenix Nova™" title={pick(locale, "一个以家庭成长为核心的\n长期平台。", "A long-term platform\nbuilt around family growth.")} lead={pick(locale, "Phoenix Nova™ 不是单一申请机构、身份服务商或销售平台，而是连接方向判断、专业支持与长期数字系统的家庭成长平台。", "Phoenix Nova™ is not a single-purpose admissions agency, identity provider or sales platform. It connects direction, professional support and a long-term digital system around family growth.")} />
-      <section className="brand-proof"><div className="shell brand-proof__layout"><div><Image src="/brand/official/v3/phoenix-nova-primary-original.png" alt="Phoenix Nova 鳳啟 Official Logo" width={1254} height={1254} unoptimized /></div><p><span>OFFICIAL PHOENIX NOVA™ LOGO</span>{pick(locale,"凤凰、地球与星光连接家庭的每一次启程。官网使用 Founder 于2026年10月30日确认的原始标志，完整保留颜色、画布与比例。","The phoenix, globe and star connect every family beginning. The website uses the original logo confirmed by the Founder on 30 October 2026, preserving its colours, canvas and proportions.")}</p></div></section>
-      <section className="principles-section"><div className="shell"><SectionIntro index="01" eyebrow="How we work" title={pick(locale, "长期主义，需要一套不同的工作原则。", "Long-term thinking requires a different set of principles.")} /><div className="principles-grid"><article><span>01</span><h3>Knowledge First.</h3><p>{pick(locale,"先理解，再行动。","Understand before acting.")}</p></article><article><span>02</span><h3>AI for efficiency.</h3><p>{pick(locale,"让科技处理复杂，让人保留温度。","Let technology handle complexity while people preserve care.")}</p></article><article><span>03</span><h3>Continuity by design.</h3><p>{pick(locale,"每一次服务，都应成为家庭长期成长的一部分。","Every service should become part of a family's long-term growth.")}</p></article></div></div></section>
-      <section className="about-statement"><div className="shell"><p>{pick(locale,"植根东方，连接世界。","Rooted in the East, connected to the world.")}</p><h2>For Every Beginning.</h2><span>{pick(locale,"每一次启程，都值得更好的未来。","Every beginning deserves a better future.")}</span></div></section>
-    </>
-  );
+  const wealthHref = `${WEALTH_ORIGIN}/${locale}`;
+  const principles = [
+    ["Knowledge First.", "先理解，再行动。", "Understand before acting.", "先厘清适用条件、资料来源和潜在风险，再讨论规划方向。", "Check eligibility, sources and potential risks before discussing a course of action."],
+    ["AI for efficiency.", "让科技处理复杂，让人保留温度。", "Use technology to simplify complexity, with people at the centre.", "探索用数字工具整理知识、分析资料和协作。重要决策仍需要专业判断与人的参与。", "We explore digital tools for research, analysis and collaboration. Important decisions still require professional judgment and human involvement."],
+    ["Continuity by design.", "让每一次服务，成为长期成长的一部分。", "Make each engagement part of long-term growth.", "把阶段性规划、重要节点和后续服务联系起来，持续关注家庭的长期目标。", "Connect plans, milestones and follow-up as the family’s needs evolve."],
+  ] as const;
+  return <>
+    <PageHero locale={locale} page="about" eyebrow="ABOUT PHOENIX NOVA™ · GLOBAL FAMILY GROWTH PLATFORM" title={pick(locale, "以家庭为中心，连接更广阔的未来。", "Built Around Families. Connected to the World.")} lead={pick(locale, "凤启环球以家庭长期成长为核心，围绕教育、身份、健康与财富，帮助家庭理解复杂的选择，制定适合自身目标的规划，并协调相关专业服务。每一次启程，都值得更好的未来。", "Phoenix Nova is a global family growth platform. Across education, residency, health and wealth, we help families understand complex choices, make plans around their goals and coordinate professional support through different stages of life. For Every Beginning.")} />
+    <AboutTrustSections locale={locale} wealthHref={wealthHref} principles={
+      <section className="principles-section"><div className="shell">
+        <SectionIntro index="03" eyebrow="WHY PHOENIX NOVA" title={pick(locale, "长期主义，需要一套不同的工作原则。", "Long-term thinking calls for a different way of working.")} />
+        <div className="principles-grid">{principles.map(([title, cn, en, bodyCN, bodyEN]) => <article key={title}><h3>{title}</h3><p><strong>{pick(locale, cn, en)}</strong></p><p>{pick(locale, bodyCN, bodyEN)}</p></article>)}</div>
+      </div></section>
+    } />
+  </>;
 }
 
 function FamilyCenterPage({ locale }: { locale: Locale }) {
