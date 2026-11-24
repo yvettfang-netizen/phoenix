@@ -5,14 +5,16 @@ function runWorkbench() {
   const refresh = document.querySelector("#refresh-queue");
   const labels = { EDUCATION: "教育", IDENTITY: "身份", WEALTH: "财富", HEALTH: "健康" };
 
-  async function request(path = "", body) {
+  async function request(path = "", body, unavailableMessage) {
     const response = await fetch(endpoint + path, body === undefined ? {
       cache: "no-store",
     } : {
       method: "POST", cache: "no-store", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (!response.ok) throw new Error(response.status === 401 ? "员工会话已失效，请重新登录。" : "当前操作未完成。请刷新队列后重试。");
+    if (response.status === 401) throw new Error("员工会话已失效，请重新登录。");
+    if (response.status === 404 && unavailableMessage) throw new Error(unavailableMessage);
+    if (!response.ok) throw new Error("当前操作未完成。请刷新队列后重试。");
     return response.json();
   }
 
@@ -52,16 +54,18 @@ function runWorkbench() {
         controls.className = "actions";
         const email = element("p");
         email.setAttribute("aria-live", "polite");
-        controls.append(action("查看邮箱", async button => {
-          if (email.textContent) {
-            email.replaceChildren();
-            button.textContent = "查看邮箱";
-            return;
-          }
-          const result = await request(path + "/contact", {});
-          email.textContent = result.email;
-          button.textContent = "隐藏邮箱";
-        }));
+        if (item.canReadContact === true) {
+          controls.append(action("查看邮箱", async button => {
+            if (email.textContent) {
+              email.replaceChildren();
+              button.textContent = "查看邮箱";
+              return;
+            }
+            const result = await request(path + "/contact", {}, "当前无法查看这条咨询的邮箱，权限或有效期可能已变化。");
+            email.textContent = result.email;
+            button.textContent = "隐藏邮箱";
+          }));
+        }
         if (!item.assigneeId && item.status === "NEW") {
           const label = element("label", "顾问");
           const adviser = element("select");

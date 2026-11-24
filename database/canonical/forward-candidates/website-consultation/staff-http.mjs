@@ -98,6 +98,7 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
             receivedAt: row.received_at,
             status: row.lead_status,
             assigneeId: row.assignee_id,
+            canReadContact: row.can_read_contact === true,
           })) });
         }
         await client.query("DISCARD ALL");
