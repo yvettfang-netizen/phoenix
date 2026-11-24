@@ -13,6 +13,7 @@ export function SiteEcosystemContent({ locale, consultationPath, localized = fal
     <div className={styles.compactLinks}><BrandMark href={`${mainOrigin ?? ""}${localizedHref(locale, "")}`} label={zh ? "凤启环球首页" : "Phoenix Nova home"} /><nav aria-label={zh ? "页脚导航" : "Footer navigation"}>
       {[["专业服务", "Services", "/compass"], ["教育生态", "Learning", "/education#academy"], ["凤启家序", "Family OS", "/account"], ["凤启洞察", "Insights", "/insights"], ["关于凤启", "About", "/about"]].map(([cn,en,path]) => <Link key={path} href={`${mainOrigin ?? ""}${localizedHref(locale,path)}`}>{zh ? cn : en}</Link>)}
       <a href="https://fengqi-research-institute.yvettfang.chatgpt.site">{zh ? "数字凤启 · 进入仙兽图" : "Digital Phoenix"}</a>
+      <Link prefetch={false} href={`${mainOrigin ?? ""}${localizedHref(locale, "/consultation")}`}>{zh ? "服务咨询" : "Service enquiry"}</Link>
       {healthPreviewEnabled() && <Link href={localizedHref(locale,"/compass/health")} data-testid="health-entry">{zh ? "健康评估预览" : "Health assessment preview"}</Link>}
     </nav></div>
     <div className={styles.compactCopyright}><span>© 2026 Phoenix Nova™</span><details><summary>{zh ? "公司与服务声明" : "Company & service notice"}</summary><p>{zh ? "凤启环球信息科技（深圳）有限公司。公开信息不构成录取、身份、医疗、法律或收益保证。" : "Phoenix Nova™. Public information does not guarantee admission, immigration, medical, legal or financial outcomes."}</p></details><Link href={localeHref ?? `${mainOrigin ?? ""}${localizedHref(zh ? "en" : "zh", "")}`}>{zh ? "EN" : "中文"}</Link></div>
