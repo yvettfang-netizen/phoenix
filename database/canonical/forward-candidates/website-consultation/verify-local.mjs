@@ -290,6 +290,22 @@ try {
   const assigned = await post("assign", "synthetic-dispatcher", { assigneeId: employee });
   assert.equal(assigned.status, 200);
   const assignedBody = await assigned.json();
+  const pending = await db.query(`
+    SELECT f.due_at, f.status, f.assigned_principal_id
+      FROM crm.follow_ups f
+     WHERE f.lead_id=$1 AND f.follow_up_id=$2
+  `, [newLead, assignedBody.taskId]);
+  assert.equal(pending.rowCount, 1);
+  assert.equal(pending.rows[0].status, "PENDING");
+  assert.equal(pending.rows[0].assigned_principal_id, employee);
+  const remainingHours = (new Date(pending.rows[0].due_at).getTime() - Date.now()) / 3600000;
+  assert(remainingHours > 23 && remainingHours <= 24.1, "internal first-contact due window");
+  const assignedQueue = await staffHttp(new Request(queueUrl, {
+    headers: { authorization: "Bearer synthetic-staff" },
+  }));
+  const dueItem = (await assignedQueue.json()).items.find(item => item.leadId === newLead);
+  assert.equal(new Date(dueItem.nextDueAt).getTime(), new Date(pending.rows[0].due_at).getTime());
+  console.log("PASS first-contact task due time and authorized private-queue due projection");
   assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
   assert.deepEqual(await (await post("assign", "synthetic-dispatcher", { assigneeId: employee })).json(), assignedBody);
   assert.equal((await post("complete", "synthetic-dispatcher")).status, 404);
