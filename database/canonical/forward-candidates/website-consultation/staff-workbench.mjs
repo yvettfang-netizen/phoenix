@@ -48,6 +48,15 @@ function runWorkbench() {
           element("p", (item.status === "CONTACTED" ? "已联系" : item.status === "NEW" ? "新线索" : item.status) +
             " · " + new Date(item.receivedAt).toLocaleString("zh-CN")),
           element("code", item.leadId));
+        if (item.nextDueAt && item.status === "NEW") {
+          const due = new Date(item.nextDueAt);
+          if (!Number.isNaN(due.getTime())) {
+            const overdue = due.getTime() <= Date.now();
+            const hint = element("p", (overdue ? "待办已逾期 · " : "首次联系待办截止 · ") + due.toLocaleString("zh-CN"));
+            if (overdue) hint.setAttribute("role", "status");
+            entry.append(hint);
+          }
+        }
         const controls = element("div");
         controls.className = "actions";
         const email = element("p");
