@@ -31,7 +31,7 @@ $policy$;
 -- Queue metadata only. Dispatchers can see leads in their authorised domains.
 -- Advisers only see leads or follow-ups specifically assigned to them.
 CREATE FUNCTION crm.list_website_consultation_staff_queue(p_issuer text,p_subject text)
-RETURNS TABLE(lead_id uuid,service_domain text,locale text,received_at timestamptz,lead_status text,assignee_id uuid)
+RETURNS TABLE(lead_id uuid,service_domain text,locale text,received_at timestamptz,lead_status text,assignee_id uuid,next_due_at timestamptz)
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,crm,auth
 AS $queue$
@@ -52,7 +52,9 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  SELECT l.lead_id,i.service_domain,i.locale,i.recorded_at,l.lead_status,l.assigned_principal_id
+  SELECT l.lead_id,i.service_domain,i.locale,i.recorded_at,l.lead_status,l.assigned_principal_id,
+    (SELECT min(f.due_at) FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
+      AND f.assigned_principal_id=l.assigned_principal_id AND f.status='PENDING') AS next_due_at
     FROM crm.website_consultation_intake i JOIN crm.leads l ON l.lead_id=i.lead_id
     WHERE EXISTS (
       SELECT 1 FROM crm.website_consultation_staff_grants g
@@ -204,8 +206,10 @@ BEGIN
     END IF;
     UPDATE crm.leads SET assigned_principal_id=p_assignee,updated_by_principal_id=employee,
       updated_at=clock_timestamp() WHERE lead_id=p_lead;
-    INSERT INTO crm.follow_ups(follow_up_id,target_kind,lead_id,title,status,assigned_principal_id,created_by_principal_id)
-      VALUES(p_event,'LEAD',p_lead,'Website consultation: first contact','PENDING',p_assignee,employee);
+    -- Internal first-response target for workbench overdue highlighting, not a customer SLA.
+    INSERT INTO crm.follow_ups(follow_up_id,target_kind,lead_id,title,status,assigned_principal_id,created_by_principal_id,due_at)
+      VALUES(p_event,'LEAD',p_lead,'Website consultation: first contact','PENDING',p_assignee,employee,
+        clock_timestamp()+interval '24 hours');
     INSERT INTO crm.lead_events(lead_event_id,lead_id,event_kind,reason_code,actor_principal_id)
       VALUES(p_event,p_lead,'ASSIGNED','WEBSITE_CONSULTATION_ASSIGNED',employee);
     RETURN p_event;
