@@ -333,36 +333,36 @@ $replay$;
 REVOKE ALL ON FUNCTION crm.replay_website_contact_deletion(uuid,timestamptz) FROM PUBLIC,phoenix_canonical_app;
 GRANT EXECUTE ON FUNCTION crm.replay_website_contact_deletion(uuid,timestamptz) TO phoenix_website_deletion_replay;
 
--- Keep the existing lead transition API. Only website leads require this check
--- and have an intake envelope to clear within the conversion transaction.
-CREATE FUNCTION crm.guard_website_lead_conversion()
+-- Enforce conversion for every CRM lead. Website contacts additionally clear
+-- inside the same transaction.
+CREATE FUNCTION crm.guard_verified_lead_conversion()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,crm
 AS $conversion$
-DECLARE website_request uuid;
+DECLARE website_request uuid; verified_link uuid;
 BEGIN
-  IF NEW.lead_status<>'CONVERTED' OR OLD.lead_status='CONVERTED' THEN RETURN NEW; END IF;
-  SELECT request_id INTO website_request FROM crm.website_consultation_intake
-    WHERE lead_id=OLD.lead_id FOR UPDATE NOWAIT;
-  IF NOT FOUND THEN RETURN NEW; END IF;
-
   IF OLD.lead_status<>'QUALIFIED' OR NOT crm.is_crm_service()
+     OR OLD.family_id IS NULL
      OR auth.current_family_id() IS DISTINCT FROM OLD.family_id
      OR NEW.family_id IS DISTINCT FROM OLD.family_id THEN
-    RAISE EXCEPTION 'WEBSITE_CONVERSION_REQUIRES_VERIFIED_CLIENT' USING ERRCODE='23514';
+    RAISE EXCEPTION 'CRM_CONVERSION_FAMILY_OR_CONTEXT_DENIED' USING ERRCODE='PZ001';
   END IF;
 
   -- The lead is already locked. Fail and allow retry if a review holds the
   -- link lock, since the existing identity review path locks the link first.
-  PERFORM 1 FROM crm.lead_identity_links link
+  SELECT link.lead_identity_link_id INTO verified_link FROM crm.lead_identity_links link
     JOIN crm.clients client ON client.client_id=link.client_id
     WHERE link.lead_id=OLD.lead_id AND link.target_kind='CLIENT'
       AND link.status='VERIFIED' AND link.verified_by_principal_id<>link.linked_by_principal_id
+      AND link.verified_at>=link.linked_at AND link.verified_at<=clock_timestamp()
       AND client.family_id=OLD.family_id AND client.lifecycle_status IN ('ACTIVE','PAUSED')
     FOR SHARE OF link,client NOWAIT;
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'WEBSITE_CONVERSION_REQUIRES_VERIFIED_CLIENT' USING ERRCODE='23514';
+    RAISE EXCEPTION 'CRM_CONVERSION_VERIFIED_CLIENT_REQUIRED' USING ERRCODE='PZ002';
   END IF;
+  PERFORM audit.record_write_decision('CONVERT','CRM_LEAD_IDENTITY',verified_link,true,'VERIFIED_CLIENT_LINK_USED');
 
+  SELECT request_id INTO website_request FROM crm.website_consultation_intake
+    WHERE lead_id=OLD.lead_id FOR UPDATE NOWAIT;
   UPDATE crm.website_consultation_intake
     SET contact_envelope=NULL,payload_mac=NULL,duplicate_match_mac=NULL,contact_erased_at=clock_timestamp()
     WHERE request_id=website_request AND contact_erased_at IS NULL;
@@ -373,7 +373,42 @@ BEGIN
   RETURN NEW;
 END
 $conversion$;
-REVOKE ALL ON FUNCTION crm.guard_website_lead_conversion() FROM PUBLIC,phoenix_canonical_app;
-CREATE TRIGGER website_lead_conversion_guard BEFORE UPDATE OF lead_status ON crm.leads
-  FOR EACH ROW EXECUTE FUNCTION crm.guard_website_lead_conversion();
+REVOKE ALL ON FUNCTION crm.guard_verified_lead_conversion() FROM PUBLIC,phoenix_canonical_app;
+CREATE TRIGGER verified_lead_conversion_guard BEFORE UPDATE OF lead_status ON crm.leads
+  FOR EACH ROW WHEN (NEW.lead_status='CONVERTED' AND OLD.lead_status IS DISTINCT FROM 'CONVERTED')
+  EXECUTE FUNCTION crm.guard_verified_lead_conversion();
+
+-- Preserve the existing state machine, ACL and return contract. A rejected
+-- trigger write rolls back before we persist the denial through Canonical audit.
+CREATE OR REPLACE FUNCTION crm.transition_lead(p_lead uuid,p_next text,p_event uuid) RETURNS boolean
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,auth,core,crm,audit
+AS $transition$
+DECLARE v crm.leads%ROWTYPE; ok boolean;
+BEGIN
+  SELECT * INTO v FROM crm.leads WHERE lead_id=p_lead FOR UPDATE;
+  ok:=FOUND AND crm.is_crm_service() AND core.is_uuid_v7(p_event)
+    AND ((v.family_id IS NULL AND auth.current_family_id() IS NULL) OR v.family_id=auth.current_family_id())
+    AND ((v.lead_status='NEW' AND p_next IN ('CONTACTED','DISQUALIFIED'))
+      OR (v.lead_status='CONTACTED' AND p_next IN ('QUALIFIED','LOST','DISQUALIFIED'))
+      OR (v.lead_status='QUALIFYING' AND p_next IN ('QUALIFIED','LOST','DISQUALIFIED'))
+      OR (v.lead_status='QUALIFIED' AND p_next IN ('CONVERTED','LOST','DISQUALIFIED')));
+  IF ok IS NOT TRUE THEN
+    RETURN audit.record_write_decision('TRANSITION','CRM_LEAD',p_lead,false,'CRM_SCOPE_OR_STATE_DENIED');
+  END IF;
+  BEGIN
+    UPDATE crm.leads SET lead_status=p_next,
+      qualification_status=CASE WHEN p_next='QUALIFIED' THEN 'QUALIFIED'
+        WHEN p_next='DISQUALIFIED' THEN 'UNQUALIFIED' ELSE qualification_status END,
+      updated_by_principal_id=auth.current_principal_id(),updated_at=clock_timestamp()
+      WHERE lead_id=p_lead;
+  EXCEPTION
+    WHEN SQLSTATE 'PZ001' THEN
+      RETURN audit.record_write_decision('TRANSITION','CRM_LEAD',p_lead,false,'CRM_CONVERSION_FAMILY_OR_CONTEXT_DENIED');
+    WHEN SQLSTATE 'PZ002' THEN
+      RETURN audit.record_write_decision('TRANSITION','CRM_LEAD',p_lead,false,'CRM_CONVERSION_VERIFIED_CLIENT_REQUIRED');
+  END;
+  PERFORM crm.record_lead_event(p_event,p_lead,'STATUS_CHANGED',v.lead_status,p_next,'CONTROLLED_LEAD_STATUS_CHANGED');
+  RETURN audit.record_write_decision('TRANSITION','CRM_LEAD',p_lead,true,'CONTROLLED_LEAD_STATUS_CHANGED');
+END
+$transition$;
 COMMIT;

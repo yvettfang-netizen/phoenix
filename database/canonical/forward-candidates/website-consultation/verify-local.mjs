@@ -681,22 +681,60 @@ try {
     assert.equal(transition.rows[0].ok, true);
   }
   const convert = () => crmService.query("SELECT crm.transition_lead($1,'CONVERTED',$2) AS ok", [cancelLead, conversionEvent]);
-  await assert.rejects(convert(), /WEBSITE_CONVERSION_REQUIRES_VERIFIED_CLIENT/);
+  const denied = async () => assert.equal((await convert()).rows[0].ok, false);
+  await denied();
+  await assert.rejects(crmService.query("UPDATE crm.leads SET lead_status='CONVERTED' WHERE lead_id=$1", [cancelLead]),
+    { code: "42501" });
 
+  const fixtureId = suffix => "019347ec-7740-7000-a000-" + String(suffix).padStart(12, "0");
+  const linkIdentity = async (id, kind, target, eventId) => (await crmService.query(
+    "SELECT crm.link_lead_identity($1,$2,$3,$4,$5,$6) AS ok", [id, cancelLead, kind, target, hash, eventId],
+  )).rows[0].ok;
+  const verifyLink = async (link = clientLink, eventId = fixtureId(68)) => (await crmService.query(
+    "SELECT crm.verify_lead_identity($1,$2) AS ok", [link, eventId],
+  )).rows[0].ok;
+  assert.equal(await linkIdentity(fixtureId(69), "PERSON", person, fixtureId(70)), true);
+  await bindConversionContext(reviewerPrincipal, null);
+  assert.equal(await verifyLink(fixtureId(69), fixtureId(71)), true);
+  await denied();
   await bindConversionContext(principal, otherFamily);
-  const linked = await crmService.query("SELECT crm.link_lead_identity($1,$2,'CLIENT',$3,$4,$5) AS ok",
-    [clientLink, cancelLead, clientId, hash, "019347ec-7740-7000-a000-000000000067"]);
-  assert.equal(linked.rows[0].ok, true);
-  await bindConversionContext(principal, null);
-  await assert.rejects(convert(), /WEBSITE_CONVERSION_REQUIRES_VERIFIED_CLIENT/);
-  await bindConversionContext(principal, otherFamily);
-  const verifyLink = () => crmService.query("SELECT crm.verify_lead_identity($1,$2) AS ok",
-    [clientLink, "019347ec-7740-7000-a000-000000000068"]);
-  assert.equal((await verifyLink()).rows[0].ok, false);
+  assert.equal(await linkIdentity(fixtureId(72), "FAMILY", otherFamily, fixtureId(73)), true);
   await bindConversionContext(reviewerPrincipal, otherFamily);
-  assert.equal((await verifyLink()).rows[0].ok, true);
+  assert.equal(await verifyLink(fixtureId(72), fixtureId(74)), true);
+  await denied();
+  await bindConversionContext(principal, otherFamily);
+  assert.equal(await linkIdentity(fixtureId(75), "CLIENT", fixtureId(76), fixtureId(77)), false);
+  await denied();
+  const revokedLink = fixtureId(78);
+  assert.equal(await linkIdentity(revokedLink, "CLIENT", clientId, fixtureId(79)), true);
+  await denied();
+  assert.equal(await verifyLink(revokedLink, fixtureId(80)), false);
+  await bindConversionContext(reviewerPrincipal, otherFamily);
+  assert.equal(await verifyLink(revokedLink, fixtureId(80)), true);
+  const revokeLink = async (link, key) => (await crmService.query(
+    "SELECT crm.revoke_lead_identity($1,$2) AS ok", [link, key],
+  )).rows[0].ok;
+  assert.equal(await revokeLink(revokedLink, fixtureId(81)), true);
+  assert.equal(await verifyLink(revokedLink, fixtureId(82)), false);
+  await denied();
+  await bindConversionContext(principal, otherFamily);
+  assert.equal(await linkIdentity(clientLink, "CLIENT", clientId, fixtureId(67)), true);
+  await denied();
+  assert.equal(await verifyLink(), false);
+  await bindConversionContext(reviewerPrincipal, otherFamily);
+  assert.equal(await verifyLink(), true);
+  assert.deepEqual((await db.query(`
+    SELECT status, verified_by_principal_id, verified_at IS NOT NULL AS stamped
+    FROM crm.lead_identity_links WHERE lead_identity_link_id=$1
+  `, [clientLink])).rows, [{ status: "VERIFIED", verified_by_principal_id: reviewerPrincipal, stamped: true }]);
+  const mismatchFamily = fixtureId(83);
+  await db.query("INSERT INTO core.families(family_id,display_name) VALUES($1,'Synthetic conversion mismatch')", [mismatchFamily]);
+  await db.query("UPDATE crm.leads SET family_id=$2 WHERE lead_id=$1", [cancelLead, mismatchFamily]);
+  await bindConversionContext(principal, mismatchFamily);
+  await denied();
+  await db.query("UPDATE crm.leads SET family_id=$2 WHERE lead_id=$1", [cancelLead, otherFamily]);
   await bindConversionContext(principal, null);
-  assert.equal((await convert()).rows[0].ok, false);
+  await denied();
   await bindConversionContext(principal, otherFamily);
   await db.query("BEGIN");
   try {
@@ -716,7 +754,10 @@ try {
     FROM crm.leads l JOIN crm.website_consultation_intake i USING(lead_id) WHERE l.lead_id=$1
   `, [cancelLead])).rows, [{ lead_status: "QUALIFIED", retained: true }]);
   assert.equal((await convert()).rows[0].ok, true);
-  assert.equal((await convert()).rows[0].ok, false);
+  await denied();
+  await db.query("UPDATE auth.principals SET status='DISABLED' WHERE principal_id=$1", [principal]);
+  assert.equal(await revokeLink(clientLink, fixtureId(84)), false);
+  await db.query("UPDATE auth.principals SET status='ACTIVE' WHERE principal_id=$1", [principal]);
   await crmService.query("SELECT auth.clear_context()");
   assert.equal((await cancelPost("contact", "synthetic-staff")).status, 404);
   assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 0);
@@ -733,7 +774,36 @@ try {
     SELECT 1 FROM audit.access_events WHERE resource_id=$1 AND action='WEBSITE_CONTACT_ERASE_ON_CONVERSION'
       AND decision='ALLOW' AND principal_id=$2
   `, [cancelRequest, principal])).rowCount, 1);
-  console.log("PASS website conversion requires distinct verified client link and correct family, preserves source, and erases contact atomically");
+  assert.equal((await db.query(`
+    SELECT 1 FROM audit.access_events WHERE resource_id=$1 AND principal_id=$2
+      AND action='CONVERT' AND decision='ALLOW' AND reason_code='VERIFIED_CLIENT_LINK_USED'
+  `, [clientLink, principal])).rowCount, 1);
+  assert.ok((await db.query(`
+    SELECT 1 FROM audit.access_events WHERE resource_id=$1 AND principal_id=$2 AND decision='DENY'
+      AND reason_code='CRM_CONVERSION_VERIFIED_CLIENT_REQUIRED'
+  `, [cancelLead, principal])).rowCount >= 3);
+  assert.equal((await db.query(`
+    SELECT 1 FROM crm.lead_events WHERE lead_id=$1 AND to_status='CONVERTED' AND actor_principal_id=$2
+  `, [cancelLead, principal])).rowCount, 1);
+  assert.equal((await db.query(`
+    SELECT 1 FROM audit.access_events transition
+    JOIN audit.access_events binding ON binding.request_nonce=transition.request_nonce
+    WHERE transition.resource_id=$1 AND transition.action='TRANSITION' AND transition.decision='ALLOW'
+      AND binding.resource_id=$2 AND binding.reason_code='VERIFIED_CLIENT_LINK_USED'
+      AND transition.principal_id=binding.principal_id
+  `, [cancelLead, clientLink])).rowCount, 1);
+  console.log("PASS CRM conversion rejects absent, person-only, family-only, pending, revoked, missing-client and mismatched-family identities; distinct verified client converts once with audit and atomic contact cleanup");
+
+  const nonWebsiteLead = fixtureId(85);
+  await db.query(`
+    INSERT INTO crm.leads(lead_id,lead_source_id,family_id,lead_status,qualification_status,created_by_principal_id,updated_by_principal_id)
+    VALUES($1,$2,$3,'QUALIFIED','QUALIFIED',$4,$4)
+  `, [nonWebsiteLead, otherSource, otherFamily, principal]);
+  await bindConversionContext(principal, otherFamily);
+  assert.equal((await crmService.query("SELECT crm.transition_lead($1,'CONVERTED',$2) AS ok",
+    [nonWebsiteLead, fixtureId(86)])).rows[0].ok, false);
+  await crmService.query("SELECT auth.clear_context()");
+  console.log("PASS verified-client gate also protects non-website CRM leads");
 
   const deletionRequest = "028347ec-7740-4000-a000-000000000020";
   assert.equal((await submit("education", deletionRequest, "synthetic-deletion@example.test")).status, 202);
