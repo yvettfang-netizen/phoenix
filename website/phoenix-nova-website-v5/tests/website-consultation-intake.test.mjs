@@ -44,8 +44,8 @@ const input = {
   email: "visitor@example.test",
   consent: true,
 };
-function request(data = input, source = origin) {
-  return new Request(origin + "/api/website-consultations", {
+function request(data = input, source = origin, suffix = "") {
+  return new Request(origin + "/api/website-consultations" + suffix, {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: source },
     body: JSON.stringify(data),
@@ -72,6 +72,16 @@ test("passes the selected service and idempotency key to the receiver", async ()
   assert.equal(response.headers.get("cache-control"), "no-store");
 });
 
+test("attributes the entry path independently of the submitted service direction", async () => {
+  const response = await handleWebsiteConsultation(request(input, origin, "/education"), env, async (_url, options) => {
+    const value = JSON.parse(options.body);
+    assert.equal(value.source, "phoenix-nova-compass-education");
+    assert.equal(value.service, "wealth");
+    return Response.json({ status: "persisted", requestId: input.requestId });
+  });
+  assert.equal(response.status, 202);
+});
+
 test("rejects disabled intake, foreign origins, absent consent and unexpected personal fields", async () => {
   const unexpectedSend = () => assert.fail("receiver must not be called");
   for (const [req, config, status] of [
@@ -88,6 +98,9 @@ test("rejects disabled intake, foreign origins, absent consent and unexpected pe
     [request({ ...input, consent: false }), env, 400],
     [request({ ...input, email: "bad address@example.test" }), env, 400],
     [request({ ...input, notes: "synthetic" }), env, 400],
+    [request({ ...input, source: "phoenix-nova-compass-health" }), env, 400],
+    [request(input, origin, "/unregistered"), env, 400],
+    [request(input, origin, "?from=health"), env, 400],
     [request({ ...input, email: "x".repeat(2048) }), env, 400],
   ]) {
     let called = false;

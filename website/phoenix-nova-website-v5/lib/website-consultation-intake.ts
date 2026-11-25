@@ -77,10 +77,10 @@ export async function handleWebsiteConsultation(request: Request, env: Bindings,
   if (new URL(request.url).origin !== origin || request.headers.get("origin") !== origin) {
     return reply(403, { code: "ORIGIN_NOT_ALLOWED" });
   }
-  const query = new URL(request.url).searchParams;
-  const entry = query.get("from");
-  if ([...query.keys()].some(key => key !== "from") || query.getAll("from").length > 1 ||
-      (entry !== null && !isConsultationEntry(entry))) {
+  const url = new URL(request.url);
+  const endpointPath = "/api/website-consultations";
+  const entry = url.pathname === endpointPath ? null : url.pathname.slice(endpointPath.length + 1);
+  if (url.search || (entry !== null && (!url.pathname.startsWith(endpointPath + "/") || !isConsultationEntry(entry)))) {
     return reply(400, { code: "INVALID_CONSULTATION_ENTRY" });
   }
   const source = entry === null ? "phoenix-nova-website" : "phoenix-nova-compass-" + entry;

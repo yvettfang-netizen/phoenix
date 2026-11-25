@@ -13,7 +13,7 @@ const services = [
 
 export function WebsiteConsultationForm({ locale, entry }: { locale: "zh" | "en"; entry?: ConsultationEntry }) {
   const zh = locale === "zh";
-  const endpoint = "/api/website-consultations" + (entry ? "?from=" + entry : "");
+  const endpoint = "/api/website-consultations" + (entry ? "/" + entry : "");
   const attempt = useRef<{ payload: string; requestId: string } | null>(null);
   const busy = useRef(false);
   const [status, setStatus] = useState<"idle" | "sending" | "received" | "error" | "limited">("idle");

@@ -168,7 +168,7 @@ try {
     WEBSITE_CONSULTATION_RECEIVER_URL: receiverOrigin + "/v1/website-consultations",
     WEBSITE_CONSULTATION_RECEIVER_TOKEN: token,
   };
-  const submit = (service, requestId = "028347ec-7740-4000-a000-000000000001", email = "visitor@example.test", entry) => handleWebsiteConsultation(new Request(origin + "/api/website-consultations" + (entry ? "?from=" + entry : ""), {
+  const submit = (service, requestId = "028347ec-7740-4000-a000-000000000001", email = "visitor@example.test", entry) => handleWebsiteConsultation(new Request(origin + "/api/website-consultations" + (entry ? "/" + entry : ""), {
     method: "POST",
     headers: { origin, "content-type": "application/json" },
     body: JSON.stringify({ requestId,

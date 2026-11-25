@@ -81,7 +81,7 @@ export async function verifyBrowserConsultation({ browser, config, receiver }) {
         assert.equal(await email.count(), 0);
         if (!zh) {
           for (const domain of ["education", "identity", "health", "wealth"]) {
-            const href = "/en/consultation?from=" + domain;
+            const href = "/en/consultation/" + domain;
             assert.equal((await page.goto(origin + "/en/" + domain)).status(), 200);
             await Promise.all([page.waitForURL(origin + href), page.locator('a[href="' + href + '"]').click()]);
             assert.equal(await page.getByLabel("Service area").inputValue(), domain);

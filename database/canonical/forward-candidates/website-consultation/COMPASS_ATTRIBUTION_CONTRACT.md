@@ -11,7 +11,7 @@ This unnumbered candidate extends PR #116. Install `intake.sql` before `compass-
 | Health | phoenix-nova-compass-health | /health |
 | Wealth | phoenix-nova-compass-wealth | /wealth |
 
-Each landing page links to the contact-consent form. The BFF maps the explicit entry selector separately from the requested service area, and the receiver maps the source to its configured Canonical contract ID. PostgreSQL checks the source, approved entry and allowed LOGIN. A missing or mismatched contract denies intake. Generic website intake keeps its existing source. This is a declared website entry, not proof of an authenticated visit or a completed assessment. The browser sends no assessment, family or Client identifiers to the public form.
+Each landing page links to `/{locale}/consultation/{entry}`. The form sends to `/api/website-consultations/{entry}` without query parameters. The BFF maps the allowlisted route independently of the requested service area, and the receiver maps the source to its configured Canonical contract ID. PostgreSQL checks the source, approved entry and allowed LOGIN. A missing or mismatched contract denies intake. Generic website intake keeps its existing source. This is a declared website entry, not proof of an authenticated visit or a completed assessment. The browser sends no assessment, family or Client identifiers to the public form.
 
 Configure `compassContractIds` with approved product source identifiers as keys and their individual acquisition contract UUIDs as values. Keep each expiry, contact retention approval and organization mapping under the existing candidate controls. The existing intake and publication flags continue to govern public exposure.
 
