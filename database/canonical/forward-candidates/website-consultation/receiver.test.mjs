@@ -65,7 +65,7 @@ test("website receives an acknowledgement after the receiver commits an encrypte
   assert.deepEqual(await response.json(), { status: "received", requestId: input.requestId });
   assert.deepEqual(queries, [
     "BEGIN", "SET LOCAL statement_timeout = '3s'",
-    "SELECT crm.record_website_consultation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS outcome", "COMMIT",
+    "SELECT crm.record_website_consultation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS outcome", "COMMIT",
   ]);
 });
 

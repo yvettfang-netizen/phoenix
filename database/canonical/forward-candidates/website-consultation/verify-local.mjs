@@ -293,6 +293,13 @@ try {
   assert.equal((await submit("education", secondRequest)).status, 202);
   const newLead = (await db.query("SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [secondRequest])).rows[0].lead_id;
   assert.notEqual(newLead, lead, "same contact with a fresh request ID must preserve a separate lead");
+  const matchPair = await db.query(`
+    SELECT count(DISTINCT duplicate_match_mac)::int AS match_count,
+           count(DISTINCT payload_mac)::int AS request_count
+    FROM crm.website_consultation_intake WHERE lead_id IN ($1,$2)
+  `, [lead, newLead]);
+  assert.deepEqual(matchPair.rows, [{ match_count: 1, request_count: 2 }]);
+  await assert.rejects(staff.query("SELECT duplicate_match_mac FROM crm.website_consultation_intake"), /permission denied/);
   assert.equal((await submit("education", secondRequest)).status, 202);
   assert.equal((await db.query("SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [secondRequest])).rows[0].lead_id, newLead);
   assert.equal((await db.query("SELECT count(*)::int AS count FROM crm.leads WHERE lead_id IN ($1,$2) AND lead_status<>'MERGED'", [lead, newLead])).rows[0].count, 2);

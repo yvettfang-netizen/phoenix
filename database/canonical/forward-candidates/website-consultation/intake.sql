@@ -134,13 +134,15 @@ CREATE TABLE crm.website_consultation_intake (
   consent_version text NOT NULL CHECK (consent_version='website-consultation.v1'),
   -- The trusted receiver computes a keyed digest over the stable request fields.
   payload_mac bytea CHECK (octet_length(payload_mac)=32),
+  duplicate_match_mac bytea CHECK (octet_length(duplicate_match_mac)=32),
   -- Encrypted by the trusted receiver. The website and database have no decrypt key.
   contact_envelope bytea CHECK (octet_length(contact_envelope) BETWEEN 32 AND 4096),
   recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   contact_expires_at timestamptz NOT NULL,
   contact_erased_at timestamptz,
   CHECK ((contact_erased_at IS NOT NULL)=(contact_envelope IS NULL)),
-  CHECK ((contact_erased_at IS NOT NULL)=(payload_mac IS NULL))
+  CHECK ((contact_erased_at IS NOT NULL)=(payload_mac IS NULL)),
+  CHECK ((contact_erased_at IS NOT NULL)=(duplicate_match_mac IS NULL))
 );
 CREATE INDEX website_contact_expiration_idx ON crm.website_consultation_intake(contact_expires_at)
   WHERE contact_envelope IS NOT NULL;
@@ -162,7 +164,7 @@ $policy$;
 CREATE FUNCTION crm.record_website_consultation(
   p_request uuid, p_contract uuid, p_lead uuid, p_event uuid, p_attribution uuid,
   p_domain text, p_locale text, p_consent_version text, p_payload_mac bytea,
-  p_contact_envelope bytea
+  p_contact_envelope bytea, p_duplicate_match_mac bytea
 ) RETURNS text
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,crm,core,auth,audit
@@ -180,6 +182,7 @@ BEGIN
       AND p_domain IN ('EDUCATION','IDENTITY','WEALTH','HEALTH')
       AND p_locale IN ('zh','en') AND p_consent_version='website-consultation.v1'
       AND octet_length(p_payload_mac)=32
+      AND octet_length(p_duplicate_match_mac)=32
       AND octet_length(p_contact_envelope) BETWEEN 32 AND 4096) IS NOT TRUE THEN
     RETURN 'denied';
   END IF;
@@ -209,15 +212,15 @@ BEGIN
   actual_lead := crm.create_lead_v2(p_lead,p_contract,NULL,NULL,NULL,NULL,p_event,p_attribution,p_request::text);
   IF actual_lead IS NULL THEN RETURN 'denied'; END IF;
   INSERT INTO crm.website_consultation_intake(
-    request_id,lead_id,acquisition_contract_id,service_domain,locale,consent_version,payload_mac,contact_envelope,contact_expires_at
-  ) VALUES (p_request,actual_lead,p_contract,p_domain,p_locale,p_consent_version,p_payload_mac,p_contact_envelope,
+    request_id,lead_id,acquisition_contract_id,service_domain,locale,consent_version,payload_mac,contact_envelope,duplicate_match_mac,contact_expires_at
+  ) VALUES (p_request,actual_lead,p_contract,p_domain,p_locale,p_consent_version,p_payload_mac,p_contact_envelope,p_duplicate_match_mac,
     clock_timestamp()+make_interval(hours=>24*retention_days));
   RETURN 'persisted';
 END
 $fn$;
-REVOKE ALL ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea)
+REVOKE ALL ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea,bytea)
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
-GRANT EXECUTE ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea)
+GRANT EXECUTE ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea,bytea)
   TO phoenix_website_intake;
 
 CREATE TABLE crm.website_intake_rate_limits (
@@ -286,7 +289,7 @@ BEGIN
       ORDER BY contact_expires_at LIMIT 500 FOR UPDATE SKIP LOCKED
   )
   UPDATE crm.website_consultation_intake i
-    SET contact_envelope=NULL,payload_mac=NULL,contact_erased_at=cutoff FROM due WHERE i.request_id=due.request_id;
+    SET contact_envelope=NULL,payload_mac=NULL,duplicate_match_mac=NULL,contact_erased_at=cutoff FROM due WHERE i.request_id=due.request_id;
   GET DIAGNOSTICS erased = ROW_COUNT;
   RETURN erased;
 END

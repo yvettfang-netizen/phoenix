@@ -83,6 +83,9 @@ export function createWebsiteConsultationReceiver({
       if (await takeAdmission({ emailFingerprint }) !== true) return reply(429, { code: "RATE_LIMITED" });
       const aad = JSON.stringify([version, contractId, input.requestId, input.locale, input.service]);
       const mac = createHmac("sha256", payloadKey).update(JSON.stringify([aad, input.email])).digest();
+      const duplicateMatchMac = createHmac("sha256", payloadKey)
+        .update(JSON.stringify(["crm-duplicate-match-v1", contractId, input.service, input.email.toLowerCase()]))
+        .digest();
       const iv = randomBytes(12);
       const cipher = createCipheriv("aes-256-gcm", encryptionKey, iv);
       cipher.setAAD(Buffer.from(aad));
@@ -93,9 +96,9 @@ export function createWebsiteConsultationReceiver({
         try {
           await client.query("SET LOCAL statement_timeout = '3s'");
           const result = await client.query(
-            "SELECT crm.record_website_consultation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS outcome",
+            "SELECT crm.record_website_consultation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS outcome",
             [input.requestId, contractId, uuidV7(), uuidV7(), uuidV7(), input.service.toUpperCase(),
-              input.locale, version, mac, envelope],
+              input.locale, version, mac, envelope, duplicateMatchMac],
           );
           const persisted = result.rows[0]?.outcome;
           if (!["persisted", "denied", "conflict"].includes(persisted)) throw new Error("Unexpected intake outcome");
