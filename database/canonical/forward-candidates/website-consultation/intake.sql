@@ -332,4 +332,48 @@ END
 $replay$;
 REVOKE ALL ON FUNCTION crm.replay_website_contact_deletion(uuid,timestamptz) FROM PUBLIC,phoenix_canonical_app;
 GRANT EXECUTE ON FUNCTION crm.replay_website_contact_deletion(uuid,timestamptz) TO phoenix_website_deletion_replay;
+
+-- Keep the existing lead transition API. Only website leads require this check
+-- and have an intake envelope to clear within the conversion transaction.
+CREATE FUNCTION crm.guard_website_lead_conversion()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,crm
+AS $conversion$
+DECLARE website_request uuid;
+BEGIN
+  IF NEW.lead_status<>'CONVERTED' OR OLD.lead_status='CONVERTED' THEN RETURN NEW; END IF;
+  SELECT request_id INTO website_request FROM crm.website_consultation_intake
+    WHERE lead_id=OLD.lead_id FOR UPDATE NOWAIT;
+  IF NOT FOUND THEN RETURN NEW; END IF;
+
+  IF OLD.lead_status<>'QUALIFIED' OR NOT crm.is_crm_service()
+     OR auth.current_family_id() IS DISTINCT FROM OLD.family_id
+     OR NEW.family_id IS DISTINCT FROM OLD.family_id THEN
+    RAISE EXCEPTION 'WEBSITE_CONVERSION_REQUIRES_VERIFIED_CLIENT' USING ERRCODE='23514';
+  END IF;
+
+  -- The lead is already locked. Fail and allow retry if a review holds the
+  -- link lock, since the existing identity review path locks the link first.
+  PERFORM 1 FROM crm.lead_identity_links link
+    JOIN crm.clients client ON client.client_id=link.client_id
+    WHERE link.lead_id=OLD.lead_id AND link.target_kind='CLIENT'
+      AND link.status='VERIFIED' AND link.verified_by_principal_id<>link.linked_by_principal_id
+      AND client.family_id=OLD.family_id AND client.lifecycle_status IN ('ACTIVE','PAUSED')
+    FOR SHARE OF link,client NOWAIT;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'WEBSITE_CONVERSION_REQUIRES_VERIFIED_CLIENT' USING ERRCODE='23514';
+  END IF;
+
+  UPDATE crm.website_consultation_intake
+    SET contact_envelope=NULL,payload_mac=NULL,duplicate_match_mac=NULL,contact_erased_at=clock_timestamp()
+    WHERE request_id=website_request AND contact_erased_at IS NULL;
+  IF FOUND THEN
+    PERFORM audit.record_write_decision('WEBSITE_CONTACT_ERASE_ON_CONVERSION',
+      'WEBSITE_CONSULTATION',website_request,true,'VERIFIED_CLIENT_CONVERSION');
+  END IF;
+  RETURN NEW;
+END
+$conversion$;
+REVOKE ALL ON FUNCTION crm.guard_website_lead_conversion() FROM PUBLIC,phoenix_canonical_app;
+CREATE TRIGGER website_lead_conversion_guard BEFORE UPDATE OF lead_status ON crm.leads
+  FOR EACH ROW EXECUTE FUNCTION crm.guard_website_lead_conversion();
 COMMIT;

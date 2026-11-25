@@ -652,13 +652,88 @@ try {
       contact_erased_at IS NOT NULL AS recorded FROM crm.website_consultation_intake WHERE lead_id=$1
   `, [newLead])).rows, [{ no_contact: true, no_mac: true, no_duplicate_match: true, recorded: true }]);
   console.log("PASS approved retention configuration, expiry denial and scoped contact erasure");
-  await db.query("UPDATE crm.leads SET lead_status='CONVERTED' WHERE lead_id=$1", [cancelLead]);
+  const clientId = "019347ec-7740-7000-a000-000000000061";
+  const reviewerPrincipal = "019347ec-7740-7000-a000-000000000062";
+  const clientLink = "019347ec-7740-7000-a000-000000000063";
+  const conversionEvent = "019347ec-7740-7000-a000-000000000064";
+  await db.query(`
+    INSERT INTO auth.principals(principal_id,principal_kind,status,service_label)
+      VALUES($1,'SERVICE','ACTIVE','canonical_crm_v2')
+  `, [reviewerPrincipal]);
+  await db.query(`
+    INSERT INTO crm.clients(client_id,family_id,client_code,relationship_started_at,created_by_principal_id,updated_by_principal_id)
+      VALUES($1,$2,'SYNTHETIC-CONVERSION',clock_timestamp(),$3,$3)
+  `, [clientId, otherFamily, principal]);
+  const bindConversionContext = async (actor, family) => {
+    await crmService.query("SELECT auth.clear_context()");
+    const { rows } = await db.query(`
+      SELECT auth.issue_context_ticket($1,NULL,$2,'INTERNAL',clock_timestamp()+interval '30 seconds',
+        gen_random_uuid(),$1) AS ticket
+    `, [actor, family]);
+    await crmService.query("SELECT auth.redeem_context_ticket($1,$2)", [rows[0].ticket, actor]);
+  };
+  await bindConversionContext(principal, null);
+  for (const [status, key] of [
+    ["CONTACTED", "019347ec-7740-7000-a000-000000000065"],
+    ["QUALIFIED", "019347ec-7740-7000-a000-000000000066"],
+  ]) {
+    const transition = await crmService.query("SELECT crm.transition_lead($1,$2,$3) AS ok", [cancelLead, status, key]);
+    assert.equal(transition.rows[0].ok, true);
+  }
+  const convert = () => crmService.query("SELECT crm.transition_lead($1,'CONVERTED',$2) AS ok", [cancelLead, conversionEvent]);
+  await assert.rejects(convert(), /WEBSITE_CONVERSION_REQUIRES_VERIFIED_CLIENT/);
+
+  await bindConversionContext(principal, otherFamily);
+  const linked = await crmService.query("SELECT crm.link_lead_identity($1,$2,'CLIENT',$3,$4,$5) AS ok",
+    [clientLink, cancelLead, clientId, hash, "019347ec-7740-7000-a000-000000000067"]);
+  assert.equal(linked.rows[0].ok, true);
+  await bindConversionContext(principal, null);
+  await assert.rejects(convert(), /WEBSITE_CONVERSION_REQUIRES_VERIFIED_CLIENT/);
+  await bindConversionContext(principal, otherFamily);
+  const verifyLink = () => crmService.query("SELECT crm.verify_lead_identity($1,$2) AS ok",
+    [clientLink, "019347ec-7740-7000-a000-000000000068"]);
+  assert.equal((await verifyLink()).rows[0].ok, false);
+  await bindConversionContext(reviewerPrincipal, otherFamily);
+  assert.equal((await verifyLink()).rows[0].ok, true);
+  await bindConversionContext(principal, null);
+  assert.equal((await convert()).rows[0].ok, false);
+  await bindConversionContext(principal, otherFamily);
+  await db.query("BEGIN");
+  try {
+    await db.query("SELECT 1 FROM crm.lead_identity_links WHERE lead_identity_link_id=$1 FOR UPDATE", [clientLink]);
+    await assert.rejects(convert(), { code: "55P03" });
+  } finally {
+    await db.query("ROLLBACK");
+  }
+  await crmService.query("BEGIN");
+  try {
+    assert.equal((await convert()).rows[0].ok, true);
+  } finally {
+    await crmService.query("ROLLBACK");
+  }
+  assert.deepEqual((await db.query(`
+    SELECT l.lead_status, i.contact_envelope IS NOT NULL AS retained
+    FROM crm.leads l JOIN crm.website_consultation_intake i USING(lead_id) WHERE l.lead_id=$1
+  `, [cancelLead])).rows, [{ lead_status: "QUALIFIED", retained: true }]);
+  assert.equal((await convert()).rows[0].ok, true);
+  assert.equal((await convert()).rows[0].ok, false);
+  await crmService.query("SELECT auth.clear_context()");
   assert.equal((await cancelPost("contact", "synthetic-staff")).status, 404);
-  assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 1);
+  assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 0);
   assert.deepEqual((await db.query(`
     SELECT contact_envelope IS NULL AND payload_mac IS NULL AND duplicate_match_mac IS NULL AS cleared
     FROM crm.website_consultation_intake WHERE lead_id=$1
   `, [cancelLead])).rows, [{ cleared: true }]);
+  assert.deepEqual((await db.query(`
+    SELECT l.lead_status, l.family_id, a.source_system FROM crm.leads l
+    JOIN crm.lead_attributions a ON a.lead_id=l.lead_id AND a.attribution_kind='FIRST_TOUCH'
+    WHERE l.lead_id=$1
+  `, [cancelLead])).rows, [{ lead_status: "CONVERTED", family_id: otherFamily, source_system: "phoenix-nova-website" }]);
+  assert.equal((await db.query(`
+    SELECT 1 FROM audit.access_events WHERE resource_id=$1 AND action='WEBSITE_CONTACT_ERASE_ON_CONVERSION'
+      AND decision='ALLOW' AND principal_id=$2
+  `, [cancelRequest, principal])).rowCount, 1);
+  console.log("PASS website conversion requires distinct verified client link and correct family, preserves source, and erases contact atomically");
 
   const deletionRequest = "028347ec-7740-4000-a000-000000000020";
   assert.equal((await submit("education", deletionRequest, "synthetic-deletion@example.test")).status, 202);
