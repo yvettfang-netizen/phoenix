@@ -199,7 +199,7 @@ BEGIN
   FROM crm.website_consultation_intake i JOIN crm.leads l ON l.lead_id=i.lead_id
   JOIN crm.website_consultation_staff_grants g
     ON g.principal_id=employee AND g.service_domain=i.service_domain AND crm.website_consultation_org_allows(i.lead_id,g.organization_id) AND g.grant_kind='ADVISER'
-  WHERE l.lead_id=p_lead AND l.lead_status NOT IN ('MERGED','DISQUALIFIED','LOST')
+  WHERE l.lead_id=p_lead AND l.lead_status NOT IN ('MERGED','DISQUALIFIED','LOST','CONVERTED')
     AND i.contact_envelope IS NOT NULL AND i.contact_expires_at>clock_timestamp()
     AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
     AND (l.assigned_principal_id=employee OR EXISTS (

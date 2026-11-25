@@ -137,6 +137,7 @@ try {
     WEBSITE_CONSULTATION_PRIVACY_ZH_URL: origin + "/zh/privacy",
     WEBSITE_CONSULTATION_PRIVACY_EN_URL: origin + "/en/privacy",
     WEBSITE_PRIVACY_APPROVED: "true",
+    WEBSITE_PRIVACY_LAUNCH_DATE: "2025-01-01",
     WEBSITE_PRIVACY_VERSION: "website-consultation.v1",
     WEBSITE_PRIVACY_POLICY_ZH: "合成验收政策，非正式文案。",
     WEBSITE_PRIVACY_POLICY_EN: "Synthetic test policy, not approved publication copy.",
@@ -150,10 +151,12 @@ try {
       locale: "en", service, email, consent: true }),
   }), websiteConfig, (url, init) => receiver(new Request(url, init)));
   assert.equal((await submit("education", undefined, "no-policy@example.test")).status, 503);
-  assert.equal((await db.query("SELECT crm.configure_website_contact_retention($1,30,$2) AS allowed",
+  assert.equal((await db.query("SELECT crm.configure_website_contact_retention($1,180,$2) AS allowed",
     [contractId, "f".repeat(64)])).rows[0].allowed, false);
-  assert.equal((await db.query("SELECT crm.configure_website_contact_retention($1,30,$2) AS allowed",
+  assert.equal((await db.query("SELECT crm.configure_website_contact_retention($1,180,$2) AS allowed",
     [contractId, hash])).rows[0].allowed, true);
+  assert.equal((await db.query("SELECT crm.configure_website_contact_retention($1,30,$2) AS allowed",
+    [contractId, hash])).rows[0].allowed, false);
   assert.equal((await submit("education")).status, 202);
   assert.equal((await submit("education")).status, 202);
   assert.equal((await submit("health")).status, 409);
@@ -177,6 +180,9 @@ try {
     [employee, person],
   );
   const lead = (await db.query("SELECT lead_id FROM crm.website_consultation_intake")).rows[0].lead_id;
+  const lifetime = (await db.query(`SELECT extract(epoch FROM (contact_expires_at-recorded_at))::float8 AS seconds
+    FROM crm.website_consultation_intake WHERE lead_id=$1`, [lead])).rows[0].seconds;
+  assert.ok(Math.abs(lifetime - 180 * 86400) < 2);
   await db.query(`
     INSERT INTO auth.external_identities(external_identity_id,issuer,subject,principal_id,status)
     VALUES('019347ec-7740-7000-a000-000000000015',$1,$2,$3,'ACTIVE')
@@ -642,6 +648,13 @@ try {
       contact_erased_at IS NOT NULL AS recorded FROM crm.website_consultation_intake WHERE lead_id=$1
   `, [newLead])).rows, [{ no_contact: true, no_mac: true, no_duplicate_match: true, recorded: true }]);
   console.log("PASS approved retention configuration, expiry denial and scoped contact erasure");
+  await db.query("UPDATE crm.leads SET lead_status='CONVERTED' WHERE lead_id=$1", [cancelLead]);
+  assert.equal((await cancelPost("contact", "synthetic-staff")).status, 404);
+  assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 1);
+  assert.deepEqual((await db.query(`
+    SELECT contact_envelope IS NULL AND payload_mac IS NULL AND duplicate_match_mac IS NULL AS cleared
+    FROM crm.website_consultation_intake WHERE lead_id=$1
+  `, [cancelLead])).rows, [{ cleared: true }]);
 
   const listeners = [];
   function requestLocal(listener, hostHeader, path, method = "GET", body, headers = {}) {

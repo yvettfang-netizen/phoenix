@@ -1,14 +1,36 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import { handleWebsiteConsultation } from "../lib/website-consultation-intake.ts";
+import { websitePrivacyPolicy } from "../lib/website-privacy-policy.mjs";
 
 const origin = "https://preview.example";
+test("approved bilingual parameters and publication date are complete", () => {
+  const document = readFileSync(new URL("../docs/WEBSITE_CONSULTATION_PRIVACY_FOUNDER_REVIEW.md", import.meta.url), "utf8");
+  const [, bilingual] = document.split("## 中文正文");
+  const [zh, enWithChecks] = bilingual.split("## English publication text");
+  const [en] = enWithChecks.split("## Publication checks");
+  for (const body of [zh, en]) {
+    for (const value of ["凤启环球信息科技（深圳）有限公司", "nova@phoenixnova.com.cn", "180", "24", "30", "15"]) {
+      assert.ok(body.includes(value));
+    }
+  }
+  const config = { ...env, WEBSITE_PRIVACY_POLICY_ZH: zh, WEBSITE_PRIVACY_POLICY_EN: en };
+  assert.equal(websitePrivacyPolicy(config, "2025-01-01").zh[0], "生效日期：2025-01-01");
+  assert.equal(websitePrivacyPolicy(config, "2025-01-01").en[0], "Effective date: 2025-01-01");
+  for (const date of [undefined, "2025-02-29", "2025-01-02"]) {
+    assert.equal(websitePrivacyPolicy({ ...config, WEBSITE_PRIVACY_LAUNCH_DATE: date }, "2025-01-01"), null);
+  }
+  assert.equal(websitePrivacyPolicy({ ...config, WEBSITE_PRIVACY_POLICY_EN: "" }, "2025-01-01"), null);
+  assert.equal(websitePrivacyPolicy({ ...config, WEBSITE_PRIVACY_APPROVED: "false" }, "2025-01-01"), null);
+});
 const env = {
   WEBSITE_CONSULTATION_ENABLED: "true",
   WEBSITE_CONSULTATION_PUBLIC_ORIGIN: origin,
   WEBSITE_CONSULTATION_PRIVACY_ZH_URL: origin + "/zh/privacy",
   WEBSITE_CONSULTATION_PRIVACY_EN_URL: origin + "/en/privacy",
   WEBSITE_PRIVACY_APPROVED: "true",
+  WEBSITE_PRIVACY_LAUNCH_DATE: "2025-01-01",
   WEBSITE_PRIVACY_VERSION: "website-consultation.v1",
   WEBSITE_PRIVACY_POLICY_ZH: "合成验收政策，非正式文案。",
   WEBSITE_PRIVACY_POLICY_EN: "Synthetic test policy, not approved publication copy.",

@@ -94,7 +94,7 @@ $fn$;
 -- A fixed policy belongs to the approved acquisition contract version.
 CREATE TABLE crm.website_contact_retention (
   contract_id uuid PRIMARY KEY REFERENCES crm.acquisition_contract_revisions(contract_id),
-  contact_days integer NOT NULL CHECK (contact_days BETWEEN 1 AND 3660)
+  contact_days integer NOT NULL CHECK (contact_days = 180)
 );
 ALTER TABLE crm.website_contact_retention ENABLE ROW LEVEL SECURITY;
 ALTER TABLE crm.website_contact_retention FORCE ROW LEVEL SECURITY;
@@ -111,7 +111,7 @@ CREATE FUNCTION crm.configure_website_contact_retention(p_contract uuid,p_days i
 RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm
 AS $configure$
 BEGIN
-  IF (p_days BETWEEN 1 AND 3660 AND EXISTS (
+  IF (p_days = 180 AND EXISTS (
       SELECT 1 FROM crm.acquisition_contract_revisions c JOIN crm.lead_sources s USING(lead_source_id)
       WHERE c.contract_id=p_contract AND c.source_system='phoenix-nova-website' AND s.source_channel='WEBSITE'
         AND c.revoked_at IS NULL AND c.retention_policy_sha256=p_policy_sha256
@@ -284,9 +284,10 @@ BEGIN
     OR pg_has_role(session_user,'phoenix_website_intake','MEMBER')
     OR pg_has_role(session_user,'phoenix_canonical_app','MEMBER') THEN RETURN 0; END IF;
   WITH due AS (
-    SELECT request_id FROM crm.website_consultation_intake
-      WHERE contact_envelope IS NOT NULL AND contact_expires_at<=cutoff
-      ORDER BY contact_expires_at LIMIT 500 FOR UPDATE SKIP LOCKED
+    SELECT i.request_id FROM crm.website_consultation_intake i
+      WHERE i.contact_envelope IS NOT NULL AND (i.contact_expires_at<=cutoff
+        OR EXISTS (SELECT 1 FROM crm.leads l WHERE l.lead_id=i.lead_id AND l.lead_status='CONVERTED'))
+      ORDER BY i.contact_expires_at,i.request_id LIMIT 500 FOR UPDATE OF i SKIP LOCKED
   )
   UPDATE crm.website_consultation_intake i
     SET contact_envelope=NULL,payload_mac=NULL,duplicate_match_mac=NULL,contact_erased_at=cutoff FROM due WHERE i.request_id=due.request_id;

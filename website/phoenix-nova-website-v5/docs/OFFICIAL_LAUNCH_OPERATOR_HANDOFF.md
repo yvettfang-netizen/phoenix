@@ -8,8 +8,8 @@
 - 正式域名的首页 canonical 和双语元数据已加入候选代码。待确认线上运行时、部署提交、移动端及完整索引策略。
 - 正式域名只读复查中，HTTP 返回 308 并跳到 HTTPS。中英文首页返回 200，canonical 和文档语言正确。双方的咨询和隐私地址均返回 404，索引仍关闭。发布后使用 `node scripts/official-launch-preflight.mjs` 复跑这些检查。只有 Founder 明确批准首页索引后才使用 `--index-approved` 验收索引开放状态。
 - 统计候选仅记录官方主站白名单页面的成功文档请求，按页面和语言计数。不采集访客标识、URL 参数、来源地址或表单内容。Worker 使用可选 `WEBSITE_TRAFFIC` 数据集绑定。生产如果使用其他运行时，要在对应入口确认同一计数逻辑。
-- `/zh/privacy` 和 `/en/privacy` 从运行环境读取批准的双语纯文本。以空行分隔段落，设置 `WEBSITE_PRIVACY_POLICY_ZH`、`WEBSITE_PRIVACY_POLICY_EN` 及 `WEBSITE_PRIVACY_VERSION=website-consultation.v1`。留存 Founder 审阅的文本版本和引用后，才设置 `WEBSITE_PRIVACY_APPROVED=true`。使用这些内建隐私页时，任何一版缺失都会关闭咨询提交。验收夹具里的政策正文是合成文本。
-- 联系方式保留期限随 Canonical 接收契约配置。由有权限的配置角色调用 `crm.configure_website_contact_retention`，输入经批准的天数及该契约已登记的隐私保留政策摘要。没有配置时拒绝创建线索。仅为清理调度账号授予 `phoenix_website_contact_retention`，按批准频率调用 `crm.erase_expired_website_contacts()` 并记录批次结果。员工读取会即时拒绝过期数据，清理会去除加密邮箱及其摘要，留下线索、关联请求编号和清理时间。隔离夹具里的 30 天仅用于测试。
+- `/zh/privacy` 和 `/en/privacy` 从运行环境读取批准的双语纯文本。以空行分隔段落，设置 `WEBSITE_PRIVACY_POLICY_ZH`、`WEBSITE_PRIVACY_POLICY_EN` 及 `WEBSITE_PRIVACY_VERSION=website-consultation.v1`。上线时将真实公开上线日期（Asia/Shanghai，YYYY-MM-DD）记录为 `WEBSITE_PRIVACY_LAUNCH_DATE`，保留发布回执，不得回填。法律复核、处理地点披露、实机验收及 Founder 发布批准完成前，保持 `WEBSITE_PRIVACY_APPROVED=false` 和 `WEBSITE_CONSULTATION_ENABLED=false`。使用这些内建隐私页时，任何一版缺失都会关闭咨询提交。验收夹具里的政策正文是合成文本。
+- 联系方式保留期限随 Canonical 接收契约配置。由有权限的配置角色调用 `crm.configure_website_contact_retention`，输入 180 天及该契约已登记的隐私保留政策摘要。没有配置时拒绝创建线索。仅为清理调度账号授予 `phoenix_website_contact_retention`，按批准频率调用 `crm.erase_expired_website_contacts()` 并记录批次结果。员工读取会即时拒绝过期数据，清理会去除加密邮箱、请求核验摘要和重复匹配摘要，留下线索、关联请求编号和清理时间。
 
 ## Jimson 人工操作
 
@@ -36,7 +36,7 @@
 | --- | --- | --- |
 | Jimson | 测试环境网址、HTTPS 代理负责人、可回滚部署版本 | 提供环境地址和版本引用即可。 |
 | Jimson | 已有员工登录及服务端会话读取方式、签名源、一个调度员及一个顾问验收账户 | 提供受控环境里的配置引用和授权记录。密钥、令牌和密码通过现有机密管理配置。 |
-| Founder | 双语隐私正文的批准版本、处理主体、隐私联系渠道及联系方式保留天数 | 提供批准正文及明确保留期限。Codex 对照两种语言、表单提示和数据库配置。 |
+| Founder | 生产发布授权 | 核对实际发布日期、独立法律审阅和验收证据后作出发布决定。 |
 | Founder | 首页索引是否与首发同步、生产发布窗口 | 分别记录索引批准和生产发布批准。未获索引批准时保持关闭。 |
 
 本地和 GitHub 的合成验收可复跑。正式配置齐备后，依次执行目标环境咨询及员工端验收、确认清理调度、检查统计数据集、运行只读发布验收脚本，再提交发布审批。不得把预览发送的合成线索计入正式访问或运营统计。
@@ -44,3 +44,9 @@
 当前 GitHub 仓库的 Environments 和 Deployments 列表均为空。仓库内的 `ops/phoenix-core-staging/` 记录的是 ASKWISE 只读数据库接入，未提供官网写入验收、员工私有入口或部署目标的证据。请 Jimson 优先确认是否已有符合条件的隔离环境。若复用已有服务器，请明确独立测试库、测试网关和两组 HTTPS 虚拟主机的归属。
 
 候选未验证员工登录和生产接收端时，不安排正式上线日期。
+
+## 已批准的隐私运营规则
+
+- 处理者为凤启环球信息科技（深圳）有限公司，隐私请求统一通过 nova@phoenixnova.com.cn 接收。身份核验后的删除请求内部目标为 15 个工作日。记录核验结果、批准和清理回执，避免在审计中抄录邮箱。
+- 未转化官网咨询联系方式自收件起保留 180 天。转化为正式客户后，只在正式客户记录中保存有依据的必要联系方式，并清除官网副本。安全审计元数据保留 24 个月，滚动备份保留上限为 30 天。
+- 恢复先在隔离环境进行。重放已批准删除记录并完成过期清理，核对邮箱密文和摘要均不可访问后才恢复访问。正式备份到期、删除重放和转化清除均需留存实际回执。

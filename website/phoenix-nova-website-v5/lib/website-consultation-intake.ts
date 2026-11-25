@@ -43,11 +43,10 @@ function receiverConfig(env: Bindings) {
     const token = env.WEBSITE_CONSULTATION_RECEIVER_TOKEN;
     const privacyZh = new URL(String(env.WEBSITE_CONSULTATION_PRIVACY_ZH_URL ?? ""));
     const privacyEn = new URL(String(env.WEBSITE_CONSULTATION_PRIVACY_EN_URL ?? ""));
-    const usesBuiltInPrivacy = [privacyZh, privacyEn].some(policy => /^\/(?:zh|en)\/privacy\/?$/.test(policy.pathname));
     if (origin.protocol !== "https:" || env.WEBSITE_CONSULTATION_PUBLIC_ORIGIN !== origin.origin ||
         endpoint.protocol !== "https:" || endpoint.username || endpoint.password ||
         endpoint.search || endpoint.hash || endpoint.origin === origin.origin ||
-        (usesBuiltInPrivacy && !websitePrivacyPolicy(env)) ||
+        !websitePrivacyPolicy(env) ||
         [privacyZh, privacyEn].some(policy => policy.origin !== origin.origin ||
           policy.username || policy.password || policy.search || policy.hash ||
           !policy.pathname.startsWith(policy === privacyZh ? "/zh/" : "/en/") ||
