@@ -549,4 +549,37 @@ REVOKE ALL ON FUNCTION crm.list_website_consultation_duplicates(text,text)
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
 GRANT EXECUTE ON FUNCTION crm.list_website_consultation_duplicates(text,text)
   TO phoenix_website_consultation_staff_gateway;
+CREATE INDEX website_consultation_duplicate_match_idx
+  ON crm.website_consultation_intake(acquisition_contract_id,service_domain,duplicate_match_mac,lead_id)
+  WHERE duplicate_match_mac IS NOT NULL;
+
+CREATE FUNCTION crm.suggest_website_consultation_duplicates(p_issuer text,p_subject text)
+RETURNS TABLE(first_lead_id uuid,second_lead_id uuid)
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog
+AS $suggest$
+  SELECT a.lead_id,b.lead_id
+  FROM crm.website_consultation_intake a
+  JOIN crm.website_consultation_intake b
+    ON b.acquisition_contract_id=a.acquisition_contract_id AND b.service_domain=a.service_domain
+    AND b.duplicate_match_mac=a.duplicate_match_mac AND b.lead_id>a.lead_id
+  JOIN crm.leads first_lead ON first_lead.lead_id=a.lead_id
+  JOIN crm.leads second_lead ON second_lead.lead_id=b.lead_id
+  WHERE pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500
+    AND a.duplicate_match_mac IS NOT NULL
+    AND a.contact_expires_at>clock_timestamp() AND b.contact_expires_at>clock_timestamp()
+    AND first_lead.lead_status IN ('NEW','CONTACTED') AND second_lead.lead_status IN ('NEW','CONTACTED')
+    AND crm.website_consultation_duplicate_scope_allows(
+      auth.resolve_external_identity(p_issuer,p_subject),a.lead_id,b.lead_id,'DISPATCHER'
+    )
+    AND NOT EXISTS (SELECT 1 FROM crm.lead_duplicate_candidates c
+      WHERE c.lead_a_id=a.lead_id AND c.lead_b_id=b.lead_id)
+  ORDER BY a.lead_id,b.lead_id LIMIT 50
+$suggest$;
+REVOKE ALL ON FUNCTION crm.suggest_website_consultation_duplicates(text,text)
+  FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.suggest_website_consultation_duplicates(text,text)
+  TO phoenix_website_consultation_staff_gateway;
 COMMIT;

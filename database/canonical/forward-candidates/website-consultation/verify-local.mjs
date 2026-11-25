@@ -331,6 +331,12 @@ try {
   }));
   assert.equal((await duplicatePost("propose", "synthetic-staff", { firstLeadId: lead, secondLeadId: newLead })).status, 404);
   assert.equal((await duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: lead, secondLeadId: newLead, actor: employee })).status, 400);
+  const suggestionsFor = async token => (await (await staffHttp(new Request(queueUrl + "/duplicates", {
+    headers: { authorization: "Bearer " + token },
+  }))).json()).suggestions;
+  const [firstLeadId, secondLeadId] = [lead, newLead].sort();
+  assert.deepEqual(await suggestionsFor("synthetic-dispatcher"), [{ firstLeadId, secondLeadId }]);
+  assert.deepEqual(await suggestionsFor("synthetic-staff"), []);
   const proposals = await Promise.all([
     duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: lead, secondLeadId: newLead }),
     duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: newLead, secondLeadId: lead }),
@@ -339,6 +345,7 @@ try {
   const [{ candidateId }, reversedProposal] = await Promise.all(proposals.map(response => response.json()));
   assert.ok(candidateId);
   assert.deepEqual(reversedProposal, { candidateId });
+  assert.deepEqual(await suggestionsFor("synthetic-dispatcher"), []);
   const proposalEvent = "019347ec-7740-7000-a000-000000000092";
   const propose = async (who, first, second) => (await staff.query(
     "SELECT crm.propose_website_consultation_duplicate($1,$2,$3,$4,$5,$6,$7) AS candidate",

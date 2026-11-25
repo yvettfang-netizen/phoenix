@@ -38,8 +38,19 @@ function runWorkbench() {
   }
 
   async function loadDuplicates() {
-    const { items } = await request("/duplicates");
+    const { items, suggestions } = await request("/duplicates");
     duplicates.replaceChildren();
+    for (const pair of suggestions) {
+      const row = element("li");
+      row.append(element("p", "可能重复 · 待人工判断"),
+        element("code", pair.firstLeadId + " / " + pair.secondLeadId),
+        action("提交此候选", async () => {
+          await request("/duplicates/propose", pair);
+          await loadDuplicates();
+          notice.textContent = "已提交，等待另一名员工审核。";
+        }));
+      duplicates.append(row);
+    }
     for (const item of items) {
       const row = element("li");
       row.append(element("code", item.firstLeadId + " / " + item.secondLeadId));

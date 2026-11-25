@@ -112,12 +112,16 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
         if (duplicateList) {
           const { rows } = await client.query("SELECT * FROM crm.list_website_consultation_duplicates($1,$2)",
             [identity.issuer, identity.subject]);
+          const { rows: suggested } = await client.query("SELECT * FROM crm.suggest_website_consultation_duplicates($1,$2)",
+            [identity.issuer, identity.subject]);
           response = reply(200, { items: rows.map(row => ({
             candidateId: row.candidate_id,
             firstLeadId: row.first_lead_id,
             secondLeadId: row.second_lead_id,
             status: row.status,
             canReview: row.can_review,
+          })), suggestions: suggested.map(row => ({
+            firstLeadId: row.first_lead_id, secondLeadId: row.second_lead_id,
           })) });
         } else if (duplicate) {
           response = await runDuplicate(client, identity, duplicate, duplicateInput);
