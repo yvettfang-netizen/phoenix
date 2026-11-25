@@ -9,6 +9,7 @@ const staffId = new RegExp("^" + leadUuid + "$");
 const queuePath = "/internal/website-consultations";
 const workbenchPath = queuePath + "/workbench";
 const duplicatePath = new RegExp("^" + queuePath + "/duplicates/(propose|review|merge)$");
+const viewPath = new RegExp("^" + queuePath + "/views/(DISPATCHER|ADVISER|FOUNDER)$");
 
 function duplicateArgs(operation, body) {
   const fields = {
@@ -64,7 +65,9 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
     const duplicate = duplicatePath.exec(url.pathname)?.[1];
     const duplicateList = url.pathname === queuePath + "/duplicates";
     const workbench = url.pathname === workbenchPath;
-    if (url.origin !== origin || url.search || (url.pathname !== queuePath && !workbench && !contact && !duplicate && !duplicateList)) {
+    const views = url.pathname === queuePath + "/views";
+    const view = viewPath.exec(url.pathname)?.[1];
+    if (url.origin !== origin || url.search || (url.pathname !== queuePath && !workbench && !contact && !duplicate && !duplicateList && !views && !view)) {
       return reply(404, { code: "NOT_FOUND" });
     }
     const write = duplicate || (contact && contact[2] !== "assignees");
@@ -80,6 +83,9 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
           identity.issuer.length > 500 || identity.subject.length > 500) {
         return reply(401, { code: "STAFF_AUTH_REQUIRED" });
       }
+      // No confirmed Founder-to-organization contract exists. A business title,
+      // browser role header or dispatcher grant must never confer this scope.
+      if (view === "FOUNDER") return reply(403, { code: "FOUNDER_SCOPE_UNCONFIRMED" });
       if (workbench) {
         const nonce = randomBytes(18).toString("base64");
         return new Response(workbenchHtml(nonce), { headers: {
@@ -109,7 +115,16 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
         await client.query("DISCARD ALL");
         await client.query("SET ROLE phoenix_website_consultation_staff_gateway");
         let response;
-        if (duplicateList) {
+        if (views) {
+          const { rows } = await client.query("SELECT * FROM crm.list_website_consultation_staff_views($1,$2)",
+            [identity.issuer, identity.subject]);
+          response = reply(200, { views: rows.map(row => row.view_kind),
+            founder: { status: "HOLD", code: "FOUNDER_SCOPE_UNCONFIRMED" } });
+        } else if (view) {
+          const { rows } = await client.query("SELECT crm.read_website_consultation_staff_view($1,$2,$3) AS view",
+            [identity.issuer, identity.subject, view]);
+          response = rows[0]?.view ? reply(200, rows[0].view) : reply(403, { code: "VIEW_ACCESS_DENIED" });
+        } else if (duplicateList) {
           const { rows } = await client.query("SELECT * FROM crm.list_website_consultation_duplicates($1,$2)",
             [identity.issuer, identity.subject]);
           const { rows: suggested } = await client.query("SELECT * FROM crm.suggest_website_consultation_duplicates($1,$2)",

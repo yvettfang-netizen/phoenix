@@ -1,7 +1,7 @@
 // Disposable loopback cluster only. Expects an isolated bootstrap role and a fresh database.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { Script } from "node:vm";
@@ -10,6 +10,7 @@ import { readStaffConsultationEmail } from "./staff-contact.mjs";
 import { createWebsiteConsultationGateway } from "./gateway.mjs";
 import { listenConsultationLoopback } from "./loopback-http.mjs";
 import { verifyBrowserConsultation } from "./verify-browser-form.mjs";
+import { verifyStaffViews } from "./verify-staff-views.mjs";
 import { handleWebsiteConsultation } from "../../../../website/phoenix-nova-website-v5/lib/website-consultation-intake.ts";
 
 if (process.argv[2] !== "--synthetic-loopback" || !process.argv[3]) throw new Error("A disposable runtime directory is required");
@@ -45,6 +46,7 @@ try {
   console.log("Applied numbered SQL files:", files.length);
   await db.query(await readFile(new URL("./intake.sql", import.meta.url), "utf8"));
   await db.query(await readFile(new URL("./staff-queue.sql", import.meta.url), "utf8"));
+  await db.query(await readFile(new URL("./staff-views.sql", import.meta.url), "utf8"));
   await db.query(`
     CREATE ROLE website_fixture_binder LOGIN;
     CREATE ROLE website_fixture_writer LOGIN;
@@ -462,6 +464,8 @@ try {
   assert.equal(pending.rowCount, 1);
   assert.equal(pending.rows[0].status, "PENDING");
   assert.equal(pending.rows[0].assigned_principal_id, employee);
+  await verifyStaffViews({ db, staff, outside, staffHttp, issuer, staffOrigin, employee, dispatcher,
+    serviceOrg, otherOrg, contractId, newLead, otherFamily });
   const remainingHours = (new Date(pending.rows[0].due_at).getTime() - Date.now()) / 3600000;
   assert(remainingHours > 23 && remainingHours <= 24.1, "internal first-contact due window");
   const assignedQueue = await staffHttp(new Request(queueUrl, {
@@ -586,8 +590,20 @@ try {
       const item = page.locator("article").filter({ hasText: browserLead });
       return { page, item, context };
     };
+    const capture = async (page, name) => {
+      const directory = process.env.CRM_FIXTURE_PREVIEW_DIR;
+      if (directory) {
+        await mkdir(directory, { recursive: true });
+        await page.screenshot({ path: resolve(directory, name + ".png"), fullPage: true });
+      }
+    };
     try {
       const dispatch = await open("synthetic-dispatcher", 1440);
+      await dispatch.page.getByRole("heading", { name: "Dispatcher · 业务调度" }).waitFor();
+      assert.equal(await dispatch.page.getByRole("button", { name: "查看邮箱", exact: true }).count(), 0);
+      assert.equal(await dispatch.page.getByRole("button", { name: "完成首次跟进", exact: true }).count(), 0);
+      await dispatch.item.waitFor();
+      await capture(dispatch.page, "dispatcher-1440");
       await dispatch.item.getByRole("button", { name: "加载可分配顾问" }).click();
       await dispatch.item.getByRole("combobox", { name: "顾问", exact: true }).selectOption({ label: "Synthetic adviser" });
       await dispatch.item.getByRole("button", { name: "分配", exact: true }).click();
@@ -602,14 +618,84 @@ try {
       assert.equal(overdueTask.rowCount, 1);
       const adviser = await open("synthetic-staff", 320);
       await adviser.item.getByText(/待办已逾期/).waitFor();
+      assert.equal(await adviser.page.getByRole("button", { name: "加载接手顾问" }).count(), 0);
+      assert.equal(await adviser.page.getByRole("button", { name: "取消首次跟进" }).count(), 0);
+      assert.equal(await adviser.page.getByRole("button", { name: "提议重复线索" }).count(), 0);
+      await capture(adviser.page, "adviser-320");
       assert.equal(await adviser.page.getByText("visitor@example.test").count(), 0);
+      const readCount = async () => (await db.query("SELECT count(*)::int AS n FROM crm.website_consultation_contact_reads WHERE lead_id=$1", [browserLead])).rows[0].n;
+      const beforeReveal = await readCount();
       await adviser.item.getByRole("button", { name: "查看邮箱", exact: true }).click();
       await adviser.item.getByText("visitor@example.test", { exact: true }).waitFor();
+      assert.equal(await readCount(), beforeReveal + 1);
       assert.ok(await adviser.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      for (const width of [320, 390, 1440]) {
+        for (const [token, role] of [["synthetic-dispatcher", "dispatcher"], ["synthetic-staff", "adviser"]]) {
+          const preview = await open(token, width);
+          await preview.item.waitFor();
+          assert.ok(await preview.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          if (width === 390) {
+            await db.query("UPDATE crm.leads SET family_id=$2 WHERE lead_id=$1", [browserLead, otherFamily]);
+            try {
+              const refreshed = preview.page.waitForResponse(response => response.url().endsWith("/views/" + role.toUpperCase()));
+              await preview.page.getByRole("button", { name: "刷新队列" }).click();
+              const payload = await (await refreshed).json();
+              assert.equal(payload.items.some(item => item.leadId === browserLead), false);
+              await preview.page.getByRole("status").filter({ hasText: "已载入获授权" }).waitFor();
+              assert.equal(await preview.item.count(), 0);
+            } finally { await db.query("UPDATE crm.leads SET family_id=NULL WHERE lead_id=$1", [browserLead]); }
+            await preview.page.getByRole("button", { name: "刷新队列" }).click();
+            await preview.item.waitFor();
+          }
+          if (width === 1440) {
+            await db.query("UPDATE crm.website_consultation_contract_organizations SET organization_id=$2 WHERE contract_id=$1", [contractId, otherOrg]);
+            try {
+              await preview.page.getByRole("button", { name: "刷新队列" }).click();
+              await preview.page.getByRole("status").filter({ hasText: "暂无获授权" }).waitFor();
+              assert.equal(await preview.page.locator("#lead-list article").count(), 0);
+              assert.equal(await preview.page.locator("#summary strong").first().textContent(), "0");
+            } finally {
+              await db.query("UPDATE crm.website_consultation_contract_organizations SET organization_id=$2 WHERE contract_id=$1", [contractId, serviceOrg]);
+            }
+            await preview.page.getByRole("button", { name: "刷新队列" }).click();
+            await preview.item.waitFor();
+          }
+          await capture(preview.page, role + "-" + width);
+          await preview.page.getByRole("button", { name: "Founder · 设计预览" }).click();
+          await preview.page.getByRole("heading", { name: "Founder · 经营概览" }).waitFor();
+          await preview.page.getByText("经营授权 · HOLD", { exact: true }).waitFor();
+          assert.equal(await preview.page.locator("#lead-list article").count(), 0);
+          assert.equal(await preview.page.getByText("visitor@example.test").count(), 0);
+          assert.ok(await preview.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          const founder = await preview.page.evaluate(async () => {
+            const response = await fetch("/internal/website-consultations/views/FOUNDER");
+            return { status: response.status, body: await response.json() };
+          });
+          assert.deepEqual(founder, { status: 403, body: { code: "FOUNDER_SCOPE_UNCONFIRMED" } });
+          if (role === "dispatcher") await capture(preview.page, "founder-hold-" + width);
+          await preview.context.close();
+        }
+      }
+      // Revoke with the original browser credential and clear rendered contacts
+      // on the very next refresh; restoring scope does not create a new session.
+      await db.query(`UPDATE crm.website_consultation_staff_grants SET revoked_at=clock_timestamp()
+        WHERE principal_id=$1 AND organization_id=$2 AND service_domain='EDUCATION' AND grant_kind='ADVISER'`, [employee, serviceOrg]);
+      await adviser.page.getByRole("button", { name: "刷新队列" }).click();
+      await adviser.page.getByRole("status").filter({ hasText: "没有有效的工作台角色授权" }).waitFor();
+      assert.equal(await adviser.page.getByText("visitor@example.test").count(), 0);
+      assert.equal(await adviser.page.locator("#lead-list article").count(), 0);
+      await db.query(`UPDATE crm.website_consultation_staff_grants SET revoked_at=NULL
+        WHERE principal_id=$1 AND organization_id=$2 AND service_domain='EDUCATION' AND grant_kind='ADVISER'`, [employee, serviceOrg]);
+      await adviser.page.getByRole("button", { name: "刷新队列" }).click();
       await adviser.item.getByRole("button", { name: "完成首次跟进" }).click();
       await adviser.page.getByRole("status").filter({ hasText: "已记录首次跟进" }).waitFor();
       assert.equal(await adviser.page.getByText("visitor@example.test").count(), 0);
       await adviser.item.getByText(/已联系/).waitFor();
+      fixtureSessions.delete("Bearer synthetic-staff");
+      await adviser.page.getByRole("button", { name: "刷新队列" }).click();
+      await adviser.page.getByRole("status").filter({ hasText: "员工会话已失效" }).waitFor();
+      assert.equal(await adviser.page.locator("#lead-list article").count(), 0);
+      fixtureSessions.set("Bearer synthetic-staff", subject);
       await adviser.context.close();
       const proposer = await open("synthetic-dispatcher", 1440);
       const suggestedPair = proposer.page.getByRole("list", { name: "待处理重复候选" }).locator("li")
@@ -633,10 +719,13 @@ try {
       assert.equal(await pair.count(), 0);
       await reviewer.context.close();
       console.log("PASS Chromium staff workbench: 1440px assignment and 320px overdue, contact and follow-up");
-      await verifyBrowserConsultation({ browser, config: websiteConfig, receiver });
-      const pages = await db.query("SELECT locale FROM crm.website_consultation_intake WHERE service_domain='WEALTH' ORDER BY locale");
-      assert.deepEqual(pages.rows, [{ locale: "en" }, { locale: "zh" }]);
-      console.log("PASS Chromium website form: 320px Chinese, 390px English, retry and PostgreSQL receipts");
+      console.log("PASS Chromium role views at 320/390/1440px, Founder HOLD API, contact read audit and original-session grant revocation");
+      if (process.argv[5] !== "--staff-browser-only") {
+        await verifyBrowserConsultation({ browser, config: websiteConfig, receiver });
+        const pages = await db.query("SELECT locale FROM crm.website_consultation_intake WHERE service_domain='WEALTH' ORDER BY locale");
+        assert.deepEqual(pages.rows, [{ locale: "en" }, { locale: "zh" }]);
+        console.log("PASS Chromium website form: 320px Chinese, 390px English, retry and PostgreSQL receipts");
+      } else console.log("NOT RUN public website Worker browser tests: explicit staff-only local run");
     } finally {
       await browser.close();
     }

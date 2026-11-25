@@ -60,8 +60,16 @@ jobs:
         env:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/crm-browser/node_modules/playwright
           CRM_FIXTURE_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+          CRM_FIXTURE_PREVIEW_DIR: ${{ runner.temp }}/crm-role-previews
         run: |
           test -n "$CRM_FIXTURE_POSTGRES_CONTAINER"
           npm install --prefix "$RUNNER_TEMP/crm-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
           node "$PLAYWRIGHT_MODULE/cli.js" install --with-deps chromium
           node --experimental-strip-types database/canonical/forward-candidates/website-consultation/verify-local.mjs --synthetic-loopback "Phoenix Compass/education compass/server" --bundled-chromium
+      - name: Preserve role view previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-role-previews-pg${{ matrix.postgres }}
+          path: ${{ runner.temp }}/crm-role-previews
+          if-no-files-found: ignore
