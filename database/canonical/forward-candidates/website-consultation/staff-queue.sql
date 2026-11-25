@@ -354,4 +354,46 @@ REVOKE ALL ON FUNCTION crm.list_website_consultation_assignees(text,text,uuid) F
   phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
 GRANT EXECUTE ON FUNCTION crm.list_website_consultation_assignees(text,text,uuid)
   TO phoenix_website_consultation_staff_gateway;
+CREATE FUNCTION crm.propose_website_consultation_duplicate(
+  p_issuer text,p_subject text,p_first uuid,p_second uuid,
+  p_candidate uuid,p_event uuid,p_evidence_sha256 text
+) RETURNS uuid
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog
+AS $proposal$
+DECLARE employee uuid;
+        candidate_id uuid;
+BEGIN
+  IF (pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500
+    AND core.is_uuid_v7(p_candidate) AND core.is_uuid_v7(p_event)
+    AND p_evidence_sha256 ~ '^[0-9a-f]{64}$') IS NOT TRUE THEN RETURN NULL; END IF;
+  employee := auth.resolve_external_identity(p_issuer,p_subject);
+  IF crm.lock_website_consultation_duplicate_pair(employee,p_first,p_second,'DISPATCHER') IS NOT TRUE
+    OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee
+  THEN RETURN NULL; END IF;
+
+  INSERT INTO crm.lead_duplicate_candidates(
+    lead_duplicate_candidate_id,lead_a_id,lead_b_id,evidence_sha256,status,proposed_by_principal_id
+  ) VALUES(p_candidate,least(p_first,p_second),greatest(p_first,p_second),p_evidence_sha256,'PENDING',employee)
+  ON CONFLICT (lead_a_id,lead_b_id) WHERE status='PENDING' DO NOTHING
+  RETURNING lead_duplicate_candidate_id INTO candidate_id;
+  IF FOUND THEN
+    INSERT INTO crm.lead_events(lead_event_id,lead_id,event_kind,to_status,reason_code,actor_principal_id)
+    VALUES(p_event,least(p_first,p_second),'DEDUP_CANDIDATE','PENDING','MANUAL_DUPLICATE_CANDIDATE',employee);
+    RETURN candidate_id;
+  END IF;
+  SELECT c.lead_duplicate_candidate_id INTO candidate_id
+  FROM crm.lead_duplicate_candidates c
+  WHERE c.lead_a_id=least(p_first,p_second) AND c.lead_b_id=greatest(p_first,p_second)
+    AND c.status='PENDING' AND c.evidence_sha256=p_evidence_sha256;
+  RETURN candidate_id;
+END
+$proposal$;
+REVOKE ALL ON FUNCTION crm.propose_website_consultation_duplicate(text,text,uuid,uuid,uuid,uuid,text)
+  FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.propose_website_consultation_duplicate(text,text,uuid,uuid,uuid,uuid,text)
+  TO phoenix_website_consultation_staff_gateway;
 COMMIT;
