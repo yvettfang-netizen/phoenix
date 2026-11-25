@@ -584,10 +584,12 @@ try {
       await adviser.item.getByText(/已联系/).waitFor();
       await adviser.context.close();
       const proposer = await open("synthetic-dispatcher", 1440);
-      await proposer.page.getByLabel("第一条线索").selectOption(browserLead);
-      await proposer.page.getByLabel("第二条线索").selectOption(lead);
-      await proposer.page.getByRole("button", { name: "提议重复线索" }).click();
+      const suggestedPair = proposer.page.getByRole("list", { name: "待处理重复候选" }).locator("li")
+        .filter({ hasText: browserLead }).filter({ hasText: lead });
+      await suggestedPair.getByText("可能重复 · 待人工判断").waitFor();
+      await suggestedPair.getByRole("button", { name: "提交此候选" }).click();
       await proposer.page.getByRole("status").filter({ hasText: "等待另一名员工审核" }).waitFor();
+      assert.equal(await suggestedPair.getByRole("button", { name: "提交此候选" }).count(), 0);
       assert.equal(await proposer.page.getByRole("button", { name: "确认重复" }).count(), 0);
       await proposer.context.close();
       await db.query(`UPDATE crm.website_consultation_staff_grants SET revoked_at=NULL

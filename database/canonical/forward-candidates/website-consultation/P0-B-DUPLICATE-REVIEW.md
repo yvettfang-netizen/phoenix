@@ -14,4 +14,8 @@ The intake payload MAC includes the request ID and cannot match separate consult
 2. Deny proposal, review and merge if either side is outside the current staff scope. Reject expiry, revocation and self-review under the original credential. Exercise a family association added between proposal and review or merge.
 3. Demonstrate symmetric concurrent proposal deduplication, one durable reviewed decision, one audited merge, and retained original leads on PG16 and PG17. A same-request retry must create neither a new lead nor a duplicate review candidate.
 
-Workflow integration and these authorization tests remain pending.
+## Candidate evidence
+
+- The authenticated staff gateway at `53f7407a5c796234b2ba878613cf3cd8e4c31b53` passed both [PG16 and PG17 jobs](https://github.com/yvettfang-netizen/phoenix/actions/runs/45589189330). The harness exercised pair scope, proposal replay, independent confirmation, merge with audit attribution and retained history.
+- The first browser-enabled run at `94fe48f3405ef063db1ec47d159dbffd3305eb4f` failed the workbench viewport assertion on both database versions. The [rerun with the layout fix](https://github.com/yvettfang-netizen/phoenix/actions/runs/45590363854) is pinned to `329d58f9c162ef6f9244fce25d48124dc5f2ada4`. Integrated browser acceptance remains pending until both jobs pass.
+- The candidate now supports manual pair selection and exact-contact suggestions scoped to the same acquisition contract and service domain. Suggestions are filtered by live dispatcher authorization, absent for expired contact records and hidden once an employee proposes the pair. The workbench never receives the digest. Concurrent reversed-pair submission and browser suggestion acceptance are included in the synthetic harness. The newer commits still require PG16/17 and Chromium results.
