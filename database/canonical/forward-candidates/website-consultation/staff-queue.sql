@@ -396,4 +396,46 @@ REVOKE ALL ON FUNCTION crm.propose_website_consultation_duplicate(text,text,uuid
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
 GRANT EXECUTE ON FUNCTION crm.propose_website_consultation_duplicate(text,text,uuid,uuid,uuid,uuid,text)
   TO phoenix_website_consultation_staff_gateway;
+
+CREATE FUNCTION crm.review_website_consultation_duplicate(
+  p_issuer text,p_subject text,p_candidate uuid,p_decision text,p_event uuid
+) RETURNS boolean
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog
+AS $review$
+DECLARE employee uuid;
+        candidate crm.lead_duplicate_candidates%ROWTYPE;
+BEGIN
+  IF (pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500
+    AND core.is_uuid_v7(p_event) AND p_decision IN ('CONFIRMED','DISMISSED'))
+    IS NOT TRUE THEN RETURN false; END IF;
+  employee := auth.resolve_external_identity(p_issuer,p_subject);
+  SELECT * INTO candidate FROM crm.lead_duplicate_candidates
+    WHERE lead_duplicate_candidate_id=p_candidate;
+  IF NOT FOUND OR candidate.status<>'PENDING'
+    OR employee IS NOT DISTINCT FROM candidate.proposed_by_principal_id
+    OR crm.lock_website_consultation_duplicate_pair(
+      employee,candidate.lead_a_id,candidate.lead_b_id,'DISPATCHER'
+    ) IS NOT TRUE
+    OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee
+  THEN RETURN false; END IF;
+
+  UPDATE crm.lead_duplicate_candidates
+    SET status=p_decision,reviewed_by_principal_id=employee,reviewed_at=clock_timestamp()
+    WHERE lead_duplicate_candidate_id=p_candidate AND status='PENDING';
+  IF NOT FOUND THEN RETURN false; END IF;
+  INSERT INTO crm.lead_events(
+    lead_event_id,lead_id,event_kind,from_status,to_status,reason_code,actor_principal_id
+  ) VALUES(p_event,candidate.lead_a_id,'DEDUP_REVIEWED','PENDING',p_decision,
+    'MANUAL_DUPLICATE_REVIEWED',employee);
+  RETURN true;
+END
+$review$;
+REVOKE ALL ON FUNCTION crm.review_website_consultation_duplicate(text,text,uuid,text,uuid)
+  FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.review_website_consultation_duplicate(text,text,uuid,text,uuid)
+  TO phoenix_website_consultation_staff_gateway;
 COMMIT;

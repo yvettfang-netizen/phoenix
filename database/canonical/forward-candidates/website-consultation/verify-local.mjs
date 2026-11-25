@@ -326,12 +326,23 @@ try {
   assert.equal(await propose(subject, lead, newLead), null);
   assert.equal(await propose("synthetic-dispatcher", lead, newLead), candidateId);
   assert.equal(await propose("synthetic-dispatcher", newLead, lead), candidateId);
+  const reviewEvent = "019347ec-7740-7000-a000-000000000093";
+  const review = async who => (await staff.query(
+    "SELECT crm.review_website_consultation_duplicate($1,$2,$3,'CONFIRMED',$4) AS accepted",
+    [issuer, who, candidateId, reviewEvent],
+  )).rows[0].accepted;
+  assert.equal(await review("synthetic-dispatcher"), false);
+  assert.equal(await review(subject), false);
+  await db.query(`INSERT INTO crm.website_consultation_staff_grants
+    (principal_id,organization_id,service_domain,grant_kind,valid_until)
+    VALUES($1,$2,'EDUCATION','DISPATCHER',clock_timestamp()+interval '1 hour')`, [employee, serviceOrg]);
   assert.deepEqual((await db.query(
     "SELECT actor_principal_id,event_kind FROM crm.lead_events WHERE lead_event_id=$1", [proposalEvent],
   )).rows, [{ actor_principal_id: dispatcher, event_kind: "DEDUP_CANDIDATE" }]);
   assert.equal(await duplicateScope(lead, lead), false);
   await assert.rejects(staff.query(pairScopeSql, [dispatcher, lead, newLead]), /permission denied/);
   await setLeadFamily(otherFamily);
+  assert.equal(await review(subject), false);
   assert.equal(await propose("synthetic-dispatcher", lead, newLead), null);
   assert.equal(await duplicateScope(lead, newLead), false);
   assert.equal(await duplicateScope(newLead, lead), false);
@@ -339,6 +350,14 @@ try {
   assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
   assert.equal((await post("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 404);
   await setLeadFamily(null);
+  assert.equal(await review(subject), true);
+  assert.equal(await review(subject), false);
+  assert.deepEqual((await db.query(
+    "SELECT actor_principal_id,event_kind,to_status FROM crm.lead_events WHERE lead_event_id=$1", [reviewEvent],
+  )).rows, [{ actor_principal_id: employee, event_kind: "DEDUP_REVIEWED", to_status: "CONFIRMED" }]);
+  await db.query(`UPDATE crm.website_consultation_staff_grants SET revoked_at=clock_timestamp()
+    WHERE principal_id=$1 AND organization_id=$2 AND service_domain='EDUCATION' AND grant_kind='DISPATCHER'`,
+    [employee, serviceOrg]);
   assert.equal((await post("assign", "synthetic-staff", { assigneeId: employee })).status, 404);
   await db.query("UPDATE crm.website_consultation_staff_grants SET organization_id=$2 WHERE principal_id=$1", [dispatcher, otherOrg]);
   assert.equal(await duplicateScope(lead, newLead), false);
