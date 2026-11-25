@@ -137,7 +137,7 @@ BEGIN
     (SELECT min(f.due_at) FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
       AND f.assigned_principal_id=l.assigned_principal_id AND f.status='PENDING') AS next_due_at
     FROM crm.website_consultation_intake i JOIN crm.leads l ON l.lead_id=i.lead_id
-    WHERE EXISTS (
+    WHERE l.lead_status<>'MERGED' AND EXISTS (
       SELECT 1 FROM crm.website_consultation_staff_grants g
       WHERE g.principal_id=employee AND g.service_domain=i.service_domain AND crm.website_consultation_org_allows(i.lead_id,g.organization_id)
         AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
@@ -437,5 +437,52 @@ $review$;
 REVOKE ALL ON FUNCTION crm.review_website_consultation_duplicate(text,text,uuid,text,uuid)
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
 GRANT EXECUTE ON FUNCTION crm.review_website_consultation_duplicate(text,text,uuid,text,uuid)
+  TO phoenix_website_consultation_staff_gateway;
+
+CREATE FUNCTION crm.merge_website_consultation_duplicate(
+  p_issuer text,p_subject text,p_candidate uuid,p_source uuid,p_target uuid,
+  p_merge uuid,p_event uuid
+) RETURNS boolean
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog
+AS $merge$
+DECLARE employee uuid;
+        previous_status text;
+BEGIN
+  IF (pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500
+    AND core.is_uuid_v7(p_merge) AND core.is_uuid_v7(p_event)) IS NOT TRUE
+  THEN RETURN false; END IF;
+  employee := auth.resolve_external_identity(p_issuer,p_subject);
+  IF crm.lock_website_consultation_duplicate_pair(employee,p_source,p_target,'DISPATCHER') IS NOT TRUE
+    OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee
+  THEN RETURN false; END IF;
+  PERFORM 1 FROM crm.lead_duplicate_candidates
+    WHERE lead_duplicate_candidate_id=p_candidate AND status='CONFIRMED'
+      AND lead_a_id=least(p_source,p_target) AND lead_b_id=greatest(p_source,p_target)
+    FOR UPDATE;
+  IF NOT FOUND THEN RETURN false; END IF;
+  SELECT lead_status INTO previous_status FROM crm.leads WHERE lead_id=p_source;
+  IF previous_status NOT IN ('NEW','CONTACTED')
+    OR NOT EXISTS (SELECT 1 FROM crm.leads WHERE lead_id=p_target AND lead_status IN ('NEW','CONTACTED'))
+    OR EXISTS (SELECT 1 FROM crm.follow_ups WHERE lead_id=p_source AND status='PENDING')
+    OR EXISTS (SELECT 1 FROM crm.lead_merge_decisions WHERE target_lead_id=p_source AND status='ACTIVE')
+  THEN RETURN false; END IF;
+  INSERT INTO crm.lead_merge_decisions(
+    lead_merge_decision_id,duplicate_candidate_id,source_lead_id,target_lead_id,
+    source_previous_status,status,merged_by_principal_id
+  ) VALUES(p_merge,p_candidate,p_source,p_target,previous_status,'ACTIVE',employee);
+  UPDATE crm.leads SET lead_status='MERGED',merged_into_lead_id=p_target,
+    updated_by_principal_id=employee,updated_at=clock_timestamp() WHERE lead_id=p_source;
+  INSERT INTO crm.lead_events(
+    lead_event_id,lead_id,event_kind,from_status,to_status,reason_code,actor_principal_id
+  ) VALUES(p_event,p_source,'MERGED',previous_status,'MERGED','MANUAL_AUDITED_LEAD_MERGE',employee);
+  RETURN true;
+END
+$merge$;
+REVOKE ALL ON FUNCTION crm.merge_website_consultation_duplicate(text,text,uuid,uuid,uuid,uuid,uuid)
+  FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.merge_website_consultation_duplicate(text,text,uuid,uuid,uuid,uuid,uuid)
   TO phoenix_website_consultation_staff_gateway;
 COMMIT;

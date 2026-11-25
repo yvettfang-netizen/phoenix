@@ -372,6 +372,13 @@ try {
       FROM crm.follow_ups f
      WHERE f.lead_id=$1 AND f.follow_up_id=$2
   `, [newLead, assignedBody.taskId]);
+  const mergeId = "019347ec-7740-7000-a000-000000000094";
+  const mergeEvent = "019347ec-7740-7000-a000-000000000095";
+  const merge = async who => (await staff.query(
+    "SELECT crm.merge_website_consultation_duplicate($1,$2,$3,$4,$5,$6,$7) AS accepted",
+    [issuer, who, candidateId, newLead, lead, mergeId, mergeEvent],
+  )).rows[0].accepted;
+  assert.equal(await merge("synthetic-dispatcher"), false, "pending source task must remain actionable");
   assert.equal(pending.rowCount, 1);
   assert.equal(pending.rows[0].status, "PENDING");
   assert.equal(pending.rows[0].assigned_principal_id, employee);
@@ -431,6 +438,19 @@ try {
     { event_kind: "STATUS_CHANGED", actor_principal_id: employee },
   ]);
   console.log("PASS staff HTTP assign, reveal and complete with separate actors and idempotent retries");
+  assert.equal(await merge(subject), false);
+  await setLeadFamily(otherFamily);
+  assert.equal(await merge("synthetic-dispatcher"), false);
+  await setLeadFamily(null);
+  assert.equal(await merge("synthetic-dispatcher"), true);
+  assert.equal(await merge("synthetic-dispatcher"), false);
+  assert.deepEqual((await db.query(
+    "SELECT lead_status,merged_into_lead_id FROM crm.leads WHERE lead_id=$1", [newLead],
+  )).rows, [{ lead_status: "MERGED", merged_into_lead_id: lead }]);
+  assert.deepEqual((await db.query(
+    "SELECT actor_principal_id,event_kind FROM crm.lead_events WHERE lead_event_id=$1", [mergeEvent],
+  )).rows, [{ actor_principal_id: dispatcher, event_kind: "MERGED" }]);
+  assert.equal((await queue()).rows.some(item => item.lead_id === newLead), false);
   const rateRequest = "028347ec-7740-4000-a000-000000000009";
   const rateResults = await Promise.all(Array.from({ length: 9 }, () =>
     submit("identity", rateRequest, "synthetic-rate@example.test")));
