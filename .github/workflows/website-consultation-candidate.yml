@@ -16,11 +16,15 @@ permissions:
 
 jobs:
   synthetic-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '17']
     runs-on: ubuntu-latest
     timeout-minutes: 12
     services:
       postgres:
-        image: postgres:17
+        image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_USER: phoenix_bootstrap
           POSTGRES_HOST_AUTH_METHOD: trust

@@ -8,12 +8,13 @@ GRANT USAGE ON SCHEMA crm TO phoenix_website_consultation_staff_gateway;
 -- Domain grants reference existing Canonical principals, never independent accounts.
 CREATE TABLE crm.website_consultation_staff_grants (
   principal_id uuid NOT NULL REFERENCES auth.principals(principal_id),
+  organization_id uuid NOT NULL REFERENCES core.organizations,
   service_domain text NOT NULL CHECK (service_domain IN ('EDUCATION','IDENTITY','WEALTH','HEALTH')),
   grant_kind text NOT NULL CHECK (grant_kind IN ('DISPATCHER','ADVISER')),
   valid_from timestamptz NOT NULL DEFAULT clock_timestamp(),
   valid_until timestamptz NOT NULL CHECK (valid_until > valid_from),
   revoked_at timestamptz,
-  PRIMARY KEY (principal_id,service_domain,grant_kind)
+  PRIMARY KEY (principal_id,organization_id,service_domain,grant_kind)
 );
 ALTER TABLE crm.website_consultation_staff_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE crm.website_consultation_staff_grants FORCE ROW LEVEL SECURITY;
@@ -27,6 +28,38 @@ BEGIN
   );
 END
 $policy$;
+
+-- The operator binds each approved intake contract revision to its service organization.
+-- An unmapped contract has no staff-visible leads.
+CREATE TABLE crm.website_consultation_contract_organizations (
+  contract_id uuid PRIMARY KEY REFERENCES crm.acquisition_contract_revisions,
+  organization_id uuid NOT NULL REFERENCES core.organizations
+);
+ALTER TABLE crm.website_consultation_contract_organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crm.website_consultation_contract_organizations FORCE ROW LEVEL SECURITY;
+DO $policy$
+BEGIN
+  EXECUTE format(
+    'CREATE POLICY website_contract_org_owner ON crm.website_consultation_contract_organizations TO %I USING (true) WITH CHECK (true)',
+    current_user
+  );
+END
+$policy$;
+REVOKE ALL ON crm.website_consultation_contract_organizations FROM PUBLIC,
+  phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_consultation_staff_gateway;
+
+CREATE FUNCTION crm.website_consultation_org_allows(p_lead uuid,p_org uuid)
+RETURNS boolean LANGUAGE sql VOLATILE SET search_path=pg_catalog
+RETURN EXISTS (
+  SELECT 1 FROM crm.website_consultation_intake i
+  JOIN crm.website_consultation_contract_organizations binding
+    ON binding.contract_id=i.acquisition_contract_id
+  JOIN core.organizations org ON org.organization_id=binding.organization_id
+  JOIN crm.leads lead ON lead.lead_id=i.lead_id
+  WHERE i.lead_id=p_lead AND org.organization_id=p_org AND org.status='ACTIVE'
+    AND lead.family_id IS NULL AND lead.contact_person_id IS NULL
+);
+REVOKE ALL ON FUNCTION crm.website_consultation_org_allows(uuid,uuid) FROM PUBLIC;
 
 -- Queue metadata only. Dispatchers can see leads in their authorised domains.
 -- Advisers only see leads or follow-ups specifically assigned to them.
@@ -58,7 +91,7 @@ BEGIN
     FROM crm.website_consultation_intake i JOIN crm.leads l ON l.lead_id=i.lead_id
     WHERE EXISTS (
       SELECT 1 FROM crm.website_consultation_staff_grants g
-      WHERE g.principal_id=employee AND g.service_domain=i.service_domain
+      WHERE g.principal_id=employee AND g.service_domain=i.service_domain AND crm.website_consultation_org_allows(i.lead_id,g.organization_id)
         AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
         AND (g.grant_kind='DISPATCHER' OR l.assigned_principal_id=employee OR EXISTS (
           SELECT 1 FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
@@ -117,7 +150,7 @@ BEGIN
   SELECT i.* INTO item
   FROM crm.website_consultation_intake i JOIN crm.leads l ON l.lead_id=i.lead_id
   JOIN crm.website_consultation_staff_grants g
-    ON g.principal_id=employee AND g.service_domain=i.service_domain AND g.grant_kind='ADVISER'
+    ON g.principal_id=employee AND g.service_domain=i.service_domain AND crm.website_consultation_org_allows(i.lead_id,g.organization_id) AND g.grant_kind='ADVISER'
   WHERE l.lead_id=p_lead AND l.lead_status NOT IN ('MERGED','DISQUALIFIED','LOST')
     AND i.contact_envelope IS NOT NULL AND i.contact_expires_at>clock_timestamp()
     AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
@@ -132,7 +165,7 @@ BEGIN
     OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee
     OR NOT EXISTS (
       SELECT 1 FROM crm.website_consultation_staff_grants g
-      WHERE g.principal_id=employee AND g.service_domain=item.service_domain
+      WHERE g.principal_id=employee AND g.service_domain=item.service_domain AND crm.website_consultation_org_allows(p_lead,g.organization_id)
         AND g.grant_kind='ADVISER' AND g.valid_from<=clock_timestamp()
         AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
     )
@@ -177,11 +210,11 @@ BEGIN
   IF NOT FOUND THEN RETURN NULL; END IF;
   SELECT i.service_domain INTO STRICT domain FROM crm.website_consultation_intake i WHERE i.lead_id=p_lead;
   PERFORM 1 FROM crm.website_consultation_staff_grants g
-    WHERE g.principal_id=employee AND g.service_domain=domain
+    WHERE g.principal_id=employee AND g.service_domain=domain AND crm.website_consultation_org_allows(p_lead,g.organization_id)
       AND g.grant_kind=CASE p_action WHEN 'ASSIGN' THEN 'DISPATCHER' ELSE 'ADVISER' END
       AND g.revoked_at IS NULL FOR SHARE;
   IF NOT FOUND OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee OR NOT EXISTS (
-    SELECT 1 FROM crm.website_consultation_staff_grants g WHERE g.principal_id=employee AND g.service_domain=domain
+    SELECT 1 FROM crm.website_consultation_staff_grants g WHERE g.principal_id=employee AND g.service_domain=domain AND crm.website_consultation_org_allows(p_lead,g.organization_id)
       AND g.grant_kind=CASE p_action WHEN 'ASSIGN' THEN 'DISPATCHER' ELSE 'ADVISER' END
       AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()
   ) THEN RETURN NULL; END IF;
@@ -194,7 +227,7 @@ BEGIN
     IF NOT EXISTS (
       SELECT 1 FROM crm.website_consultation_staff_grants g JOIN auth.principals p USING(principal_id)
       WHERE g.principal_id=p_assignee AND p.principal_kind='ADVISOR' AND p.person_id IS NOT NULL
-        AND p.status='ACTIVE' AND g.service_domain=domain AND g.grant_kind='ADVISER'
+        AND p.status='ACTIVE' AND g.service_domain=domain AND crm.website_consultation_org_allows(p_lead,g.organization_id) AND g.grant_kind='ADVISER'
         AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()
     ) THEN RETURN NULL; END IF;
     IF lead.assigned_principal_id IS NOT NULL THEN
@@ -252,11 +285,11 @@ BEGIN
     JOIN crm.leads lead USING(lead_id)
     JOIN crm.website_consultation_staff_grants dispatched
       ON dispatched.principal_id=employee AND dispatched.service_domain=intake.service_domain
-        AND dispatched.grant_kind='DISPATCHER'
+        AND dispatched.grant_kind='DISPATCHER' AND crm.website_consultation_org_allows(p_lead,dispatched.organization_id)
     JOIN auth.principals actor ON actor.principal_id=employee AND actor.principal_kind='ADVISOR'
       AND actor.person_id IS NOT NULL AND actor.status='ACTIVE'
     JOIN crm.website_consultation_staff_grants eligible
-      ON eligible.service_domain=intake.service_domain AND eligible.grant_kind='ADVISER'
+      ON eligible.service_domain=intake.service_domain AND eligible.grant_kind='ADVISER' AND eligible.organization_id=dispatched.organization_id
     JOIN auth.principals target ON target.principal_id=eligible.principal_id
       AND target.principal_kind='ADVISOR' AND target.status='ACTIVE'
     JOIN core.people person ON person.person_id=target.person_id

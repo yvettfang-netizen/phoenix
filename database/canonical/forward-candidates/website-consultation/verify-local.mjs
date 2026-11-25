@@ -189,11 +189,21 @@ try {
   const readEmail = (who = subject) => readStaffConsultationEmail(staff, { issuer, subject: who }, lead, contactKey);
   assert.equal((await queue()).rowCount, 0);
   assert.equal(await readEmail(), null);
+  const serviceOrg = "019347ec-7740-7000-a000-000000000030";
+  const otherOrg = "019347ec-7740-7000-a000-000000000031";
   await db.query(`
-    INSERT INTO crm.website_consultation_staff_grants(principal_id,service_domain,grant_kind,valid_until)
-    VALUES($1,'HEALTH','DISPATCHER',clock_timestamp()+interval '1 hour'),
-          ($1,'EDUCATION','ADVISER',clock_timestamp()+interval '1 hour')
-  `, [employee]);
+    INSERT INTO core.organizations
+      (organization_id,legal_name,display_name,organization_type,country_code,created_by_principal_id,updated_by_principal_id)
+    VALUES ($1,'Synthetic service organization','Synthetic service organization','ENTERPRISE','CN',$3,$3),
+           ($2,'Synthetic external organization','Synthetic external organization','ENTERPRISE','CN',$3,$3)
+  `, [serviceOrg, otherOrg, principal]);
+  await db.query("INSERT INTO crm.website_consultation_contract_organizations VALUES ($1,$2)", [contractId, serviceOrg]);
+  await db.query(`
+    INSERT INTO crm.website_consultation_staff_grants(principal_id,organization_id,service_domain,grant_kind,valid_until)
+    VALUES($1,$2,'HEALTH','DISPATCHER',clock_timestamp()+interval '1 hour'),
+          ($1,$2,'EDUCATION','ADVISER',clock_timestamp()+interval '1 hour'),
+          ($1,$3,'EDUCATION','DISPATCHER',clock_timestamp()+interval '1 hour')
+  `, [employee, serviceOrg, otherOrg]);
   assert.equal((await queue()).rowCount, 0);
   assert.equal(await readEmail(), null);
   const ticket = (await db.query(`
@@ -211,6 +221,12 @@ try {
   assert.equal(queued.rows[0].lead_id, lead);
   assert.equal(queued.rows[0].service_domain, "EDUCATION");
   assert.equal(Object.hasOwn(queued.rows[0], "contact_envelope"), false);
+  await db.query(`UPDATE crm.website_consultation_staff_grants SET organization_id=$2
+    WHERE principal_id=$1 AND grant_kind='ADVISER'`, [employee, otherOrg]);
+  assert.equal((await queue()).rowCount, 0);
+  assert.equal(await readEmail(), null);
+  await db.query(`UPDATE crm.website_consultation_staff_grants SET organization_id=$2
+    WHERE principal_id=$1 AND grant_kind='ADVISER'`, [employee, serviceOrg]);
   assert.equal((await queue("unknown")).rowCount, 0);
   assert.equal(await readEmail("unknown"), null);
   const queueUrl = staffOrigin + "/internal/website-consultations";
@@ -270,9 +286,9 @@ try {
       WHERE principal_id=$1 AND service_domain='EDUCATION' AND grant_kind='ADVISER'
   `, [employee]);
   await db.query(`
-    INSERT INTO crm.website_consultation_staff_grants(principal_id,service_domain,grant_kind,valid_until)
-      VALUES($1,'EDUCATION','DISPATCHER',clock_timestamp()+interval '1 hour')
-  `, [dispatcher]);
+    INSERT INTO crm.website_consultation_staff_grants(principal_id,organization_id,service_domain,grant_kind,valid_until)
+      VALUES($1,$2,'EDUCATION','DISPATCHER',clock_timestamp()+interval '1 hour')
+  `, [dispatcher, serviceOrg]);
   const secondRequest = "028347ec-7740-4000-a000-000000000002";
   assert.equal((await submit("education", secondRequest)).status, 202);
   const newLead = (await db.query("SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [secondRequest])).rows[0].lead_id;
