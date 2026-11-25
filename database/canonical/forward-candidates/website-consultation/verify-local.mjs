@@ -309,12 +309,22 @@ try {
   const otherFamily = "019347ec-7740-7000-a000-000000000039";
   await db.query("INSERT INTO core.families(family_id,display_name) VALUES($1,'Synthetic unrelated family')", [otherFamily]);
   const setLeadFamily = family => db.query("UPDATE crm.leads SET family_id=$2 WHERE lead_id=$1", [newLead, family]);
+  const pairScopeSql = "SELECT crm.website_consultation_duplicate_scope_allows($1,$2,$3,'DISPATCHER') AS allowed";
+  const duplicateScope = async (first, second) =>
+    (await db.query(pairScopeSql, [dispatcher, first, second])).rows[0].allowed;
+  assert.equal(await duplicateScope(lead, newLead), true);
+  assert.equal(await duplicateScope(newLead, lead), true);
+  assert.equal(await duplicateScope(lead, lead), false);
+  await assert.rejects(staff.query(pairScopeSql, [dispatcher, lead, newLead]), /permission denied/);
   await setLeadFamily(otherFamily);
+  assert.equal(await duplicateScope(lead, newLead), false);
+  assert.equal(await duplicateScope(newLead, lead), false);
   assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
   assert.equal((await post("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 404);
   await setLeadFamily(null);
   assert.equal((await post("assign", "synthetic-staff", { assigneeId: employee })).status, 404);
   await db.query("UPDATE crm.website_consultation_staff_grants SET organization_id=$2 WHERE principal_id=$1", [dispatcher, otherOrg]);
+  assert.equal(await duplicateScope(lead, newLead), false);
   assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
   assert.equal((await post("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 404);
   await db.query("UPDATE crm.website_consultation_staff_grants SET organization_id=$2 WHERE principal_id=$1", [dispatcher, serviceOrg]);

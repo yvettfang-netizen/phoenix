@@ -61,6 +61,29 @@ RETURN EXISTS (
 );
 REVOKE ALL ON FUNCTION crm.website_consultation_org_allows(uuid,uuid) FROM PUBLIC;
 
+-- Internal predicate. A caller must authenticate the actor and hold both lead
+-- locks while using the result for a duplicate lifecycle transition.
+CREATE FUNCTION crm.website_consultation_duplicate_scope_allows(
+  p_actor uuid,p_first uuid,p_second uuid,p_grant_kind text
+) RETURNS boolean LANGUAGE sql VOLATILE SET search_path=pg_catalog
+RETURN EXISTS (
+  SELECT 1
+    FROM crm.website_consultation_intake a
+    JOIN crm.website_consultation_intake b ON b.service_domain=a.service_domain
+    JOIN crm.website_consultation_staff_grants g ON g.service_domain=a.service_domain
+    JOIN auth.principals actor ON actor.principal_id=g.principal_id
+   WHERE a.lead_id=p_first AND b.lead_id=p_second AND p_first<>p_second
+     AND actor.principal_id=p_actor AND actor.principal_kind='ADVISOR'
+     AND actor.person_id IS NOT NULL AND actor.status='ACTIVE'
+     AND g.grant_kind=p_grant_kind AND g.revoked_at IS NULL
+     AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()
+     AND crm.website_consultation_org_allows(p_first,g.organization_id)
+     AND crm.website_consultation_org_allows(p_second,g.organization_id)
+);
+REVOKE ALL ON FUNCTION crm.website_consultation_duplicate_scope_allows(uuid,uuid,uuid,text)
+  FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,
+  phoenix_website_intake,phoenix_website_consultation_staff_gateway;
+
 -- Queue metadata only. Dispatchers can see leads in their authorised domains.
 -- Advisers only see leads or follow-ups specifically assigned to them.
 CREATE FUNCTION crm.list_website_consultation_staff_queue(p_issuer text,p_subject text)
