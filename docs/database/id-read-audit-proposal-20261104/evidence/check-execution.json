@@ -1,0 +1,45 @@
+{
+  "scope": "Source/design preparation only",
+  "checks": [
+    {
+      "command": [
+        "node",
+        "docs/database/id-read-audit-proposal-20261104/verify-baseline.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": "{\"passed\":64,\"total\":64,\"status\":\"PASS\"}",
+      "rawOutput": "baseline-verification.json"
+    },
+    {
+      "command": [
+        "node",
+        "--check",
+        "docs/database/id-read-audit-proposal-20261104/verify-baseline.mjs"
+      ],
+      "exitCode": 0,
+      "stdout": ""
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exitCode": 0,
+      "stdout": ""
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "cwd": "Phoenix Compass/education compass/server",
+      "exitCode": 0,
+      "stdout": "\n> phoenix-family-os-server@0.5.0 typecheck\n> tsc -p tsconfig.json --noEmit\n\n"
+    }
+  ],
+  "newSqlImplementation": "NOT RUN",
+  "newPg16Pg17Acceptance": "NOT RUN",
+  "realIdentityActivation": "HOLD"
+}

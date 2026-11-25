@@ -1,0 +1,22 @@
+[
+ {
+  "RuleID": "generic-api-key",
+  "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+  "StartLine": 52,
+  "EndLine": 52,
+  "StartColumn": 31,
+  "EndColumn": 153,
+  "Match": "FOUNDER_DECISION_FAMILY_MAPPING_MANAGEMENT_API_V1.0.md', 'REDACTED'",
+  "Secret": "REDACTED",
+  "File": "/scan/verify-baseline.mjs",
+  "SymlinkFile": "",
+  "Commit": "",
+  "Entropy": 3.7683434,
+  "Author": "",
+  "Email": "",
+  "Date": "",
+  "Message": "",
+  "Tags": [],
+  "Fingerprint": "/scan/verify-baseline.mjs:generic-api-key:52"
+ }
+]

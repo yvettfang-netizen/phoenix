@@ -1,0 +1,48 @@
+name: Family Student synthetic projection E2E
+on:
+  pull_request:
+    paths:
+      - 'Phoenix Compass/education compass/server/**'
+      - 'website/phoenix-nova-website-v5/**'
+      - 'database/canonical/**'
+      - '.github/workflows/family-student-projection.yml'
+permissions:
+  contents: read
+concurrency:
+  group: family-projection-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  family-projection-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16', '17']
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Existing backend typecheck build and tests
+        working-directory: Phoenix Compass/education compass/server
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run typecheck
+          npm run build
+          npm test
+      - name: Existing website dependencies
+        working-directory: website/phoenix-nova-website-v5
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          node node_modules/workerd/install.js
+      - name: Isolated pinned browser
+        run: |
+          npm install --prefix "$RUNNER_TEMP/projection-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          node "$RUNNER_TEMP/projection-browser/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Real LOGIN ticket RLS browser and fresh restore
+        run: |
+          export PLAYWRIGHT_MODULE="$RUNNER_TEMP/projection-browser/node_modules/playwright"
+          node database/canonical/verification/family-projection-e2e.mjs '${{ matrix.pg }}'
