@@ -17,12 +17,21 @@ ALTER TABLE crm.lead_events
 CREATE UNIQUE INDEX lead_compass_assessment_reference_uq
   ON crm.lead_events(compass_domain,compass_assessment_id) WHERE compass_assessment_id IS NOT NULL;
 
+-- Installing the receiver alone must never turn a caller's UUID into an assessment.
+CREATE FUNCTION crm.native_compass_assessment_is_shareable(p_domain text,p_assessment uuid,p_subject uuid)
+RETURNS boolean LANGUAGE sql VOLATILE SET search_path=pg_catalog
+RETURN false;
+REVOKE ALL ON FUNCTION crm.native_compass_assessment_is_shareable(text,uuid,uuid) FROM PUBLIC;
+CREATE FUNCTION crm.native_compass_assessment_writer_allowed(p_domain text)
+RETURNS boolean LANGUAGE sql STABLE SET search_path=pg_catalog
+RETURN false;
+REVOKE ALL ON FUNCTION crm.native_compass_assessment_writer_allowed(text) FROM PUBLIC;
+
 CREATE FUNCTION crm.can_access_compass_event(p_lead uuid,p_subject uuid,p_domain text,p_assessment uuid)
 RETURNS boolean LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm,auth,core,consent
 RETURN coalesce(auth.write_context_is_live() AND auth.current_channel()='FAMILY'
-  AND p_subject=auth.current_actor_person_id()
   AND EXISTS (SELECT 1 FROM auth.principals p WHERE p.principal_id=auth.current_principal_id()
-      AND p.status='ACTIVE' AND p.principal_kind='FAMILY' AND p.person_id=p_subject)
+      AND p.status='ACTIVE' AND p.principal_kind='FAMILY' AND p.person_id=auth.current_actor_person_id())
   AND EXISTS (
     SELECT 1 FROM crm.leads l JOIN crm.lead_identity_links link ON link.lead_id=l.lead_id
       JOIN crm.clients client ON client.client_id=link.client_id AND client.family_id=l.family_id
@@ -34,15 +43,8 @@ RETURN coalesce(auth.write_context_is_live() AND auth.current_channel()='FAMILY'
     SELECT 1 FROM core.family_memberships m WHERE m.family_id=auth.current_family_id()
       AND m.person_id=auth.current_actor_person_id() AND m.valid_from<=clock_timestamp()
       AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp()))
-  AND (p_assessment IS NULL OR
-    EXISTS (
-      SELECT 1 FROM consent.grants g
-      WHERE p_assessment IS NOT NULL AND g.family_id=auth.current_family_id()
-        AND g.grantee_person_id=p_subject AND g.subject_person_id=p_subject AND g.grantor_person_id=p_subject
-        AND g.status='ACTIVE' AND g.withdrawn_at IS NULL
-        AND g.granted_at<=clock_timestamp() AND g.expires_at>clock_timestamp()
-        AND ((p_domain='EDUCATION' AND g.purpose='EDUCATION_CASE' AND g.data_class='EDUCATION')
-          OR (p_domain='IDENTITY' AND g.purpose='IDENTITY_CASE' AND g.data_class='IDENTITY_SENSITIVE'))))
+  AND CASE WHEN p_assessment IS NULL THEN p_subject=auth.current_actor_person_id()
+    ELSE crm.native_compass_assessment_is_shareable(p_domain,p_assessment,p_subject) END
   ,false);
 REVOKE ALL ON FUNCTION crm.can_access_compass_event(uuid,uuid,text,uuid) FROM PUBLIC;
 
@@ -55,6 +57,7 @@ AS $event$
 DECLARE prior crm.lead_events%ROWTYPE;
 BEGIN
   IF (core.is_uuid_v7(p_event) AND crm.acquisition_contract_usable(p_contract)
+    AND (p_assessment IS NULL OR crm.native_compass_assessment_writer_allowed(p_domain))
     AND EXISTS(SELECT 1 FROM crm.acquisition_contract_revisions c WHERE c.contract_id=p_contract
       AND c.source_system='phoenix-nova-compass-'||lower(p_domain)
       AND crm.website_consultation_source_matches(c.source_system,c.entry_ref))

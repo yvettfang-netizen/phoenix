@@ -1,6 +1,7 @@
 // Disposable loopback cluster only. Expects an isolated bootstrap role and a fresh database.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import { readFile, readdir, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -1073,12 +1074,12 @@ try {
   await db.query("INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from) VALUES($1,$2,$3,'PRIMARY',clock_timestamp()),($4,$5,$3,'MEMBER',clock_timestamp())",
     [fixtureId(142), otherFamily, actor, fixtureId(143), mismatchFamily]);
   const publisherContracts = {};
-  for (const [i, domain] of ["education", "identity"].entries()) {
+  for (const [i, domain] of ["education", "identity", "health", "wealth"].entries()) {
     const registered = await db.query(`
       SELECT crm.register_acquisition_contract($1,lead_source_id,'fixture-publisher',$2,'synthetic approval',$3,
         'synthetic retention',$3,'website_fixture_crm_service',clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour')
       FROM crm.lead_sources WHERE source_system=$4
-    `, [fixtureId(144 + i), { entry_ref: "/" + domain, entry_revision: "fixture-publisher",
+    `, [fixtureId(170 + i), { entry_ref: "/" + domain, entry_revision: "fixture-publisher",
       manifest_ref: "synthetic publisher manifest", manifest_sha256: hash }, hash, "phoenix-nova-compass-" + domain]);
     publisherContracts[domain] = Object.values(registered.rows[0])[0];
   }
@@ -1112,14 +1113,15 @@ try {
     purpose,data_class,status,granted_at,expires_at)
     VALUES($1,$2,$3,$3,$3,'IDENTITY_CASE','IDENTITY_SENSITIVE','ACTIVE',clock_timestamp(),clock_timestamp()+interval '1 hour')`,
     [fixtureId(153), otherFamily, actor]);
-  assert.equal((await recordCompass(assessed, assessment)).rows[0].event, assessed);
-  assert.equal((await recordCompass(assessed, assessment)).rows[0].event, assessed);
-  assert.equal((await recordCompass(fixtureId(158), assessment)).rows[0].event, assessed);
-  assert.equal((await recordCompass(assessed, fixtureId(154))).rows[0].event, null);
-  assert.equal((await readCompass(assessed)).rows[0].assessment_id, assessment);
-  await db.query("UPDATE consent.grants SET status='WITHDRAWN',withdrawn_at=clock_timestamp() WHERE consent_id=$1", [fixtureId(153)]);
-  assert.equal((await readCompass(assessed)).rowCount, 0);
   assert.equal((await recordCompass(assessed, assessment)).rows[0].event, null);
+  assert.equal((await readCompass(assessed)).rowCount, 0);
+  console.log("PASS Identity reference denied despite case consent when no trusted native completion exists");
+  for (const [offset, domain] of ["health", "wealth"].entries()) {
+    const refused = await crmService.query("SELECT crm.record_compass_event($1,$2,$3,$4,$5,$6) AS event",
+      [fixtureId(174 + offset), educationLead, actor, publisherContracts[domain], domain.toUpperCase(), assessment]);
+    assert.equal(refused.rows[0].event, null);
+  }
+  console.log("PASS Health and Wealth native references denied even with the correct publisher source registration");
   for (const [i, domain] of ["education", "identity"].entries()) {
     const id = fixtureId(155 + i);
     const params = [id, educationLead, publisherContracts[domain], domain.toUpperCase(), "fixture-compass-need-" + domain, hash];
@@ -1135,7 +1137,75 @@ try {
   assert.equal((await db.query("SELECT count(*)::int AS n FROM crm.lead_events WHERE lead_id=$1 AND need_domain IN ('EDUCATION','IDENTITY')",
     [educationLead])).rows[0].n, 2);
   assert.equal((await db.query("SELECT count(*)::int AS n FROM crm.clients WHERE family_id=$1", [otherFamily])).rows[0].n, 1);
-  console.log("PASS Education to Identity touch leaves first source intact; verified family, distinct needs, idempotent assessment reference and live Consent revocation");
+  console.log("PASS Education to Identity touch leaves first source intact; verified family and distinct needs");
+  if (process.env.CRM_FIXTURE_EDUCATION_CANDIDATE) {
+    const sourceSql = (await readFile(process.env.CRM_FIXTURE_EDUCATION_CANDIDATE, "utf8")).replaceAll("\r\n", "\n");
+    assert.equal(createHash("sha256").update(sourceSql).digest("hex"), "c02cd90ea37d800571772d54ac50bfb7597c919fc675c0ed3fe93b1d8e7692f6");
+    await db.query("SET phoenix.education_compass_candidate='isolated'");
+    await db.query(sourceSql);
+    await db.query(await readFile(new URL("./education-native-publisher.sql", import.meta.url), "utf8"));
+    await db.query("GRANT phoenix_education_compass_app TO website_fixture_crm_service WITH INHERIT TRUE, SET FALSE");
+    await db.query("GRANT phoenix_education_crm_reference_publisher TO website_fixture_crm_service WITH INHERIT TRUE, SET FALSE");
+
+    const student = fixtureId(160), guardianGrant = fixtureId(161), shareGrant = fixtureId(162);
+    const nativeId = fixtureId(163), completedEvent = fixtureId(164);
+    await db.query("INSERT INTO core.people(person_id,display_name) VALUES($1,'Synthetic candidate student')", [student]);
+    await db.query("INSERT INTO core.student_profiles(person_id) VALUES($1)", [student]);
+    await db.query("INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from) VALUES($1,$2,$3,'MEMBER',clock_timestamp())", [fixtureId(165), otherFamily, student]);
+    await db.query(`INSERT INTO core.guardian_authorities(authority_id,family_id,guardian_person_id,subject_person_id,
+      evidence_level,scope,valid_from,valid_until) VALUES($1,$2,$3,$4,'VERIFIED','EDUCATION',
+      clock_timestamp()-interval '1 minute',clock_timestamp()+interval '1 hour')`, [fixtureId(166), otherFamily, actor, student]);
+    await bindFamily(otherFamily);
+    const call = async (query, values) => (await crmService.query(query, values)).rows[0].outcome;
+    const publish = (event, lead = educationLead, ref = nativeId, contract = publisherContracts.education) =>
+      call("SELECT crm.publish_education_compass_completion($1,$2,$3,$4) AS outcome", [event, lead, contract, ref]);
+    const readReference = event => crmService.query("SELECT * FROM crm.read_compass_event($1)", [event]);
+    assert.equal(await publish(completedEvent), null);
+    assert.equal(await call(`SELECT education_compass.record_purpose($1,$2,'CORE_ASSESSMENT',
+      'guardian_core_assessment_v1.0.0-rc1','334a1e8e455dfef386fcaf491acea3dac23b13c4ece010cfad66d1087f6a84a5',
+      $3,clock_timestamp()+interval '30 minutes') AS outcome`, [guardianGrant, student, randomUUID()]), "RECORDED");
+    assert.equal(await call("SELECT education_compass.open_draft($1,$2,'LEVEL_1',NULL,NULL,$3,NULL) AS outcome",
+      [nativeId, student, guardianGrant]), "OPENED");
+    assert.equal(await publish(completedEvent), null);
+    // Use the native assessment write API. The probe never passes these answers to CRM.
+    const answers = Object.fromEntries(Array.from({ length: 8 }, (_, i) => ["FP0" + (i + 1), "synthetic"]));
+    assert.equal(await call("SELECT education_compass.save_draft($1,1,$2) AS outcome", [nativeId, answers]), "SAVED");
+    assert.equal(await call("SELECT education_compass.submit($1,2,$2) AS outcome", [nativeId, randomUUID()]), "SUBMITTED");
+    assert.equal(await publish(completedEvent), null, "assessment consent alone must not authorize CRM sharing");
+    const grantShare = grantId => db.query(`INSERT INTO consent.grants(consent_id,family_id,grantor_person_id,grantee_person_id,subject_person_id,
+      purpose,data_class,status,granted_at,expires_at)
+      VALUES($1,$2,$3,$3,$4,'EDUCATION_COMPASS_CRM_REFERENCE','EDUCATION','ACTIVE',clock_timestamp(),clock_timestamp()+interval '1 hour')`,
+      [grantId, otherFamily, actor, student]);
+    await grantShare(shareGrant);
+    assert.equal(await publish(completedEvent, educationLead, fixtureId(167)), null);
+    assert.equal(await publish(completedEvent, educationLead, nativeId, publisherContracts.identity), null);
+    await assert.rejects(crmService.query("SELECT answers FROM education_compass.assessment"), { code: "42501" });
+    await db.query("REVOKE phoenix_education_crm_reference_publisher FROM website_fixture_crm_service");
+    const genericWrite = await crmService.query("SELECT crm.record_compass_event($1,$2,$3,$4,'EDUCATION',$5) AS event",
+      [completedEvent, educationLead, student, publisherContracts.education, nativeId]);
+    assert.equal(genericWrite.rows[0].event, null);
+    await db.query("GRANT phoenix_education_crm_reference_publisher TO website_fixture_crm_service WITH INHERIT TRUE, SET FALSE");
+    assert.equal(await publish(completedEvent), completedEvent);
+    assert.equal(await publish(fixtureId(168)), completedEvent);
+    assert.deepEqual((await readReference(completedEvent)).rows, [{ lead_id: educationLead, service_domain: "EDUCATION",
+      assessment_id: nativeId, source_system: "phoenix-nova-compass-education" }]);
+    assert.equal(await publish(fixtureId(169), cancelLead), null, "same native ID cannot attach to a different verified lead");
+    await bindFamily(mismatchFamily);
+    assert.equal((await readReference(completedEvent)).rowCount, 0);
+    await bindFamily(otherFamily);
+    assert.equal(await call("SELECT consent.withdraw_grant($1) AS outcome", [shareGrant]), true);
+    assert.equal((await readReference(completedEvent)).rowCount, 0);
+    assert.equal(await publish(completedEvent), null);
+    await grantShare(fixtureId(176));
+    assert.equal((await readReference(completedEvent)).rowCount, 1);
+    assert.equal(await call("SELECT education_compass.withdraw_purpose($1) AS outcome", [guardianGrant]), "WITHDRAWN");
+    assert.equal((await readReference(completedEvent)).rowCount, 0);
+    assert.equal(await publish(completedEvent), null);
+    await crmService.query("SELECT auth.clear_context()");
+    console.log("PASS native #74 Education submission publishes only an authorized reference, replays idempotently and fails closed on withdrawal");
+  } else {
+    console.log("NOT RUN native Education publisher: pinned #74 source not supplied");
+  }
   const listeners = [];
   function requestLocal(listener, hostHeader, path, method = "GET", body, headers = {}) {
     return new Promise((resolve, reject) => {
