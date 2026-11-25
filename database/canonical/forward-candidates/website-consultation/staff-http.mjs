@@ -1,13 +1,45 @@
 import { readStaffConsultationEmail } from "./staff-contact.mjs";
 import { readPayload, uuidV7 } from "./receiver.mjs";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { workbenchHtml } from "./staff-workbench.mjs";
 
 const leadUuid = "[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-const detailsPath = new RegExp("^/internal/website-consultations/(" + leadUuid + ")/(contact|assign|complete|assignees)$");
+const detailsPath = new RegExp("^/internal/website-consultations/(" + leadUuid + ")/(contact|assign|reassign|cancel|complete|assignees)$");
 const staffId = new RegExp("^" + leadUuid + "$");
 const queuePath = "/internal/website-consultations";
 const workbenchPath = queuePath + "/workbench";
+const duplicatePath = new RegExp("^" + queuePath + "/duplicates/(propose|review|merge)$");
+const viewPath = new RegExp("^" + queuePath + "/views/(DISPATCHER|ADVISER|FOUNDER)$");
+
+function duplicateArgs(operation, body) {
+  const fields = {
+    propose: ["firstLeadId", "secondLeadId"],
+    review: ["candidateId", "decision"],
+    merge: ["candidateId", "sourceLeadId", "targetLeadId"],
+  }[operation];
+  if (!body || Object.keys(body).length !== fields.length ||
+      !fields.every(field => typeof body[field] === "string" &&
+        (field === "decision" ? ["CONFIRMED", "DISMISSED"].includes(body[field]) : staffId.test(body[field])))) return null;
+  return fields.map(field => body[field]);
+}
+
+async function runDuplicate(client, identity, operation, args) {
+  const actor = [identity.issuer, identity.subject];
+  if (operation === "propose") {
+    const evidence = createHash("sha256").update(JSON.stringify(["manual-pair-v1", ...args.toSorted()])).digest("hex");
+    const { rows } = await client.query(
+      "SELECT crm.propose_website_consultation_duplicate($1,$2,$3,$4,$5,$6,$7) AS candidate",
+      [...actor, ...args, uuidV7(), uuidV7(), evidence],
+    );
+    return rows[0]?.candidate ? reply(200, { candidateId: rows[0].candidate }) : reply(404, { code: "NOT_FOUND" });
+  }
+  const statement = operation === "review"
+    ? "SELECT crm.review_website_consultation_duplicate($1,$2,$3,$4,$5) AS accepted"
+    : "SELECT crm.merge_website_consultation_duplicate($1,$2,$3,$4,$5,$6,$7) AS accepted";
+  const ids = operation === "review" ? [uuidV7()] : [uuidV7(), uuidV7()];
+  const { rows } = await client.query(statement, [...actor, ...args, ...ids]);
+  return rows[0]?.accepted === true ? reply(200, { accepted: true }) : reply(404, { code: "NOT_FOUND" });
+}
 
 function reply(status, body) {
   return Response.json(body, { status, headers: {
@@ -30,11 +62,15 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
   return async function handle(request) {
     const url = new URL(request.url);
     const contact = detailsPath.exec(url.pathname);
+    const duplicate = duplicatePath.exec(url.pathname)?.[1];
+    const duplicateList = url.pathname === queuePath + "/duplicates";
     const workbench = url.pathname === workbenchPath;
-    if (url.origin !== origin || url.search || (url.pathname !== queuePath && !workbench && !contact)) {
+    const views = url.pathname === queuePath + "/views";
+    const view = viewPath.exec(url.pathname)?.[1];
+    if (url.origin !== origin || url.search || (url.pathname !== queuePath && !workbench && !contact && !duplicate && !duplicateList && !views && !view)) {
       return reply(404, { code: "NOT_FOUND" });
     }
-    const write = contact && contact[2] !== "assignees";
+    const write = duplicate || (contact && contact[2] !== "assignees");
     if (request.method !== (write ? "POST" : "GET")) return reply(405, { code: "METHOD_NOT_ALLOWED" });
     const sourceOrigin = request.headers.get("origin");
     if ((write && sourceOrigin !== origin) || (sourceOrigin && sourceOrigin !== origin) ||
@@ -47,6 +83,9 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
           identity.issuer.length > 500 || identity.subject.length > 500) {
         return reply(401, { code: "STAFF_AUTH_REQUIRED" });
       }
+      // No confirmed Founder-to-organization contract exists. A business title,
+      // browser role header or dispatcher grant must never confer this scope.
+      if (view === "FOUNDER") return reply(403, { code: "FOUNDER_SCOPE_UNCONFIRMED" });
       if (workbench) {
         const nonce = randomBytes(18).toString("base64");
         return new Response(workbenchHtml(nonce), { headers: {
@@ -59,7 +98,9 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
         } });
       }
       let assignee = null;
-      if (contact?.[2] === "assign") {
+      const duplicateInput = duplicate ? duplicateArgs(duplicate, await readPayload(request)) : null;
+      if (duplicate && !duplicateInput) return reply(400, { code: "INVALID_DUPLICATE_REQUEST" });
+      if (contact?.[2] === "assign" || contact?.[2] === "reassign") {
         const input = await readPayload(request);
         if (!input || Object.keys(input).join(",") !== "assigneeId" ||
             typeof input.assigneeId !== "string" || !staffId.test(input.assigneeId)) {
@@ -74,7 +115,32 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
         await client.query("DISCARD ALL");
         await client.query("SET ROLE phoenix_website_consultation_staff_gateway");
         let response;
-        if (contact?.[2] === "contact") {
+        if (views) {
+          const { rows } = await client.query("SELECT * FROM crm.list_website_consultation_staff_views($1,$2)",
+            [identity.issuer, identity.subject]);
+          response = reply(200, { views: rows.map(row => row.view_kind),
+            founder: { status: "HOLD", code: "FOUNDER_SCOPE_UNCONFIRMED" } });
+        } else if (view) {
+          const { rows } = await client.query("SELECT crm.read_website_consultation_staff_view($1,$2,$3) AS view",
+            [identity.issuer, identity.subject, view]);
+          response = rows[0]?.view ? reply(200, rows[0].view) : reply(403, { code: "VIEW_ACCESS_DENIED" });
+        } else if (duplicateList) {
+          const { rows } = await client.query("SELECT * FROM crm.list_website_consultation_duplicates($1,$2)",
+            [identity.issuer, identity.subject]);
+          const { rows: suggested } = await client.query("SELECT * FROM crm.suggest_website_consultation_duplicates($1,$2)",
+            [identity.issuer, identity.subject]);
+          response = reply(200, { items: rows.map(row => ({
+            candidateId: row.candidate_id,
+            firstLeadId: row.first_lead_id,
+            secondLeadId: row.second_lead_id,
+            status: row.status,
+            canReview: row.can_review,
+          })), suggestions: suggested.map(row => ({
+            firstLeadId: row.first_lead_id, secondLeadId: row.second_lead_id,
+          })) });
+        } else if (duplicate) {
+          response = await runDuplicate(client, identity, duplicate, duplicateInput);
+        } else if (contact?.[2] === "contact") {
           const email = await readStaffConsultationEmail(client, identity, contact[1], key);
           response = email ? reply(200, { email }) : reply(404, { code: "NOT_FOUND" });
         } else if (contact?.[2] === "assignees") {

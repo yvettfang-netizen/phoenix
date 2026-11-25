@@ -79,6 +79,19 @@ export async function verifyBrowserConsultation({ browser, config, receiver }) {
         await submit.click();
         await page.getByRole("status").filter({ hasText: zh ? "已收到您的咨询" : "Your enquiry was received" }).waitFor({ timeout: 10000 });
         assert.equal(await email.count(), 0);
+        if (!zh) {
+          for (const domain of ["education", "identity", "health", "wealth"]) {
+            const href = "/en/consultation/" + domain;
+            assert.equal((await page.goto(origin + "/en/" + domain)).status(), 200);
+            await Promise.all([page.waitForURL(origin + href), page.locator('a[href="' + href + '"]').click()]);
+            assert.equal(await page.getByLabel("Service area").inputValue(), domain);
+            await page.getByRole("textbox", { name: "Email address", exact: true }).fill("browser-source-" + domain + "@example.test");
+            await page.getByRole("checkbox").check();
+            await page.getByRole("button", { name: "Submit enquiry" }).click();
+            await page.getByRole("status").filter({ hasText: "Your enquiry was received" }).waitFor({ timeout: 10000 });
+          }
+          console.log("PASS Chromium all four Compass landing links and attributed consultation receipts");
+        }
       } finally {
         await context.close();
       }

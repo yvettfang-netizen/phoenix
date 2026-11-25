@@ -1,36 +1,31 @@
-# Phoenix Nova 官网咨询隐私说明｜Founder 审阅稿
+# Phoenix Nova 官网咨询隐私说明｜website-consultation.v1
 
-适用范围为官网咨询表单及相应的员工跟进流程。正文需按最终部署、政策和支持流程复核。发布配置仅接收批准后的中英文纯文本正文。
+Founder 已批准以下政策参数。正文仍需核实服务商及处理地点并完成独立法律审阅。发布时以实际公开上线日期生效，由运行配置添加日期，禁止回填早于实际公开上线的日期。
 
-## 发布前确认
+## 中文正文
 
-- 处理主体的中文法定名称及正式英文呈现、对外隐私联系渠道、政策生效日期。
-- 官网咨询邮箱保留天数、咨询记录及审计记录保留期限、备份中的清理安排和撤回请求处理方式。
-- 员工用于实际联系客户的邮箱服务及数据处理安排。确认托管、支持服务、地区及任何对外提供或跨境处理，并据实补充说明。
-- 官方主站访问统计的实际启用范围。下文仅描述已实现的页面计数功能，发布前应复核托管平台日志及第三方组件。
+本说明适用于 Phoenix Nova 官网咨询及员工跟进。个人信息处理者为凤启环球信息科技（深圳）有限公司。隐私联系邮箱为 nova@phoenixnova.com.cn。
 
-告知要素参照全国人大常委会公报所载《中华人民共和国个人信息保护法》第十七条及第十九条。适用范围和最终发布正文交由公司指定的审阅人确认。 [正式法条来源](https://wb.flk.npc.gov.cn/flfg/PDF/f67af9f12e1b4c83a998cf5a876ce0e4.pdf)
+提交咨询时，我们接收电子邮箱、所选服务方向和联系同意，并记录页面语言、请求编号、提交时间和同意版本。信息用于接收、分配、回复咨询及识别重复请求。请勿提交问卷答案、证件、病历、财务资料或他人的个人信息。
 
-## 中文正文候选
+邮箱加密保存。获授权且负责该线索的顾问才可读取邮箱。读取审计记录包含操作人、线索引用和时间。系统使用带密钥的摘要处理请求核验、重复提示及短期限流。匹配提示进入人工审核流程。
 
-官网咨询隐私说明。生效日期为【生效日期】。本说明适用于 Phoenix Nova 官网咨询表单，以及接收和跟进您提交的咨询。负责处理此项咨询的是【处理主体中文名称】。如有隐私问题，请通过【隐私联系渠道】联系我们。
+未转为正式客户的官网咨询联系方式自收到咨询起保留 180 天。到期后工作台拒绝读取，清理移除加密邮箱、请求核验摘要和重复匹配摘要。转为正式客户时，仅在有依据的正式客户记录中保留必要联系方式，并清理不再必要的官网副本。安全审计元数据保留 24 个月。滚动备份最长保留 30 天；恢复后，在开放访问前重新执行到期清理并核对已批准的删除状态。
 
-当您自愿提交咨询时，我们接收电子邮箱、所选服务方向和联系同意，并记录页面语言、请求编号、提交时间及适用的同意版本。我们使用这些信息接收、分配和回复您的咨询，并核对重复提交。请勿在此表单提供问卷答案、身份证件、病历、财务资料或他人的个人信息。
+如需访问、更正、删除或撤回本次咨询联系同意，请通过 nova@phoenixnova.com.cn 联系。我们会进行与请求相称的身份核验，已核验删除请求的内部处理目标为 15 个工作日。
 
-邮箱以加密形式保存。获授权的工作人员按职责处理咨询，负责该线索的顾问才可以查看邮箱。联系方式的读取会留下审计记录。为控制重复或过量请求，系统使用由邮箱生成的不可逆标识做短时计数。
+## English publication text
 
-我们自收到咨询起保留邮箱【天数】天。期限届满后，工作人员无法继续在工作台查看该邮箱，清理任务会移除加密邮箱及其核验摘要。咨询记录、审计记录及备份按照【各类记录的保留与清理安排】处理。与本服务相关的托管和后续联系方式详见【经确认的服务商、处理地区及其他适用安排】。
+This notice covers Phoenix Nova website enquiries and staff follow-up. The data controller is 凤启环球信息科技（深圳）有限公司. Contact nova@phoenixnova.com.cn about privacy.
 
-如需查询、更正或删除您的资料，或撤回就本次咨询联系您的同意，请通过【隐私联系渠道】提出请求。我们将按照【申请处理流程及身份核验方式】处理。
+When you send an enquiry, we receive your email address, selected service area and agreement to be contacted. We record the page language, request reference, submission time and consent version. We use these details to receive, allocate and respond to enquiries and identify repeats. Please do not submit assessment answers, identity documents, medical records, financial information or other people's personal information.
 
-## English publication candidate
+We store email addresses in encrypted form. Only authorised advisers responsible for an enquiry can retrieve its email address. The access audit records the actor, lead reference and time. The system uses keyed digests for request verification, duplicate suggestions and short-term rate limiting. Staff review suggested matches.
 
-Website enquiry privacy notice. Effective from [effective date]. This notice covers the Phoenix Nova website enquiry form and the handling of enquiries submitted through it. [Confirmed name of the organisation] handles this process. For privacy enquiries, use [privacy contact].
+We retain contact details for unconverted website enquiries for 180 days from receipt. At expiry the workbench denies access, and cleanup removes the encrypted email and its request-verification and duplicate-matching digests. On conversion, we keep only necessary contact details in the formal client record where justified and erase the unnecessary website copy. Security audit metadata is retained for 24 months. Rolling backups are retained for a maximum of 30 days. Before reopening access after a restore, we reapply expiry cleanup and reconcile approved deletions.
 
-When you choose to send an enquiry, we receive your email address, selected service area and agreement to be contacted. We also record the page language, request reference, submission time and consent version. We use these details to receive, allocate and respond to your enquiry and check repeat submissions. Please keep assessment answers, identity documents, medical records, financial information and information about other people out of this form.
+To request access, correction, deletion or withdrawal of agreement to be contacted about your enquiry, email nova@phoenixnova.com.cn. We verify identity in proportion to the request. Our internal target for processing a verified deletion request is 15 business days.
 
-Your email address is stored in encrypted form. Authorised staff handle enquiries according to their responsibilities. Only an adviser assigned to your enquiry can view your email address. The system records this access for audit purposes. To manage repeated or excessive requests, it briefly counts submissions using a non-reversible identifier derived from the email address.
+## Publication checks
 
-We keep your email address for [number of days] after receiving your enquiry. After that period, staff can no longer retrieve it through the workbench, and the scheduled cleanup removes the encrypted address and its verification digest. We handle enquiry records, audit records and backups according to [retention and deletion arrangements for each category]. For hosting and further correspondence, see [confirmed providers, processing locations and other applicable arrangements].
-
-To request access, correction or deletion, or to withdraw your agreement to be contacted about this enquiry, contact [privacy contact]. We handle requests through [request handling and identity verification procedure].
+Verify hosting, service providers and processing locations and add confirmed disclosures to both languages. Record the independent legal review and actual launch evidence before enabling either release flag.

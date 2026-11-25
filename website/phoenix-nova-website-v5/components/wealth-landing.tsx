@@ -766,7 +766,7 @@ export function WealthLanding({
                 "Your choice · Specific consent · Professional collaboration",
               )}
             </p>
-          </div>
+          <Link prefetch={false} href={"/" + locale + "/consultation/wealth"}>{locale === "zh" ? "提交服务咨询" : "Submit an enquiry"}</Link></div>
           <WealthConsultation locale={locale} />
         </div>
       </section>

@@ -16,11 +16,15 @@ permissions:
 
 jobs:
   synthetic-postgres:
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: ['16', '17']
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     services:
       postgres:
-        image: postgres:17
+        image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_USER: phoenix_bootstrap
           POSTGRES_HOST_AUTH_METHOD: trust
@@ -33,6 +37,13 @@ jobs:
           --health-retries=12
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Fetch pinned Education assessment candidate for isolated validation
+        run: |
+          source_sha=1366b53f662082098c2f2673e9ee4be6f433b261
+          git fetch --no-tags --depth=1 origin "$source_sha"
+          git show "$source_sha:database/canonical/forward-candidates/education-assessment-report/education_assessment_report.sql" > "$RUNNER_TEMP/education-source.sql"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -41,8 +52,33 @@ jobs:
       - name: Install locked PostgreSQL client dependencies
         working-directory: "Phoenix Compass/education compass/server"
         run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Build website worker for browser acceptance
+        working-directory: website/phoenix-nova-website-v5
+        run: |
+          npm run install:ci
+          npm run build
+      - name: Verify receiver and trusted sessions
+        run: |
+          node --import ./website/phoenix-nova-website-v5/tests/register-typescript.mjs --test \
+            database/canonical/forward-candidates/website-consultation/receiver.test.mjs \
+            database/canonical/forward-candidates/website-consultation/canonical-session.test.mjs \
+            database/canonical/forward-candidates/website-consultation/staff-session.test.mjs
       - name: Verify synthetic case against PostgreSQL
-        run: >-
-          node --experimental-strip-types
-          database/canonical/forward-candidates/website-consultation/verify-local.mjs
-          --synthetic-loopback "Phoenix Compass/education compass/server"
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/crm-browser/node_modules/playwright
+          CRM_FIXTURE_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+          CRM_FIXTURE_PREVIEW_DIR: ${{ runner.temp }}/crm-role-previews
+          CRM_FIXTURE_EDUCATION_CANDIDATE: ${{ runner.temp }}/education-source.sql
+        run: |
+          test -n "$CRM_FIXTURE_POSTGRES_CONTAINER"
+          test -s "$CRM_FIXTURE_EDUCATION_CANDIDATE"
+          npm install --prefix "$RUNNER_TEMP/crm-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          node "$PLAYWRIGHT_MODULE/cli.js" install --with-deps chromium
+          node --experimental-strip-types database/canonical/forward-candidates/website-consultation/verify-local.mjs --synthetic-loopback "Phoenix Compass/education compass/server" --bundled-chromium
+      - name: Preserve role view previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crm-role-previews-pg${{ matrix.postgres }}
+          path: ${{ runner.temp }}/crm-role-previews
+          if-no-files-found: ignore

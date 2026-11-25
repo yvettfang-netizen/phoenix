@@ -16,6 +16,7 @@ const config = {
   WEBSITE_CONSULTATION_PRIVACY_ZH_URL: origin + "/zh/privacy",
   WEBSITE_CONSULTATION_PRIVACY_EN_URL: origin + "/en/privacy",
   WEBSITE_PRIVACY_APPROVED: "true",
+  WEBSITE_PRIVACY_LAUNCH_DATE: "2025-01-01",
   WEBSITE_PRIVACY_VERSION: "website-consultation.v1",
   WEBSITE_PRIVACY_POLICY_ZH: "合成验收政策，非正式文案。",
   WEBSITE_PRIVACY_POLICY_EN: "Synthetic test policy, not approved publication copy.",
@@ -65,7 +66,7 @@ test("website receives an acknowledgement after the receiver commits an encrypte
   assert.deepEqual(await response.json(), { status: "received", requestId: input.requestId });
   assert.deepEqual(queries, [
     "BEGIN", "SET LOCAL statement_timeout = '3s'",
-    "SELECT crm.record_website_consultation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS outcome", "COMMIT",
+    "SELECT crm.record_website_consultation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS outcome", "COMMIT",
   ]);
 });
 
