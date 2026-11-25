@@ -17,7 +17,9 @@ try {
         if (request.method() === "POST") writes.push(request);
       });
       const target = origin + "/zh/education/free-assessment";
-      assert.equal((await page.goto(target)).status(), 200);
+      assert.equal((await page.goto(origin + "/zh/education")).status(), 200);
+      await page.getByRole("link", { name: "开始免费初评" }).click();
+      await page.waitForURL(target);
       await page.getByRole("button", { name: "不说明身份，直接开始" }).click();
       for (let i = 0; i < 3; i += 1) {
         const question = page.getByRole("group").getByRole("button").first();

@@ -46,7 +46,6 @@ jobs:
         run: |
           export PLAYWRIGHT_MODULE="$(python -c 'import pathlib, playwright; print(pathlib.Path(playwright.__file__).parent / "driver" / "package")')"
           export HEALTH_COMPASS_PREVIEW=0
-          export EDUCATION_FREE_ASSESSMENT_PREVIEW=true
           export HEALTH_TEST_PORT=4402
           export EDUCATION_ORIGIN=http://127.0.0.1:4402
           export EDUCATION_EVIDENCE_DIR=education-evidence
@@ -59,9 +58,22 @@ jobs:
             sleep 1
           done
           node tests/education-browser.mjs
-          node tests/free-education-assessment-browser.mjs
           EDUCATION_KNOWLEDGE_EVIDENCE_DIR=education-evidence/knowledge node tests/education-knowledge-browser.mjs
           EDUCATION_KNOWLEDGE_EVIDENCE_DIR=education-evidence/readiness node tests/education-readiness-browser.mjs
+      - name: Anonymous Education Compass browser checks with preview enabled
+        run: |
+          export PLAYWRIGHT_MODULE="$(python -c 'import pathlib, playwright; print(pathlib.Path(playwright.__file__).parent / "driver" / "package")')"
+          export EDUCATION_FREE_ASSESSMENT_PREVIEW=true
+          export HEALTH_TEST_PORT=4412
+          export EDUCATION_ORIGIN=http://127.0.0.1:4412
+          node scripts/health-preview-server.mjs > education-evidence/free-assessment-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent "$EDUCATION_ORIGIN/zh/education/free-assessment" > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/free-education-assessment-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
