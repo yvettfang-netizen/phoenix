@@ -314,11 +314,15 @@ try {
     (await db.query(pairScopeSql, [dispatcher, first, second])).rows[0].allowed;
   assert.equal(await duplicateScope(lead, newLead), true);
   assert.equal(await duplicateScope(newLead, lead), true);
+  const lockPairSql = "SELECT crm.lock_website_consultation_duplicate_pair($1,$2,$3,'DISPATCHER') AS allowed";
+  assert.equal((await db.query(lockPairSql, [dispatcher, newLead, lead])).rows[0].allowed, true);
+  await assert.rejects(staff.query(lockPairSql, [dispatcher, lead, newLead]), /permission denied/);
   assert.equal(await duplicateScope(lead, lead), false);
   await assert.rejects(staff.query(pairScopeSql, [dispatcher, lead, newLead]), /permission denied/);
   await setLeadFamily(otherFamily);
   assert.equal(await duplicateScope(lead, newLead), false);
   assert.equal(await duplicateScope(newLead, lead), false);
+  assert.equal((await db.query(lockPairSql, [dispatcher, newLead, lead])).rows[0].allowed, false);
   assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
   assert.equal((await post("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 404);
   await setLeadFamily(null);

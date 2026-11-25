@@ -84,6 +84,31 @@ REVOKE ALL ON FUNCTION crm.website_consultation_duplicate_scope_allows(uuid,uuid
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,
   phoenix_website_intake,phoenix_website_consultation_staff_gateway;
 
+-- Serialize duplicate operations against family linking and lead state changes.
+-- Both argument orders acquire the same row locks in the same order.
+CREATE FUNCTION crm.lock_website_consultation_duplicate_pair(
+  p_actor uuid,p_first uuid,p_second uuid,p_grant_kind text
+) RETURNS boolean LANGUAGE plpgsql VOLATILE SET search_path=pg_catalog
+AS $duplicate$
+DECLARE locked_count integer;
+BEGIN
+  IF NOT crm.website_consultation_duplicate_scope_allows(
+    p_actor,p_first,p_second,p_grant_kind
+  ) THEN RETURN false; END IF;
+
+  PERFORM 1 FROM crm.leads
+    WHERE lead_id IN (p_first,p_second) AND lead_status<>'MERGED'
+    ORDER BY lead_id FOR UPDATE;
+  GET DIAGNOSTICS locked_count = ROW_COUNT;
+  RETURN locked_count=2 AND crm.website_consultation_duplicate_scope_allows(
+    p_actor,p_first,p_second,p_grant_kind
+  );
+END
+$duplicate$;
+REVOKE ALL ON FUNCTION crm.lock_website_consultation_duplicate_pair(uuid,uuid,uuid,text)
+  FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,
+  phoenix_website_intake,phoenix_website_consultation_staff_gateway;
+
 -- Queue metadata only. Dispatchers can see leads in their authorised domains.
 -- Advisers only see leads or follow-ups specifically assigned to them.
 CREATE FUNCTION crm.list_website_consultation_staff_queue(p_issuer text,p_subject text)
