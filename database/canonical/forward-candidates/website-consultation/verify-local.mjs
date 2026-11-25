@@ -481,6 +481,25 @@ try {
   )).rows, [{ actor_principal_id: dispatcher, event_kind: "MERGED" }]);
   assert.equal((await queue()).rows.some(item => item.lead_id === newLead), false);
   const rateRequest = "028347ec-7740-4000-a000-000000000009";
+  const cancelRequest = "028347ec-7740-4000-a000-000000000042";
+  assert.equal((await submit("education", cancelRequest, "synthetic-cancel@example.test")).status, 202);
+  const cancelLead = (await db.query("SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [cancelRequest])).rows[0].lead_id;
+  const cancelPost = (operation, token, body = {}) => staffHttp(new Request(queueUrl + "/" + cancelLead + "/" + operation, {
+    method: "POST", headers: { authorization: "Bearer " + token, origin: staffOrigin, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  }));
+  assert.equal((await cancelPost("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 200);
+  assert.equal((await cancelPost("cancel", "synthetic-staff")).status, 404);
+  const cancellations = await Promise.all([
+    cancelPost("cancel", "synthetic-dispatcher"), cancelPost("cancel", "synthetic-dispatcher"),
+  ]);
+  for (const response of cancellations) assert.equal(response.status, 200);
+  assert.deepEqual(await cancellations[0].json(), await cancellations[1].json());
+  assert.equal((await cancelPost("complete", "synthetic-staff")).status, 404);
+  assert.equal((await db.query("SELECT status FROM crm.follow_ups WHERE lead_id=$1", [cancelLead])).rows[0].status, "CANCELLED");
+  assert.deepEqual((await db.query(`SELECT actor_principal_id FROM crm.lead_events
+    WHERE lead_id=$1 AND reason_code='WEBSITE_CONSULTATION_FOLLOW_UP_CANCELLED'`, [cancelLead])).rows,
+    [{ actor_principal_id: dispatcher }]);
   const rateResults = await Promise.all(Array.from({ length: 9 }, () =>
     submit("identity", rateRequest, "synthetic-rate@example.test")));
   assert.deepEqual(rateResults.map(response => response.status).sort(), [202, 202, 202, 202, 202, 202, 202, 202, 429]);

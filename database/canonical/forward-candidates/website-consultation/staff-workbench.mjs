@@ -131,11 +131,17 @@ function runWorkbench() {
             }));
           }));
         }
-        if (item.assigneeId && item.status === "NEW") {
+        if (item.assigneeId && item.status === "NEW" && item.nextDueAt) {
           controls.append(action("完成首次跟进", async () => {
             await request(path + "/complete", {});
             await loadQueue();
             notice.textContent = "已记录首次跟进。";
+          }));
+          controls.append(action("取消首次跟进", async () => {
+            if (!window.confirm("确认取消这条首次跟进待办？")) return;
+            await request(path + "/cancel", {});
+            await loadQueue();
+            notice.textContent = "已取消首次跟进。";
           }));
         }
         entry.append(controls, email);

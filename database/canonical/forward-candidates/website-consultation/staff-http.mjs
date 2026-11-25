@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { workbenchHtml } from "./staff-workbench.mjs";
 
 const leadUuid = "[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-const detailsPath = new RegExp("^/internal/website-consultations/(" + leadUuid + ")/(contact|assign|reassign|complete|assignees)$");
+const detailsPath = new RegExp("^/internal/website-consultations/(" + leadUuid + ")/(contact|assign|reassign|cancel|complete|assignees)$");
 const staffId = new RegExp("^" + leadUuid + "$");
 const queuePath = "/internal/website-consultations";
 const workbenchPath = queuePath + "/workbench";

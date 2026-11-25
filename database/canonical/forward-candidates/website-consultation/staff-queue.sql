@@ -246,7 +246,7 @@ BEGIN
     AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
     AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
     AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500
-    AND core.is_uuid_v7(p_event) AND p_action IN ('ASSIGN','REASSIGN','COMPLETE')) IS NOT TRUE THEN RETURN NULL; END IF;
+    AND core.is_uuid_v7(p_event) AND p_action IN ('ASSIGN','REASSIGN','CANCEL','COMPLETE')) IS NOT TRUE THEN RETURN NULL; END IF;
   employee := auth.resolve_external_identity(p_issuer,p_subject);
   IF NOT EXISTS (
     SELECT 1 FROM auth.principals WHERE principal_id=employee AND principal_kind='ADVISOR'
@@ -312,6 +312,23 @@ BEGIN
     RETURN p_event;
   END IF;
 
+  IF p_action='CANCEL' THEN
+    IF p_assignee IS NOT NULL THEN RETURN NULL; END IF;
+    SELECT f.follow_up_id INTO task FROM crm.follow_ups f
+      JOIN crm.lead_events e ON e.lead_event_id=f.follow_up_id
+      WHERE f.lead_id=p_lead AND f.assigned_principal_id=lead.assigned_principal_id
+        AND f.status IN ('PENDING','CANCELLED') AND e.lead_id=p_lead
+        AND e.reason_code='WEBSITE_CONSULTATION_ASSIGNED'
+      FOR UPDATE OF f;
+    IF NOT FOUND THEN RETURN NULL; END IF;
+    UPDATE crm.follow_ups SET status='CANCELLED',updated_at=clock_timestamp()
+      WHERE follow_up_id=task AND status='PENDING';
+    IF FOUND THEN
+      INSERT INTO crm.lead_events(lead_event_id,lead_id,event_kind,from_status,to_status,reason_code,actor_principal_id)
+        VALUES(p_event,p_lead,'STATUS_CHANGED','PENDING','CANCELLED','WEBSITE_CONSULTATION_FOLLOW_UP_CANCELLED',employee);
+    END IF;
+    RETURN task;
+  END IF;
   IF p_assignee IS NOT NULL OR lead.assigned_principal_id IS DISTINCT FROM employee THEN RETURN NULL; END IF;
   SELECT f.follow_up_id INTO task FROM crm.follow_ups f JOIN crm.lead_events e ON e.lead_event_id=f.follow_up_id
   WHERE f.lead_id=p_lead AND f.assigned_principal_id=employee AND e.lead_id=p_lead
