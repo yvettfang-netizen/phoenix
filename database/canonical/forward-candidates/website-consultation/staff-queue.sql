@@ -582,4 +582,49 @@ REVOKE ALL ON FUNCTION crm.suggest_website_consultation_duplicates(text,text)
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
 GRANT EXECUTE ON FUNCTION crm.suggest_website_consultation_duplicates(text,text)
   TO phoenix_website_consultation_staff_gateway;
+
+-- Recovery receives targeted revocations from the current authorization
+-- authority. The receipt must match the grant revision found in the backup.
+CREATE ROLE phoenix_website_staff_revocation_replay NOLOGIN NOINHERIT NOSUPERUSER
+  NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+GRANT USAGE ON SCHEMA crm TO phoenix_website_staff_revocation_replay;
+CREATE FUNCTION crm.replay_website_staff_revocation(
+  p_principal uuid,p_organization uuid,p_domain text,p_kind text,
+  p_valid_from timestamptz,p_revoked_at timestamptz
+) RETURNS text LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm
+AS $revocation$
+BEGIN
+  IF NOT pg_has_role(session_user,'phoenix_website_staff_revocation_replay','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    OR pg_has_role(session_user,'phoenix_canonical_app','MEMBER') THEN
+    RAISE EXCEPTION 'WEBSITE_STAFF_REVOCATION_REPLAY_DENIED' USING ERRCODE='42501';
+  END IF;
+  IF p_valid_from IS NULL OR NOT isfinite(p_valid_from) OR
+     p_revoked_at IS NULL OR NOT isfinite(p_revoked_at) OR
+     p_revoked_at>clock_timestamp() OR p_revoked_at<p_valid_from THEN
+    RAISE EXCEPTION 'WEBSITE_STAFF_REVOCATION_TIME_INVALID' USING ERRCODE='22023';
+  END IF;
+
+  UPDATE crm.website_consultation_staff_grants SET revoked_at=p_revoked_at
+    WHERE principal_id=p_principal AND organization_id=p_organization
+      AND service_domain=p_domain AND grant_kind=p_kind AND valid_from=p_valid_from
+      AND (revoked_at IS NULL OR revoked_at>p_revoked_at);
+  IF FOUND THEN
+    PERFORM audit.record_write_decision('REVOKE','WEBSITE_STAFF_GRANT',p_principal,true,'WEBSITE_STAFF_REVOCATION_REPLAYED');
+    RETURN 'revoked';
+  END IF;
+  IF EXISTS (SELECT 1 FROM crm.website_consultation_staff_grants
+    WHERE principal_id=p_principal AND organization_id=p_organization
+      AND service_domain=p_domain AND grant_kind=p_kind AND valid_from=p_valid_from
+      AND revoked_at<=p_revoked_at) THEN
+    RETURN 'already_revoked';
+  END IF;
+  RETURN 'not_matched';
+END
+$revocation$;
+REVOKE ALL ON FUNCTION crm.replay_website_staff_revocation(uuid,uuid,text,text,timestamptz,timestamptz)
+  FROM PUBLIC,phoenix_canonical_app,phoenix_website_consultation_staff_gateway;
+GRANT EXECUTE ON FUNCTION crm.replay_website_staff_revocation(uuid,uuid,text,text,timestamptz,timestamptz)
+  TO phoenix_website_staff_revocation_replay;
 COMMIT;

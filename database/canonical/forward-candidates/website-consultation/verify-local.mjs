@@ -53,10 +53,13 @@ try {
     CREATE ROLE website_fixture_staff_gateway LOGIN;
     CREATE ROLE website_fixture_contact_retention LOGIN;
     CREATE ROLE website_fixture_deletion_replay LOGIN;
+    CREATE ROLE website_fixture_revocation_replay LOGIN;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_contact_retention;
     GRANT phoenix_website_contact_retention TO website_fixture_contact_retention WITH INHERIT FALSE, SET TRUE;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_deletion_replay;
     GRANT phoenix_website_deletion_replay TO website_fixture_deletion_replay WITH INHERIT FALSE, SET TRUE;
+    GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_revocation_replay;
+    GRANT phoenix_website_staff_revocation_replay TO website_fixture_revocation_replay WITH INHERIT FALSE, SET TRUE;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_staff_gateway;
     GRANT phoenix_website_consultation_staff_gateway TO website_fixture_staff_gateway WITH INHERIT FALSE, SET TRUE;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_binder, website_fixture_writer, website_fixture_outside, website_fixture_crm_service;
@@ -819,6 +822,18 @@ try {
   const allowedContact = await deletionPost("contact", "synthetic-staff");
   assert.equal(allowedContact.status, 200);
   assert.equal(allowedContact.headers.get("cache-control"), "private, no-store");
+  const retainedRequest = "028347ec-7740-4000-a000-000000000021";
+  assert.equal((await submit("education", retainedRequest, "synthetic-retained@example.test")).status, 202);
+  const retainedLead = (await db.query(
+    "SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [retainedRequest],
+  )).rows[0].lead_id;
+  const staffRetainedRequest = (operation, token, body) => staffHttp(new Request(queueUrl + "/" + retainedLead + "/" + operation, {
+    method: "POST",
+    headers: { authorization: "Bearer " + token, origin: staffOrigin, "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }));
+  assert.equal((await staffRetainedRequest("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 200);
+  assert.equal((await staffRetainedRequest("contact", "synthetic-staff")).status, 200);
   const contactState = async connection => (await connection.query(`
     SELECT recorded_at::text, contact_expires_at > clock_timestamp() AS unexpired,
       contact_envelope IS NULL AND payload_mac IS NULL AND duplicate_match_mac IS NULL
@@ -837,6 +852,34 @@ try {
   const dump = fixtureContainer && dockerPostgres([
     "exec", fixtureContainer, "pg_dump", "--no-password", "--format=custom", "-U", bootstrap, database,
   ]);
+  const revocationSql = "SELECT crm.replay_website_staff_revocation($1,$2,$3,$4,$5,$6) AS outcome";
+  const grant = (await db.query(`
+    SELECT valid_from::text AS start,clock_timestamp()::text AS revoked
+    FROM crm.website_consultation_staff_grants
+    WHERE principal_id=$1 AND organization_id=$2 AND service_domain='EDUCATION' AND grant_kind='ADVISER'
+  `, [employee, serviceOrg])).rows[0];
+  const revokedGrant = [employee, serviceOrg, "EDUCATION", "ADVISER", grant.start, grant.revoked];
+  await assert.rejects(staff.query(revocationSql, revokedGrant), { code: "42501" });
+  const verifyRevocation = async (targetDatabase, observer) => {
+    const operator = new Client({ host, port, user: "website_fixture_revocation_replay", database: targetDatabase });
+    await operator.connect();
+    try {
+      await operator.query("SET ROLE phoenix_website_staff_revocation_replay");
+      await assert.rejects(operator.query("SELECT * FROM crm.website_consultation_staff_grants"), { code: "42501" });
+      await assert.rejects(operator.query(replaySql, receipt), { code: "42501" });
+      const [actor, org, domain, kind, start] = revokedGrant;
+      await assert.rejects(operator.query(revocationSql, [actor, org, domain, kind, start, "infinity"]), { code: "22023" });
+      assert.equal((await operator.query(revocationSql, [actor, otherOrg, domain, kind, start, grant.revoked])).rows[0].outcome, "not_matched");
+      assert.equal((await operator.query(revocationSql, revokedGrant)).rows[0].outcome, "revoked");
+      assert.equal((await operator.query(revocationSql, revokedGrant)).rows[0].outcome, "already_revoked");
+      assert.equal((await observer.query(`
+        SELECT 1 FROM audit.access_events
+        WHERE resource_id=$1 AND reason_code='WEBSITE_STAFF_REVOCATION_REPLAYED' AND decision='ALLOW'
+      `, [employee])).rowCount, 1);
+    } finally {
+      await operator.end();
+    }
+  };
   assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 0);
   await assert.rejects(retention.query(replaySql, receipt), /permission denied/);
   await assert.rejects(staff.query(replaySql, receipt), /permission denied/);
@@ -865,6 +908,8 @@ try {
   assert.equal((await deletionPost("contact", "synthetic-staff")).status, 404);
   assert.equal((await submit("education", deletionRequest, "synthetic-deletion@example.test")).status, 503);
   console.log("PASS verified deletion replay: isolated role, exact recorded timestamp, erasure and idempotency");
+  await verifyRevocation(database, db);
+  assert.equal((await staffRetainedRequest("contact", "synthetic-staff")).status, 404);
   if (dump) {
     const restoredDatabase = "phoenix_website_intake_restore_fixture";
     await db.query("CREATE DATABASE phoenix_website_intake_restore_fixture");
@@ -878,16 +923,23 @@ try {
       await restoredStaff.connect();
       await restoredStaff.query("SET ROLE phoenix_website_consultation_staff_gateway");
       assert.deepEqual(await contactState(restored), before);
-      await verifyReplay(restoredDatabase, restored);
-      const denied = await restoredStaff.query(
+      const restoredContact = leadId => restoredStaff.query(
         "SELECT request_id FROM crm.read_website_consultation_contact($1,$2,$3,gen_random_uuid())",
-        [issuer, subject, deletionLead],
+        [issuer, subject, leadId],
       );
-      assert.equal(denied.rowCount, 0);
+      await verifyReplay(restoredDatabase, restored);
+      assert.equal((await restoredContact(deletionLead)).rowCount, 0);
+      assert.equal((await restoredContact(retainedLead)).rowCount, 1);
+      await verifyRevocation(restoredDatabase, restored);
+      assert.equal((await restoredContact(retainedLead)).rowCount, 0);
+      assert.equal((await restored.query(`
+        SELECT 1 FROM crm.website_consultation_intake WHERE request_id=$1 AND contact_envelope IS NOT NULL
+      `, [retainedRequest])).rowCount, 1, "revocation should deny access even when the contact remains stored");
     } finally {
       await Promise.all([restoredStaff.end(), restored.end()]);
     }
     console.log("PASS pre-deletion PostgreSQL backup restored to a fresh fixture database and reconciled before access");
+    console.log("PASS restored grant revocation replays once and denies the same credential for a retained contact");
   } else {
     console.log("NOT RUN PostgreSQL dump and restore: CRM_FIXTURE_POSTGRES_CONTAINER is unset");
   }
