@@ -480,8 +480,12 @@ try {
     const thirdRequest = "028347ec-7740-4000-a000-000000000003";
     assert.equal((await submit("education", thirdRequest)).status, 202);
     const browserLead = (await db.query("SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [thirdRequest])).rows[0].lead_id;
-    const { chromium } = loadRuntime("playwright-core");
-    const browser = await chromium.launch({ executablePath: process.argv[4], headless: true });
+    const { chromium } = process.env.PLAYWRIGHT_MODULE
+      ? loadRuntime(process.env.PLAYWRIGHT_MODULE) : loadRuntime("playwright-core");
+    const browser = await chromium.launch({
+      ...(process.argv[4] === "--bundled-chromium" ? {} : { executablePath: process.argv[4] }),
+      headless: true,
+    });
     const open = async (token, width) => {
       const context = await browser.newContext({ viewport: { width, height: 850 } });
       await context.route(staffOrigin + "/**", async route => {
@@ -518,6 +522,25 @@ try {
       assert.equal(await adviser.page.getByText("visitor@example.test").count(), 0);
       await adviser.item.getByText(/已联系/).waitFor();
       await adviser.context.close();
+      const proposer = await open("synthetic-dispatcher", 1440);
+      await proposer.page.getByLabel("第一条线索").selectOption(browserLead);
+      await proposer.page.getByLabel("第二条线索").selectOption(lead);
+      await proposer.page.getByRole("button", { name: "提议重复线索" }).click();
+      await proposer.page.getByRole("status").filter({ hasText: "等待另一名员工审核" }).waitFor();
+      assert.equal(await proposer.page.getByRole("button", { name: "确认重复" }).count(), 0);
+      await proposer.context.close();
+      await db.query(`UPDATE crm.website_consultation_staff_grants SET revoked_at=NULL
+        WHERE principal_id=$1 AND organization_id=$2 AND service_domain='EDUCATION' AND grant_kind='DISPATCHER'`,
+        [employee, serviceOrg]);
+      const reviewer = await open("synthetic-staff", 390);
+      const pair = reviewer.page.getByRole("list", { name: "待处理重复候选" }).locator("li").filter({ hasText: browserLead });
+      await pair.getByRole("button", { name: "确认重复" }).click();
+      await pair.getByText("已确认重复").waitFor();
+      reviewer.page.once("dialog", dialog => dialog.accept());
+      await pair.getByRole("button", { name: [browserLead, lead].sort()[0] === lead ? "保留第一条" : "保留第二条" }).click();
+      await reviewer.page.getByRole("status").filter({ hasText: "已记录合并" }).waitFor();
+      assert.equal(await pair.count(), 0);
+      await reviewer.context.close();
       console.log("PASS Chromium staff workbench: 1440px assignment and 390px contact and follow-up");
       await verifyBrowserConsultation({ browser, config: websiteConfig, receiver });
       const pages = await db.query("SELECT locale FROM crm.website_consultation_intake WHERE service_domain='WEALTH' ORDER BY locale");

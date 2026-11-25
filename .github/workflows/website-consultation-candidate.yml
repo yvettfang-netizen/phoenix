@@ -21,7 +21,7 @@ jobs:
       matrix:
         postgres: ['16', '17']
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:${{ matrix.postgres }}
@@ -46,7 +46,9 @@ jobs:
         working-directory: "Phoenix Compass/education compass/server"
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify synthetic case against PostgreSQL
-        run: >-
-          node --experimental-strip-types
-          database/canonical/forward-candidates/website-consultation/verify-local.mjs
-          --synthetic-loopback "Phoenix Compass/education compass/server"
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/crm-browser/node_modules/playwright
+        run: |
+          npm install --prefix "$RUNNER_TEMP/crm-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          node "$PLAYWRIGHT_MODULE/cli.js" install --with-deps chromium
+          node --experimental-strip-types database/canonical/forward-candidates/website-consultation/verify-local.mjs --synthetic-loopback "Phoenix Compass/education compass/server" --bundled-chromium
