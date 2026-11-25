@@ -318,6 +318,13 @@ try {
   assert.equal((await db.query(lockPairSql, [dispatcher, newLead, lead])).rows[0].allowed, true);
   await assert.rejects(staff.query(lockPairSql, [dispatcher, lead, newLead]), /permission denied/);
   const candidateId = "019347ec-7740-7000-a000-000000000091";
+  const duplicatePost = (operation, token, body) => staffHttp(new Request(queueUrl + "/duplicates/" + operation, {
+    method: "POST",
+    headers: { authorization: "Bearer " + token, origin: staffOrigin, "content-type": "application/json" },
+    body: JSON.stringify(body),
+  }));
+  assert.equal((await duplicatePost("propose", "synthetic-staff", { firstLeadId: lead, secondLeadId: newLead })).status, 404);
+  assert.equal((await duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: lead, secondLeadId: newLead, actor: employee })).status, 400);
   const proposalEvent = "019347ec-7740-7000-a000-000000000092";
   const propose = async (who, first, second) => (await staff.query(
     "SELECT crm.propose_website_consultation_duplicate($1,$2,$3,$4,$5,$6,$7) AS candidate",
@@ -350,10 +357,10 @@ try {
   assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
   assert.equal((await post("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 404);
   await setLeadFamily(null);
-  assert.equal(await review(subject), true);
+  assert.equal((await duplicatePost("review", "synthetic-staff", { candidateId, decision: "CONFIRMED" })).status, 200);
   assert.equal(await review(subject), false);
   assert.deepEqual((await db.query(
-    "SELECT actor_principal_id,event_kind,to_status FROM crm.lead_events WHERE lead_event_id=$1", [reviewEvent],
+    "SELECT actor_principal_id,event_kind,to_status FROM crm.lead_events WHERE lead_id=$1 AND event_kind='DEDUP_REVIEWED'", [[lead, newLead].sort()[0]],
   )).rows, [{ actor_principal_id: employee, event_kind: "DEDUP_REVIEWED", to_status: "CONFIRMED" }]);
   await db.query(`UPDATE crm.website_consultation_staff_grants SET revoked_at=clock_timestamp()
     WHERE principal_id=$1 AND organization_id=$2 AND service_domain='EDUCATION' AND grant_kind='DISPATCHER'`,
@@ -442,13 +449,13 @@ try {
   await setLeadFamily(otherFamily);
   assert.equal(await merge("synthetic-dispatcher"), false);
   await setLeadFamily(null);
-  assert.equal(await merge("synthetic-dispatcher"), true);
+  assert.equal((await duplicatePost("merge", "synthetic-dispatcher", { candidateId, sourceLeadId: newLead, targetLeadId: lead })).status, 200);
   assert.equal(await merge("synthetic-dispatcher"), false);
   assert.deepEqual((await db.query(
     "SELECT lead_status,merged_into_lead_id FROM crm.leads WHERE lead_id=$1", [newLead],
   )).rows, [{ lead_status: "MERGED", merged_into_lead_id: lead }]);
   assert.deepEqual((await db.query(
-    "SELECT actor_principal_id,event_kind FROM crm.lead_events WHERE lead_event_id=$1", [mergeEvent],
+    "SELECT actor_principal_id,event_kind FROM crm.lead_events WHERE lead_id=$1 AND event_kind='MERGED'", [newLead],
   )).rows, [{ actor_principal_id: dispatcher, event_kind: "MERGED" }]);
   assert.equal((await queue()).rows.some(item => item.lead_id === newLead), false);
   const rateRequest = "028347ec-7740-4000-a000-000000000009";
