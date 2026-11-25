@@ -1,14 +1,36 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { readFileSync } from "node:fs";
 import { handleWebsiteConsultation } from "../lib/website-consultation-intake.ts";
+import { websitePrivacyPolicy } from "../lib/website-privacy-policy.mjs";
 
 const origin = "https://preview.example";
+test("approved bilingual parameters and publication date are complete", () => {
+  const document = readFileSync(new URL("../docs/WEBSITE_CONSULTATION_PRIVACY_FOUNDER_REVIEW.md", import.meta.url), "utf8");
+  const [, bilingual] = document.split("## 中文正文");
+  const [zh, enWithChecks] = bilingual.split("## English publication text");
+  const [en] = enWithChecks.split("## Publication checks");
+  for (const body of [zh, en]) {
+    for (const value of ["凤启环球信息科技（深圳）有限公司", "nova@phoenixnova.com.cn", "180", "24", "30", "15"]) {
+      assert.ok(body.includes(value));
+    }
+  }
+  const config = { ...env, WEBSITE_PRIVACY_POLICY_ZH: zh, WEBSITE_PRIVACY_POLICY_EN: en };
+  assert.equal(websitePrivacyPolicy(config, "2025-01-01").zh[0], "生效日期：2025-01-01");
+  assert.equal(websitePrivacyPolicy(config, "2025-01-01").en[0], "Effective date: 2025-01-01");
+  for (const date of [undefined, "2025-02-29", "2025-01-02"]) {
+    assert.equal(websitePrivacyPolicy({ ...config, WEBSITE_PRIVACY_LAUNCH_DATE: date }, "2025-01-01"), null);
+  }
+  assert.equal(websitePrivacyPolicy({ ...config, WEBSITE_PRIVACY_POLICY_EN: "" }, "2025-01-01"), null);
+  assert.equal(websitePrivacyPolicy({ ...config, WEBSITE_PRIVACY_APPROVED: "false" }, "2025-01-01"), null);
+});
 const env = {
   WEBSITE_CONSULTATION_ENABLED: "true",
   WEBSITE_CONSULTATION_PUBLIC_ORIGIN: origin,
   WEBSITE_CONSULTATION_PRIVACY_ZH_URL: origin + "/zh/privacy",
   WEBSITE_CONSULTATION_PRIVACY_EN_URL: origin + "/en/privacy",
   WEBSITE_PRIVACY_APPROVED: "true",
+  WEBSITE_PRIVACY_LAUNCH_DATE: "2025-01-01",
   WEBSITE_PRIVACY_VERSION: "website-consultation.v1",
   WEBSITE_PRIVACY_POLICY_ZH: "合成验收政策，非正式文案。",
   WEBSITE_PRIVACY_POLICY_EN: "Synthetic test policy, not approved publication copy.",
@@ -22,8 +44,8 @@ const input = {
   email: "visitor@example.test",
   consent: true,
 };
-function request(data = input, source = origin) {
-  return new Request(origin + "/api/website-consultations", {
+function request(data = input, source = origin, suffix = "") {
+  return new Request(origin + "/api/website-consultations" + suffix, {
     method: "POST",
     headers: { "Content-Type": "application/json", Origin: source },
     body: JSON.stringify(data),
@@ -50,6 +72,16 @@ test("passes the selected service and idempotency key to the receiver", async ()
   assert.equal(response.headers.get("cache-control"), "no-store");
 });
 
+test("attributes the entry path independently of the submitted service direction", async () => {
+  const response = await handleWebsiteConsultation(request(input, origin, "/education"), env, async (_url, options) => {
+    const value = JSON.parse(options.body);
+    assert.equal(value.source, "phoenix-nova-compass-education");
+    assert.equal(value.service, "wealth");
+    return Response.json({ status: "persisted", requestId: input.requestId });
+  });
+  assert.equal(response.status, 202);
+});
+
 test("rejects disabled intake, foreign origins, absent consent and unexpected personal fields", async () => {
   const unexpectedSend = () => assert.fail("receiver must not be called");
   for (const [req, config, status] of [
@@ -66,6 +98,9 @@ test("rejects disabled intake, foreign origins, absent consent and unexpected pe
     [request({ ...input, consent: false }), env, 400],
     [request({ ...input, email: "bad address@example.test" }), env, 400],
     [request({ ...input, notes: "synthetic" }), env, 400],
+    [request({ ...input, source: "phoenix-nova-compass-health" }), env, 400],
+    [request(input, origin, "/unregistered"), env, 400],
+    [request(input, origin, "?from=health"), env, 400],
     [request({ ...input, email: "x".repeat(2048) }), env, 400],
   ]) {
     let called = false;

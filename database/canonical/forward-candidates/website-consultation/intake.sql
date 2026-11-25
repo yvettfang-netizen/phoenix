@@ -32,6 +32,18 @@ $ticket$;
 REVOKE ALL ON FUNCTION auth.issue_website_intake_ticket(uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION auth.issue_website_intake_ticket(uuid,uuid) TO phoenix_website_intake_binder;
 
+-- Keep source identity separate from the selected enquiry direction.
+CREATE FUNCTION crm.website_consultation_source_matches(p_source text,p_entry text)
+RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path=pg_catalog
+RETURN CASE p_source
+  WHEN 'phoenix-nova-website' THEN true
+  WHEN 'phoenix-nova-compass-education' THEN p_entry='/education'
+  WHEN 'phoenix-nova-compass-identity' THEN p_entry='/identity'
+  WHEN 'phoenix-nova-compass-health' THEN p_entry='/health'
+  WHEN 'phoenix-nova-compass-wealth' THEN p_entry='/wealth'
+  ELSE false END;
+REVOKE ALL ON FUNCTION crm.website_consultation_source_matches(text,text) FROM PUBLIC;
+
 -- Preserve the 0036 contract evidence checks. Only the website source can
 -- register a dedicated intake writer, which cannot hold the general app role.
 CREATE OR REPLACE FUNCTION crm.register_acquisition_contract(
@@ -59,7 +71,7 @@ BEGIN
       AND EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=p_app_login AND r.rolcanlogin
         AND NOT(r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls))
       AND CASE WHEN pg_has_role(p_app_login,'phoenix_website_intake','MEMBER') THEN
-        s.source_system='phoenix-nova-website' AND s.source_channel='WEBSITE'
+        crm.website_consultation_source_matches(s.source_system,p_manifest->>'entry_ref') AND s.source_channel='WEBSITE'
         AND p_advisor_resource_kind IS NULL
         AND NOT pg_has_role(p_app_login,'phoenix_website_intake_binder','MEMBER')
         AND NOT pg_has_role(p_app_login,'phoenix_canonical_app','MEMBER')
@@ -94,7 +106,7 @@ $fn$;
 -- A fixed policy belongs to the approved acquisition contract version.
 CREATE TABLE crm.website_contact_retention (
   contract_id uuid PRIMARY KEY REFERENCES crm.acquisition_contract_revisions(contract_id),
-  contact_days integer NOT NULL CHECK (contact_days BETWEEN 1 AND 3660)
+  contact_days integer NOT NULL CHECK (contact_days = 180)
 );
 ALTER TABLE crm.website_contact_retention ENABLE ROW LEVEL SECURITY;
 ALTER TABLE crm.website_contact_retention FORCE ROW LEVEL SECURITY;
@@ -111,9 +123,9 @@ CREATE FUNCTION crm.configure_website_contact_retention(p_contract uuid,p_days i
 RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm
 AS $configure$
 BEGIN
-  IF (p_days BETWEEN 1 AND 3660 AND EXISTS (
+  IF (p_days = 180 AND EXISTS (
       SELECT 1 FROM crm.acquisition_contract_revisions c JOIN crm.lead_sources s USING(lead_source_id)
-      WHERE c.contract_id=p_contract AND c.source_system='phoenix-nova-website' AND s.source_channel='WEBSITE'
+      WHERE c.contract_id=p_contract AND crm.website_consultation_source_matches(c.source_system,c.entry_ref) AND s.source_channel='WEBSITE'
         AND c.revoked_at IS NULL AND c.retention_policy_sha256=p_policy_sha256
   )) IS NOT TRUE THEN RETURN false; END IF;
   INSERT INTO crm.website_contact_retention(contract_id,contact_days) VALUES(p_contract,p_days)
@@ -134,13 +146,15 @@ CREATE TABLE crm.website_consultation_intake (
   consent_version text NOT NULL CHECK (consent_version='website-consultation.v1'),
   -- The trusted receiver computes a keyed digest over the stable request fields.
   payload_mac bytea CHECK (octet_length(payload_mac)=32),
+  duplicate_match_mac bytea CHECK (octet_length(duplicate_match_mac)=32),
   -- Encrypted by the trusted receiver. The website and database have no decrypt key.
   contact_envelope bytea CHECK (octet_length(contact_envelope) BETWEEN 32 AND 4096),
   recorded_at timestamptz NOT NULL DEFAULT clock_timestamp(),
   contact_expires_at timestamptz NOT NULL,
   contact_erased_at timestamptz,
   CHECK ((contact_erased_at IS NOT NULL)=(contact_envelope IS NULL)),
-  CHECK ((contact_erased_at IS NOT NULL)=(payload_mac IS NULL))
+  CHECK ((contact_erased_at IS NOT NULL)=(payload_mac IS NULL)),
+  CHECK ((contact_erased_at IS NOT NULL)=(duplicate_match_mac IS NULL))
 );
 CREATE INDEX website_contact_expiration_idx ON crm.website_consultation_intake(contact_expires_at)
   WHERE contact_envelope IS NOT NULL;
@@ -162,7 +176,7 @@ $policy$;
 CREATE FUNCTION crm.record_website_consultation(
   p_request uuid, p_contract uuid, p_lead uuid, p_event uuid, p_attribution uuid,
   p_domain text, p_locale text, p_consent_version text, p_payload_mac bytea,
-  p_contact_envelope bytea
+  p_contact_envelope bytea, p_duplicate_match_mac bytea, p_source text DEFAULT 'phoenix-nova-website'
 ) RETURNS text
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,crm,core,auth,audit
@@ -180,13 +194,14 @@ BEGIN
       AND p_domain IN ('EDUCATION','IDENTITY','WEALTH','HEALTH')
       AND p_locale IN ('zh','en') AND p_consent_version='website-consultation.v1'
       AND octet_length(p_payload_mac)=32
+      AND octet_length(p_duplicate_match_mac)=32
       AND octet_length(p_contact_envelope) BETWEEN 32 AND 4096) IS NOT TRUE THEN
     RETURN 'denied';
   END IF;
   PERFORM pg_advisory_xact_lock(83111,hashtext(p_request::text));
   PERFORM 1 FROM crm.acquisition_contract_revisions c
     JOIN crm.lead_sources s ON s.lead_source_id=c.lead_source_id
-    WHERE c.contract_id=p_contract AND c.source_system='phoenix-nova-website'
+    WHERE c.contract_id=p_contract AND c.source_system=p_source AND crm.website_consultation_source_matches(c.source_system,c.entry_ref)
       AND s.source_system=c.source_system AND s.source_channel='WEBSITE' AND s.status='ACTIVE'
     FOR SHARE OF c;
   IF NOT FOUND OR crm.acquisition_contract_usable(p_contract) IS NOT TRUE
@@ -209,15 +224,15 @@ BEGIN
   actual_lead := crm.create_lead_v2(p_lead,p_contract,NULL,NULL,NULL,NULL,p_event,p_attribution,p_request::text);
   IF actual_lead IS NULL THEN RETURN 'denied'; END IF;
   INSERT INTO crm.website_consultation_intake(
-    request_id,lead_id,acquisition_contract_id,service_domain,locale,consent_version,payload_mac,contact_envelope,contact_expires_at
-  ) VALUES (p_request,actual_lead,p_contract,p_domain,p_locale,p_consent_version,p_payload_mac,p_contact_envelope,
+    request_id,lead_id,acquisition_contract_id,service_domain,locale,consent_version,payload_mac,contact_envelope,duplicate_match_mac,contact_expires_at
+  ) VALUES (p_request,actual_lead,p_contract,p_domain,p_locale,p_consent_version,p_payload_mac,p_contact_envelope,p_duplicate_match_mac,
     clock_timestamp()+make_interval(hours=>24*retention_days));
   RETURN 'persisted';
 END
 $fn$;
-REVOKE ALL ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea)
+REVOKE ALL ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea,bytea,text)
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
-GRANT EXECUTE ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea)
+GRANT EXECUTE ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea,bytea,text)
   TO phoenix_website_intake;
 
 CREATE TABLE crm.website_intake_rate_limits (
@@ -281,16 +296,131 @@ BEGIN
     OR pg_has_role(session_user,'phoenix_website_intake','MEMBER')
     OR pg_has_role(session_user,'phoenix_canonical_app','MEMBER') THEN RETURN 0; END IF;
   WITH due AS (
-    SELECT request_id FROM crm.website_consultation_intake
-      WHERE contact_envelope IS NOT NULL AND contact_expires_at<=cutoff
-      ORDER BY contact_expires_at LIMIT 500 FOR UPDATE SKIP LOCKED
+    SELECT i.request_id FROM crm.website_consultation_intake i
+      WHERE i.contact_envelope IS NOT NULL AND (i.contact_expires_at<=cutoff
+        OR EXISTS (SELECT 1 FROM crm.leads l WHERE l.lead_id=i.lead_id AND l.lead_status='CONVERTED'))
+      ORDER BY i.contact_expires_at,i.request_id LIMIT 500 FOR UPDATE OF i SKIP LOCKED
   )
   UPDATE crm.website_consultation_intake i
-    SET contact_envelope=NULL,payload_mac=NULL,contact_erased_at=cutoff FROM due WHERE i.request_id=due.request_id;
+    SET contact_envelope=NULL,payload_mac=NULL,duplicate_match_mac=NULL,contact_erased_at=cutoff FROM due WHERE i.request_id=due.request_id;
   GET DIAGNOSTICS erased = ROW_COUNT;
   RETURN erased;
 END
 $erase$;
 REVOKE ALL ON FUNCTION crm.erase_expired_website_contacts() FROM PUBLIC,phoenix_canonical_app;
 GRANT EXECUTE ON FUNCTION crm.erase_expired_website_contacts() TO phoenix_website_contact_retention;
+
+-- Only a separately provisioned operator may replay already verified deletions.
+-- The independent approval register is the caller's source of authority.
+CREATE ROLE phoenix_website_deletion_replay NOLOGIN NOINHERIT NOSUPERUSER
+  NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+GRANT USAGE ON SCHEMA crm TO phoenix_website_deletion_replay;
+CREATE FUNCTION crm.replay_website_contact_deletion(p_request_id uuid, p_recorded_at timestamptz)
+RETURNS text LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm
+AS $replay$
+BEGIN
+  IF NOT pg_has_role(session_user,'phoenix_website_deletion_replay','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_contact_retention','MEMBER')
+    OR pg_has_role(session_user,'phoenix_canonical_app','MEMBER') THEN
+    RAISE EXCEPTION 'WEBSITE_DELETION_REPLAY_DENIED' USING ERRCODE='42501';
+  END IF;
+
+  UPDATE crm.website_consultation_intake
+    SET contact_envelope=NULL,payload_mac=NULL,duplicate_match_mac=NULL,contact_erased_at=clock_timestamp()
+    WHERE request_id=p_request_id AND recorded_at=p_recorded_at AND contact_erased_at IS NULL;
+  IF FOUND THEN
+    PERFORM audit.record_write_decision('WEBSITE_CONTACT_DELETION_REPLAY',
+      'WEBSITE_CONSULTATION',p_request_id,true,'VERIFIED_DELETION_REPLAY');
+    RETURN 'erased';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM crm.website_consultation_intake
+    WHERE request_id=p_request_id AND recorded_at=p_recorded_at AND contact_erased_at IS NOT NULL) THEN
+    RETURN 'already_erased';
+  END IF;
+  RETURN 'not_matched';
+END
+$replay$;
+REVOKE ALL ON FUNCTION crm.replay_website_contact_deletion(uuid,timestamptz) FROM PUBLIC,phoenix_canonical_app;
+GRANT EXECUTE ON FUNCTION crm.replay_website_contact_deletion(uuid,timestamptz) TO phoenix_website_deletion_replay;
+
+-- Enforce conversion for every CRM lead. Website contacts additionally clear
+-- inside the same transaction.
+CREATE FUNCTION crm.guard_verified_lead_conversion()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,crm
+AS $conversion$
+DECLARE website_request uuid; verified_link uuid;
+BEGIN
+  IF OLD.lead_status<>'QUALIFIED' OR NOT crm.is_crm_service()
+     OR OLD.family_id IS NULL
+     OR auth.current_family_id() IS DISTINCT FROM OLD.family_id
+     OR NEW.family_id IS DISTINCT FROM OLD.family_id THEN
+    RAISE EXCEPTION 'CRM_CONVERSION_FAMILY_OR_CONTEXT_DENIED' USING ERRCODE='PZ001';
+  END IF;
+
+  -- The lead is already locked. Fail and allow retry if a review holds the
+  -- link lock, since the existing identity review path locks the link first.
+  SELECT link.lead_identity_link_id INTO verified_link FROM crm.lead_identity_links link
+    JOIN crm.clients client ON client.client_id=link.client_id
+    WHERE link.lead_id=OLD.lead_id AND link.target_kind='CLIENT'
+      AND link.status='VERIFIED' AND link.verified_by_principal_id<>link.linked_by_principal_id
+      AND link.verified_at>=link.linked_at AND link.verified_at<=clock_timestamp()
+      AND client.family_id=OLD.family_id AND client.lifecycle_status IN ('ACTIVE','PAUSED')
+    FOR SHARE OF link,client NOWAIT;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'CRM_CONVERSION_VERIFIED_CLIENT_REQUIRED' USING ERRCODE='PZ002';
+  END IF;
+  PERFORM audit.record_write_decision('CONVERT','CRM_LEAD_IDENTITY',verified_link,true,'VERIFIED_CLIENT_LINK_USED');
+
+  SELECT request_id INTO website_request FROM crm.website_consultation_intake
+    WHERE lead_id=OLD.lead_id FOR UPDATE NOWAIT;
+  UPDATE crm.website_consultation_intake
+    SET contact_envelope=NULL,payload_mac=NULL,duplicate_match_mac=NULL,contact_erased_at=clock_timestamp()
+    WHERE request_id=website_request AND contact_erased_at IS NULL;
+  IF FOUND THEN
+    PERFORM audit.record_write_decision('WEBSITE_CONTACT_ERASE_ON_CONVERSION',
+      'WEBSITE_CONSULTATION',website_request,true,'VERIFIED_CLIENT_CONVERSION');
+  END IF;
+  RETURN NEW;
+END
+$conversion$;
+REVOKE ALL ON FUNCTION crm.guard_verified_lead_conversion() FROM PUBLIC,phoenix_canonical_app;
+CREATE TRIGGER verified_lead_conversion_guard BEFORE UPDATE OF lead_status ON crm.leads
+  FOR EACH ROW WHEN (NEW.lead_status='CONVERTED' AND OLD.lead_status IS DISTINCT FROM 'CONVERTED')
+  EXECUTE FUNCTION crm.guard_verified_lead_conversion();
+
+-- Preserve the existing state machine, ACL and return contract. A rejected
+-- trigger write rolls back before we persist the denial through Canonical audit.
+CREATE OR REPLACE FUNCTION crm.transition_lead(p_lead uuid,p_next text,p_event uuid) RETURNS boolean
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,auth,core,crm,audit
+AS $transition$
+DECLARE v crm.leads%ROWTYPE; ok boolean;
+BEGIN
+  SELECT * INTO v FROM crm.leads WHERE lead_id=p_lead FOR UPDATE;
+  ok:=FOUND AND crm.is_crm_service() AND core.is_uuid_v7(p_event)
+    AND ((v.family_id IS NULL AND auth.current_family_id() IS NULL) OR v.family_id=auth.current_family_id())
+    AND ((v.lead_status='NEW' AND p_next IN ('CONTACTED','DISQUALIFIED'))
+      OR (v.lead_status='CONTACTED' AND p_next IN ('QUALIFIED','LOST','DISQUALIFIED'))
+      OR (v.lead_status='QUALIFYING' AND p_next IN ('QUALIFIED','LOST','DISQUALIFIED'))
+      OR (v.lead_status='QUALIFIED' AND p_next IN ('CONVERTED','LOST','DISQUALIFIED')));
+  IF ok IS NOT TRUE THEN
+    RETURN audit.record_write_decision('TRANSITION','CRM_LEAD',p_lead,false,'CRM_SCOPE_OR_STATE_DENIED');
+  END IF;
+  BEGIN
+    UPDATE crm.leads SET lead_status=p_next,
+      qualification_status=CASE WHEN p_next='QUALIFIED' THEN 'QUALIFIED'
+        WHEN p_next='DISQUALIFIED' THEN 'UNQUALIFIED' ELSE qualification_status END,
+      updated_by_principal_id=auth.current_principal_id(),updated_at=clock_timestamp()
+      WHERE lead_id=p_lead;
+  EXCEPTION
+    WHEN SQLSTATE 'PZ001' THEN
+      RETURN audit.record_write_decision('TRANSITION','CRM_LEAD',p_lead,false,'CRM_CONVERSION_FAMILY_OR_CONTEXT_DENIED');
+    WHEN SQLSTATE 'PZ002' THEN
+      RETURN audit.record_write_decision('TRANSITION','CRM_LEAD',p_lead,false,'CRM_CONVERSION_VERIFIED_CLIENT_REQUIRED');
+  END;
+  PERFORM crm.record_lead_event(p_event,p_lead,'STATUS_CHANGED',v.lead_status,p_next,'CONTROLLED_LEAD_STATUS_CHANGED');
+  RETURN audit.record_write_decision('TRANSITION','CRM_LEAD',p_lead,true,'CONTROLLED_LEAD_STATUS_CHANGED');
+END
+$transition$;
 COMMIT;

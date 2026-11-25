@@ -8,8 +8,8 @@
 - 正式域名的首页 canonical 和双语元数据已加入候选代码。待确认线上运行时、部署提交、移动端及完整索引策略。
 - 正式域名只读复查中，HTTP 返回 308 并跳到 HTTPS。中英文首页返回 200，canonical 和文档语言正确。双方的咨询和隐私地址均返回 404，索引仍关闭。发布后使用 `node scripts/official-launch-preflight.mjs` 复跑这些检查。只有 Founder 明确批准首页索引后才使用 `--index-approved` 验收索引开放状态。
 - 统计候选仅记录官方主站白名单页面的成功文档请求，按页面和语言计数。不采集访客标识、URL 参数、来源地址或表单内容。Worker 使用可选 `WEBSITE_TRAFFIC` 数据集绑定。生产如果使用其他运行时，要在对应入口确认同一计数逻辑。
-- `/zh/privacy` 和 `/en/privacy` 从运行环境读取批准的双语纯文本。以空行分隔段落，设置 `WEBSITE_PRIVACY_POLICY_ZH`、`WEBSITE_PRIVACY_POLICY_EN` 及 `WEBSITE_PRIVACY_VERSION=website-consultation.v1`。留存 Founder 审阅的文本版本和引用后，才设置 `WEBSITE_PRIVACY_APPROVED=true`。使用这些内建隐私页时，任何一版缺失都会关闭咨询提交。验收夹具里的政策正文是合成文本。
-- 联系方式保留期限随 Canonical 接收契约配置。由有权限的配置角色调用 `crm.configure_website_contact_retention`，输入经批准的天数及该契约已登记的隐私保留政策摘要。没有配置时拒绝创建线索。仅为清理调度账号授予 `phoenix_website_contact_retention`，按批准频率调用 `crm.erase_expired_website_contacts()` 并记录批次结果。员工读取会即时拒绝过期数据，清理会去除加密邮箱及其摘要，留下线索、关联请求编号和清理时间。隔离夹具里的 30 天仅用于测试。
+- `/zh/privacy` 和 `/en/privacy` 从运行环境读取批准的双语纯文本。以空行分隔段落，设置 `WEBSITE_PRIVACY_POLICY_ZH`、`WEBSITE_PRIVACY_POLICY_EN` 及 `WEBSITE_PRIVACY_VERSION=website-consultation.v1`。上线时将真实公开上线日期（Asia/Shanghai，YYYY-MM-DD）记录为 `WEBSITE_PRIVACY_LAUNCH_DATE`，保留发布回执，不得回填。法律复核、处理地点披露、实机验收及 Founder 发布批准完成前，保持 `WEBSITE_PRIVACY_APPROVED=false` 和 `WEBSITE_CONSULTATION_ENABLED=false`。使用这些内建隐私页时，任何一版缺失都会关闭咨询提交。验收夹具里的政策正文是合成文本。
+- 联系方式保留期限随 Canonical 接收契约配置。由有权限的配置角色调用 `crm.configure_website_contact_retention`，输入 180 天及该契约已登记的隐私保留政策摘要。没有配置时拒绝创建线索。仅为清理调度账号授予 `phoenix_website_contact_retention`，按批准频率调用 `crm.erase_expired_website_contacts()` 并记录批次结果。员工读取会即时拒绝过期数据，清理会去除加密邮箱、请求核验摘要和重复匹配摘要，留下线索、关联请求编号和清理时间。
 
 ## Jimson 人工操作
 
@@ -36,7 +36,7 @@
 | --- | --- | --- |
 | Jimson | 测试环境网址、HTTPS 代理负责人、可回滚部署版本 | 提供环境地址和版本引用即可。 |
 | Jimson | 已有员工登录及服务端会话读取方式、签名源、一个调度员及一个顾问验收账户 | 提供受控环境里的配置引用和授权记录。密钥、令牌和密码通过现有机密管理配置。 |
-| Founder | 双语隐私正文的批准版本、处理主体、隐私联系渠道及联系方式保留天数 | 提供批准正文及明确保留期限。Codex 对照两种语言、表单提示和数据库配置。 |
+| Founder | 生产发布授权 | 核对实际发布日期、独立法律审阅和验收证据后作出发布决定。 |
 | Founder | 首页索引是否与首发同步、生产发布窗口 | 分别记录索引批准和生产发布批准。未获索引批准时保持关闭。 |
 
 本地和 GitHub 的合成验收可复跑。正式配置齐备后，依次执行目标环境咨询及员工端验收、确认清理调度、检查统计数据集、运行只读发布验收脚本，再提交发布审批。不得把预览发送的合成线索计入正式访问或运营统计。
@@ -44,3 +44,24 @@
 当前 GitHub 仓库的 Environments 和 Deployments 列表均为空。仓库内的 `ops/phoenix-core-staging/` 记录的是 ASKWISE 只读数据库接入，未提供官网写入验收、员工私有入口或部署目标的证据。请 Jimson 优先确认是否已有符合条件的隔离环境。若复用已有服务器，请明确独立测试库、测试网关和两组 HTTPS 虚拟主机的归属。
 
 候选未验证员工登录和生产接收端时，不安排正式上线日期。
+
+## 已批准的隐私运营规则
+
+合成验收基线为 `3ba7a907cfd38b3fbc709ccc6680d13f861c236c`。[PG16](https://github.com/yvettfang-netizen/phoenix/actions/runs/45593168052/job/139132333060) 和 [PG17](https://github.com/yvettfang-netizen/phoenix/actions/runs/45593168052/job/139132332439) 均通过。两版均加载 37 条正式迁移，验证 180 天策略、读取拒绝和保留期清理，并完成 320px 中文及 390px 英文表单的提交重试和数据库回执验证。工作台通过 1440px 分派及 320px 逾期处理。此记录适用于合成环境，正式恢复及删除状态重放仍需实机回执。
+
+- 处理者为凤启环球信息科技（深圳）有限公司，隐私请求统一通过 nova@phoenixnova.com.cn 接收。身份核验后的删除请求内部目标为 15 个工作日。记录核验结果、批准和清理回执，避免在审计中抄录邮箱。
+- 未转化官网咨询联系方式自收件起保留 180 天。转化为正式客户后，只在正式客户记录中保存有依据的必要联系方式，并清除官网副本。安全审计元数据保留 24 个月，滚动备份保留上限为 30 天。
+- CRM 线索使用原 Canonical 转化接口。转化要求独立核验的有效 CLIENT 关联和匹配的家庭上下文，PERSON 或 FAMILY 关联无法代替。拒绝返回 `false` 并记录原因，成功审计以请求 nonce 关联 Lead 和核验记录。官网线索的状态与密文、请求摘要、重复匹配摘要的清除在同一事务提交。首次来源及线索事件继续保留。并发审查暂时锁定关联时，重新核对状态后可重试。
+- 恢复先在隔离环境进行。重放已批准删除记录并完成过期清理，核对邮箱密文和摘要均不可访问后才恢复访问。正式备份到期、删除重放和转化清除均需留存实际回执。
+
+### 恢复与删除状态核对
+
+1. 确认备份目录及所有保留副本的到期规则均为最多 30 天。取得到期删除回执，记录规则版本、备份时间、预定到期时间和实际删除时间。
+2. 将备份恢复到隔离实例，保持公开入口及员工访问关闭。记录快照时间、恢复时间、提交 SHA、数据库主要版本及核对结果。
+3. 使用独立保留期角色运行 `crm.erase_expired_website_contacts()`，每批最多 500 条。清理结束后确认没有到期联系人或已转化线索保留密文或两个摘要。另行核验实际审计存储的 24 个月到期机制及回执。
+4. 对照独立于该快照保存的、已核验且已批准的删除记录，核对快照后发生的删除。候选的 `crm.replay_website_contact_deletion(request_id, recorded_at)` 使用独立角色，对请求 UUID 和原始收件时间做精确匹配。返回 `erased`、`already_erased` 或 `not_matched`。前两者可作为清除回执，`not_matched` 须核对快照是否早于收件，或按差异处理。授权依据来自外部审批清单，函数只执行已核准条目的清除。角色仅授予受控运维身份。
+5. 使用获授权的工作台会话验证已核对的记录无法读取，并确认密文、请求核验摘要和重复匹配摘要均已清除。核验首次提前清除的 Canonical 审计事件及重复重放的幂等结果。
+6. 在恢复环境开放前，从当前授权登记获取官网工作台撤权记录。使用独立的 `phoenix_website_staff_revocation_replay` 运维身份执行 `crm.replay_website_staff_revocation(principal, organization, domain, kind, valid_from, revoked_at)`。函数按完整授权键及原生效时间匹配，只允许撤权或保留更早的撤权时间。记录 `revoked`、`already_revoked`、`not_matched` 及审计回执。对 `not_matched` 核查快照与授权版本，再验证恢复前获权的测试会话无法读取仍保留的联系人。
+7. 独立核对当前 IdP、Canonical Principal、其他组织授权及 Consent 的撤权状态和生效时间。验收证据仅保存数量、脱敏引用、时间及结果。仍有未对账记录、未验证撤权或缺失回执时，恢复环境继续隔离。
+
+备份平台 30 天到期、24 个月审计到期、真实提前删除重放、全局员工身份及撤权实机回执均为 HOLD。合成恢复在同一临时 PostgreSQL 集群内向空数据库恢复快照，验证联系数据清除、官网工作台授权撤回、同一数据库会话下一次读被拒、审计及幂等。

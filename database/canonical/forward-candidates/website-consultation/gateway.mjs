@@ -12,7 +12,7 @@ function httpsOrigin(value) {
 
 /** Compose the two private service listeners in an existing TLS host. */
 export function createWebsiteConsultationGateway({
-  receiverOrigin, staffOrigin, receiverToken, contactKey, macKey, acquisitionContractId,
+  receiverOrigin, staffOrigin, receiverToken, contactKey, macKey, acquisitionContractId, compassContractIds,
   intakePrincipalId, binderPool, writerPool, staffPool,
   readStaffSession, brokerVerifier,
 }) {
@@ -23,7 +23,7 @@ export function createWebsiteConsultationGateway({
   }
   const withIntakeConnection = createWebsiteIntakeConnection({ binderPool, writerPool, principalId: intakePrincipalId });
   const receiver = createWebsiteConsultationReceiver({
-    token: receiverToken, contactKey, macKey, contractId: acquisitionContractId,
+    token: receiverToken, contactKey, macKey, contractId: acquisitionContractId, compassContractIds,
     takeAdmission: ({ emailFingerprint }) => withIntakeConnection(randomUUID(), async client => {
       const result = await client.query("SELECT crm.admit_website_consultation($1) AS allowed", [emailFingerprint]);
       return result.rows[0]?.allowed === true;

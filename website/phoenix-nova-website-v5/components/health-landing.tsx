@@ -187,7 +187,7 @@ export function HealthLanding({ locale }: { locale: "zh" | "en" }) {
       </div></section>
 
       <section className={styles.contactSection} id="consultation" aria-labelledby="consultation-title"><div className={`${styles.section} ${styles.wrap} ${styles.contact}`}>
-        <div>{heading("13", "咨询准备", "PREPARE A CONVERSATION", ["专业连接，安心同行。", "Expert connections. Thoughtful support."], "consultation-title")}<p>{t(["从一次清晰的沟通开始，了解适合家庭的协调支持。", "Start with a clear conversation about the coordination your family needs."])}</p><p className={styles.micro}>{t(["当前为前端候选预览，正式咨询渠道尚未接通。此入口不提交预约、不接收医疗资料。", "Frontend candidate preview. A formal enquiry channel is not connected. This entry does not book or receive medical records."])}</p></div>
+        <div>{heading("13", "咨询准备", "PREPARE A CONVERSATION", ["专业连接，安心同行。", "Expert connections. Thoughtful support."], "consultation-title")}<p>{t(["从一次清晰的沟通开始，了解适合家庭的协调支持。", "Start with a clear conversation about the coordination your family needs."])}</p><p className={styles.micro}>{t(["当前为前端候选预览，正式咨询渠道尚未接通。此入口不提交预约、不接收医疗资料。", "Frontend candidate preview. A formal enquiry channel is not connected. This entry does not book or receive medical records."])}</p><Link prefetch={false} href={"/" + locale + "/consultation/health"}>{locale === "zh" ? "提交服务咨询" : "Submit an enquiry"}</Link></div>
         <HealthConsultation locale={locale} />
       </div></section>
     </main>
