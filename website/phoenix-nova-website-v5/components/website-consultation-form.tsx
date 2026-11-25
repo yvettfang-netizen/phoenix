@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type FormEvent } from "react";
+import type { ConsultationEntry } from "@/lib/website-consultation-intake";
 import { Button } from "./ui/button";
 
 const services = [
@@ -10,8 +11,9 @@ const services = [
   ["health", "健康", "Health"],
 ] as const;
 
-export function WebsiteConsultationForm({ locale }: { locale: "zh" | "en" }) {
+export function WebsiteConsultationForm({ locale, entry }: { locale: "zh" | "en"; entry?: ConsultationEntry }) {
   const zh = locale === "zh";
+  const endpoint = "/api/website-consultations" + (entry ? "?from=" + entry : "");
   const attempt = useRef<{ payload: string; requestId: string } | null>(null);
   const busy = useRef(false);
   const [status, setStatus] = useState<"idle" | "sending" | "received" | "error" | "limited">("idle");
@@ -29,7 +31,7 @@ export function WebsiteConsultationForm({ locale }: { locale: "zh" | "en" }) {
     busy.current = true;
     setStatus("sending");
     try {
-      const response = await fetch("/api/website-consultations", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, requestId }),
@@ -49,10 +51,10 @@ export function WebsiteConsultationForm({ locale }: { locale: "zh" | "en" }) {
     }
   }
 
-  return <form method="post" action="/api/website-consultations" onSubmit={submit} className="grid gap-4">
+  return <form method="post" action={endpoint} onSubmit={submit} className="grid gap-4">
     {status !== "received" && <fieldset disabled={status === "sending"} className="grid gap-4">
       <label className="grid gap-2">{zh ? "咨询方向" : "Service area"}
-        <select required name="service" defaultValue="" className="min-h-11 rounded border bg-white px-3">
+        <select required name="service" defaultValue={entry ?? ""} className="min-h-11 rounded border bg-white px-3">
           <option value="" disabled>{zh ? "请选择" : "Select a service"}</option>
           {services.map(([value, cn, en]) => <option key={value} value={value}>{zh ? cn : en}</option>)}
         </select>

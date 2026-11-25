@@ -4,6 +4,12 @@ type Bindings = Record<string, unknown>;
 
 const maxBodyBytes = 2048;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const consultationEntries = ["education", "identity", "health", "wealth"] as const;
+export type ConsultationEntry = typeof consultationEntries[number];
+export function isConsultationEntry(value: unknown): value is ConsultationEntry {
+  return consultationEntries.some(entry => entry === value);
+}
+
 const services = new Set(["education", "identity", "wealth", "health"]);
 
 function reply(status: number, body: object) {
@@ -71,6 +77,13 @@ export async function handleWebsiteConsultation(request: Request, env: Bindings,
   if (new URL(request.url).origin !== origin || request.headers.get("origin") !== origin) {
     return reply(403, { code: "ORIGIN_NOT_ALLOWED" });
   }
+  const query = new URL(request.url).searchParams;
+  const entry = query.get("from");
+  if ([...query.keys()].some(key => key !== "from") || query.getAll("from").length > 1 ||
+      (entry !== null && !isConsultationEntry(entry))) {
+    return reply(400, { code: "INVALID_CONSULTATION_ENTRY" });
+  }
+  const source = entry === null ? "phoenix-nova-website" : "phoenix-nova-compass-" + entry;
   if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") {
     return reply(415, { code: "JSON_REQUIRED" });
   }
@@ -100,7 +113,7 @@ export async function handleWebsiteConsultation(request: Request, env: Bindings,
       },
       body: JSON.stringify({
         schemaVersion: "website-consultation.v1",
-        source: "phoenix-nova-website",
+        source,
         consentVersion: "website-consultation.v1",
         requestId: input.requestId,
         locale: input.locale,

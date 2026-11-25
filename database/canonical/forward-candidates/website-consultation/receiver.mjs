@@ -4,6 +4,8 @@ const uuidV4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 const serviceDomains = new Set(["education", "identity", "wealth", "health"]);
 const version = "website-consultation.v1";
 const source = "phoenix-nova-website";
+const compassSource = /^phoenix-nova-compass-(education|identity|health|wealth)$/;
+const contractUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 export function uuidV7() {
   const bytes = randomBytes(16);
@@ -48,15 +50,18 @@ export async function readPayload(request) {
  * cleans or discards the connection after the callback.
  */
 export function createWebsiteConsultationReceiver({
-  token, contactKey, macKey, contractId, takeAdmission, withIntakeConnection,
+  token, contactKey, macKey, contractId, compassContractIds = {}, takeAdmission, withIntakeConnection,
 }) {
   if (typeof token !== "string" || !/^[A-Za-z0-9_-]{32,256}$/.test(token) ||
       !Buffer.isBuffer(contactKey) || contactKey.length !== 32 ||
       !Buffer.isBuffer(macKey) || macKey.length !== 32 || timingSafeEqual(contactKey, macKey) ||
-      typeof contractId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(contractId) ||
+      !contractUuid.test(contractId) || !compassContractIds ||
+      Object.entries(compassContractIds).some(([key, id]) => !compassSource.test(key) || !contractUuid.test(id)) ||
+      new Set([contractId, ...Object.values(compassContractIds)]).size !== 1 + Object.keys(compassContractIds).length ||
       typeof takeAdmission !== "function" || typeof withIntakeConnection !== "function") {
     throw new Error("Invalid website consultation receiver configuration");
   }
+  const contracts = new Map([[source, contractId], ...Object.entries(compassContractIds)]);
   const expectedAuth = Buffer.from("Bearer " + token);
   const encryptionKey = Buffer.from(contactKey);
   const payloadKey = Buffer.from(macKey);
@@ -70,7 +75,7 @@ export function createWebsiteConsultationReceiver({
     const input = await readPayload(request);
     if (!input || typeof input !== "object" ||
         Object.keys(input).sort().join(",") !== "consentVersion,email,locale,requestId,schemaVersion,service,source" ||
-        input.schemaVersion !== version || input.consentVersion !== version || input.source !== source ||
+        input.schemaVersion !== version || input.consentVersion !== version || !(input.source === source || (typeof input.source === "string" && compassSource.test(input.source))) ||
         !["zh", "en"].includes(input.locale) || !serviceDomains.has(input.service) ||
         typeof input.requestId !== "string" || !uuidV4.test(input.requestId) ||
         request.headers.get("idempotency-key") !== input.requestId ||
@@ -78,13 +83,15 @@ export function createWebsiteConsultationReceiver({
         !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(input.email)) {
       return reply(400, { code: "INVALID_CONSULTATION" });
     }
+    const selectedContract = contracts.get(input.source);
+    if (!selectedContract) return reply(503, { code: "INTAKE_UNAVAILABLE" });
     try {
       const emailFingerprint = createHmac("sha256", payloadKey).update("rate-limit\0" + input.email.toLowerCase()).digest("hex");
       if (await takeAdmission({ emailFingerprint }) !== true) return reply(429, { code: "RATE_LIMITED" });
-      const aad = JSON.stringify([version, contractId, input.requestId, input.locale, input.service]);
+      const aad = JSON.stringify([version, selectedContract, input.requestId, input.locale, input.service]);
       const mac = createHmac("sha256", payloadKey).update(JSON.stringify([aad, input.email])).digest();
       const duplicateMatchMac = createHmac("sha256", payloadKey)
-        .update(JSON.stringify(["crm-duplicate-match-v1", contractId, input.service, input.email.toLowerCase()]))
+        .update(JSON.stringify(["crm-duplicate-match-v1", selectedContract, input.service, input.email.toLowerCase()]))
         .digest();
       const iv = randomBytes(12);
       const cipher = createCipheriv("aes-256-gcm", encryptionKey, iv);
@@ -96,9 +103,9 @@ export function createWebsiteConsultationReceiver({
         try {
           await client.query("SET LOCAL statement_timeout = '3s'");
           const result = await client.query(
-            "SELECT crm.record_website_consultation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) AS outcome",
-            [input.requestId, contractId, uuidV7(), uuidV7(), uuidV7(), input.service.toUpperCase(),
-              input.locale, version, mac, envelope, duplicateMatchMac],
+            "SELECT crm.record_website_consultation($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) AS outcome",
+            [input.requestId, selectedContract, uuidV7(), uuidV7(), uuidV7(), input.service.toUpperCase(),
+              input.locale, version, mac, envelope, duplicateMatchMac, input.source],
           );
           const persisted = result.rows[0]?.outcome;
           if (!["persisted", "denied", "conflict"].includes(persisted)) throw new Error("Unexpected intake outcome");

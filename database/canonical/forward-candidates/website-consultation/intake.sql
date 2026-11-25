@@ -32,6 +32,18 @@ $ticket$;
 REVOKE ALL ON FUNCTION auth.issue_website_intake_ticket(uuid,uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION auth.issue_website_intake_ticket(uuid,uuid) TO phoenix_website_intake_binder;
 
+-- Keep source identity separate from the selected enquiry direction.
+CREATE FUNCTION crm.website_consultation_source_matches(p_source text,p_entry text)
+RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path=pg_catalog
+RETURN CASE p_source
+  WHEN 'phoenix-nova-website' THEN true
+  WHEN 'phoenix-nova-compass-education' THEN p_entry='/education'
+  WHEN 'phoenix-nova-compass-identity' THEN p_entry='/identity'
+  WHEN 'phoenix-nova-compass-health' THEN p_entry='/health'
+  WHEN 'phoenix-nova-compass-wealth' THEN p_entry='/wealth'
+  ELSE false END;
+REVOKE ALL ON FUNCTION crm.website_consultation_source_matches(text,text) FROM PUBLIC;
+
 -- Preserve the 0036 contract evidence checks. Only the website source can
 -- register a dedicated intake writer, which cannot hold the general app role.
 CREATE OR REPLACE FUNCTION crm.register_acquisition_contract(
@@ -59,7 +71,7 @@ BEGIN
       AND EXISTS(SELECT 1 FROM pg_roles r WHERE r.rolname=p_app_login AND r.rolcanlogin
         AND NOT(r.rolsuper OR r.rolcreatedb OR r.rolcreaterole OR r.rolreplication OR r.rolbypassrls))
       AND CASE WHEN pg_has_role(p_app_login,'phoenix_website_intake','MEMBER') THEN
-        s.source_system='phoenix-nova-website' AND s.source_channel='WEBSITE'
+        crm.website_consultation_source_matches(s.source_system,p_manifest->>'entry_ref') AND s.source_channel='WEBSITE'
         AND p_advisor_resource_kind IS NULL
         AND NOT pg_has_role(p_app_login,'phoenix_website_intake_binder','MEMBER')
         AND NOT pg_has_role(p_app_login,'phoenix_canonical_app','MEMBER')
@@ -113,7 +125,7 @@ AS $configure$
 BEGIN
   IF (p_days = 180 AND EXISTS (
       SELECT 1 FROM crm.acquisition_contract_revisions c JOIN crm.lead_sources s USING(lead_source_id)
-      WHERE c.contract_id=p_contract AND c.source_system='phoenix-nova-website' AND s.source_channel='WEBSITE'
+      WHERE c.contract_id=p_contract AND crm.website_consultation_source_matches(c.source_system,c.entry_ref) AND s.source_channel='WEBSITE'
         AND c.revoked_at IS NULL AND c.retention_policy_sha256=p_policy_sha256
   )) IS NOT TRUE THEN RETURN false; END IF;
   INSERT INTO crm.website_contact_retention(contract_id,contact_days) VALUES(p_contract,p_days)
@@ -164,7 +176,7 @@ $policy$;
 CREATE FUNCTION crm.record_website_consultation(
   p_request uuid, p_contract uuid, p_lead uuid, p_event uuid, p_attribution uuid,
   p_domain text, p_locale text, p_consent_version text, p_payload_mac bytea,
-  p_contact_envelope bytea, p_duplicate_match_mac bytea
+  p_contact_envelope bytea, p_duplicate_match_mac bytea, p_source text DEFAULT 'phoenix-nova-website'
 ) RETURNS text
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER
 SET search_path=pg_catalog,crm,core,auth,audit
@@ -189,7 +201,7 @@ BEGIN
   PERFORM pg_advisory_xact_lock(83111,hashtext(p_request::text));
   PERFORM 1 FROM crm.acquisition_contract_revisions c
     JOIN crm.lead_sources s ON s.lead_source_id=c.lead_source_id
-    WHERE c.contract_id=p_contract AND c.source_system='phoenix-nova-website'
+    WHERE c.contract_id=p_contract AND c.source_system=p_source AND crm.website_consultation_source_matches(c.source_system,c.entry_ref)
       AND s.source_system=c.source_system AND s.source_channel='WEBSITE' AND s.status='ACTIVE'
     FOR SHARE OF c;
   IF NOT FOUND OR crm.acquisition_contract_usable(p_contract) IS NOT TRUE
@@ -218,9 +230,9 @@ BEGIN
   RETURN 'persisted';
 END
 $fn$;
-REVOKE ALL ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea,bytea)
+REVOKE ALL ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea,bytea,text)
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader;
-GRANT EXECUTE ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea,bytea)
+GRANT EXECUTE ON FUNCTION crm.record_website_consultation(uuid,uuid,uuid,uuid,uuid,text,text,text,bytea,bytea,bytea,text)
   TO phoenix_website_intake;
 
 CREATE TABLE crm.website_intake_rate_limits (

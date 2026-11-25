@@ -45,6 +45,7 @@ try {
   for (const file of files) await db.query(await readFile(new URL(file, migrations), "utf8"));
   console.log("Applied numbered SQL files:", files.length);
   await db.query(await readFile(new URL("./intake.sql", import.meta.url), "utf8"));
+  await db.query(await readFile(new URL("./compass-events.sql", import.meta.url), "utf8"));
   await db.query(await readFile(new URL("./staff-queue.sql", import.meta.url), "utf8"));
   await db.query(await readFile(new URL("./staff-views.sql", import.meta.url), "utf8"));
   await db.query(`
@@ -91,6 +92,20 @@ try {
   );
   await assert.rejects(register(otherSource), /ACQUISITION_CONTRACT_EVIDENCE_OR_LOGIN_DENIED/);
   await register();
+  const compassContractIds = {};
+  for (const [offset, domain] of ["education", "identity", "health", "wealth"].entries()) {
+    const source = "phoenix-nova-compass-" + domain;
+    const id = suffix => "019347ec-7740-7000-a000-" + String(suffix).padStart(12, "0");
+    const sourceIdForDomain = id(100 + offset);
+    const contractIdForDomain = id(110 + offset);
+    await db.query("INSERT INTO crm.lead_sources(lead_source_id,source_system,source_channel,status,created_by_principal_id) VALUES($1,$2,'WEBSITE','ACTIVE',$3)", [sourceIdForDomain, source, principal]);
+    const registerEntry = entry => db.query("SELECT crm.register_acquisition_contract($1,$2,'fixture-1',$3,'synthetic approval',$4,'synthetic retention',$4,'website_fixture_writer',clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour')",
+      [contractIdForDomain, sourceIdForDomain, { entry_ref: entry, entry_revision: "fixture-1", manifest_ref: "synthetic manifest", manifest_sha256: hash }, hash]);
+    await assert.rejects(registerEntry("/unexpected"), /ACQUISITION_CONTRACT_EVIDENCE_OR_LOGIN_DENIED/);
+    await registerEntry("/" + domain);
+    assert.equal((await db.query("SELECT crm.configure_website_contact_retention($1,180,$2) AS allowed", [contractIdForDomain, hash])).rows[0].allowed, true);
+    compassContractIds[source] = contractIdForDomain;
+  }
   const writer = await writerPool.connect();
   try {
     await writer.query("SET ROLE phoenix_website_intake");
@@ -120,7 +135,7 @@ try {
   ]);
   const gateway = createWebsiteConsultationGateway({
     receiverOrigin, staffOrigin, receiverToken: token, contactKey, macKey: Buffer.alloc(32, 6),
-    acquisitionContractId: contractId, intakePrincipalId: principal, binderPool, writerPool, staffPool: gatewayPool,
+    acquisitionContractId: contractId, compassContractIds, intakePrincipalId: principal, binderPool, writerPool, staffPool: gatewayPool,
     readStaffSession: async request => {
       const sub = fixtureSessions.get(request.headers.get("authorization"));
       return sub ? {
@@ -153,7 +168,7 @@ try {
     WEBSITE_CONSULTATION_RECEIVER_URL: receiverOrigin + "/v1/website-consultations",
     WEBSITE_CONSULTATION_RECEIVER_TOKEN: token,
   };
-  const submit = (service, requestId = "028347ec-7740-4000-a000-000000000001", email = "visitor@example.test") => handleWebsiteConsultation(new Request(origin + "/api/website-consultations", {
+  const submit = (service, requestId = "028347ec-7740-4000-a000-000000000001", email = "visitor@example.test", entry) => handleWebsiteConsultation(new Request(origin + "/api/website-consultations" + (entry ? "?from=" + entry : ""), {
     method: "POST",
     headers: { origin, "content-type": "application/json" },
     body: JSON.stringify({ requestId,
@@ -722,8 +737,11 @@ try {
       console.log("PASS Chromium role views at 320/390/1440px, Founder HOLD API, contact read audit and original-session grant revocation");
       if (process.argv[5] !== "--staff-browser-only") {
         await verifyBrowserConsultation({ browser, config: websiteConfig, receiver });
-        const pages = await db.query("SELECT locale FROM crm.website_consultation_intake WHERE service_domain='WEALTH' ORDER BY locale");
+        const pages = await db.query("SELECT locale FROM crm.website_consultation_intake WHERE service_domain='WEALTH' AND acquisition_contract_id=$1 ORDER BY locale", [contractId]);
         assert.deepEqual(pages.rows, [{ locale: "en" }, { locale: "zh" }]);
+        assert.deepEqual((await db.query(`
+          SELECT source_system FROM crm.lead_attributions WHERE source_system LIKE 'phoenix-nova-compass-%' ORDER BY source_system
+        `)).rows.map(row => row.source_system), ["education", "health", "identity", "wealth"].map(domain => "phoenix-nova-compass-" + domain));
         console.log("PASS Chromium website form: 320px Chinese, 390px English, retry and PostgreSQL receipts");
       } else console.log("NOT RUN public website Worker browser tests: explicit staff-only local run");
     } finally {
@@ -1033,6 +1051,91 @@ try {
     console.log("NOT RUN PostgreSQL dump and restore: CRM_FIXTURE_POSTGRES_CONTAINER is unset");
   }
 
+  let educationLead;
+  for (const [i, entry] of ["education", "identity", "health", "wealth"].entries()) {
+    const request = "028347ec-7740-4000-a000-00000000010" + i;
+    const email = "synthetic-" + entry + "-source@example.test";
+    assert.equal((await submit(entry, request, email, entry)).status, 202);
+    assert.equal((await submit(entry, request, email, entry)).status, 202);
+    const otherEntry = entry === "education" ? "identity" : "education";
+    assert.equal((await submit(entry, request, email, otherEntry)).status, 409);
+    const { rows } = await db.query("SELECT a.source_system,a.entry_ref,l.family_id FROM crm.website_consultation_intake i JOIN crm.lead_attributions a USING(lead_id) JOIN crm.leads l USING(lead_id) WHERE i.request_id=$1 AND a.attribution_kind='FIRST_TOUCH'", [request]);
+    assert.deepEqual(rows, [{ source_system: "phoenix-nova-compass-" + entry, entry_ref: "/" + entry, family_id: null }]);
+    if (entry === "education") {
+      educationLead = (await db.query("SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [request])).rows[0].lead_id;
+    }
+    console.log("PASS Compass " + entry + " first touch, idempotency and cross-source conflict");
+  }
+  assert.equal((await submit("education", undefined, "synthetic-invalid@example.test", "spoofed")).status, 400);
+  const actor = fixtureId(140), familyPrincipal = fixtureId(141);
+  await db.query("INSERT INTO core.people(person_id,display_name) VALUES($1,'Synthetic Compass actor')", [actor]);
+  await db.query("INSERT INTO auth.principals(principal_id,person_id,principal_kind,status) VALUES($1,$2,'FAMILY','ACTIVE')", [familyPrincipal, actor]);
+  await db.query("INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from) VALUES($1,$2,$3,'PRIMARY',clock_timestamp()),($4,$5,$3,'MEMBER',clock_timestamp())",
+    [fixtureId(142), otherFamily, actor, fixtureId(143), mismatchFamily]);
+  const publisherContracts = {};
+  for (const [i, domain] of ["education", "identity"].entries()) {
+    const registered = await db.query(`
+      SELECT crm.register_acquisition_contract($1,lead_source_id,'fixture-publisher',$2,'synthetic approval',$3,
+        'synthetic retention',$3,'website_fixture_crm_service',clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour')
+      FROM crm.lead_sources WHERE source_system=$4
+    `, [fixtureId(144 + i), { entry_ref: "/" + domain, entry_revision: "fixture-publisher",
+      manifest_ref: "synthetic publisher manifest", manifest_sha256: hash }, hash, "phoenix-nova-compass-" + domain]);
+    publisherContracts[domain] = Object.values(registered.rows[0])[0];
+  }
+  const bindFamily = async family => {
+    await crmService.query("SELECT auth.clear_context()");
+    const { rows } = await db.query(`SELECT auth.issue_context_ticket($1,$2,$3,'FAMILY',
+      clock_timestamp()+interval '30 seconds',gen_random_uuid(),$1) AS ticket`, [familyPrincipal, actor, family]);
+    await crmService.query("SELECT auth.redeem_context_ticket($1,$2)", [rows[0].ticket, familyPrincipal]);
+  };
+  const visit = fixtureId(146), assessed = fixtureId(147), assessment = fixtureId(148);
+  const recordCompass = (id, ref = null, subject = actor, domain = "IDENTITY") => crmService.query(
+    "SELECT crm.record_compass_event($1,$2,$3,$4,$5,$6) AS event",
+    [id, educationLead, subject, publisherContracts.identity, domain, ref]);
+  const readCompass = id => crmService.query("SELECT * FROM crm.read_compass_event($1)", [id]);
+  await bindFamily(otherFamily);
+  assert.equal((await recordCompass(visit)).rows[0].event, null, "unverified lead must not link by email or family claim");
+  await bindConversionContext(principal, otherFamily);
+  assert.equal((await crmService.query("SELECT crm.link_lead_identity($1,$2,'CLIENT',$3,$4,$5) AS ok",
+    [fixtureId(149), educationLead, clientId, hash, fixtureId(150)])).rows[0].ok, true);
+  await bindConversionContext(reviewerPrincipal, otherFamily);
+  assert.equal(await verifyLink(fixtureId(149), fixtureId(151)), true);
+  await bindFamily(otherFamily);
+  assert.equal((await recordCompass(visit)).rows[0].event, visit);
+  assert.equal((await recordCompass(visit)).rows[0].event, visit);
+  assert.equal((await recordCompass(visit, null, person)).rows[0].event, null);
+  assert.equal((await recordCompass(fixtureId(152), null, actor, "WEALTH")).rows[0].event, null);
+  assert.deepEqual((await readCompass(visit)).rows, [{ lead_id: educationLead, service_domain: "IDENTITY",
+    assessment_id: null, source_system: "phoenix-nova-compass-identity" }]);
+  assert.equal((await recordCompass(assessed, assessment)).rows[0].event, null);
+  await db.query(`INSERT INTO consent.grants(consent_id,family_id,grantor_person_id,grantee_person_id,subject_person_id,
+    purpose,data_class,status,granted_at,expires_at)
+    VALUES($1,$2,$3,$3,$3,'IDENTITY_CASE','IDENTITY_SENSITIVE','ACTIVE',clock_timestamp(),clock_timestamp()+interval '1 hour')`,
+    [fixtureId(153), otherFamily, actor]);
+  assert.equal((await recordCompass(assessed, assessment)).rows[0].event, assessed);
+  assert.equal((await recordCompass(assessed, assessment)).rows[0].event, assessed);
+  assert.equal((await recordCompass(fixtureId(158), assessment)).rows[0].event, assessed);
+  assert.equal((await recordCompass(assessed, fixtureId(154))).rows[0].event, null);
+  assert.equal((await readCompass(assessed)).rows[0].assessment_id, assessment);
+  await db.query("UPDATE consent.grants SET status='WITHDRAWN',withdrawn_at=clock_timestamp() WHERE consent_id=$1", [fixtureId(153)]);
+  assert.equal((await readCompass(assessed)).rowCount, 0);
+  assert.equal((await recordCompass(assessed, assessment)).rows[0].event, null);
+  for (const [i, domain] of ["education", "identity"].entries()) {
+    const id = fixtureId(155 + i);
+    const params = [id, educationLead, publisherContracts[domain], domain.toUpperCase(), "fixture-compass-need-" + domain, hash];
+    const result = await crmService.query("SELECT crm.assert_lead_need($1,$2,$3,$4,'USER_SELECTED','ASSERT',NULL,NULL,$5,$6) AS event", params);
+    assert.equal(result.rows[0].event, id);
+  }
+  await bindFamily(mismatchFamily);
+  assert.equal((await readCompass(visit)).rowCount, 0);
+  assert.equal((await recordCompass(fixtureId(157))).rows[0].event, null);
+  await crmService.query("SELECT auth.clear_context()");
+  assert.deepEqual((await db.query("SELECT source_system FROM crm.lead_attributions WHERE lead_id=$1 AND attribution_kind='FIRST_TOUCH'",
+    [educationLead])).rows, [{ source_system: "phoenix-nova-compass-education" }]);
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM crm.lead_events WHERE lead_id=$1 AND need_domain IN ('EDUCATION','IDENTITY')",
+    [educationLead])).rows[0].n, 2);
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM crm.clients WHERE family_id=$1", [otherFamily])).rows[0].n, 1);
+  console.log("PASS Education to Identity touch leaves first source intact; verified family, distinct needs, idempotent assessment reference and live Consent revocation");
   const listeners = [];
   function requestLocal(listener, hostHeader, path, method = "GET", body, headers = {}) {
     return new Promise((resolve, reject) => {
