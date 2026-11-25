@@ -485,4 +485,28 @@ REVOKE ALL ON FUNCTION crm.merge_website_consultation_duplicate(text,text,uuid,u
   FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
 GRANT EXECUTE ON FUNCTION crm.merge_website_consultation_duplicate(text,text,uuid,uuid,uuid,uuid,uuid)
   TO phoenix_website_consultation_staff_gateway;
+
+CREATE FUNCTION crm.list_website_consultation_duplicates(p_issuer text,p_subject text)
+RETURNS TABLE(candidate_id uuid,first_lead_id uuid,second_lead_id uuid,status text,can_review boolean)
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path=pg_catalog
+AS $list$
+  SELECT c.lead_duplicate_candidate_id,c.lead_a_id,c.lead_b_id,c.status,
+    c.status='PENDING' AND c.proposed_by_principal_id<>employee.id
+  FROM crm.lead_duplicate_candidates c
+  CROSS JOIN LATERAL (SELECT auth.resolve_external_identity(p_issuer,p_subject) AS id) employee
+  JOIN crm.leads a ON a.lead_id=c.lead_a_id
+  JOIN crm.leads b ON b.lead_id=c.lead_b_id
+  WHERE pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500
+    AND c.status IN ('PENDING','CONFIRMED')
+    AND a.lead_status<>'MERGED' AND b.lead_status<>'MERGED'
+    AND crm.website_consultation_duplicate_scope_allows(employee.id,c.lead_a_id,c.lead_b_id,'DISPATCHER')
+  ORDER BY c.proposed_at DESC,c.lead_duplicate_candidate_id LIMIT 100
+$list$;
+REVOKE ALL ON FUNCTION crm.list_website_consultation_duplicates(text,text)
+  FROM PUBLIC,phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.list_website_consultation_duplicates(text,text)
+  TO phoenix_website_consultation_staff_gateway;
 COMMIT;

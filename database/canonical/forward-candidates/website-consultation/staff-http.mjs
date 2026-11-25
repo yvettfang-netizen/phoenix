@@ -62,8 +62,9 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
     const url = new URL(request.url);
     const contact = detailsPath.exec(url.pathname);
     const duplicate = duplicatePath.exec(url.pathname)?.[1];
+    const duplicateList = url.pathname === queuePath + "/duplicates";
     const workbench = url.pathname === workbenchPath;
-    if (url.origin !== origin || url.search || (url.pathname !== queuePath && !workbench && !contact && !duplicate)) {
+    if (url.origin !== origin || url.search || (url.pathname !== queuePath && !workbench && !contact && !duplicate && !duplicateList)) {
       return reply(404, { code: "NOT_FOUND" });
     }
     const write = duplicate || (contact && contact[2] !== "assignees");
@@ -108,7 +109,17 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
         await client.query("DISCARD ALL");
         await client.query("SET ROLE phoenix_website_consultation_staff_gateway");
         let response;
-        if (duplicate) {
+        if (duplicateList) {
+          const { rows } = await client.query("SELECT * FROM crm.list_website_consultation_duplicates($1,$2)",
+            [identity.issuer, identity.subject]);
+          response = reply(200, { items: rows.map(row => ({
+            candidateId: row.candidate_id,
+            firstLeadId: row.first_lead_id,
+            secondLeadId: row.second_lead_id,
+            status: row.status,
+            canReview: row.can_review,
+          })) });
+        } else if (duplicate) {
           response = await runDuplicate(client, identity, duplicate, duplicateInput);
         } else if (contact?.[2] === "contact") {
           const email = await readStaffConsultationEmail(client, identity, contact[1], key);

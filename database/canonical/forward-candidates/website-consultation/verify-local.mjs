@@ -333,6 +333,15 @@ try {
   assert.equal(await propose(subject, lead, newLead), null);
   assert.equal(await propose("synthetic-dispatcher", lead, newLead), candidateId);
   assert.equal(await propose("synthetic-dispatcher", newLead, lead), candidateId);
+  const duplicateItems = async token => {
+    const response = await staffHttp(new Request(queueUrl + "/duplicates", {
+      headers: { authorization: "Bearer " + token },
+    }));
+    assert.equal(response.status, 200);
+    return (await response.json()).items;
+  };
+  assert.deepEqual(await duplicateItems("synthetic-staff"), []);
+  assert.equal((await duplicateItems("synthetic-dispatcher")).find(item => item.candidateId === candidateId)?.canReview, false);
   const reviewEvent = "019347ec-7740-7000-a000-000000000093";
   const review = async who => (await staff.query(
     "SELECT crm.review_website_consultation_duplicate($1,$2,$3,'CONFIRMED',$4) AS accepted",
@@ -349,6 +358,7 @@ try {
   assert.equal(await duplicateScope(lead, lead), false);
   await assert.rejects(staff.query(pairScopeSql, [dispatcher, lead, newLead]), /permission denied/);
   await setLeadFamily(otherFamily);
+  assert.deepEqual(await duplicateItems("synthetic-dispatcher"), []);
   assert.equal(await review(subject), false);
   assert.equal(await propose("synthetic-dispatcher", lead, newLead), null);
   assert.equal(await duplicateScope(lead, newLead), false);

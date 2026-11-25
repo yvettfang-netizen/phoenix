@@ -3,6 +3,9 @@ function runWorkbench() {
   const list = document.querySelector("#lead-list");
   const notice = document.querySelector("#workbench-status");
   const refresh = document.querySelector("#refresh-queue");
+  const duplicates = document.querySelector("#duplicate-list");
+  const firstLead = document.querySelector("#duplicate-first");
+  const secondLead = document.querySelector("#duplicate-second");
   const labels = { EDUCATION: "教育", IDENTITY: "身份", WEALTH: "财富", HEALTH: "健康" };
 
   async function request(path = "", body) {
@@ -34,13 +37,49 @@ function runWorkbench() {
     return button;
   }
 
+  async function loadDuplicates() {
+    const { items } = await request("/duplicates");
+    duplicates.replaceChildren();
+    for (const item of items) {
+      const row = element("li");
+      row.append(element("code", item.firstLeadId + " / " + item.secondLeadId));
+      row.append(element("p", item.status === "PENDING" ? "待独立审核" : "已确认重复"));
+      if (item.canReview) {
+        for (const [decision, label] of [["CONFIRMED", "确认重复"], ["DISMISSED", "驳回候选"]]) {
+          row.append(action(label, async () => {
+            await request("/duplicates/review", { candidateId: item.candidateId, decision });
+            await loadDuplicates();
+            notice.textContent = "已记录审核。";
+          }));
+        }
+      }
+      if (item.status === "CONFIRMED") {
+        for (const [sourceLeadId, targetLeadId, label] of [
+          [item.firstLeadId, item.secondLeadId, "保留第二条"],
+          [item.secondLeadId, item.firstLeadId, "保留第一条"],
+        ]) {
+          row.append(action(label, async () => {
+            if (!window.confirm("确认合并，并保留线索 " + targetLeadId + "？")) return;
+            await request("/duplicates/merge", { candidateId: item.candidateId, sourceLeadId, targetLeadId });
+            await loadQueue();
+            notice.textContent = "已记录合并。";
+          }));
+        }
+      }
+      duplicates.append(row);
+    }
+  }
+
   async function loadQueue() {
     refresh.disabled = true;
     list.replaceChildren();
+    duplicates.replaceChildren();
+    for (const select of [firstLead, secondLead]) select.replaceChildren(new Option("请选择线索", ""));
     notice.textContent = "正在读取线索…";
     try {
       const { items } = await request();
       for (const item of items) {
+        for (const select of [firstLead, secondLead]) select.append(new Option(item.leadId, item.leadId));
         const row = element("li");
         const entry = element("article");
         const path = "/" + encodeURIComponent(item.leadId);
@@ -103,6 +142,7 @@ function runWorkbench() {
         row.append(entry);
         list.append(row);
       }
+      await loadDuplicates();
       notice.textContent = items.length ? "已载入获授权的线索。" : "暂无获授权的线索。";
     } catch (error) {
       notice.textContent = error.message;
@@ -112,7 +152,19 @@ function runWorkbench() {
   }
 
   refresh.addEventListener("click", loadQueue);
-  window.addEventListener("pagehide", () => list.replaceChildren());
+  document.querySelector("#duplicate-actions").append(action("提议重复线索", async () => {
+    if (!firstLead.value || !secondLead.value || firstLead.value === secondLead.value) {
+      throw new Error("请选择两条不同的线索。");
+    }
+    await request("/duplicates/propose", { firstLeadId: firstLead.value, secondLeadId: secondLead.value });
+    await loadDuplicates();
+    notice.textContent = "已提交，等待另一名员工审核。";
+  }));
+  window.addEventListener("pagehide", () => {
+    list.replaceChildren();
+    duplicates.replaceChildren();
+    for (const select of [firstLead, secondLead]) select.replaceChildren();
+  });
   window.addEventListener("pageshow", event => { if (event.persisted) void loadQueue(); });
   void loadQueue();
 }
@@ -129,6 +181,11 @@ button,select{font:inherit;min-height:44px;border:1px solid #003b46;border-radiu
 select{max-width:100%;box-sizing:border-box}button{background:#003b46;color:white}button:disabled{opacity:.6}
 </style></head><body><main><h1>官网咨询工作台</h1>
 <button id="refresh-queue" type="button">刷新队列</button><p id="workbench-status" role="status">正在读取线索…</p>
+<section aria-label="重复线索"><h2>重复线索</h2>
+<div id="duplicate-actions" class="actions">
+<label>第一条线索<select id="duplicate-first"></select></label>
+<label>第二条线索<select id="duplicate-second"></select></label>
+</div><ol id="duplicate-list" aria-label="待处理重复候选"></ol></section>
 <ol id="lead-list" aria-label="咨询线索"></ol><noscript>此工作台需要 JavaScript。</noscript>
 </main><script nonce="${nonce}">(${runWorkbench.toString()})();</script></body></html>`;
 }
