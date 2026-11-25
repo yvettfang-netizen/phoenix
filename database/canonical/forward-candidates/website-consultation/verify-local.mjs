@@ -337,6 +337,21 @@ try {
   const [firstLeadId, secondLeadId] = [lead, newLead].sort();
   assert.deepEqual(await suggestionsFor("synthetic-dispatcher"), [{ firstLeadId, secondLeadId }]);
   assert.deepEqual(await suggestionsFor("synthetic-staff"), []);
+  const setDispatcherRevoked = revoked => db.query(`
+    UPDATE crm.website_consultation_staff_grants
+    SET revoked_at=CASE WHEN $2::boolean THEN clock_timestamp() ELSE NULL END
+    WHERE principal_id=$1 AND grant_kind='DISPATCHER'
+  `, [dispatcher, revoked]);
+  await setDispatcherRevoked(true);
+  assert.deepEqual(await suggestionsFor("synthetic-dispatcher"), []);
+  await setDispatcherRevoked(false);
+  const expiry = (await db.query("SELECT contact_expires_at::text AS expiry FROM crm.website_consultation_intake WHERE lead_id=$1",
+    [newLead])).rows[0].expiry;
+  await db.query("UPDATE crm.website_consultation_intake SET contact_expires_at=clock_timestamp()-interval '1 second' WHERE lead_id=$1",
+    [newLead]);
+  assert.deepEqual(await suggestionsFor("synthetic-dispatcher"), []);
+  await db.query("UPDATE crm.website_consultation_intake SET contact_expires_at=$2 WHERE lead_id=$1", [newLead, expiry]);
+  assert.deepEqual(await suggestionsFor("synthetic-dispatcher"), [{ firstLeadId, secondLeadId }]);
   const proposals = await Promise.all([
     duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: lead, secondLeadId: newLead }),
     duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: newLead, secondLeadId: lead }),
@@ -623,8 +638,9 @@ try {
   assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 0);
   assert.deepEqual((await db.query(`
     SELECT contact_envelope IS NULL AS no_contact, payload_mac IS NULL AS no_mac,
+      duplicate_match_mac IS NULL AS no_duplicate_match,
       contact_erased_at IS NOT NULL AS recorded FROM crm.website_consultation_intake WHERE lead_id=$1
-  `, [newLead])).rows, [{ no_contact: true, no_mac: true, recorded: true }]);
+  `, [newLead])).rows, [{ no_contact: true, no_mac: true, no_duplicate_match: true, recorded: true }]);
   console.log("PASS approved retention configuration, expiry denial and scoped contact erasure");
 
   const listeners = [];
