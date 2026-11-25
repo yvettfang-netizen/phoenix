@@ -50,10 +50,18 @@ jobs:
         run: |
           npm run install:ci
           npm run build
+      - name: Verify receiver and trusted sessions
+        run: |
+          node --import ./website/phoenix-nova-website-v5/tests/register-typescript.mjs --test \
+            database/canonical/forward-candidates/website-consultation/receiver.test.mjs \
+            database/canonical/forward-candidates/website-consultation/canonical-session.test.mjs \
+            database/canonical/forward-candidates/website-consultation/staff-session.test.mjs
       - name: Verify synthetic case against PostgreSQL
         env:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/crm-browser/node_modules/playwright
+          CRM_FIXTURE_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
         run: |
+          test -n "$CRM_FIXTURE_POSTGRES_CONTAINER"
           npm install --prefix "$RUNNER_TEMP/crm-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
           node "$PLAYWRIGHT_MODULE/cli.js" install --with-deps chromium
           node --experimental-strip-types database/canonical/forward-candidates/website-consultation/verify-local.mjs --synthetic-loopback "Phoenix Compass/education compass/server" --bundled-chromium

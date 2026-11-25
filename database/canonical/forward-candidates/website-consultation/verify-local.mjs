@@ -1,5 +1,6 @@
 // Disposable loopback cluster only. Expects an isolated bootstrap role and a fresh database.
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -51,8 +52,11 @@ try {
     CREATE ROLE website_fixture_crm_service LOGIN;
     CREATE ROLE website_fixture_staff_gateway LOGIN;
     CREATE ROLE website_fixture_contact_retention LOGIN;
+    CREATE ROLE website_fixture_deletion_replay LOGIN;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_contact_retention;
     GRANT phoenix_website_contact_retention TO website_fixture_contact_retention WITH INHERIT FALSE, SET TRUE;
+    GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_deletion_replay;
+    GRANT phoenix_website_deletion_replay TO website_fixture_deletion_replay WITH INHERIT FALSE, SET TRUE;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_staff_gateway;
     GRANT phoenix_website_consultation_staff_gateway TO website_fixture_staff_gateway WITH INHERIT FALSE, SET TRUE;
     GRANT CONNECT ON DATABASE phoenix_website_intake_fixture TO website_fixture_binder, website_fixture_writer, website_fixture_outside, website_fixture_crm_service;
@@ -655,6 +659,93 @@ try {
     SELECT contact_envelope IS NULL AND payload_mac IS NULL AND duplicate_match_mac IS NULL AS cleared
     FROM crm.website_consultation_intake WHERE lead_id=$1
   `, [cancelLead])).rows, [{ cleared: true }]);
+
+  const deletionRequest = "028347ec-7740-4000-a000-000000000020";
+  assert.equal((await submit("education", deletionRequest, "synthetic-deletion@example.test")).status, 202);
+  const deletionLead = (await db.query(
+    "SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [deletionRequest],
+  )).rows[0].lead_id;
+  const deletionPost = (operation, token, body) => staffHttp(new Request(queueUrl + "/" + deletionLead + "/" + operation, {
+    method: "POST",
+    headers: { authorization: "Bearer " + token, origin: staffOrigin, "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  }));
+  assert.equal((await deletionPost("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 200);
+  const allowedContact = await deletionPost("contact", "synthetic-staff");
+  assert.equal(allowedContact.status, 200);
+  assert.equal(allowedContact.headers.get("cache-control"), "private, no-store");
+  const contactState = async connection => (await connection.query(`
+    SELECT recorded_at::text, contact_expires_at > clock_timestamp() AS unexpired,
+      contact_envelope IS NULL AND payload_mac IS NULL AND duplicate_match_mac IS NULL
+        AND contact_erased_at IS NOT NULL AS erased
+    FROM crm.website_consultation_intake WHERE request_id=$1
+  `, [deletionRequest])).rows[0];
+  const before = await contactState(db);
+  assert.equal(before.unexpired, true);
+  assert.equal(before.erased, false);
+  const receipt = [deletionRequest, before.recorded_at];
+  const replaySql = "SELECT crm.replay_website_contact_deletion($1,$2) AS outcome";
+  const fixtureContainer = process.env.CRM_FIXTURE_POSTGRES_CONTAINER;
+  const dockerPostgres = (args, input) => execFileSync("docker", args, {
+    input, timeout: 60_000, maxBuffer: 32 * 1024 * 1024,
+  });
+  const dump = fixtureContainer && dockerPostgres([
+    "exec", fixtureContainer, "pg_dump", "--no-password", "--format=custom", "-U", bootstrap, database,
+  ]);
+  assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 0);
+  await assert.rejects(retention.query(replaySql, receipt), /permission denied/);
+  await assert.rejects(staff.query(replaySql, receipt), /permission denied/);
+  const verifyReplay = async (targetDatabase, observer) => {
+    const operator = new Client({ host, port, user: "website_fixture_deletion_replay", database: targetDatabase });
+    await operator.connect();
+    try {
+      await operator.query("SET ROLE phoenix_website_deletion_replay");
+      await assert.rejects(operator.query("SELECT * FROM crm.website_consultation_intake"), /permission denied/);
+      await assert.rejects(operator.query("SELECT crm.erase_expired_website_contacts()"), /permission denied/);
+      assert.equal((await operator.query(replaySql, [deletionRequest, "2000-01-01T00:00:00Z"])).rows[0].outcome, "not_matched");
+      assert.deepEqual(await contactState(observer), before);
+      assert.equal((await operator.query(replaySql, receipt)).rows[0].outcome, "erased");
+      assert.deepEqual(await contactState(observer), { ...before, erased: true });
+      assert.equal((await operator.query(replaySql, receipt)).rows[0].outcome, "already_erased");
+      const event = await observer.query(`
+        SELECT decision, reason_code FROM audit.access_events
+        WHERE resource_id=$1 AND action='WEBSITE_CONTACT_DELETION_REPLAY'
+      `, [deletionRequest]);
+      assert.deepEqual(event.rows, [{ decision: "ALLOW", reason_code: "VERIFIED_DELETION_REPLAY" }]);
+    } finally {
+      await operator.end();
+    }
+  };
+  await verifyReplay(database, db);
+  assert.equal((await deletionPost("contact", "synthetic-staff")).status, 404);
+  assert.equal((await submit("education", deletionRequest, "synthetic-deletion@example.test")).status, 503);
+  console.log("PASS verified deletion replay: isolated role, exact recorded timestamp, erasure and idempotency");
+  if (dump) {
+    const restoredDatabase = "phoenix_website_intake_restore_fixture";
+    await db.query("CREATE DATABASE phoenix_website_intake_restore_fixture");
+    dockerPostgres([
+      "exec", "-i", fixtureContainer, "pg_restore", "--no-password", "--exit-on-error", "-U", bootstrap, "-d", restoredDatabase,
+    ], dump);
+    const restored = new Client({ host, port, user: bootstrap, database: restoredDatabase });
+    const restoredStaff = new Client({ host, port, user: "website_fixture_staff_gateway", database: restoredDatabase });
+    try {
+      await restored.connect();
+      await restoredStaff.connect();
+      await restoredStaff.query("SET ROLE phoenix_website_consultation_staff_gateway");
+      assert.deepEqual(await contactState(restored), before);
+      await verifyReplay(restoredDatabase, restored);
+      const denied = await restoredStaff.query(
+        "SELECT request_id FROM crm.read_website_consultation_contact($1,$2,$3,gen_random_uuid())",
+        [issuer, subject, deletionLead],
+      );
+      assert.equal(denied.rowCount, 0);
+    } finally {
+      await Promise.all([restoredStaff.end(), restored.end()]);
+    }
+    console.log("PASS pre-deletion PostgreSQL backup restored to a fresh fixture database and reconciled before access");
+  } else {
+    console.log("NOT RUN PostgreSQL dump and restore: CRM_FIXTURE_POSTGRES_CONTAINER is unset");
+  }
 
   const listeners = [];
   function requestLocal(listener, hostHeader, path, method = "GET", body, headers = {}) {

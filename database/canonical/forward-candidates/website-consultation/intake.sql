@@ -297,4 +297,39 @@ END
 $erase$;
 REVOKE ALL ON FUNCTION crm.erase_expired_website_contacts() FROM PUBLIC,phoenix_canonical_app;
 GRANT EXECUTE ON FUNCTION crm.erase_expired_website_contacts() TO phoenix_website_contact_retention;
+
+-- Only a separately provisioned operator may replay already verified deletions.
+-- The independent approval register is the caller's source of authority.
+CREATE ROLE phoenix_website_deletion_replay NOLOGIN NOINHERIT NOSUPERUSER
+  NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+GRANT USAGE ON SCHEMA crm TO phoenix_website_deletion_replay;
+CREATE FUNCTION crm.replay_website_contact_deletion(p_request_id uuid, p_recorded_at timestamptz)
+RETURNS text LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm
+AS $replay$
+BEGIN
+  IF NOT pg_has_role(session_user,'phoenix_website_deletion_replay','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_contact_retention','MEMBER')
+    OR pg_has_role(session_user,'phoenix_canonical_app','MEMBER') THEN
+    RAISE EXCEPTION 'WEBSITE_DELETION_REPLAY_DENIED' USING ERRCODE='42501';
+  END IF;
+
+  UPDATE crm.website_consultation_intake
+    SET contact_envelope=NULL,payload_mac=NULL,duplicate_match_mac=NULL,contact_erased_at=clock_timestamp()
+    WHERE request_id=p_request_id AND recorded_at=p_recorded_at AND contact_erased_at IS NULL;
+  IF FOUND THEN
+    PERFORM audit.record_write_decision('WEBSITE_CONTACT_DELETION_REPLAY',
+      'WEBSITE_CONSULTATION',p_request_id,true,'VERIFIED_DELETION_REPLAY');
+    RETURN 'erased';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM crm.website_consultation_intake
+    WHERE request_id=p_request_id AND recorded_at=p_recorded_at AND contact_erased_at IS NOT NULL) THEN
+    RETURN 'already_erased';
+  END IF;
+  RETURN 'not_matched';
+END
+$replay$;
+REVOKE ALL ON FUNCTION crm.replay_website_contact_deletion(uuid,timestamptz) FROM PUBLIC,phoenix_canonical_app;
+GRANT EXECUTE ON FUNCTION crm.replay_website_contact_deletion(uuid,timestamptz) TO phoenix_website_deletion_replay;
 COMMIT;
