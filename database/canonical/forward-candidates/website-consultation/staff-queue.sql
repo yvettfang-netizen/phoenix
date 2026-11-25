@@ -246,7 +246,7 @@ BEGIN
     AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
     AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
     AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500
-    AND core.is_uuid_v7(p_event) AND p_action IN ('ASSIGN','COMPLETE')) IS NOT TRUE THEN RETURN NULL; END IF;
+    AND core.is_uuid_v7(p_event) AND p_action IN ('ASSIGN','REASSIGN','COMPLETE')) IS NOT TRUE THEN RETURN NULL; END IF;
   employee := auth.resolve_external_identity(p_issuer,p_subject);
   IF NOT EXISTS (
     SELECT 1 FROM auth.principals WHERE principal_id=employee AND principal_kind='ADVISOR'
@@ -259,15 +259,15 @@ BEGIN
   SELECT i.service_domain INTO STRICT domain FROM crm.website_consultation_intake i WHERE i.lead_id=p_lead;
   PERFORM 1 FROM crm.website_consultation_staff_grants g
     WHERE g.principal_id=employee AND g.service_domain=domain AND crm.website_consultation_org_allows(p_lead,g.organization_id)
-      AND g.grant_kind=CASE p_action WHEN 'ASSIGN' THEN 'DISPATCHER' ELSE 'ADVISER' END
+      AND g.grant_kind=CASE p_action WHEN 'COMPLETE' THEN 'ADVISER' ELSE 'DISPATCHER' END
       AND g.revoked_at IS NULL FOR SHARE;
   IF NOT FOUND OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee OR NOT EXISTS (
     SELECT 1 FROM crm.website_consultation_staff_grants g WHERE g.principal_id=employee AND g.service_domain=domain AND crm.website_consultation_org_allows(p_lead,g.organization_id)
-      AND g.grant_kind=CASE p_action WHEN 'ASSIGN' THEN 'DISPATCHER' ELSE 'ADVISER' END
+      AND g.grant_kind=CASE p_action WHEN 'COMPLETE' THEN 'ADVISER' ELSE 'DISPATCHER' END
       AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()
   ) THEN RETURN NULL; END IF;
 
-  IF p_action='ASSIGN' THEN
+  IF p_action IN ('ASSIGN','REASSIGN') THEN
     IF NOT EXISTS (
       SELECT 1 FROM crm.website_consultation_intake i WHERE i.lead_id=p_lead
         AND i.contact_envelope IS NOT NULL AND i.contact_expires_at>clock_timestamp()
@@ -278,6 +278,22 @@ BEGIN
         AND p.status='ACTIVE' AND g.service_domain=domain AND crm.website_consultation_org_allows(p_lead,g.organization_id) AND g.grant_kind='ADVISER'
         AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()
     ) THEN RETURN NULL; END IF;
+    IF p_action='REASSIGN' THEN
+      SELECT f.follow_up_id INTO task
+      FROM crm.follow_ups f JOIN crm.lead_events e ON e.lead_event_id=f.follow_up_id
+      WHERE f.lead_id=p_lead AND f.assigned_principal_id=lead.assigned_principal_id
+        AND f.status='PENDING' AND e.lead_id=p_lead
+        AND e.reason_code='WEBSITE_CONSULTATION_ASSIGNED'
+      FOR UPDATE OF f;
+      IF NOT FOUND THEN RETURN NULL; END IF;
+      IF lead.assigned_principal_id=p_assignee THEN RETURN task; END IF;
+      UPDATE crm.follow_ups SET assigned_principal_id=p_assignee,updated_at=clock_timestamp() WHERE follow_up_id=task;
+      UPDATE crm.leads SET assigned_principal_id=p_assignee,updated_by_principal_id=employee,
+        updated_at=clock_timestamp() WHERE lead_id=p_lead;
+      INSERT INTO crm.lead_events(lead_event_id,lead_id,event_kind,reason_code,actor_principal_id)
+        VALUES(p_event,p_lead,'ASSIGNED','WEBSITE_CONSULTATION_REASSIGNED',employee);
+      RETURN task;
+    END IF;
     IF lead.assigned_principal_id IS NOT NULL THEN
       IF lead.assigned_principal_id IS DISTINCT FROM p_assignee THEN RETURN NULL; END IF;
       SELECT f.follow_up_id INTO task FROM crm.follow_ups f JOIN crm.lead_events e ON e.lead_event_id=f.follow_up_id

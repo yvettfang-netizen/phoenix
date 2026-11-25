@@ -384,6 +384,18 @@ try {
   const assigned = await post("assign", "synthetic-dispatcher", { assigneeId: employee });
   assert.equal(assigned.status, 200);
   const assignedBody = await assigned.json();
+  await db.query(`INSERT INTO crm.website_consultation_staff_grants
+    (principal_id,organization_id,service_domain,grant_kind,valid_until)
+    VALUES ($1,$2,'EDUCATION','ADVISER',clock_timestamp()+interval '1 hour')`, [dispatcher, serviceOrg]);
+  assert.equal((await post("reassign", "synthetic-staff", { assigneeId: dispatcher })).status, 404);
+  assert.deepEqual(await (await post("reassign", "synthetic-dispatcher", { assigneeId: dispatcher })).json(), assignedBody);
+  assert.equal((await post("contact", "synthetic-staff")).status, 404);
+  assert.equal((await post("complete", "synthetic-staff")).status, 404);
+  assert.deepEqual(await (await post("reassign", "synthetic-dispatcher", { assigneeId: employee })).json(), assignedBody);
+  await db.query(`UPDATE crm.website_consultation_staff_grants SET revoked_at=clock_timestamp()
+    WHERE principal_id=$1 AND organization_id=$2 AND service_domain='EDUCATION' AND grant_kind='ADVISER'`,
+  [dispatcher, serviceOrg]);
+  assert.equal((await db.query("SELECT count(*)::int AS count FROM crm.follow_ups WHERE lead_id=$1", [newLead])).rows[0].count, 1);
   const pending = await db.query(`
     SELECT f.due_at, f.status, f.assigned_principal_id
       FROM crm.follow_ups f

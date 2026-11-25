@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { workbenchHtml } from "./staff-workbench.mjs";
 
 const leadUuid = "[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-const detailsPath = new RegExp("^/internal/website-consultations/(" + leadUuid + ")/(contact|assign|complete|assignees)$");
+const detailsPath = new RegExp("^/internal/website-consultations/(" + leadUuid + ")/(contact|assign|reassign|complete|assignees)$");
 const staffId = new RegExp("^" + leadUuid + "$");
 const queuePath = "/internal/website-consultations";
 const workbenchPath = queuePath + "/workbench";
@@ -94,7 +94,7 @@ export function createWebsiteConsultationStaffHandler({ origin, authenticateStaf
       let assignee = null;
       const duplicateInput = duplicate ? duplicateArgs(duplicate, await readPayload(request)) : null;
       if (duplicate && !duplicateInput) return reply(400, { code: "INVALID_DUPLICATE_REQUEST" });
-      if (contact?.[2] === "assign") {
+      if (contact?.[2] === "assign" || contact?.[2] === "reassign") {
         const input = await readPayload(request);
         if (!input || Object.keys(input).join(",") !== "assigneeId" ||
             typeof input.assigneeId !== "string" || !staffId.test(input.assigneeId)) {
