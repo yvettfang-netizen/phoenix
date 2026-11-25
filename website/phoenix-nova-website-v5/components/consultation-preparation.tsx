@@ -45,6 +45,7 @@ export function ConsultationPreparation({ locale }: { locale: Locale }) {
         <div className="shell" style={{ maxWidth: 960, paddingTop: "9rem", paddingBottom: "5rem" }}>
           <p className="eyebrow">{text.eyebrow}</p>
           <h1 id="consultation-title" style={{ maxWidth: 760 }}>{text.title}</h1>
+          <p>{locale === "zh" ? "在线咨询暂未开放。" : "Online enquiries are currently unavailable."}</p>
           <p style={{ maxWidth: 700, fontSize: "1.12rem", lineHeight: 1.7 }}>{text.lead}</p>
           <div className="quiet-cta" style={{ marginTop: "2rem" }}>
             <h2>{text.intro}</h2>
