@@ -1,6 +1,8 @@
-export * from "../../../Phoenix Compass/education compass/models/free-education-assessment.js";
+import assessment from "../../../Phoenix Compass/education compass/models/free-education-assessment.js";
+export type { Answer, Answers, RespondentRole, Snapshot } from "../../../Phoenix Compass/education compass/models/free-education-assessment.js";
 
-import { evaluateFreeAssessment } from "../../../Phoenix Compass/education compass/models/free-education-assessment.js";
+export const { assessmentPath, isValidAnswer, reviseAnswer, VERSIONS } = assessment;
+const { evaluateFreeAssessment } = assessment;
 
 export function freeAssessmentPreviewEnabled(bindings: Record<string, unknown>) {
   return bindings.EDUCATION_FREE_ASSESSMENT_PREVIEW === "true";

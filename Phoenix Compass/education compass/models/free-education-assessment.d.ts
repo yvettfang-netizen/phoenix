@@ -30,7 +30,7 @@ export type Finding = {
 }
 export type Snapshot = {
   cards: (Card & { findings: Finding[]; missing_information: string[] })[]
-  versions: typeof VERSIONS; branch: string; respondent_role: RespondentRole
+  versions: typeof VERSIONS; branch: string | null; respondent_role: RespondentRole
   authorizations: Record<string, string>; question_status: Record<string, string>; profile: Record<string, unknown>
 }
 export const CARDS: readonly Card[]
@@ -40,3 +40,12 @@ export function assessmentPath(answers: Answers): { branch: string | null; quest
 export function reviseAnswer(answers: Answers, id: string, value: Answer): Answers
 export function evaluateFreeAssessment(input: unknown): Snapshot
 export function anonymousActionAllowed(action: string): boolean
+
+declare const assessment: {
+  assessmentPath: typeof assessmentPath
+  evaluateFreeAssessment: typeof evaluateFreeAssessment
+  isValidAnswer: typeof isValidAnswer
+  reviseAnswer: typeof reviseAnswer
+  VERSIONS: typeof VERSIONS
+}
+export default assessment
