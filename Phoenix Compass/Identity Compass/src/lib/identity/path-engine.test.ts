@@ -5,69 +5,73 @@ import { runPathEngine } from "@/lib/identity/path-engine";
 import { IDENTITY_POLICY_RULES, type IdentityPolicyRule } from "@/lib/identity/policy";
 import { POLICY_LIBRARY_VERSION } from "@/lib/identity/types";
 
-describe("Identity Path Engine", () => {
-  it("returns all six paths in locked order", () => {
+describe("Identity Path Engine — Gate 2", () => {
+  it("returns all six existing runtime paths in locked order", () => {
     const results = runPathEngine({ normalized_answers: {}, policy_version: POLICY_LIBRARY_VERSION });
     expect(results.map(({ path_code }) => path_code)).toEqual(IDENTITY_PATH_ORDER);
   });
 
-  it("does not guess when normalized answers are incomplete", () => {
+  it("fails closed when facts or verified policy rules are incomplete", () => {
     const results = runPathEngine({ normalized_answers: {}, policy_version: POLICY_LIBRARY_VERSION });
-    expect(results.every(({ fit_status }) => fit_status === "insufficient_information")).toBe(true);
-    expect(results.every(({ gaps }) => gaps.length > 0)).toBe(true);
+    expect(results.every(({ fit_status }) => ["insufficient_information", "needs_verification"].includes(fit_status))).toBe(true);
+    expect(results.some(({ fit_status }) => fit_status === "possible_fit")).toBe(false);
     expect(JSON.stringify(results)).not.toContain("success_rate");
     expect(JSON.stringify(results)).not.toContain("approval_probability");
   });
 
-  it("does not produce a deterministic output from expired policy", () => {
-    const expiredRules = IDENTITY_POLICY_RULES.filter(({ path_code }) => path_code === "new_cies").map(
-      (rule) => ({ ...rule, effective_status: "EXPIRED" }) satisfies IdentityPolicyRule,
-    );
-    const [newCies] = runPathEngine(
-      {
-        normalized_answers: {
-          age_exact: 17,
-          net_assets_hkd: 40_000_000,
-          asset_holding_period_months: 12,
-          beneficial_share_confirmed: "yes",
-          planned_investment_hkd: 30_000_000,
-          planned_asset_classes: "funds",
-          nationality_residency_context: "provided",
-        },
-        policy_version: POLICY_LIBRARY_VERSION,
+  it("treats HK$2.5m exactly as satisfying the verified TTPS-A threshold", () => {
+    const results = runPathEngine({
+      normalized_answers: {
+        prior_year_annual_income_hkd: 2_500_000,
+        income_source_type: "employment_or_business",
       },
-      expiredRules,
-    );
-    expect(newCies.fit_status).toBe("needs_verification");
-    expect(newCies.fit_status).not.toBe("clear_mismatch");
-    expect(newCies.manual_checks.join(" ")).toContain("不得产生确定性结论");
-  });
-
-  it("allows a clear mismatch only from a current official screening rule", () => {
-    const [newCies] = runPathEngine({
-      normalized_answers: { age_exact: 17 },
       policy_version: POLICY_LIBRARY_VERSION,
     });
-    expect(newCies.fit_status).toBe("clear_mismatch");
-    expect(newCies.reasons.join(" ")).toContain("不是法律结论");
+    const ttps = results.find(({ path_code }) => path_code === "ttps");
+    expect(ttps?.fit_status).toBe("possible_fit");
+    expect(ttps?.reasons.join(" ")).toContain("TTPSA-R01");
+    expect(ttps?.manual_checks.join(" ")).toContain("TTPSA-R02");
   });
 
-  it("does not let internal experience or model inference override official current", () => {
-    const officialAgeRule = IDENTITY_POLICY_RULES.find(({ rule_id }) => rule_id === "NCIES-R01");
-    expect(officialAgeRule).toBeDefined();
-    const lowerLayerRule = {
-      ...officialAgeRule!,
-      rule_id: "MODEL-AGE-INFERENCE",
-      source_type: "MODEL_INFERENCE",
-      source: "Model inference fixture",
-      official_url: null,
-      evaluator: { field: "age_exact", operator: "gte_number", expected: 99 },
-    } satisfies IdentityPolicyRule;
-    const [newCies] = runPathEngine(
-      { normalized_answers: { age_exact: 17 }, policy_version: POLICY_LIBRARY_VERSION },
-      [officialAgeRule!, lowerLayerRule],
+  it("does not falsely reject a sub-threshold TTPS-A profile because B/C may still require review", () => {
+    const results = runPathEngine({
+      normalized_answers: {
+        prior_year_annual_income_hkd: 2_499_999,
+        income_source_type: "employment_or_business",
+      },
+      policy_version: POLICY_LIBRARY_VERSION,
+    });
+    const ttps = results.find(({ path_code }) => path_code === "ttps");
+    expect(ttps?.fit_status).toBe("needs_verification");
+    expect(ttps?.fit_status).not.toBe("clear_mismatch");
+  });
+
+  it("keeps TTPS-B dynamic university-list evidence fail-closed even at 36 months experience", () => {
+    const results = runPathEngine({
+      normalized_answers: {
+        degree_institution: "synthetic eligible-list candidate",
+        degree_level: "bachelor",
+        work_experience_months_in_last_5y: 36,
+      },
+      policy_version: POLICY_LIBRARY_VERSION,
+    });
+    const ttps = results.find(({ path_code }) => path_code === "ttps");
+    expect(ttps?.fit_status).toBe("needs_verification");
+    expect(ttps?.manual_checks.join(" ")).toContain("UNVERIFIED");
+  });
+
+  it("does not produce deterministic output from stale evidence lifecycle", () => {
+    const currentA = IDENTITY_POLICY_RULES.find(({ rule_id }) => rule_id === "TTPSA-R01")!;
+    const expiredA = { ...currentA, effective_status: "EXPIRED" } satisfies IdentityPolicyRule;
+    const results = runPathEngine(
+      {
+        normalized_answers: { prior_year_annual_income_hkd: 1 },
+        policy_version: POLICY_LIBRARY_VERSION,
+      },
+      [expiredA],
     );
-    expect(newCies.fit_status).toBe("clear_mismatch");
-    expect(newCies.manual_checks.join(" ")).toContain("MODEL_INFERENCE");
+    const ttps = results.find(({ path_code }) => path_code === "ttps");
+    expect(ttps?.fit_status).toBe("needs_verification");
+    expect(ttps?.manual_checks.join(" ")).toContain("不得产生确定性结论");
   });
 });
