@@ -303,6 +303,10 @@ try {
     body: body === undefined ? undefined : JSON.stringify(body),
   }));
   assert.equal((await post("assign", "synthetic-staff", { assigneeId: employee })).status, 404);
+  await db.query("UPDATE crm.website_consultation_staff_grants SET organization_id=$2 WHERE principal_id=$1", [dispatcher, otherOrg]);
+  assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
+  assert.equal((await post("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 404);
+  await db.query("UPDATE crm.website_consultation_staff_grants SET organization_id=$2 WHERE principal_id=$1", [dispatcher, serviceOrg]);
   const assigned = await post("assign", "synthetic-dispatcher", { assigneeId: employee });
   assert.equal(assigned.status, 200);
   const assignedBody = await assigned.json();
@@ -326,6 +330,24 @@ try {
   assert.deepEqual(await (await post("assign", "synthetic-dispatcher", { assigneeId: employee })).json(), assignedBody);
   assert.equal((await post("complete", "synthetic-dispatcher")).status, 404);
   assert.equal((await post("contact", "synthetic-staff")).status, 200);
+  for (const [deny, restore] of [
+    ["organization_id=$2", "organization_id=$3"],
+    ["revoked_at=clock_timestamp()", "revoked_at=NULL"],
+    ["valid_from=clock_timestamp()-interval '2 hours', valid_until=clock_timestamp()-interval '1 hour'",
+      "valid_from=clock_timestamp()-interval '1 minute', valid_until=clock_timestamp()+interval '1 hour'"],
+  ]) {
+    const setGrant = async (change, organization) => db.query(
+      `UPDATE crm.website_consultation_staff_grants SET ${change.replace("$3", "$2")}
+       WHERE principal_id=$1 AND grant_kind='ADVISER'`,
+      organization ? [employee, organization] : [employee],
+    );
+    await setGrant(deny, deny.includes("organization_id") ? otherOrg : undefined);
+    assert.equal((await post("contact", "synthetic-staff")).status, 404);
+    assert.equal((await post("complete", "synthetic-staff")).status, 404);
+    assert.equal((await db.query("SELECT status FROM crm.follow_ups WHERE follow_up_id=$1", [assignedBody.taskId])).rows[0].status, "PENDING");
+    await setGrant(restore, restore.includes("organization_id") ? serviceOrg : undefined);
+  }
+  console.log("PASS cross-organization assignment and same-session action denial after grant change, revocation or expiry");
   assert.deepEqual(await (await post("complete", "synthetic-staff")).json(), assignedBody);
   assert.deepEqual(await (await post("complete", "synthetic-staff")).json(), assignedBody);
   const history = await db.query(`
