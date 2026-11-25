@@ -512,7 +512,14 @@ try {
       await dispatch.page.getByRole("status").filter({ hasText: "已分配跟进" }).waitFor();
       await dispatch.context.close();
 
-      const adviser = await open("synthetic-staff", 390);
+      const overdueTask = await db.query(`
+        UPDATE crm.follow_ups SET due_at=clock_timestamp()-interval '1 hour'
+        WHERE lead_id=$1 AND status='PENDING'
+        RETURNING follow_up_id
+      `, [browserLead]);
+      assert.equal(overdueTask.rowCount, 1);
+      const adviser = await open("synthetic-staff", 320);
+      await adviser.item.getByText(/待办已逾期/).waitFor();
       assert.equal(await adviser.page.getByText("visitor@example.test").count(), 0);
       await adviser.item.getByRole("button", { name: "查看邮箱", exact: true }).click();
       await adviser.item.getByText("visitor@example.test", { exact: true }).waitFor();
@@ -541,7 +548,7 @@ try {
       await reviewer.page.getByRole("status").filter({ hasText: "已记录合并" }).waitFor();
       assert.equal(await pair.count(), 0);
       await reviewer.context.close();
-      console.log("PASS Chromium staff workbench: 1440px assignment and 390px contact and follow-up");
+      console.log("PASS Chromium staff workbench: 1440px assignment and 320px overdue, contact and follow-up");
       await verifyBrowserConsultation({ browser, config: websiteConfig, receiver });
       const pages = await db.query("SELECT locale FROM crm.website_consultation_intake WHERE service_domain='WEALTH' ORDER BY locale");
       assert.deepEqual(pages.rows, [{ locale: "en" }, { locale: "zh" }]);
