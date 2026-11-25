@@ -348,6 +348,13 @@ try {
     await setGrant(restore, restore.includes("organization_id") ? serviceOrg : undefined);
   }
   console.log("PASS cross-organization assignment and same-session action denial after grant change, revocation or expiry");
+  await db.query("UPDATE auth.principals SET status='DISABLED' WHERE principal_id=$1", [employee]);
+  assert.equal((await queue()).rowCount, 0);
+  assert.equal((await post("contact", "synthetic-staff")).status, 404);
+  assert.equal((await post("complete", "synthetic-staff")).status, 404);
+  assert.equal((await db.query("SELECT status FROM crm.follow_ups WHERE follow_up_id=$1", [assignedBody.taskId])).rows[0].status, "PENDING");
+  await db.query("UPDATE auth.principals SET status='ACTIVE' WHERE principal_id=$1", [employee]);
+  console.log("PASS disabled employee loses queue, contact and completion access with the original credential");
   assert.deepEqual(await (await post("complete", "synthetic-staff")).json(), assignedBody);
   assert.deepEqual(await (await post("complete", "synthetic-staff")).json(), assignedBody);
   const history = await db.query(`
