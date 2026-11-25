@@ -1,0 +1,26 @@
+.about { background: var(--ivory); color: var(--ink, var(--navy)); }
+.section { padding-block: clamp(2.5rem, 6vw, 5.5rem); border-top: 1px solid var(--line); }
+.heading { max-width: 48rem; margin-bottom: 1.5rem; }
+.heading > p, .step { color: var(--gold); font-size: .875rem; letter-spacing: .1em; font-weight: 700; }
+.heading h2 { color: var(--navy); font-family: var(--serif); font-size: clamp(1.75rem, 3.6vw, 2.85rem); line-height: 1.18; margin: .5rem 0; }
+.section p { max-width: 60ch; line-height: 1.65; }
+.grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; padding: 0; list-style: none; }
+.card { padding: 1rem; border-top: 2px solid var(--domain, var(--line)); }
+.card h3 { color: var(--navy); font-size: 1.15rem; margin: 0 0 .5rem; }
+.card h3 a { display: flex; align-items: center; min-height: 44px; text-decoration: underline; text-underline-offset: .22em; }
+.card p { margin: .5rem 0 0; }
+.card small { display: block; font-size: .875rem; font-weight: 600; }
+.card[data-domain="education"] { --domain: var(--education, var(--line)); }
+.card[data-domain="identity"] { --domain: var(--identity, var(--navy)); }
+.card[data-domain="health"] { --domain: var(--teal, var(--line)); }
+.card[data-domain="wealth"] { --domain: var(--navy); }
+.company { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; padding: 1.5rem 0; border-block: 1px solid var(--line); }
+.company dt { font-weight: 700; }
+.company dd { margin: .375rem 0 0; }
+.contact { margin-top: 2rem; padding: clamp(1rem, 4vw, 3rem); border: 1px solid var(--line); scroll-margin-top: 6rem; }
+.contact summary, .contact > a { cursor: pointer; min-height: 44px; padding: .65rem 0; text-decoration: underline; text-underline-offset: .22em; }
+.contact > a { display: inline-flex; align-items: center; }
+.about :is(a, summary):focus-visible { outline: 2px solid var(--navy); outline-offset: 4px; }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .grid, .company { grid-template-columns: 1fr; } }
+

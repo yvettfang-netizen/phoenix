@@ -8,6 +8,6 @@
 
 - [services/auth.js](../../services/auth.js)
 - [services/backend-api.js](../../services/backend-api.js)
-- [backend/auth.js](../../backend/auth.js)
+- [backend/server.js](../../backend/server.js)
 
 原认证保留；真实微信认证与 Core 身份映射在专门实现阶段接入。

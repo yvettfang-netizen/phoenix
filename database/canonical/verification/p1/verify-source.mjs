@@ -25,9 +25,17 @@ assert.match(bridge,/CANONICAL_ACCESS_UNAVAILABLE/)
 assert.match(bridge,/x-customer-id/)
 const acceptance=readFileSync(path.resolve(root,'database/canonical/verification/p1/acceptance.mjs'),'utf8')
 const browser=readFileSync(path.resolve(root,'database/canonical/verification/p1/browser.mjs'),'utf8')
+const fixture=readFileSync(path.resolve(root,'database/canonical/verification/p1/fixture.mjs'),'utf8')
+for(const source of [acceptance,fixture]){
+ assert.match(source,/createSyntheticAuthFixture/,'P1 harness must use the explicit synthetic trusted identity authority')
+ assert.doesNotMatch(source,/createD1|Miniflare|drizzle|\.getD1Database\(/,'P1 harness must not restore the retired parallel D1 store')
+}
+assert.match(acceptance,/CANONICAL_AUTH_NOT_CONFIGURED/,'P1 must assert retired local password auth stays unavailable')
+assert.match(acceptance,/\['register','login'\]/,'P1 must check both retired local credential routes')
+assert.match(acceptance,/assert\.equal\(response\.status,503\)/,'Retired credential routes must fail closed')
 for(const marker of [
  'createServer',
- 'D1 client A summary',
+ 'trusted synthetic client A summary',
  'same-family subject isolation',
  'client C receives multiple',
  'real empty state',
@@ -36,7 +44,7 @@ for(const marker of [
  'TASK_STATUS',
  'SCHOOL_SELECTION',
  'rt.call',
- 'synthetic D1 outage',
+ 'identity authority and gateway failures',
  'SERVICE_WORKBENCH_API_ORIGIN'
 ])assert.ok((acceptance+'\n'+browser).includes(marker),'P1 acceptance coverage missing: '+marker)
 for(const marker of [

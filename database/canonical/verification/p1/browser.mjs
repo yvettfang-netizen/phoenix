@@ -21,11 +21,11 @@ const record={
  harness:'isolated esbuild React component harness; not the built Worker/Sites runtime',
  syntheticOnly:true,
  routeMocking:false,
- transport:'browser -> isolated UI proxy -> server-owned customer bridge -> P0 BFF -> real PostgreSQL; D1 cookie is a real Miniflare D1 session',
+ transport:'browser -> isolated UI proxy -> server-owned customer bridge -> P0 BFF -> real PostgreSQL; synthetic trusted Canonical identity authority supplies test sessions',
  checks:[],
  screenshots:[],
  status:'FAIL',
- realIdentity:{status:'BLOCKED',reason:'This evidence uses D1 test accounts and synthetic Canonical mappings only.'}
+ realIdentity:{status:'BLOCKED',reason:'This evidence uses a synthetic trusted Canonical identity authority and synthetic mappings only.'}
 }
 let fixture,uiServer,browser,lastPage
 const check=(name,details={})=>{record.checks.push({name,status:'PASS',...details});console.log('PASS browser '+name)}
@@ -161,8 +161,25 @@ async function main(){
  await shot(view.page,'client-a-en-390')
  check('client A English Family Service Overview reads real PG summary', {identity:'client-a',locale:'en'})
 
- const navigation=view.page.getByRole('navigation',{name:'Family Center navigation'})
- assert.equal(await navigation.locator('button,a').count(),3)
+ const navigation=view.page.getByRole('navigation',{name:'Family OS navigation'})
+ assert.equal(await navigation.locator('button,a').count(),6,
+   'P1 unified Family OS retains three existing and three new scoped navigation items')
+ await navigation.getByRole('button',{name:/Access & Guardianship/}).click()
+ await view.page.locator('[data-family-unified-panel="access"]').waitFor()
+ await view.page.getByText('Live consent management is not available',{exact:false}).waitFor()
+ await navigation.getByRole('button',{name:/Service Updates/}).click()
+ await view.page.locator('[data-family-unified-panel="updates"]').waitFor()
+ await view.page.locator('.fsv-source').waitFor()
+ assert.equal(await view.page.getByText('Synthetic Identity Hong Kong 319',{exact:false}).count(),0,
+   'P1 unified service updates cannot disclose other family records')
+ await navigation.getByRole('button',{name:/Family Assistant/}).click()
+ await view.page.locator('[data-family-unified-panel="assistant"]').waitFor()
+ await view.page.locator('.fsv-source').waitFor()
+ await view.page.getByRole('button',{name:/Summarize my next step/}).click()
+ await view.page.locator('.fsv-guidance').waitFor()
+ await navigation.getByRole('button',{name:/Overview/}).click()
+ await view.page.locator('[data-family-service-overview]').waitFor()
+ check('unified Family Service tabs reuse the authorized P1 session with no cross-family data')
  await navigation.getByRole('link',{name:'My Services',exact:true}).click()
  await view.page.locator('.sw-projects').getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).waitFor()
  assert.equal(await view.page.locator('.sw-projects').getByText('Synthetic Identity Hong Kong 319',{exact:true}).count(),0)

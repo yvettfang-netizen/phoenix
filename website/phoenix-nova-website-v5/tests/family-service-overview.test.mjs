@@ -31,7 +31,7 @@ test("P1 Family Service Overview uses a strict, no-store authorized summary cont
   assert.match(overview, /window\.addEventListener\("pageshow"/);
 });
 
-test("P1 Family Center selects the real summary only for authenticated workbench accounts", () => {
+test("P1 Family OS selects the real summary only for authenticated workbench accounts", () => {
   assert.match(center, /const p1AccountWorkbench=workbench&&account&&!demo/);
   assert.match(center, /p1AccountWorkbench\?<FamilyServiceOverview locale=\{locale\}\/>/);
   assert.match(center, /workbench&&!account&&!demo\?<ServiceProjectCards locale=\{locale\}\/>/);

@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict'
-import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { AddressInfo } from 'node:net'
 import { resolve } from 'node:path'
@@ -60,25 +59,8 @@ test('Agent enqueue uses report-before-conversation PostgreSQL lock ordering', (
     'enqueueRun must validate the locked conversation still belongs to the locked report')
 })
 
-test('migration baselines stay immutable and Agent schema has no plaintext or response ID columns', () => {
-  const migration = (name: string): string => readFileSync(resolve(__dirname, `../../migrations/${name}`), 'utf8')
-  const initial = migration('001_initial_schema.sql')
-  const feishu = migration('002_feishu_bitable_integration.sql')
-  const agent = migration('003_openai_agent.sql')
-  const dualAnalysis = migration('004_dual_agent_analysis.sql')
-  assert.equal(createHash('sha256').update(initial).digest('hex').toUpperCase(), '502AB6BED513978922FAD8FD424D1C11281B07771E37CE056CF001A2674B35C9')
-  assert.equal(createHash('sha256').update(feishu).digest('hex').toUpperCase(), '5A9FC3092BDF46025834A1211E8458CBFF9D3B1DD39ECBF3C2BD02A72CA2D34D')
-  assert.equal(createHash('sha256').update(agent).digest('hex').toUpperCase(), '1E8B64E1FE38D48BEFD11AD3D69AF73423D77AF17A294ECF8E809A83C3D197E6')
-  for (const table of ['agent_consents', 'agent_conversations', 'agent_messages', 'agent_runs', 'agent_worker_heartbeats']) {
-    assert.match(agent, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\s*\\(`))
-  }
-  assert.doesNotMatch(agent, /\bresponse_id\b/i)
-  assert.doesNotMatch(agent, /^\s*content\s+(?:text|jsonb|varchar)/im)
-  assert.match(agent, /content_envelope\s+jsonb/i)
-  assert.match(agent, /terms_summary\s+text/i)
-  assert.match(dualAnalysis, /ASSESSMENT_ANALYSIS/)
-  assert.match(dualAnalysis, /REPORT_ANALYSIS/)
-  assert.match(dualAnalysis, /report_id, purpose/i)
+test('retired independent Education migrations cannot be loaded', () => {
+  assert.throws(() => readFileSync(resolve(__dirname, '../../migrations/003_openai_agent.sql'), 'utf8'), { code: 'ENOENT' })
 })
 
 function paidReport(overrides: Partial<Report> = {}): Report {
