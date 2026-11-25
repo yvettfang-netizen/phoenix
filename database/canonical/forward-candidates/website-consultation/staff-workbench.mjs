@@ -181,9 +181,10 @@ export function workbenchHtml(nonce) {
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>官网咨询工作台｜Phoenix Nova</title>
 <style nonce="${nonce}">
 body{font:16px/1.5 system-ui,sans-serif;margin:0;background:#f8f6f1;color:#003b46}
-main{max-width:50rem;margin:auto;padding:1.25rem}ol{list-style:none;padding:0;display:grid;gap:1rem}
+main{max-width:50rem;margin:auto;padding:1.25rem}ol{list-style:none;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:1rem}
 article{background:white;padding:1rem;border-radius:.6rem}h2,p{margin:.5rem 0}code{overflow-wrap:anywhere}
-.actions{display:flex;flex-wrap:wrap;gap:.6rem;align-items:end;margin-top:1rem}label{display:grid;gap:.25rem}
+.actions{display:flex;flex-wrap:wrap;gap:.6rem;align-items:end;margin-top:1rem}label{display:grid;grid-template-columns:minmax(0,1fr);gap:.25rem;min-width:0;max-width:100%}
+#duplicate-actions label{flex:1 1 14rem}#duplicate-actions select{width:100%;min-width:0}
 button,select{font:inherit;min-height:44px;border:1px solid #003b46;border-radius:.4rem;padding:0 .65rem}
 select{max-width:100%;box-sizing:border-box}button{background:#003b46;color:white}button:disabled{opacity:.6}
 </style></head><body><main><h1>官网咨询工作台</h1>
