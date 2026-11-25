@@ -20,6 +20,8 @@ Use the configured private staff gateway behind the existing Corporate OS employ
 
 The same page provides authorized Dispatcher/Adviser perspectives and a clearly labeled Founder HOLD design preview. This change supplies no production hostname and does not claim that Corporate OS SSO/navigation is deployed.
 
+Visual tokens follow the current website `app/globals.css` and `docs/HOMEPAGE_V63_REVIEW.md`: deepsea `#003B46` primary, champagne `#C99B50` accent, ivory `#F8F6F1` background, ink `#123F48`, and restrained celadon/moon supporting surfaces. The older navy-led baseline is not the current primary palette.
+
 | Route suffix under `/internal/website-consultations` | Result |
 | --- | --- |
 | `/views` | Current DB-authorized view names; Founder HOLD status |
