@@ -28,6 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -38,6 +39,10 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           npm run typecheck
           npm run build
+      - name: Regress Education backend and Mini Program contracts
+        run: |
+          npm --prefix 'Phoenix Compass/education compass/server' test
+          npm --prefix 'Phoenix Compass/education compass' run test:client
       - name: Verify candidate manifest and fail-closed evidence gate
         shell: bash
         run: |

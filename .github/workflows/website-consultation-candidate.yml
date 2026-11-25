@@ -39,11 +39,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-      - name: Fetch pinned Education assessment candidate for isolated validation
-        run: |
-          source_sha=1366b53f662082098c2f2673e9ee4be6f433b261
-          git fetch --no-tags --depth=1 origin "$source_sha"
-          git show "$source_sha:database/canonical/forward-candidates/education-assessment-report/education_assessment_report.sql" > "$RUNNER_TEMP/education-source.sql"
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -68,8 +63,9 @@ jobs:
           PLAYWRIGHT_MODULE: ${{ runner.temp }}/crm-browser/node_modules/playwright
           CRM_FIXTURE_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
           CRM_FIXTURE_PREVIEW_DIR: ${{ runner.temp }}/crm-role-previews
-          CRM_FIXTURE_EDUCATION_CANDIDATE: ${{ runner.temp }}/education-source.sql
+          CRM_FIXTURE_EDUCATION_CANDIDATE: ${{ github.workspace }}/database/canonical/forward-candidates/education-assessment-report/education_assessment_report.sql
         run: |
+          node --experimental-strip-types --test website/phoenix-nova-website-v5/tests/free-education-assessment.test.mjs
           test -n "$CRM_FIXTURE_POSTGRES_CONTAINER"
           test -s "$CRM_FIXTURE_EDUCATION_CANDIDATE"
           npm install --prefix "$RUNNER_TEMP/crm-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1

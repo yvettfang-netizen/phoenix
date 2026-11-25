@@ -206,6 +206,24 @@ export function createHttpHandler(deps: AppDependencies | IsolatedCanonicalDepen
     try {
       const url = new URL(request.url ?? '/', 'http://localhost')
       route = url.pathname
+      if (route === '/v1/education-compass/free-assessment/evaluate') {
+        invariant(process.env.EDUCATION_FREE_ASSESSMENT_PREVIEW === 'true', 404, 'ROUTE_NOT_FOUND', '接口不存在')
+        invariant(method === 'POST', 405, 'METHOD_NOT_ALLOWED', '请求方式不受支持')
+        exactQuery(url)
+        invariant(request.headers['content-type']?.split(';')[0].trim() === 'application/json', 400,
+          'INVALID_FREE_ASSESSMENT', '请求内容无效')
+        invariant(!request.headers.authorization && !request.headers.cookie, 400, 'INVALID_FREE_ASSESSMENT', '请求内容无效')
+        invariant(await rateLimiter.consume('anonymous-free-education', 180, 60_000), 429, 'RATE_LIMITED', '请求过于频繁')
+        const body = parseJson(await readRawBody(request, 4096, 5000))
+        const { evaluateFreeAssessment, AssessmentInputError } = await import('../../../models/free-education-assessment.js')
+        response.setHeader('Cache-Control', 'no-store')
+        try {
+          return json(response, 200, evaluateFreeAssessment(body))
+        } catch (error) {
+          if (error instanceof AssessmentInputError) throw new AppError(400, 'INVALID_FREE_ASSESSMENT', '请求内容无效')
+          throw error
+        }
+      }
       if (route.startsWith('/v1/service-workbench/')) {
         invariant(!deps.isolatedCanonical && deps.serviceWorkbench, 404, 'ROUTE_NOT_FOUND', '接口不存在')
         return deps.serviceWorkbench.handle(request, response)

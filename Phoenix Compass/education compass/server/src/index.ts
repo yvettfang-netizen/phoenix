@@ -39,7 +39,9 @@ async function main(): Promise<void> {
   }
   const config = loadConfig()
   if (config.databaseUrl || config.nodeEnv === 'production') {
-    throw new Error('LEGACY_EDUCATION_DATABASE_RETIRED: use the Canonical PostgreSQL service API, not an independent Education Store')
+    const error = new Error('Use the Canonical PostgreSQL service API for Education Compass')
+    error.name = 'LEGACY_EDUCATION_DATABASE_RETIRED'
+    throw error
   }
   const learningCatalog = await loadLearningCatalog()
   const familyProjection = process.env.CANONICAL_BROKER_SESSION_BRIDGE_ENABLED === 'true' ? undefined : await loadFamilyProjection()

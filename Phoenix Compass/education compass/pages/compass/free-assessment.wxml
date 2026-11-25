@@ -1,0 +1,44 @@
+<template name="freeAssessment">
+  <view class="free-education">
+    <view class="free-education__body">
+      <image class="free-education__brand" src="/assets/brand/phoenix-nova-logo-primary.png" mode="widthFix" aria-label="Phoenix Nova" />
+      <text class="free-education__eyebrow">凤启教育罗盘 · 免费初评</text>
+      <view wx:if="{{!freeRole}}" class="free-education__panel">
+        <text class="free-education__heading">先看清方向，再规划成长。</text>
+        <text class="free-education__note">用 3–5 分钟梳理目前的教育问题。匿名填写，完成即可查看成长快照。</text>
+        <button class="free-education__option" data-role="PARENT_GUARDIAN" bindtap="startFreeAssessment">以家长视角填写</button>
+        <button class="free-education__option" data-role="STUDENT" bindtap="startFreeAssessment">学生本人填写</button>
+        <button class="free-education__option" data-role="UNDECLARED" bindtap="startFreeAssessment">不说明身份，直接开始</button>
+      </view>
+      <view wx:elif="{{freeSnapshot}}" class="free-education__panel">
+        <text class="free-education__heading">成长快照</text>
+        <view wx:for="{{freeSnapshot.cards}}" wx:for-item="card" wx:key="id" class="free-education__card">
+          <text class="free-education__title">{{card.label}}</text>
+          <text wx:if="{{!card.findings.length}}" class="free-education__note">目前可用信息较少。</text>
+          <view wx:for="{{card.findings}}" wx:for-item="finding" wx:key="finding_id" class="free-education__finding">
+            <text class="free-education__title">{{finding.title}}</text>
+            <text class="free-education__note">{{finding.summary}}</text>
+            <text class="free-education__evidence">证据 {{finding.evidence_level}}<text wx:for="{{finding.evidence_refs}}" wx:for-item="ref" wx:key="question_id"> · {{ref.question_id}}</text></text>
+            <text wx:for="{{finding.recommended_next_actions}}" wx:for-item="action" wx:key="*this" class="free-education__note">{{action}}</text>
+          </view>
+        </view>
+        <button class="free-education__outline" bindtap="backFreeQuestion">回看并修改</button>
+      </view>
+      <view wx:else class="free-education__panel">
+        <text class="free-education__note">第 {{freeStep.step}} 题，共 {{freeStep.total}} 题</text>
+        <progress percent="{{100 * freeStep.step / freeStep.total}}" activeColor="#476f47" backgroundColor="#e1eadd" stroke-width="5" />
+        <text class="free-education__heading">{{freeStep.question.prompt}}</text>
+        <text wx:if="{{freeStep.question.answer_type === 'MULTI_CHOICE'}}" class="free-education__note">最多选择 {{freeStep.question.max_selections}} 项</text>
+        <button wx:for="{{freeStep.options}}" wx:key="value" data-value="{{item.value}}" disabled="{{freeBusy}}"
+          aria-label="{{item.label}}{{item.selected ? '，已选择' : ''}}" bindtap="selectFreeAnswer"
+          class="free-education__option {{item.selected ? 'free-education__option--selected' : ''}}">{{item.label}}</button>
+        <view class="free-education__controls">
+          <button class="free-education__outline" disabled="{{freeBusy}}" bindtap="backFreeQuestion">返回</button>
+          <button wx:if="{{!freeStep.question.required}}" class="free-education__outline" data-skip="yes" disabled="{{freeBusy}}" bindtap="nextFreeQuestion">跳过</button>
+          <button class="free-education__continue" disabled="{{freeBusy || !freeStep.canContinue}}" loading="{{freeBusy}}" bindtap="nextFreeQuestion">{{freeStep.step === freeStep.total ? '查看成长快照' : '下一题'}}</button>
+        </view>
+      </view>
+      <text wx:if="{{freeError}}" role="alert" class="free-education__note">{{freeError}}</text>
+    </view>
+  </view>
+</template>

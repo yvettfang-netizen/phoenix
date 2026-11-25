@@ -2,9 +2,9 @@ import assert from 'node:assert/strict'
 import { spawn, spawnSync } from 'node:child_process'
 import { generateKeyPairSync, randomBytes, randomUUID, sign } from 'node:crypto'
 import { once } from 'node:events'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { connect, createServer } from 'node:net'
+import { connect } from 'node:net'
 import path from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import { createCluster, id, protect } from './v0038/cluster.mjs'
@@ -197,32 +197,21 @@ async function get(runtime, route, expected, { token, headers, method } = {}) {
 }
 
 async function closeLegacyConnection(legacy) {
-  const password = /^POSTGRES_PASSWORD=([a-f0-9]{64})$/m.exec(
-    readFileSync(path.join(legacy.work, 'postgres.env'), 'utf8'))?.[1]
-  assert(password)
-  const databaseUrl = `postgresql://phoenix_bootstrap:${password}@127.0.0.1:${legacy.port}/phoenix_canonical_dev`
-  const portHolder = createServer()
-  portHolder.listen(0, '127.0.0.1')
-  await once(portHolder, 'listening')
-  const port = portHolder.address().port
-  await new Promise(resolve => portHolder.close(resolve))
-  const legacyEnv = { ...childEnv, NODE_ENV: 'test', LISTEN_HOST: '127.0.0.1', PORT: String(port),
-    DATABASE_URL: databaseUrl }
-  const migration = run('scripts/migrate.js', legacyEnv)
-  assert.equal(migration.status, 0, 'Legacy synthetic SQL must initialize')
-  const runtime = await start(legacyEnv)
-  try {
-    assert.deepEqual((await get(runtime, '/health', 200))[0], { ok: true })
-    assert.equal(legacy.sql("SELECT count(*) FROM public.products WHERE code='EDUCATION_GROWTH_DISCOVERY_SINGLE_V1'"), '1')
-  } finally {
-    await runtime.stop()
-  }
+  const databaseUrl = `postgresql://retired_fixture@127.0.0.1:${legacy.port}/phoenix_canonical_dev`
+  const socket = connect({ host: '127.0.0.1', port: legacy.port })
+  try { await once(socket, 'connect') }
+  finally { socket.destroy() }
+  const result = run('dist/index.js', { ...childEnv, NODE_ENV: 'test', DATABASE_URL: databaseUrl })
+  assert.equal(result.status, 1)
+  assert.match(result.stderr, /LEGACY_EDUCATION_DATABASE_RETIRED/)
+  assert.doesNotMatch(result.stdout, /listening on port/)
+  assert.equal(legacy.sql("SELECT count(*) FROM pg_tables WHERE schemaname='public' AND tablename='products'"), '0')
   legacy.call(['stop', legacy.container])
   assert.equal(legacy.call(['inspect','--format','{{.State.Running}}',legacy.container]), 'false')
   const client = connect({ host: '127.0.0.1', port: legacy.port })
   try { await assert.rejects(once(client, 'connect'), { code: 'ECONNREFUSED' }) }
   finally { client.destroy() }
-  console.log('PASS old public.products readiness reproduced; owned legacy PostgreSQL stopped and TCP refused')
+  console.log('PASS retired database URL refused before listening; no legacy tables initialized; disposable endpoint stopped')
   return databaseUrl
 }
 

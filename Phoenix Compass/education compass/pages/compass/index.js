@@ -6,6 +6,7 @@ const runtime = require('../../config/runtime')
 const { PRODUCT, CONSENT_VERSION } = require('../../config/compass')
 const { dateLabel } = require('../../utils/date')
 const educationNavigation = require('../../utils/education-compass-navigation')
+const { previewAvailable, freeAssessmentControls } = require('../../services/free-education-assessment')
 const currentStudent = require('../../utils/current-student')
 
 const GUARDIAN_COPY = '我已了解本测评用于形成教育成长快照与下一步支持建议。我确认有权为该家庭／未成年学生管理必要资料，并同意系统按隐私说明保存版本化问卷与结果。我可以撤回非必要授权；撤回不会被解释为学生能力或意愿不足。'
@@ -42,7 +43,9 @@ function recordView(record) {
 }
 
 Page({
+  ...freeAssessmentControls,
   data: {
+    freeMode: false, freeRole: null, freeStep: null, freeSnapshot: null, freeBusy: false, freeError: '',
     isV05: !runtime.isDemo(), level: 1,
     uiScreen: runtime.isDemo() ? UI_SCREENS.LEGACY : UI_SCREENS.FREE,
     student: null, family: null, reports: [], state: null, loading: true, creating: false, error: '',
@@ -56,6 +59,11 @@ Page({
   },
 
   onLoad(options) {
+    if (options?.mode === 'free-assessment' && previewAvailable()) {
+      this.freeClosed = false
+      this.setData({ freeMode: true })
+      return
+    }
     this.options = options || {}
     this.studentId = options.studentId || ''
     this.sourceAssessmentId = options.sourceAssessmentId || ''
@@ -67,7 +75,12 @@ Page({
     this.setData({ level, mode: this.mode, uiScreen: runtime.isDemo() ? UI_SCREENS.LEGACY : (level === 2 ? UI_SCREENS.GROWTH : UI_SCREENS.FREE) })
   },
 
+  onUnload() {
+    if (this.data.freeMode) this.discardFreeAssessment()
+  },
+
   async onShow() {
+    if (this.data.freeMode) return
     const user = session.guard(['family_user'])
     if (!user) return
     this.user = user
