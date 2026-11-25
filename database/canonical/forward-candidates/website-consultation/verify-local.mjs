@@ -317,7 +317,6 @@ try {
   const lockPairSql = "SELECT crm.lock_website_consultation_duplicate_pair($1,$2,$3,'DISPATCHER') AS allowed";
   assert.equal((await db.query(lockPairSql, [dispatcher, newLead, lead])).rows[0].allowed, true);
   await assert.rejects(staff.query(lockPairSql, [dispatcher, lead, newLead]), /permission denied/);
-  const candidateId = "019347ec-7740-7000-a000-000000000091";
   const duplicatePost = (operation, token, body) => staffHttp(new Request(queueUrl + "/duplicates/" + operation, {
     method: "POST",
     headers: { authorization: "Bearer " + token, origin: staffOrigin, "content-type": "application/json" },
@@ -325,14 +324,21 @@ try {
   }));
   assert.equal((await duplicatePost("propose", "synthetic-staff", { firstLeadId: lead, secondLeadId: newLead })).status, 404);
   assert.equal((await duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: lead, secondLeadId: newLead, actor: employee })).status, 400);
+  const proposals = await Promise.all([
+    duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: lead, secondLeadId: newLead }),
+    duplicatePost("propose", "synthetic-dispatcher", { firstLeadId: newLead, secondLeadId: lead }),
+  ]);
+  for (const response of proposals) assert.equal(response.status, 200);
+  const [{ candidateId }, reversedProposal] = await Promise.all(proposals.map(response => response.json()));
+  assert.ok(candidateId);
+  assert.deepEqual(reversedProposal, { candidateId });
   const proposalEvent = "019347ec-7740-7000-a000-000000000092";
   const propose = async (who, first, second) => (await staff.query(
     "SELECT crm.propose_website_consultation_duplicate($1,$2,$3,$4,$5,$6,$7) AS candidate",
     [issuer, who, first, second, candidateId, proposalEvent, "a".repeat(64)],
   )).rows[0].candidate;
   assert.equal(await propose(subject, lead, newLead), null);
-  assert.equal(await propose("synthetic-dispatcher", lead, newLead), candidateId);
-  assert.equal(await propose("synthetic-dispatcher", newLead, lead), candidateId);
+  assert.equal(await propose("synthetic-dispatcher", lead, newLead), null, "different evidence must not reuse this pending proposal");
   const duplicateItems = async token => {
     const response = await staffHttp(new Request(queueUrl + "/duplicates", {
       headers: { authorization: "Bearer " + token },
@@ -353,7 +359,8 @@ try {
     (principal_id,organization_id,service_domain,grant_kind,valid_until)
     VALUES($1,$2,'EDUCATION','DISPATCHER',clock_timestamp()+interval '1 hour')`, [employee, serviceOrg]);
   assert.deepEqual((await db.query(
-    "SELECT actor_principal_id,event_kind FROM crm.lead_events WHERE lead_event_id=$1", [proposalEvent],
+    "SELECT actor_principal_id,event_kind FROM crm.lead_events WHERE lead_id=$1 AND event_kind='DEDUP_CANDIDATE'",
+    [[lead, newLead].sort()[0]],
   )).rows, [{ actor_principal_id: dispatcher, event_kind: "DEDUP_CANDIDATE" }]);
   assert.equal(await duplicateScope(lead, lead), false);
   await assert.rejects(staff.query(pairScopeSql, [dispatcher, lead, newLead]), /permission denied/);
