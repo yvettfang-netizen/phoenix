@@ -33,7 +33,7 @@ test('broker strict selected profile verifies internal subject-only assertions a
     ['signature', jwt({}, {}, second)], ['issuer', jwt({ iss: 'https://other.invalid' })],
     ['audience', jwt({ aud: 'other' })], ['audience-array', jwt({ aud: [profile.audience] })],
     ['expired', jwt({ exp: now - 1 })], ['future-iat', jwt({ iat: now + 5 })], ['future-nbf', jwt({ nbf: now + 5 })],
-    ['overlong-lifetime', jwt({ exp: now + 301 })], ['missing-claim', jwt({ nbf: undefined })],
+    ['overlong-lifetime', jwt({ iat: now, nbf: now, exp: now + 301 })], ['missing-claim', jwt({ nbf: undefined })],
     ['fractional-time', jwt({ iat: now - 0.5 })], ['negative-lifetime', jwt({ exp: now - 5, iat: now })],
     ['family-claim', jwt({ application_family_id: 'fam_' + 'b'.repeat(32) })], ['role-claim', jwt({ role: 'admin' })],
     ['PII-claim', jwt({ openid: 'synthetic-not-real' })], ['wrong-subject-shape', jwt({ sub: 'openid_synthetic' })],
