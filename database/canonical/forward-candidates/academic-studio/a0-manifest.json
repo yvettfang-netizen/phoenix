@@ -1,0 +1,23 @@
+{
+  "status": "DRAFT UNNUMBERED FORWARD CANDIDATE - DO NOT INSTALL OR MERGE",
+  "candidate": "ACADEMIC_A0_UNNUMBERED",
+  "original_source_pr": 89,
+  "original_source_sha": "a17fc176f27c1f3cdbf2ba434b8fbe2187d3ce13",
+  "scope": "One existing learning.can_read_sensitive function; current family membership on guardian-to-child LEARNING read; no schema objects",
+  "formal_base": {
+    "migrations": 37,
+    "last": "0037_scoped_public_id_projection_read_audit.sql"
+  },
+  "file": "a0-live-family-access.sql",
+  "sha256": "3d550391fc1d8f22141aecd264de0bb7aca5392b30d18b69c112f18774aca3c7",
+  "rollback_file": "a0-live-family-access-rollback.sql",
+  "rollback_sha256": "1ce21afa3c7f3aca532180c3af979709983f4b3356f117a294aa703d0d8a7119",
+  "added_tables": 0,
+  "added_columns": 0,
+  "added_indexes": 0,
+  "added_policies": 0,
+  "added_roles": 0,
+  "added_schemas": 0,
+  "data_migration": false,
+  "activation": "Founder second approval required; no shared database install, no production action."
+}
