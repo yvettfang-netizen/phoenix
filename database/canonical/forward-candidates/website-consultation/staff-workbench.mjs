@@ -110,24 +110,25 @@ function runWorkbench() {
           email.textContent = result.email;
           button.textContent = "隐藏邮箱";
         }));
-        if (!item.assigneeId && item.status === "NEW") {
+        if (item.status === "NEW" && (!item.assigneeId || item.nextDueAt)) {
+          const reassign = Boolean(item.assigneeId);
           const label = element("label", "顾问");
           const adviser = element("select");
           adviser.setAttribute("aria-label", "顾问");
           adviser.append(new Option("请选择顾问", ""));
           label.append(adviser);
-          controls.append(action("加载可分配顾问", async button => {
+          controls.append(action(reassign ? "加载接手顾问" : "加载可分配顾问", async button => {
             const { items: people } = await request(path + "/assignees");
             if (!people.length) {
               notice.textContent = "当前暂无可分配的顾问。";
               return;
             }
             for (const { id, name } of people) adviser.append(new Option(name, id));
-            button.replaceWith(label, action("分配", async () => {
+            button.replaceWith(label, action(reassign ? "重新分派" : "分配", async () => {
               if (!adviser.value) throw new Error("请选择顾问。");
-              await request(path + "/assign", { assigneeId: adviser.value });
+              await request(path + (reassign ? "/reassign" : "/assign"), { assigneeId: adviser.value });
               await loadQueue();
-              notice.textContent = "已分配跟进。";
+              notice.textContent = reassign ? "已重新分派跟进。" : "已分配跟进。";
             }));
           }));
         }

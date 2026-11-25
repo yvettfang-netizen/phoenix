@@ -374,7 +374,14 @@ BEGIN
     JOIN auth.principals target ON target.principal_id=eligible.principal_id
       AND target.principal_kind='ADVISOR' AND target.status='ACTIVE'
     JOIN core.people person ON person.person_id=target.person_id
-    WHERE lead.lead_id=p_lead AND lead.lead_status='NEW' AND lead.assigned_principal_id IS NULL
+    WHERE lead.lead_id=p_lead AND lead.lead_status='NEW'
+      AND target.principal_id IS DISTINCT FROM lead.assigned_principal_id
+      AND (lead.assigned_principal_id IS NULL OR EXISTS (
+        SELECT 1 FROM crm.follow_ups f JOIN crm.lead_events e ON e.lead_event_id=f.follow_up_id
+        WHERE f.lead_id=p_lead AND f.assigned_principal_id=lead.assigned_principal_id
+          AND f.status='PENDING' AND e.lead_id=p_lead
+          AND e.reason_code='WEBSITE_CONSULTATION_ASSIGNED'
+      ))
       AND intake.contact_envelope IS NOT NULL AND intake.contact_expires_at>clock_timestamp()
       AND lead.contact_person_id IS NULL AND lead.family_id IS NULL
       AND dispatched.revoked_at IS NULL AND eligible.revoked_at IS NULL

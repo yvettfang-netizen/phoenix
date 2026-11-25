@@ -387,6 +387,8 @@ try {
   await db.query(`INSERT INTO crm.website_consultation_staff_grants
     (principal_id,organization_id,service_domain,grant_kind,valid_until)
     VALUES ($1,$2,'EDUCATION','ADVISER',clock_timestamp()+interval '1 hour')`, [dispatcher, serviceOrg]);
+  assert.deepEqual((await assignees("synthetic-dispatcher")).items.map(item => item.id), [dispatcher]);
+  assert.deepEqual(await assignees("synthetic-staff"), { items: [] });
   assert.equal((await post("reassign", "synthetic-staff", { assigneeId: dispatcher })).status, 404);
   assert.deepEqual(await (await post("reassign", "synthetic-dispatcher", { assigneeId: dispatcher })).json(), assignedBody);
   assert.equal((await post("contact", "synthetic-staff")).status, 404);
