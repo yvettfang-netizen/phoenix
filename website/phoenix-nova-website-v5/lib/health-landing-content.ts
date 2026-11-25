@@ -23,8 +23,8 @@ export const healthBrandOrigin = {
   eyebrow: ["品牌缘起 · 深圳2026", "APEC 2026 SHENZHEN · BRAND ORIGIN"] as HealthCopy,
   title: ["以深圳为起点，连接世界与中国医疗资源。", "Shenzhen, Your Gateway to Healthcare in China."] as HealthCopy,
   body: [
-    "2026年APEC经济领导人会议的举办城市为深圳，会议日期为2026年11月18日至19日。Phoenix Nova™ 以这座面向世界的城市为起点，独立启动深圳 Global Health 首发计划，面向海外国际人士及海外华人华侨，提供非临床医疗资源导航、信息核验与协调支持。",
-    "The 2026 APEC Economic Leaders’ Meeting is scheduled for Shenzhen on 18–19 November 2026. Phoenix Nova™ is independently launching its Shenzhen Global Health initiative from this international city for overseas international residents and overseas Chinese, offering non-clinical healthcare resource navigation, information verification and coordination support.",
+    "2026年APEC经济领导人会议定于11月18日至19日在深圳举行。Phoenix Nova™ 独立筹备的深圳 Global Health 首发计划拟于会后开始，面向海外华人华侨及其他国际人士。计划内容包括非临床医疗资源导航、信息核验与协调支持。具体机构、服务范围及可用性仍待逐项核实。",
+    "The 2026 APEC Economic Leaders’ Meeting is scheduled for Shenzhen on 18–19 November 2026. Phoenix Nova™ plans to start its independent Shenzhen Global Health initiative after the meeting. The plan covers non-clinical healthcare resource navigation, information verification and coordination for people overseas, including overseas Chinese communities. Specific providers, service scope and availability are still to be verified individually.",
   ] as HealthCopy,
   boundary: [
     "Phoenix Nova™ 与APEC会议官方组织、授权、指定医疗服务或赞助无关。此页面不构成医院合作、接诊、预约、治疗或结果保证。",
