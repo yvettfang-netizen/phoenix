@@ -11,13 +11,15 @@ import { readStaffConsultationEmail } from "./staff-contact.mjs";
 import { createWebsiteConsultationGateway } from "./gateway.mjs";
 import { listenConsultationLoopback } from "./loopback-http.mjs";
 import { verifyBrowserConsultation } from "./verify-browser-form.mjs";
+import { verifyNativeCompass } from "./verify-native-compass.mjs";
 import { verifyStaffViews } from "./verify-staff-views.mjs";
 import { handleWebsiteConsultation } from "../../../../website/phoenix-nova-website-v5/lib/website-consultation-intake.ts";
 
 if (process.argv[2] !== "--synthetic-loopback" || !process.argv[3]) throw new Error("A disposable runtime directory is required");
 const loadRuntime = createRequire(resolve(process.argv[3], "harness.cjs"));
 const { Client, Pool } = loadRuntime("pg");
-const port = 55487;
+const port = Number(process.env.CRM_FIXTURE_POSTGRES_PORT ?? 55487);
+if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("Invalid disposable fixture port");
 const database = "phoenix_website_intake_fixture";
 const host = "127.0.0.1";
 const bootstrap = "phoenix_bootstrap";
@@ -1138,74 +1140,12 @@ try {
     [educationLead])).rows[0].n, 2);
   assert.equal((await db.query("SELECT count(*)::int AS n FROM crm.clients WHERE family_id=$1", [otherFamily])).rows[0].n, 1);
   console.log("PASS Education to Identity touch leaves first source intact; verified family and distinct needs");
-  if (process.env.CRM_FIXTURE_EDUCATION_CANDIDATE) {
-    const sourceSql = (await readFile(process.env.CRM_FIXTURE_EDUCATION_CANDIDATE, "utf8")).replaceAll("\r\n", "\n");
-    assert.equal(createHash("sha256").update(sourceSql).digest("hex"), "c02cd90ea37d800571772d54ac50bfb7597c919fc675c0ed3fe93b1d8e7692f6");
-    await db.query("SET phoenix.education_compass_candidate='isolated'");
-    await db.query(sourceSql);
-    await db.query(await readFile(new URL("./education-native-publisher.sql", import.meta.url), "utf8"));
-    await db.query("GRANT phoenix_education_compass_app TO website_fixture_crm_service WITH INHERIT TRUE, SET FALSE");
-    await db.query("GRANT phoenix_education_crm_reference_publisher TO website_fixture_crm_service WITH INHERIT TRUE, SET FALSE");
-
-    const student = fixtureId(160), guardianGrant = fixtureId(161), shareGrant = fixtureId(162);
-    const nativeId = fixtureId(163), completedEvent = fixtureId(164);
-    await db.query("INSERT INTO core.people(person_id,display_name) VALUES($1,'Synthetic candidate student')", [student]);
-    await db.query("INSERT INTO core.student_profiles(person_id) VALUES($1)", [student]);
-    await db.query("INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from) VALUES($1,$2,$3,'MEMBER',clock_timestamp())", [fixtureId(165), otherFamily, student]);
-    await db.query(`INSERT INTO core.guardian_authorities(authority_id,family_id,guardian_person_id,subject_person_id,
-      evidence_level,scope,valid_from,valid_until) VALUES($1,$2,$3,$4,'VERIFIED','EDUCATION',
-      clock_timestamp()-interval '1 minute',clock_timestamp()+interval '1 hour')`, [fixtureId(166), otherFamily, actor, student]);
-    await bindFamily(otherFamily);
-    const call = async (query, values) => (await crmService.query(query, values)).rows[0].outcome;
-    const publish = (event, lead = educationLead, ref = nativeId, contract = publisherContracts.education) =>
-      call("SELECT crm.publish_education_compass_completion($1,$2,$3,$4) AS outcome", [event, lead, contract, ref]);
-    const readReference = event => crmService.query("SELECT * FROM crm.read_compass_event($1)", [event]);
-    assert.equal(await publish(completedEvent), null);
-    assert.equal(await call(`SELECT education_compass.record_purpose($1,$2,'CORE_ASSESSMENT',
-      'guardian_core_assessment_v1.0.0-rc1','334a1e8e455dfef386fcaf491acea3dac23b13c4ece010cfad66d1087f6a84a5',
-      $3,clock_timestamp()+interval '30 minutes') AS outcome`, [guardianGrant, student, randomUUID()]), "RECORDED");
-    assert.equal(await call("SELECT education_compass.open_draft($1,$2,'LEVEL_1',NULL,NULL,$3,NULL) AS outcome",
-      [nativeId, student, guardianGrant]), "OPENED");
-    assert.equal(await publish(completedEvent), null);
-    // Use the native assessment write API. The probe never passes these answers to CRM.
-    const answers = Object.fromEntries(Array.from({ length: 8 }, (_, i) => ["FP0" + (i + 1), "synthetic"]));
-    assert.equal(await call("SELECT education_compass.save_draft($1,1,$2) AS outcome", [nativeId, answers]), "SAVED");
-    assert.equal(await call("SELECT education_compass.submit($1,2,$2) AS outcome", [nativeId, randomUUID()]), "SUBMITTED");
-    assert.equal(await publish(completedEvent), null, "assessment consent alone must not authorize CRM sharing");
-    const grantShare = grantId => db.query(`INSERT INTO consent.grants(consent_id,family_id,grantor_person_id,grantee_person_id,subject_person_id,
-      purpose,data_class,status,granted_at,expires_at)
-      VALUES($1,$2,$3,$3,$4,'EDUCATION_COMPASS_CRM_REFERENCE','EDUCATION','ACTIVE',clock_timestamp(),clock_timestamp()+interval '1 hour')`,
-      [grantId, otherFamily, actor, student]);
-    await grantShare(shareGrant);
-    assert.equal(await publish(completedEvent, educationLead, fixtureId(167)), null);
-    assert.equal(await publish(completedEvent, educationLead, nativeId, publisherContracts.identity), null);
-    await assert.rejects(crmService.query("SELECT answers FROM education_compass.assessment"), { code: "42501" });
-    await db.query("REVOKE phoenix_education_crm_reference_publisher FROM website_fixture_crm_service");
-    const genericWrite = await crmService.query("SELECT crm.record_compass_event($1,$2,$3,$4,'EDUCATION',$5) AS event",
-      [completedEvent, educationLead, student, publisherContracts.education, nativeId]);
-    assert.equal(genericWrite.rows[0].event, null);
-    await db.query("GRANT phoenix_education_crm_reference_publisher TO website_fixture_crm_service WITH INHERIT TRUE, SET FALSE");
-    assert.equal(await publish(completedEvent), completedEvent);
-    assert.equal(await publish(fixtureId(168)), completedEvent);
-    assert.deepEqual((await readReference(completedEvent)).rows, [{ lead_id: educationLead, service_domain: "EDUCATION",
-      assessment_id: nativeId, source_system: "phoenix-nova-compass-education" }]);
-    assert.equal(await publish(fixtureId(169), cancelLead), null, "same native ID cannot attach to a different verified lead");
-    await bindFamily(mismatchFamily);
-    assert.equal((await readReference(completedEvent)).rowCount, 0);
-    await bindFamily(otherFamily);
-    assert.equal(await call("SELECT consent.withdraw_grant($1) AS outcome", [shareGrant]), true);
-    assert.equal((await readReference(completedEvent)).rowCount, 0);
-    assert.equal(await publish(completedEvent), null);
-    await grantShare(fixtureId(176));
-    assert.equal((await readReference(completedEvent)).rowCount, 1);
-    assert.equal(await call("SELECT education_compass.withdraw_purpose($1) AS outcome", [guardianGrant]), "WITHDRAWN");
-    assert.equal((await readReference(completedEvent)).rowCount, 0);
-    assert.equal(await publish(completedEvent), null);
-    await crmService.query("SELECT auth.clear_context()");
-    console.log("PASS native #74 Education submission publishes only an authorized reference, replays idempotently and fails closed on withdrawal");
-  } else {
-    console.log("NOT RUN native Education publisher: pinned #74 source not supplied");
-  }
+  await verifyNativeCompass({
+    db, crmService, staff, Pool, connection: { host, port, database },
+    sourceFile: process.env.CRM_FIXTURE_EDUCATION_CANDIDATE,
+    bindFamily, actor, familyPrincipal, otherFamily, mismatchFamily, principal,
+    reviewerPrincipal, educationLead, cancelLead, publisherContracts, fixtureId, hash,
+  });
   const listeners = [];
   function requestLocal(listener, hostHeader, path, method = "GET", body, headers = {}) {
     return new Promise((resolve, reject) => {

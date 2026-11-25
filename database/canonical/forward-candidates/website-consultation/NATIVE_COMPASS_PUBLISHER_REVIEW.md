@@ -1,5 +1,7 @@
 # Native Compass publisher review
 
+Phase 1 baseline. See [Phase 2](NATIVE_COMPASS_PHASE_2.md) for the current optional authority, scoped consent and publisher implementation.
+
 Scope is the existing Draft PR #116. The optional Education publisher is an isolated candidate. No native assessment is shareable when only the base CRM candidate is loaded.
 
 | Product | Actual completion evidence and native IDs | Subject, family, authorization and publisher decision |
