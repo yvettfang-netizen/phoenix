@@ -302,6 +302,13 @@ try {
     headers: { authorization: "Bearer " + token, origin: staffOrigin, "content-type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
   }));
+  const otherFamily = "019347ec-7740-7000-a000-000000000039";
+  await db.query("INSERT INTO core.families(family_id,display_name) VALUES($1,'Synthetic unrelated family')", [otherFamily]);
+  const setLeadFamily = family => db.query("UPDATE crm.leads SET family_id=$2 WHERE lead_id=$1", [newLead, family]);
+  await setLeadFamily(otherFamily);
+  assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
+  assert.equal((await post("assign", "synthetic-dispatcher", { assigneeId: employee })).status, 404);
+  await setLeadFamily(null);
   assert.equal((await post("assign", "synthetic-staff", { assigneeId: employee })).status, 404);
   await db.query("UPDATE crm.website_consultation_staff_grants SET organization_id=$2 WHERE principal_id=$1", [dispatcher, otherOrg]);
   assert.deepEqual(await assignees("synthetic-dispatcher"), { items: [] });
@@ -355,6 +362,13 @@ try {
   assert.equal((await db.query("SELECT status FROM crm.follow_ups WHERE follow_up_id=$1", [assignedBody.taskId])).rows[0].status, "PENDING");
   await db.query("UPDATE auth.principals SET status='ACTIVE' WHERE principal_id=$1", [employee]);
   console.log("PASS disabled employee loses queue, contact and completion access with the original credential");
+  await setLeadFamily(otherFamily);
+  assert.equal((await queue()).rows.some(item => item.lead_id === newLead), false);
+  assert.equal((await post("contact", "synthetic-staff")).status, 404);
+  assert.equal((await post("complete", "synthetic-staff")).status, 404);
+  assert.equal((await db.query("SELECT status FROM crm.follow_ups WHERE follow_up_id=$1", [assignedBody.taskId])).rows[0].status, "PENDING");
+  await setLeadFamily(null);
+  console.log("PASS family-linked lead is excluded from intake queue, assignment, contact and completion");
   assert.deepEqual(await (await post("complete", "synthetic-staff")).json(), assignedBody);
   assert.deepEqual(await (await post("complete", "synthetic-staff")).json(), assignedBody);
   const history = await db.query(`
