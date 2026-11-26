@@ -56,6 +56,7 @@ export function AboutTrustSections({ locale, wealthHref, principles }: { locale:
       <dl className={styles.company}>
         <div><dt>{t("品牌", "Brand")}</dt><dd>Phoenix Nova™｜凤启环球</dd></div>
         <div><dt>{t("公司主体", "Registered company name")}</dt><dd lang="zh-Hans">凤启环球信息科技（深圳）有限公司</dd></div>
+        <div style={{ gridColumn: "1 / -1" }}><dt>{t("服务网络", "Our presence")}</dt><dd>{t("香港总部 · 深圳运营 · 北京代表处 · 潮州代表处", "Hong Kong Headquarters · Shenzhen Operations · Beijing Representative Office · Chaozhou Representative Office")}</dd></div>
         <div><dt>{t("定位", "Positioning")}</dt><dd>Global Family Growth Platform</dd></div>
         <div><dt>{t("核心领域", "Professional domains")}</dt><dd>{t("教育｜身份｜健康｜财富", "Education · Identity · Health · Wealth")}</dd></div>
       </dl>
