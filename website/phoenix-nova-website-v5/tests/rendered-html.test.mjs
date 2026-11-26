@@ -47,7 +47,7 @@ test("connects Digital Phoenix to the approved immortal-guardian world", async (
 });
 
 test("renders every bilingual candidate destination", async () => {
-  const pages = ["compass", "lighthouse", "services", "insights", "oriental", "about", "family-center", "admissions", "application"];
+  const pages = ["compass", "lighthouse", "services", "insights", "oriental", "about", "contact", "family-center", "admissions", "application"];
   for (const locale of ["zh", "en"]) {
     for (const page of pages) {
       const response = await get(`/${locale}/${page}`);
