@@ -47,7 +47,7 @@ test("connects Digital Phoenix to the approved immortal-guardian world", async (
 });
 
 test("renders every bilingual candidate destination", async () => {
-  const pages = ["compass", "lighthouse", "services", "insights", "oriental", "about", "family-center", "admissions", "application"];
+  const pages = ["compass", "lighthouse", "services", "insights", "oriental", "about", "contact", "family-center", "admissions", "application"];
   for (const locale of ["zh", "en"]) {
     for (const page of pages) {
       const response = await get(`/${locale}/${page}`);
@@ -91,4 +91,29 @@ test("keeps the serial novel inside Insights", async () => {
   const home = await get("/zh");
   assert.match(await insights.text(), /《维港之上》/);
   assert.match(await home.text(), /凤启洞察/);
+});
+
+test("separates About and Contact with bilingual routes and verified contact details", async () => {
+  for (const locale of ["zh", "en"]) {
+    const aboutResponse = await get(`/${locale}/about`);
+    const contactResponse = await get(`/${locale}/contact`);
+    assert.equal(aboutResponse.status, 200);
+    assert.equal(contactResponse.status, 200);
+    const about = await aboutResponse.text();
+    const contact = await contactResponse.text();
+    assert.match(about, new RegExp(`/${locale}/contact`));
+    assert.match(contact, /nova@phoenixnova\.com\.cn/);
+    assert.match(contact, /mailto:nova@phoenixnova\.com\.cn/);
+    assert.match(contact, /2201/);
+    assert.match(contact, /智富家办/);
+    assert.doesNotMatch(about, /深圳办公地址/);
+    assert.doesNotMatch(contact, /<form\b/i);
+    if (locale === "zh") {
+      for (const label of ["香港总部", "深圳运营", "北京代表处", "潮州代表处"]) assert.match(contact, new RegExp(label));
+      assert.match(contact, /联系我们/);
+    } else {
+      for (const label of ["Hong Kong Headquarters", "Shenzhen Operations", "Beijing Representative Office", "Chaozhou Representative Office"]) assert.ok(contact.includes(label), label);
+      assert.match(contact, /Contact Us/);
+    }
+  }
 });

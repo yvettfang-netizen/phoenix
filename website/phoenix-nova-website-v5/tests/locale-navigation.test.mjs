@@ -7,7 +7,7 @@ const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind
 const { localizedHref, resolveLocaleSwitch, getCurrentLocale, getDocumentLocale } = await import(`data:text/javascript;base64,${Buffer.from(js).toString("base64")}`);
 
 test("locale links preserve business paths, explicit locales, queries and fragments", () => {
-  for (const page of ["", "/education", "/identity", "/health", "/account"]) {
+  for (const page of ["", "/education", "/identity", "/health", "/account", "/about", "/contact"]) {
     assert.equal(localizedHref("en", `/zh${page}`), `/en${page}`);
     assert.equal(localizedHref("zh", `/en${page}`), `/zh${page}`);
   }

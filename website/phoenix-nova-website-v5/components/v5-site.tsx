@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { AboutTrustSections } from "./about-trust";
+import { AboutTrustSections, ContactSections } from "./about-trust";
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
 import { AdmissionsContent, AdmissionsShortcut, ApplicationIntake, FamilyHub } from "./customer-center";
@@ -20,6 +20,7 @@ export const pageIds = [
   "insights",
   "oriental",
   "about",
+  "contact",
   "family-center",
   "admissions",
   "application",
@@ -40,6 +41,7 @@ const routeLabels = {
   insights: ["资讯洞察", "Insights"],
   oriental: ["凤启东方", "Phoenix Oriental"],
   about: ["关于我们", "About Us"],
+  contact: ["联系我们", "Contact Us"],
   "family-center": ["凤启家序", "Family OS"],
   admissions: ["升学申请", "Admissions"],
   application: ["申请登记", "Application intake"],
@@ -52,6 +54,7 @@ export const routeMetadata = {
   insights: { zh: "凤启洞察", en: "Phoenix Insights" },
   oriental: { zh: "凤启东方", en: "Phoenix Oriental" },
   about: { zh: "关于凤启", en: "About Phoenix Nova" },
+  contact: { zh: "联系我们", en: "Contact Phoenix Nova" },
   "family-center": { zh: "凤启家序", en: "Family OS" },
   admissions: { zh: "本科、硕士与博士升学申请", en: "Undergraduate, Master’s & Doctoral Admissions" },
   application: { zh: "升学申请登记预览", en: "Admissions Intake Preview" },
@@ -599,6 +602,13 @@ function AboutPage({ locale }: { locale: Locale }) {
   </>;
 }
 
+function ContactPage({ locale }: { locale: Locale }) {
+  return <>
+    <PageHero locale={locale} page="contact" eyebrow="CONTACT PHOENIX NOVA™" title={pick(locale, "每一次连接，\n都是新的开始。", "Every connection\nbegins a new chapter.")} lead={pick(locale, "无论是家庭规划、升学咨询还是专业合作，欢迎与凤启环球联系。", "For family planning, education enquiries or professional collaboration, we welcome your message.")} />
+    <ContactSections locale={locale} wealthHref={`${WEALTH_ORIGIN}/${locale}`} />
+  </>;
+}
+
 function FamilyCenterPage({ locale }: { locale: Locale }) {
   return (
     <div className="center-page"><SiteHeader locale={locale} page="family-center"/><FamilyHub locale={locale}/></div>
@@ -613,6 +623,7 @@ export function V5Site({ locale, page }: { locale: Locale; page: PageId }) {
     : page === "insights" ? <InsightsPage locale={locale} />
     : page === "oriental" ? <OrientalPage locale={locale} />
     : page === "about" ? <AboutPage locale={locale} />
+    : page === "contact" ? <ContactPage locale={locale} />
     : page === "admissions" ? <div className="center-page"><SiteHeader locale={locale} page={page}/><AdmissionsContent locale={locale}/></div>
     : page === "application" ? <div className="center-page"><SiteHeader locale={locale} page={page}/><ApplicationIntake locale={locale}/></div>
     : <FamilyCenterPage locale={locale} />;

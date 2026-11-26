@@ -30,10 +30,10 @@ export const directoryGroups: readonly { title: Label; items: readonly Directory
     { label: ["全球家庭成长", "Global family growth"], path: "" },
   ] },
   { title: ["关于凤启", "About Phoenix Nova"], items: [
-    { label: ["品牌介绍", "Our brand"], path: "/about" },
+    { label: ["关于我们", "About us"], path: "/about" },
     { label: ["企业文化", "Our principles"], path: "/about" },
     { label: ["全球合作", "Global collaboration"] },
-    { label: ["联系我们", "Contact us"], path: "/identity#consultation", status: ["咨询准备演示", "Preparation demo"] },
+    { label: ["联系我们", "Contact us"], path: "/contact" },
   ] },
 ];
 export const directoryText = (label: Label, locale: Locale) => label[locale === "zh" ? 0 : 1];

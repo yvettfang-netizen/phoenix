@@ -66,15 +66,54 @@ export function AboutTrustSections({ locale, wealthHref, principles }: { locale:
       <ul className={styles.grid}>{ecosystem.map(([cn, en, statusCN, statusEN, detailCN, detailEN]) => <li className={styles.card} key={en}><h3>{t(cn, en)}</h3><small>{t(statusCN, statusEN)}</small><p>{t(detailCN, detailEN)}</p></li>)}</ul>
       <div className={styles.contact} id="contact">
         {heading("FOR EVERY BEGINNING.", t("每一次启程，都值得更好的未来。", "Every beginning deserves a better future."), "about-contact")}
-        <p>{t("从教育、跨境发展到健康与未来保障，我们先了解家庭真正重视的事情，再一起寻找合适的方向。", "From education and cross-border plans to health and protection, we start with what matters most to your family.")}</p>
-        <details><summary>{t("联系我们", "Contact us")}</summary><p>{t("请选择领域查看咨询准备方式。当前入口不会发送咨询。", "Choose a domain to see how to prepare for a consultation. This entry does not submit an enquiry.")}</p><ul className="about-service-links">{domains.map(([id, cn, en]) => <li key={id}><Link href={href(id).split("#")[0] + "#consultation"}>{t(cn, en)}</Link></li>)}</ul></details>
-        <address style={{ fontStyle: "normal" }}>
-          <p>{t("地址：深圳市罗湖区和平路金田大厦2201-2210", "Address: Rooms 2201–2210, Jintian Building, Heping Road, Luohu District, Shenzhen")}</p>
-          <p>{t("邮箱：", "Email: ")}<a href="mailto:nova@phoenixnova.com.cn">nova@phoenixnova.com.cn</a></p>
-        </address>
-        <a href="#professional-services">{t("探索专业服务", "Explore professional services")}</a>
+        <p>{t("想了解服务方式、各地联络信息或商务合作？欢迎前往独立的联系我们页面。", "For service enquiries, regional contacts or partnerships, visit our dedicated Contact page.")}</p>
+        <Link href={`/${locale}/contact`}>{t("联系我们 →", "Contact us →")}</Link>
       </div>
     </div></section>
   </div>;
 }
 
+const contactLocations = [
+  ["HONG KONG", "香港总部", "Hong Kong Headquarters", "智富家办", "智富家办", "国际资源连接与跨境家庭服务协作。", "International resources and cross-border family service coordination."],
+  ["SHENZHEN", "深圳运营", "Shenzhen Operations", "凤启环球信息科技（深圳）有限公司", "凤启环球信息科技（深圳）有限公司", "内地业务运营、数字产品与专业服务协同。", "Mainland operations, digital products and professional service coordination."],
+  ["BEIJING", "北京代表处", "Beijing Representative Office", "区域联络与合作", "Regional liaison and collaboration", "连接北京及周边家庭需求与专业资源。", "Connecting local family needs with professional resources."],
+  ["CHAOZHOU", "潮州代表处", "Chaozhou Representative Office", "潮汕地区服务联络", "Chaoshan regional liaison", "连接潮汕家庭、在地文化与跨境发展需求。", "Connecting Chaoshan families, local heritage and cross-border needs."],
+] as const;
+
+export function ContactSections({ locale, wealthHref }: { locale: Locale; wealthHref: string }) {
+  const zh = locale === "zh";
+  const t = (cn: string, en: string) => zh ? cn : en;
+  const href = (domain: typeof domains[number][0]) => domain === "wealth" ? wealthHref : `/${locale}/${domain}`;
+  const heading = (label: string, title: string, id: string) => <header className={styles.heading}><p>{label}</p><h2 id={id}>{title}</h2></header>;
+  return <div className={styles.about}>
+    <section className={styles.section} aria-labelledby="contact-network"><div className="shell">
+      {heading("OUR PRESENCE", t("香港总部 · 深圳运营 · 北京代表处 · 潮州代表处", "Hong Kong Headquarters · Shenzhen Operations · Beijing & Chaozhou Representative Offices"), "contact-network")}
+      <p>{t("以香港为国际资源连接枢纽，通过深圳运营及北京、潮州区域联络网络，为家庭与合作伙伴提供持续沟通。", "We connect international resources through Hong Kong, supported by Shenzhen operations and regional liaison in Beijing and Chaozhou.")}</p>
+      <ul className={styles.grid}>{contactLocations.map(([city, cn, en, subtitleCN, subtitleEN, detailCN, detailEN], i) => <li className={styles.card} key={city}>
+        <small>{String(i + 1).padStart(2, "0")} / {city}</small>
+        <h3>{t(cn, en)}</h3>
+        <p><strong>{t(subtitleCN, subtitleEN)}</strong></p>
+        <p>{t(detailCN, detailEN)}</p>
+      </li>)}</ul>
+    </div></section>
+    <section className={styles.section} aria-labelledby="contact-details"><div className="shell">
+      {heading("GET IN TOUCH", t("从一次沟通，开始下一步。", "Start with a conversation."), "contact-details")}
+      <div className={styles.contact} id="contact">
+        <p>{t("统一联系邮箱", "Central contact email")}</p>
+        <a href="mailto:nova@phoenixnova.com.cn">nova@phoenixnova.com.cn</a>
+        <address style={{ fontStyle: "normal" }}>
+          <p>{t("深圳办公地址：深圳市罗湖区和平路金田大厦2201-2210", "Shenzhen office: Rooms 2201–2210, Jintian Building, Heping Road, Luohu District, Shenzhen, China")}</p>
+        </address>
+        <p>{t("香港、北京及潮州的详细地址和电话暂未在本页公布，请先通过统一邮箱联系。", "Addresses and phone numbers for Hong Kong, Beijing and Chaozhou are not published here. Please use the central email.")}</p>
+      </div>
+    </div></section>
+    <section className={styles.section} aria-labelledby="contact-services"><div className="shell">
+      {heading("SERVICE ENQUIRIES", t("选择需要了解的服务领域。", "Explore the right service area."), "contact-services")}
+      <p>{t("以下链接仅提供咨询准备信息，不会自动提交资料或预约。", "These links provide consultation preparation information only; they do not submit an enquiry or book an appointment.")}</p>
+      <ul className={styles.grid}>{domains.map(([id, cn, en]) => <li key={id} className={styles.card} data-domain={id}>
+        <h3><Link href={href(id).split("#")[0] + "#consultation"}>{t(cn, en)}</Link></h3>
+      </li>)}</ul>
+      <p><Link href={`/${locale}/about`}>{t("了解凤启环球 →", "About Phoenix Nova →")}</Link></p>
+    </div></section>
+  </div>;
+}
