@@ -195,3 +195,37 @@ test("anonymous endpoint rejects extra fields, authorization claims, invalid ver
   assert.equal(Object.values(parent.authorizations).filter(status => status === "NOT_GRANTED").length, 4);
   for (const action of Object.keys(parent.authorizations)) assert.equal(anonymousActionAllowed(action), false);
 });
+
+for (const [branch, concern] of Object.entries(BRANCHES)) {
+  test("native page controller full branch " + branch + " matches website and four cards", async () => {
+    const answers = { ...base, Q1: concern, Q4: "SUBJECT_VARIANCE", Q5: ["STEM_TECH"],
+      Q6: ["HK", "GB"], Q7: "VOLATILE_RESULTS", Q8: "UNDECIDED" };
+    const { questions } = assessmentPath(answers);
+    assert.equal(questions.length, 12);
+    for (const q of questions.slice(8)) {
+      const value = q.allowed_values[0].value;
+      answers[q.question_id] = q.answer_type === "MULTI_CHOICE" ? [value] : value;
+    }
+    const screen = { ...mini.freeAssessmentControls, data: {}, setData(fields) { Object.assign(this.data, fields); } };
+    const event = fields => ({ currentTarget: { dataset: fields } });
+    screen.startFreeAssessment(event({ role: "PARENT_GUARDIAN" }));
+    for (const [i, q] of questions.entries()) {
+      assert.equal(screen.data.freeStep.question.question_id, q.question_id);
+      assert.equal(screen.data.freeStep.step, i + 1);
+      for (const value of [].concat(answers[q.question_id])) screen.selectFreeAnswer(event({ value }));
+      await screen.nextFreeQuestion(event({}));
+    }
+    assert.equal(screen.data.freeError, "");
+    assert.deepEqual(screen.freeAnswers, answers);
+    const response = await handleFreeEducationAssessment(request(input(answers)), true);
+    assert.equal(response.status, 200);
+    assert.deepEqual(screen.data.freeSnapshot.cards, presentGrowthCards(await response.json()));
+    const findingId = screen.data.freeSnapshot.cards[0].findings[0].id;
+    screen.toggleFreeEvidence(event({ findingId }));
+    assert.equal(screen.data.freeEvidenceOpen, findingId);
+    screen.backFreeQuestion();
+    assert.equal(screen.data.freeStep.index, 0);
+    screen.discardFreeAssessment();
+    assert.equal(screen.freeAnswers, null);
+  });
+}

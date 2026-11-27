@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { REGISTRY } from "../../../Phoenix Compass/education compass/models/free-education-assessment.js";
+import { REGISTRY, BRANCHES, CARDS, VERSIONS, assessmentPath, evaluateFreeAssessment } from "../../../Phoenix Compass/education compass/models/free-education-assessment.js";
 
 const origin = process.env.EDUCATION_ORIGIN ?? "http://127.0.0.1:4402";
 const require = createRequire(import.meta.url);
@@ -68,6 +68,58 @@ try {
       console.log(`PASS anonymous Education 8+4 ${width}x${height}, four cards, memory only`);
     } finally {
       await context.close();
+    }
+  }
+  // Full paths on both viewports; keep the minimal C skip/absence regression above.
+  for (const [branch, concern] of Object.entries(BRANCHES)) {
+    const answers = { Q1: concern, Q2: "SECONDARY_FORM_3_YEAR_9", Q3: "DSE",
+      Q4: "SUBJECT_VARIANCE", Q5: ["STEM_TECH"], Q6: ["HK", "GB"],
+      Q7: "VOLATILE_RESULTS", Q8: "UNDECIDED" };
+    const { questions } = assessmentPath(answers);
+    assert.equal(questions.length, 12);
+    assert.deepEqual(questions.slice(8).map(q => q.question_id), [9, 10, 11, 12].map(n => "Q" + n + "." + branch));
+    for (const q of questions.slice(8)) {
+      const value = q.allowed_values[0].value;
+      answers[q.question_id] = q.answer_type === "MULTI_CHOICE" ? [value] : value;
+    }
+    const expected = evaluateFreeAssessment({ versions: VERSIONS, respondent_role: "PARENT_GUARDIAN", answers });
+    for (const [width, height] of [[390, 844], [1440, 960]]) {
+      const context = await browser.newContext({ viewport: { width, height }, isMobile: width === 390 });
+      try {
+        const page = await context.newPage();
+        const writes = [];
+        page.on("request", request => { if (request.method() === "POST") writes.push(request); });
+        assert.equal((await page.goto(origin + "/zh/education")).status(), 200);
+        await page.getByRole("link", { name: "开始免费初评" }).click();
+        await page.waitForURL(origin + "/zh/education/free-assessment");
+        await page.getByRole("button", { name: "以家长视角填写" }).click();
+        for (const [i, q] of questions.entries()) {
+          assert.equal(await page.getByRole("heading", { level: 1 }).innerText(), q.prompt);
+          assert.equal(Number(await page.getByRole("progressbar").getAttribute("value")), i + 1);
+          for (const value of [].concat(answers[q.question_id])) {
+            const option = q.allowed_values.find(o => o.value === value);
+            await page.getByRole("group").getByRole("button", { name: option.label, exact: true }).click();
+          }
+          if (i === questions.length - 1) {
+            const evaluation = page.waitForResponse(response => response.url() === origin + "/api/free-education-assessment");
+            await page.getByRole("button", { name: "查看成长快照" }).click();
+            const response = await evaluation;
+            assert.equal(response.status(), 200);
+            assert.match(await response.headerValue("cache-control"), /no-store/);
+            assert.deepEqual(await response.json(), expected);
+          } else await page.getByRole("button", { name: "下一题" }).click();
+        }
+        await page.getByRole("heading", { name: "成长快照" }).waitFor();
+        assert.deepEqual(await page.locator("main article h2").allTextContents(), CARDS.map(c => c.label));
+        assert.doesNotMatch((await page.locator("main article").allInnerTexts()).join("\n"), /\b(?:L[1-4]|Q\d+|EDU-R\d+)\b|learning_state_self_reported/);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        assert.deepEqual(writes.map(request => new URL(request.url()).pathname), ["/api/free-education-assessment"]);
+        assert.equal((await writes[0].allHeaders()).authorization, undefined);
+        assert.equal((await writes[0].allHeaders()).cookie, undefined);
+        await page.getByRole("button", { name: "回看并修改" }).click();
+        await page.getByRole("heading", { level: 1, name: REGISTRY[0].prompt }).waitFor();
+        console.log(`PASS full website branch ${branch} ${width}x${height}`);
+      } finally { await context.close(); }
     }
   }
 } finally {
