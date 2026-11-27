@@ -1,4 +1,6 @@
-<view class="compass-page compass-page--level-{{level}}" data-ui-screen="{{uiScreen}}">
+<import src="./free-assessment.wxml" />
+<template wx:if="{{freeMode}}" is="freeAssessment" data="{{freeRole:freeRole, freeSnapshot:freeSnapshot, freeStep:freeStep, freeBusy:freeBusy, freeError:freeError}}" />
+<view wx:else class="compass-page compass-page--level-{{level}}" data-ui-screen="{{uiScreen}}">
   <image class="compass-page__feather compass-page__feather--top" src="/assets/ui/feather-champagne.png" mode="widthFix" aria-hidden="true" />
   <image class="compass-page__feather compass-page__feather--bottom" src="/assets/ui/feather-champagne.png" mode="widthFix" aria-hidden="true" />
 

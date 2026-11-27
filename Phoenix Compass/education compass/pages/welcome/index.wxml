@@ -26,6 +26,7 @@
   </view>
 
   <view class="welcome__actions">
+    <button wx:if="{{showFreeAssessment}}" class="btn btn--gold" bindtap="openFreeAssessment">开始免费教育初评</button>
     <button class="btn btn--gold" loading="{{loading}}" bindtap="start">开始家庭成长规划</button>
     <button class="welcome__login" bindtap="start">已有档案，登录</button>
     <text class="welcome__privacy">资料仅用于已授权的家庭成长服务</text>
