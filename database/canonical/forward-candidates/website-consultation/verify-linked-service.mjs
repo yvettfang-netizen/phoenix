@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 
@@ -28,6 +29,7 @@ export async function verifyLinkedService({ db, Client, Pool, connection, fixtur
   const [customer, manager, outsider] = [306, 307, 308].map(fixtureId);
   const task = fixtureId(320);
   const milestone = fixtureId(321);
+  const feedbackText = "Synthetic feedback on the first delivery milestone";
   await db.query(`
     INSERT INTO core.people(person_id,display_name)
     VALUES($1,'Synthetic service recipient'),($2,'Synthetic project manager'),($3,'Synthetic outside family')
@@ -56,11 +58,11 @@ export async function verifyLinkedService({ db, Client, Pool, connection, fixtur
     VALUES($1,$2,$3,$4,$3,'EDUCATION_CASE','EDUCATION','ACTIVE',clock_timestamp(),clock_timestamp()+interval '1 hour')
   `, [fixtureId(313), family, customerPerson, managerPerson]);
 
-  async function scoped(login, role, principal, person, scope, channel, run) {
-    const client = new Client({ ...connection, user: login });
+  async function scoped(login, role, principal, person, scope, channel, run, observer = db) {
+    const client = new Client({ ...connection, database: observer.database, user: login });
     await client.connect();
     try {
-      const { rows: [issued] } = await db.query(`
+      const { rows: [issued] } = await observer.query(`
         SELECT auth.issue_context_ticket($1,$2,$3,$4,clock_timestamp()+interval '30 seconds',$5,$1) AS ticket
       `, [principal, person, scope, channel, randomUUID()]);
       await client.query("SET ROLE " + role);
@@ -70,9 +72,9 @@ export async function verifyLinkedService({ db, Client, Pool, connection, fixtur
       try { await client.query("SELECT auth.clear_context()"); } finally { await client.end(); }
     }
   }
-  const workbench = (principal, person, scope, channel, run) =>
-    scoped("linked_fixture_workbench", "phoenix_canonical_service_workbench", principal, person, scope, channel, run);
-  const asCustomer = run => workbench(customer, customerPerson, family, "FAMILY", run);
+  const workbench = (principal, person, scope, channel, run, observer) =>
+    scoped("linked_fixture_workbench", "phoenix_canonical_service_workbench", principal, person, scope, channel, run, observer);
+  const asCustomer = (run, observer) => workbench(customer, customerPerson, family, "FAMILY", run, observer);
   const asManager = run => workbench(manager, managerPerson, family, "ADVISOR", run);
   const asOperations = run => scoped("linked_fixture_operations", "phoenix_canonical_app", operations, null, family, "INTERNAL", run);
   const value = async (client, sql, args = []) => (await client.query(sql, args)).rows[0].value;
@@ -154,7 +156,7 @@ export async function verifyLinkedService({ db, Client, Pool, connection, fixtur
     assert.equal(complete.status, "ALLOW");
     const feedback = await command(client, "MESSAGE", {
       revision: complete.result.revision, subjectId: customerPerson,
-      body: "Synthetic feedback on the first delivery milestone", audience: "CLIENT",
+      body: feedbackText, audience: "CLIENT",
     }, 327);
     assert.equal(feedback.status, "ALLOW");
     const fresh = await summary(client);
@@ -180,21 +182,67 @@ export async function verifyLinkedService({ db, Client, Pool, connection, fixtur
   });
   assert.deepEqual(await asCustomer(snapshot), { status: "DENY" });
 
-  const { rows } = await db.query(`
-    SELECT p.service_project_id, p.updated_at, p.project_status, t.task_status,
-      (SELECT count(*)::int FROM service.workbench_commercial_events WHERE service_project_id=p.service_project_id) AS source_events,
+  const readLinkedCase = async observer => (await observer.query(`
+    SELECT i.request_id, d.primary_lead_id AS lead_id, d.client_id, d.deal_id,
+      p.family_id, p.service_project_id, p.updated_at, p.project_status, t.task_status,
+      te.task_event_id, m.message_id AS feedback_event, m.body=$6 AS feedback_matches,
+      (SELECT array_agg(event_kind ORDER BY source_version) FROM service.workbench_commercial_events
+        WHERE service_project_id=p.service_project_id) AS commercial_events,
       (SELECT event_id FROM audit.access_events WHERE resource_id=p.service_project_id AND principal_id=$3
-        AND reason_code='WORKBENCH_COMMAND_COMMITTED' AND action='TASK_STATUS' ORDER BY event_id DESC LIMIT 1) AS task_audit_ref
-    FROM service.projects p JOIN service.tasks t USING(service_project_id)
-    WHERE p.deal_id=$1 AND p.client_id=$2
-  `, [lineage.deal_id, lineage.client_id, customer]);
+        AND reason_code='WORKBENCH_COMMAND_COMMITTED' AND action='TASK_STATUS' AND decision='ALLOW'
+        ORDER BY event_id DESC LIMIT 1) AS task_audit_ref,
+      (SELECT event_id FROM audit.access_events WHERE resource_id=p.service_project_id AND principal_id=$3
+        AND reason_code='WORKBENCH_COMMAND_COMMITTED' AND action='MESSAGE' AND decision='ALLOW') AS feedback_audit_ref
+    FROM service.projects p
+    JOIN crm.deals d ON d.deal_id=p.deal_id AND d.family_id=p.family_id
+    JOIN crm.leads l ON l.lead_id=d.primary_lead_id AND l.family_id=p.family_id
+    JOIN crm.website_consultation_intake i ON i.lead_id=d.primary_lead_id
+    JOIN service.tasks t USING(service_project_id)
+    JOIN service.task_events te ON te.task_id=t.task_id AND te.task_event_id=$4 AND te.to_status='COMPLETED'
+    JOIN service.workbench_messages m ON m.service_project_id=p.service_project_id
+      AND m.message_id=$5 AND m.author_principal_id=$3
+    WHERE p.deal_id=$1 AND p.client_id=$2 AND d.client_id=$2
+  `, [lineage.deal_id, lineage.client_id, customer, familyEvidence.task_event, familyEvidence.feedback_event, feedbackText])).rows;
+  const rows = await readLinkedCase(db);
   assert.equal(rows.length, 1);
-  assert.equal(rows[0].service_project_id, project);
-  assert.equal(rows[0].project_status, "ACTIVE");
-  assert.equal(rows[0].task_status, "COMPLETED");
-  assert.equal(rows[0].source_events, 4);
-  assert.ok(rows[0].task_audit_ref);
-  assert.ok(Date.parse(familyEvidence.read_at) >= rows[0].updated_at.getTime());
+  const [linkedCase] = rows;
+  assert.equal(linkedCase.request_id, lineage.request_id);
+  assert.equal(linkedCase.lead_id, lineage.lead_id);
+  assert.equal(linkedCase.family_id, family);
+  assert.equal(linkedCase.service_project_id, project);
+  assert.equal(linkedCase.project_status, "ACTIVE");
+  assert.equal(linkedCase.task_status, "COMPLETED");
+  assert.deepEqual(linkedCase.commercial_events, ["CONTRACT_SIGNED", "PAYMENT_CONFIRMED", "OPENING_APPROVED", "PAYMENT_REVERSED"]);
+  assert.equal(linkedCase.feedback_matches, true);
+  assert.ok(linkedCase.task_audit_ref && linkedCase.feedback_audit_ref);
+  assert.ok(Date.parse(familyEvidence.read_at) >= linkedCase.updated_at.getTime());
   console.log("PASS same synthetic consultation → deal → authorized commercial references → service project → family delivery",
-    JSON.stringify({ ...lineage, synthetic_contract_reference: contractRef, ...rows[0], ...familyEvidence }));
+    JSON.stringify({ ...lineage, synthetic_contract_reference: contractRef, ...linkedCase, ...familyEvidence }));
+
+  const fixtureContainer = process.env.CRM_FIXTURE_POSTGRES_CONTAINER;
+  if (!fixtureContainer) {
+    console.log("NOT RUN linked service logical restore: CRM_FIXTURE_POSTGRES_CONTAINER is unset");
+    return;
+  }
+  const restoredDatabase = "phoenix_linked_service_restore_fixture";
+  await db.query("CREATE DATABASE phoenix_linked_service_restore_fixture");
+  const dockerPostgres = (args, input) => execFileSync("docker", args, {
+    input, timeout: 60_000, maxBuffer: 32 * 1024 * 1024,
+  });
+  const dump = dockerPostgres(["exec", fixtureContainer, "pg_dump", "--no-password", "--format=custom",
+    "-U", db.user, connection.database]);
+  dockerPostgres(["exec", "-i", fixtureContainer, "pg_restore", "--no-password", "--exit-on-error",
+    "-U", db.user, "-d", restoredDatabase], dump);
+  const restored = new Client({ ...connection, database: restoredDatabase, user: db.user });
+  await restored.connect();
+  try {
+    assert.deepEqual(await readLinkedCase(restored), rows);
+    await asCustomer(async client => {
+      assert.deepEqual(await snapshot(client), { status: "DENY" });
+      assert.deepEqual((await summary(client)).data.projects, []);
+    }, restored);
+  } finally {
+    await restored.end();
+  }
+  console.log("PASS linked service logical restore preserves the same CRM lineage, completed task, feedback, audit and payment-reversal denial");
 }
