@@ -1,0 +1,37 @@
+name: Academic Studio Package B0 isolated teacher scheduling
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/academic-studio/scheduling-b0.sql'
+      - 'database/canonical/verification/academic-studio-b0/**'
+      - '.github/workflows/academic-studio-b0.yml'
+      - 'database/canonical/migrations/**'
+permissions:
+  contents: read
+concurrency:
+  group: academic-b0-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  candidate-isolated-pg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['16','17']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.19.0'
+      - name: Check isolated candidate and test scripts
+        run: |
+          set -euo pipefail
+          test "$(find database/canonical/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)" -eq 37
+          test ! -f database/canonical/migrations/scheduling-b0.sql
+          node --check database/canonical/verification/academic-studio-b0/acceptance.mjs
+          sha256sum database/canonical/forward-candidates/academic-studio/scheduling-b0.sql
+      - name: Verify controlled online/onsite scheduling, room and student overlap
+        run: node database/canonical/verification/academic-studio-b0/acceptance.mjs '${{ matrix.version }}'
