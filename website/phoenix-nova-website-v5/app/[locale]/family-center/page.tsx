@@ -1,7 +1,8 @@
+import {familyP1Auth, familyP1Enabled, readCustomerSession as readCanonicalSession} from "@/lib/family-p1-session";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { SiteHeader, V5Site } from "@/components/v5-site";
+import { SiteHeader } from "@/components/v5-site";
 import { CustomerAccount } from "@/components/customer-account";
 import { customerAuthEnabled, customerAuthConfig } from "@/db/customer-auth";
 import { readCustomerSession } from "@/lib/customer-auth";
@@ -37,7 +38,20 @@ async function ProtectedCenter({locale}:{locale:"zh"|"en"}) {
 export default async function FamilyCenterPage({params}:{params:Promise<{locale:string}>}) {
   const {locale}=await params;if(locale!=="zh"&&locale!=="en")notFound();
   if((env as unknown as Record<string,unknown>).FAMILY_CENTER_MAINTENANCE_ENABLED==="true")return <main data-family-maintenance style={{maxWidth:700,margin:'10vh auto',padding:24}}><h1>{locale==="zh"?"凤启家序暂时维护":"Family OS temporarily unavailable"}</h1><p>{locale==="zh"?"你的资料不会在此页面显示。请稍后重试或联系顾问。":"No personal records are displayed here. Please retry later or contact an adviser."}</p><nav aria-label={locale==="zh"?"维护期间导航":"Maintenance navigation"}><Link href={`/${locale}`}>{locale==="zh"?"返回首页":"Home"}</Link>{" · "}<Link href={`/${locale}/account`}>{locale==="zh"?"账户与安全":"Account & security"}</Link>{" · "}<Link href={`/${locale}/education#consultation`}>{locale==="zh"?"联系顾问":"Contact an adviser"}</Link></nav></main>;
+  const values = env as unknown as Record<string, unknown>;
+  if (familyP1Enabled(values, process.env.NODE_ENV)) {
+    if (values.FAMILY_P1_UI_REVIEW === "1") return <FamilyCenterV2 locale={locale} account workbench learningP1 reviewOnly/>;
+    const auth = familyP1Auth(values);
+    if (auth && customerBridgeEnabled(values, process.env.NODE_ENV)) {
+      const request = new Request(`${auth.origin}/api/customer-auth/session`, {headers: await headers()});
+      const session = await readCanonicalSession(request, auth, {touch: false}).catch(() => undefined);
+      if (session) return <FamilyCenterV2 locale={locale} account workbench learningP1/>;
+    }
+    return <main className="account-shell"><h1>{locale === 'zh' ? '凤启家序' : 'Family OS'}</h1>
+      <p role="status">{locale === 'zh' ? '需通过凤启账户完成登录。请联系顾问核对访问权限。' : 'A verified Phoenix account is required. Contact your adviser for access.'}</p>
+    </main>;
+  }
   if(customerAuthEnabled())return <ProtectedCenter locale={locale}/>;
   if(centerV2Enabled(env as unknown as Record<string,unknown>))return <NewCenter locale={locale}/>;
-  return <><div className="account-preview-link"><Link href={`/${locale}/account`}>{locale==="zh"?"账户登录入口":"Account sign-in"}</Link>{locale==="zh"?" · 以下为虚构家庭的界面预览。":" · The following preview uses a fictional family."}</div><V5Site locale={locale} page="family-center"/></>;
+  return <FamilyCenterV2 locale={locale} account workbench learningP1 reviewOnly/>;
 }
