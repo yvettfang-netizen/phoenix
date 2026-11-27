@@ -252,16 +252,31 @@ test("Wealth assessment imports only the frozen-v1 authority and detail routes f
   assert.ok(authorityImport, "assessment must import the frozen-v1 authority");
   assert.equal(
     authorityImport[1],
-    "../../../Phoenix Compass/Wealth Compass/src/domain/wealth-compass/frozen-v1",
+    "@/lib/wealth-frozen-v1",
   );
-  const authorityFile = resolve(
-    dirname(resolve(websiteRoot, "components/wealth-assessment.tsx")),
-    `${authorityImport[1]}.ts`,
-  );
+  const authorityFile = resolve(websiteRoot, "lib/wealth-frozen-v1.ts");
   assert.ok(
     existsSync(authorityFile),
     `frozen-v1 authority file is missing: ${authorityFile}`,
   );
+  const canonicalAuthorityFile = resolve(
+    websiteRoot,
+    "..",
+    "..",
+    "Phoenix Compass",
+    "Wealth Compass",
+    "src",
+    "domain",
+    "wealth-compass",
+    "frozen-v1.ts",
+  );
+  if (existsSync(canonicalAuthorityFile)) {
+    assert.equal(
+      readFileSync(authorityFile, "utf8"),
+      readFileSync(canonicalAuthorityFile, "utf8"),
+      "the standalone Sites mirror must stay byte-identical to the frozen Wealth authority",
+    );
+  }
   assert.match(
     assessmentSource,
     /import\s*\{\s*QUESTIONS,\s*DIMENSIONS,\s*CONSENTS,\s*VERSIONS,\s*score,\s*validateAnswer/,

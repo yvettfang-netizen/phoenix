@@ -1,0 +1,276 @@
+BEGIN;
+-- Internal gateway only. The gateway must authenticate the employee with the
+-- existing IdP before using the verified issuer/subject. No browser SQL access.
+CREATE ROLE phoenix_website_consultation_staff_gateway NOLOGIN NOINHERIT NOSUPERUSER
+  NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+GRANT USAGE ON SCHEMA crm TO phoenix_website_consultation_staff_gateway;
+
+-- Domain grants reference existing Canonical principals, never independent accounts.
+CREATE TABLE crm.website_consultation_staff_grants (
+  principal_id uuid NOT NULL REFERENCES auth.principals(principal_id),
+  service_domain text NOT NULL CHECK (service_domain IN ('EDUCATION','IDENTITY','WEALTH','HEALTH')),
+  grant_kind text NOT NULL CHECK (grant_kind IN ('DISPATCHER','ADVISER')),
+  valid_from timestamptz NOT NULL DEFAULT clock_timestamp(),
+  valid_until timestamptz NOT NULL CHECK (valid_until > valid_from),
+  revoked_at timestamptz,
+  PRIMARY KEY (principal_id,service_domain,grant_kind)
+);
+ALTER TABLE crm.website_consultation_staff_grants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crm.website_consultation_staff_grants FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON crm.website_consultation_staff_grants FROM PUBLIC,phoenix_canonical_app,
+  phoenix_canonical_reader,phoenix_website_consultation_staff_gateway;
+DO $policy$
+BEGIN
+  EXECUTE format(
+    'CREATE POLICY website_staff_grant_owner ON crm.website_consultation_staff_grants TO %I USING (true) WITH CHECK (true)',
+    current_user
+  );
+END
+$policy$;
+
+-- Queue metadata only. Dispatchers can see leads in their authorised domains.
+-- Advisers only see leads or follow-ups specifically assigned to them.
+CREATE FUNCTION crm.list_website_consultation_staff_queue(p_issuer text,p_subject text)
+RETURNS TABLE(lead_id uuid,service_domain text,locale text,received_at timestamptz,lead_status text,assignee_id uuid,next_due_at timestamptz)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,crm,auth
+AS $queue$
+DECLARE employee uuid;
+BEGIN
+  IF NOT pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    OR pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    OR NOT coalesce(length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500,false) THEN
+    RETURN;
+  END IF;
+  employee := auth.resolve_external_identity(p_issuer,p_subject);
+  IF employee IS NULL OR NOT EXISTS (
+    SELECT 1 FROM auth.principals p WHERE p.principal_id=employee AND p.person_id IS NOT NULL
+      AND p.principal_kind='ADVISOR' AND p.status='ACTIVE'
+  ) THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT l.lead_id,i.service_domain,i.locale,i.recorded_at,l.lead_status,l.assigned_principal_id,
+    (SELECT min(f.due_at) FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
+      AND f.assigned_principal_id=l.assigned_principal_id AND f.status='PENDING') AS next_due_at
+    FROM crm.website_consultation_intake i JOIN crm.leads l ON l.lead_id=i.lead_id
+    WHERE EXISTS (
+      SELECT 1 FROM crm.website_consultation_staff_grants g
+      WHERE g.principal_id=employee AND g.service_domain=i.service_domain
+        AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
+        AND (g.grant_kind='DISPATCHER' OR l.assigned_principal_id=employee OR EXISTS (
+          SELECT 1 FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
+            AND f.assigned_principal_id=employee AND f.status='PENDING'
+        ))
+    )
+    ORDER BY i.recorded_at DESC,l.lead_id DESC LIMIT 100;
+END
+$queue$;
+REVOKE ALL ON FUNCTION crm.list_website_consultation_staff_queue(text,text) FROM PUBLIC,
+  phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.list_website_consultation_staff_queue(text,text)
+  TO phoenix_website_consultation_staff_gateway;
+
+CREATE TABLE crm.website_consultation_contact_reads (
+  read_id uuid PRIMARY KEY,
+  lead_id uuid NOT NULL REFERENCES crm.leads(lead_id),
+  actor_principal_id uuid NOT NULL REFERENCES auth.principals(principal_id),
+  recorded_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+ALTER TABLE crm.website_consultation_contact_reads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE crm.website_consultation_contact_reads FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON crm.website_consultation_contact_reads FROM PUBLIC,phoenix_canonical_app,
+  phoenix_canonical_reader,phoenix_website_consultation_staff_gateway;
+DO $policy$
+BEGIN
+  EXECUTE format(
+    'CREATE POLICY website_contact_read_owner ON crm.website_consultation_contact_reads FOR INSERT TO %I WITH CHECK (true)',
+    current_user
+  );
+END
+$policy$;
+
+-- Query in a dedicated transaction and commit before forwarding the contact
+-- to an employee. The gateway owns authentication and decrypts server-side.
+CREATE FUNCTION crm.read_website_consultation_contact(p_issuer text,p_subject text,p_lead uuid,p_read uuid)
+RETURNS TABLE(request_id uuid,contract_id uuid,service_domain text,locale text,consent_version text,contact_envelope bytea)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,crm,auth
+AS $contact$
+DECLARE employee uuid; item crm.website_consultation_intake%ROWTYPE;
+BEGIN
+  IF p_read IS NULL
+    OR NOT pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    OR pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    OR pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    OR NOT coalesce(length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500,false) THEN
+    RETURN;
+  END IF;
+  employee := auth.resolve_external_identity(p_issuer,p_subject);
+  IF employee IS NULL OR NOT EXISTS (
+    SELECT 1 FROM auth.principals p WHERE p.principal_id=employee AND p.person_id IS NOT NULL
+      AND p.principal_kind='ADVISOR' AND p.status='ACTIVE'
+  ) THEN RETURN; END IF;
+
+  SELECT i.* INTO item
+  FROM crm.website_consultation_intake i JOIN crm.leads l ON l.lead_id=i.lead_id
+  JOIN crm.website_consultation_staff_grants g
+    ON g.principal_id=employee AND g.service_domain=i.service_domain AND g.grant_kind='ADVISER'
+  WHERE l.lead_id=p_lead AND l.lead_status NOT IN ('MERGED','DISQUALIFIED','LOST')
+    AND i.contact_envelope IS NOT NULL AND i.contact_expires_at>clock_timestamp()
+    AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
+    AND (l.assigned_principal_id=employee OR EXISTS (
+      SELECT 1 FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
+        AND f.assigned_principal_id=employee AND f.status='PENDING'
+    ))
+  FOR SHARE OF i,l,g;
+  IF NOT FOUND THEN RETURN; END IF;
+  -- Recheck after acquiring any contended locks.
+  IF item.contact_expires_at<=clock_timestamp()
+    OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee
+    OR NOT EXISTS (
+      SELECT 1 FROM crm.website_consultation_staff_grants g
+      WHERE g.principal_id=employee AND g.service_domain=item.service_domain
+        AND g.grant_kind='ADVISER' AND g.valid_from<=clock_timestamp()
+        AND g.valid_until>clock_timestamp() AND g.revoked_at IS NULL
+    )
+    OR NOT EXISTS (
+      SELECT 1 FROM crm.leads l WHERE l.lead_id=p_lead AND (l.assigned_principal_id=employee OR EXISTS (
+        SELECT 1 FROM crm.follow_ups f WHERE f.lead_id=l.lead_id
+          AND f.assigned_principal_id=employee AND f.status='PENDING'
+      ))
+    ) THEN RETURN; END IF;
+  INSERT INTO crm.website_consultation_contact_reads(read_id,lead_id,actor_principal_id)
+    VALUES(p_read,p_lead,employee);
+  RETURN QUERY SELECT item.request_id,item.acquisition_contract_id,item.service_domain,item.locale,
+    item.consent_version,item.contact_envelope;
+END
+$contact$;
+REVOKE ALL ON FUNCTION crm.read_website_consultation_contact(text,text,uuid,uuid) FROM PUBLIC,
+  phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.read_website_consultation_contact(text,text,uuid,uuid)
+  TO phoenix_website_consultation_staff_gateway;
+
+CREATE FUNCTION crm.act_on_website_consultation(
+  p_issuer text,p_subject text,p_lead uuid,p_action text,p_assignee uuid,p_event uuid
+) RETURNS uuid
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+SET search_path=pg_catalog,crm,auth,core
+AS $action$
+DECLARE employee uuid; lead crm.leads%ROWTYPE; domain text; task uuid;
+BEGIN
+  IF (pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500
+    AND core.is_uuid_v7(p_event) AND p_action IN ('ASSIGN','COMPLETE')) IS NOT TRUE THEN RETURN NULL; END IF;
+  employee := auth.resolve_external_identity(p_issuer,p_subject);
+  IF NOT EXISTS (
+    SELECT 1 FROM auth.principals WHERE principal_id=employee AND principal_kind='ADVISOR'
+      AND person_id IS NOT NULL AND status='ACTIVE'
+  ) THEN RETURN NULL; END IF;
+  SELECT l.* INTO lead FROM crm.leads l JOIN crm.website_consultation_intake i USING(lead_id)
+  WHERE l.lead_id=p_lead AND l.family_id IS NULL AND l.contact_person_id IS NULL
+    AND l.lead_status IN ('NEW','CONTACTED') FOR UPDATE OF l;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  SELECT i.service_domain INTO STRICT domain FROM crm.website_consultation_intake i WHERE i.lead_id=p_lead;
+  PERFORM 1 FROM crm.website_consultation_staff_grants g
+    WHERE g.principal_id=employee AND g.service_domain=domain
+      AND g.grant_kind=CASE p_action WHEN 'ASSIGN' THEN 'DISPATCHER' ELSE 'ADVISER' END
+      AND g.revoked_at IS NULL FOR SHARE;
+  IF NOT FOUND OR auth.resolve_external_identity(p_issuer,p_subject) IS DISTINCT FROM employee OR NOT EXISTS (
+    SELECT 1 FROM crm.website_consultation_staff_grants g WHERE g.principal_id=employee AND g.service_domain=domain
+      AND g.grant_kind=CASE p_action WHEN 'ASSIGN' THEN 'DISPATCHER' ELSE 'ADVISER' END
+      AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()
+  ) THEN RETURN NULL; END IF;
+
+  IF p_action='ASSIGN' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM crm.website_consultation_intake i WHERE i.lead_id=p_lead
+        AND i.contact_envelope IS NOT NULL AND i.contact_expires_at>clock_timestamp()
+    ) THEN RETURN NULL; END IF;
+    IF NOT EXISTS (
+      SELECT 1 FROM crm.website_consultation_staff_grants g JOIN auth.principals p USING(principal_id)
+      WHERE g.principal_id=p_assignee AND p.principal_kind='ADVISOR' AND p.person_id IS NOT NULL
+        AND p.status='ACTIVE' AND g.service_domain=domain AND g.grant_kind='ADVISER'
+        AND g.revoked_at IS NULL AND g.valid_from<=clock_timestamp() AND g.valid_until>clock_timestamp()
+    ) THEN RETURN NULL; END IF;
+    IF lead.assigned_principal_id IS NOT NULL THEN
+      IF lead.assigned_principal_id IS DISTINCT FROM p_assignee THEN RETURN NULL; END IF;
+      SELECT f.follow_up_id INTO task FROM crm.follow_ups f JOIN crm.lead_events e ON e.lead_event_id=f.follow_up_id
+      WHERE f.lead_id=p_lead AND f.assigned_principal_id=p_assignee AND e.lead_id=p_lead
+        AND e.reason_code='WEBSITE_CONSULTATION_ASSIGNED';
+      RETURN task;
+    END IF;
+    UPDATE crm.leads SET assigned_principal_id=p_assignee,updated_by_principal_id=employee,
+      updated_at=clock_timestamp() WHERE lead_id=p_lead;
+    -- Internal first-response target for workbench overdue highlighting, not a customer SLA.
+    INSERT INTO crm.follow_ups(follow_up_id,target_kind,lead_id,title,status,assigned_principal_id,created_by_principal_id,due_at)
+      VALUES(p_event,'LEAD',p_lead,'Website consultation: first contact','PENDING',p_assignee,employee,
+        clock_timestamp()+interval '24 hours');
+    INSERT INTO crm.lead_events(lead_event_id,lead_id,event_kind,reason_code,actor_principal_id)
+      VALUES(p_event,p_lead,'ASSIGNED','WEBSITE_CONSULTATION_ASSIGNED',employee);
+    RETURN p_event;
+  END IF;
+
+  IF p_assignee IS NOT NULL OR lead.assigned_principal_id IS DISTINCT FROM employee THEN RETURN NULL; END IF;
+  SELECT f.follow_up_id INTO task FROM crm.follow_ups f JOIN crm.lead_events e ON e.lead_event_id=f.follow_up_id
+  WHERE f.lead_id=p_lead AND f.assigned_principal_id=employee AND e.lead_id=p_lead
+    AND e.reason_code='WEBSITE_CONSULTATION_ASSIGNED' AND f.status IN ('PENDING','COMPLETED') FOR UPDATE OF f;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  UPDATE crm.follow_ups SET status='COMPLETED',completed_at=clock_timestamp(),updated_at=clock_timestamp()
+    WHERE follow_up_id=task AND status='PENDING';
+  IF FOUND AND lead.lead_status='NEW' THEN
+    UPDATE crm.leads SET lead_status='CONTACTED',updated_by_principal_id=employee,updated_at=clock_timestamp()
+      WHERE lead_id=p_lead;
+    INSERT INTO crm.lead_events(lead_event_id,lead_id,event_kind,from_status,to_status,reason_code,actor_principal_id)
+      VALUES(p_event,p_lead,'STATUS_CHANGED','NEW','CONTACTED','WEBSITE_CONSULTATION_CONTACTED',employee);
+  END IF;
+  RETURN task;
+END
+$action$;
+REVOKE ALL ON FUNCTION crm.act_on_website_consultation(text,text,uuid,text,uuid,uuid) FROM PUBLIC,
+  phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.act_on_website_consultation(text,text,uuid,text,uuid,uuid)
+  TO phoenix_website_consultation_staff_gateway;
+
+CREATE FUNCTION crm.list_website_consultation_assignees(p_issuer text,p_subject text,p_lead uuid)
+RETURNS TABLE(principal_id uuid,display_name text)
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path=pg_catalog,crm,auth,core
+AS $assignees$
+DECLARE employee uuid;
+BEGIN
+  IF (pg_has_role(session_user,'phoenix_website_consultation_staff_gateway','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_website_intake','MEMBER')
+    AND NOT pg_has_role(session_user,'phoenix_canonical_app','MEMBER')
+    AND length(p_issuer) BETWEEN 1 AND 500 AND length(p_subject) BETWEEN 1 AND 500) IS NOT TRUE THEN RETURN; END IF;
+  employee := auth.resolve_external_identity(p_issuer,p_subject);
+  RETURN QUERY SELECT target.principal_id,person.display_name
+    FROM crm.website_consultation_intake intake
+    JOIN crm.leads lead USING(lead_id)
+    JOIN crm.website_consultation_staff_grants dispatched
+      ON dispatched.principal_id=employee AND dispatched.service_domain=intake.service_domain
+        AND dispatched.grant_kind='DISPATCHER'
+    JOIN auth.principals actor ON actor.principal_id=employee AND actor.principal_kind='ADVISOR'
+      AND actor.person_id IS NOT NULL AND actor.status='ACTIVE'
+    JOIN crm.website_consultation_staff_grants eligible
+      ON eligible.service_domain=intake.service_domain AND eligible.grant_kind='ADVISER'
+    JOIN auth.principals target ON target.principal_id=eligible.principal_id
+      AND target.principal_kind='ADVISOR' AND target.status='ACTIVE'
+    JOIN core.people person ON person.person_id=target.person_id
+    WHERE lead.lead_id=p_lead AND lead.lead_status='NEW' AND lead.assigned_principal_id IS NULL
+      AND intake.contact_envelope IS NOT NULL AND intake.contact_expires_at>clock_timestamp()
+      AND lead.contact_person_id IS NULL AND lead.family_id IS NULL
+      AND dispatched.revoked_at IS NULL AND eligible.revoked_at IS NULL
+      AND dispatched.valid_from<=clock_timestamp() AND dispatched.valid_until>clock_timestamp()
+      AND eligible.valid_from<=clock_timestamp() AND eligible.valid_until>clock_timestamp()
+    ORDER BY person.display_name,target.principal_id LIMIT 100;
+END
+$assignees$;
+REVOKE ALL ON FUNCTION crm.list_website_consultation_assignees(text,text,uuid) FROM PUBLIC,
+  phoenix_canonical_app,phoenix_canonical_reader,phoenix_website_intake;
+GRANT EXECUTE ON FUNCTION crm.list_website_consultation_assignees(text,text,uuid)
+  TO phoenix_website_consultation_staff_gateway;
+COMMIT;

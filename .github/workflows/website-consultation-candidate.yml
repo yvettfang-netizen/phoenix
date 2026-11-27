@@ -1,0 +1,48 @@
+name: Website consultation candidate
+
+on:
+  pull_request:
+    paths:
+      - "database/canonical/forward-candidates/website-consultation/**"
+      - "database/canonical/migrations/**"
+      - "website/phoenix-nova-website-v5/lib/website-consultation-intake.ts"
+      - "website/phoenix-nova-website-v5/lib/website-privacy-policy.mjs"
+      - "Phoenix Compass/education compass/server/package-lock.json"
+      - ".github/workflows/website-consultation-candidate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: phoenix_bootstrap
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 127.0.0.1:55487:5432
+        options: >-
+          --health-cmd="pg_isready -U phoenix_bootstrap -d postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: "Phoenix Compass/education compass/server/package-lock.json"
+      - name: Install locked PostgreSQL client dependencies
+        working-directory: "Phoenix Compass/education compass/server"
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Verify synthetic case against PostgreSQL
+        run: >-
+          node --experimental-strip-types
+          database/canonical/forward-candidates/website-consultation/verify-local.mjs
+          --synthetic-loopback "Phoenix Compass/education compass/server"
