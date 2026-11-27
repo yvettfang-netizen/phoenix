@@ -1,0 +1,27 @@
+name: Identity Journey isolated candidate
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/identity-journey/**'
+      - 'website/phoenix-nova-website-v5/lib/identity-journey*.ts'
+      - 'website/phoenix-nova-website-v5/tests/identity-journey.test.mjs'
+      - '.github/workflows/identity-journey-candidate.yml'
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16', '17']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - run: node --experimental-strip-types --test website/phoenix-nova-website-v5/tests/identity-journey.test.mjs
+      - run: bash database/canonical/forward-candidates/identity-journey/verify.sh '${{ matrix.pg }}'

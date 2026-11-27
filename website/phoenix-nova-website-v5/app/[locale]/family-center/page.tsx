@@ -14,8 +14,10 @@ import {customerBridgeEnabled} from "@/lib/customer-canonical-bridge";
 
 function NewCenter({locale,account=false}:{locale:"zh"|"en";account?:boolean}) {
   const values=env as unknown as Record<string,unknown>;
+  const demo=centerDemoEnabled(values,process.env.NODE_ENV,account);
   return <FamilyCenterV2 locale={locale} account={account} workbench={account?customerBridgeEnabled(values,process.env.NODE_ENV):workbenchEnabled(values,process.env.NODE_ENV)}
-    demo={centerDemoEnabled(values,process.env.NODE_ENV,account)}
+    demo={demo}
+    identityJourneyPreview={demo && values.FAMILY_IDENTITY_JOURNEY_PREVIEW==="true"}
     canonical={!account && sessionFamilyPreviewEnabled(values,process.env.NODE_ENV)}
     personalized={values.FAMILY_CENTER_PERSONALIZATION_ENABLED==="true"}
     harmony={values.FAMILY_CENTER_HARMONY_ENABLED==="true"}/>;
