@@ -121,7 +121,7 @@ export class ReportService {
   }
 
   async pdf(userId: string, reportId: string): Promise<Buffer> {
-    return this.store.transaction(async (tx) => {
+    const bytes = await this.store.transaction(async (tx) => {
       const report = await tx.findById('reports', reportId)
       invariant(report, 404, 'REPORT_NOT_FOUND', '报告不存在')
       invariant(report.userId === userId, 403, 'REPORT_FORBIDDEN', '无权访问该报告')
@@ -143,6 +143,8 @@ export class ReportService {
       }
       return pdf
     })
+    // Transaction implementations may structured-clone a Buffer into Uint8Array.
+    return Buffer.from(bytes)
   }
 
   async submitFeedback(
