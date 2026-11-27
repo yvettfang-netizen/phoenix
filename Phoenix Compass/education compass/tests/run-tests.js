@@ -473,6 +473,25 @@ console.log('✓ paid Compass: versioned questionnaire, 70-point gate, six-modul
     assert.strictEqual(features.paidReportAnalysis, false)
     console.log('✓ order center: paid entitlement, pending navigation, closed orders and disabled report capabilities')
   }
+  {
+    const legal = require('../config/legal-notices')
+    const sha = text => require('node:crypto').createHash('sha256').update(text, 'utf8').digest('hex')
+    assert.strictEqual(sha(legal.copies.guardian), '334a1e8e455dfef386fcaf491acea3dac23b13c4ece010cfad66d1087f6a84a5')
+    assert.strictEqual(sha(legal.copies.student), '0ab8f89835cfe500f97944324ab58a3cf2cce27913fc5af5d02461227b2a821d')
+    assert.strictEqual(legal.getNotice('constructor'), null)
+    assert.strictEqual(legal.getNotice('unknown'), null)
+    assert.strictEqual(legal.getNotice('guardian-consent').sections[0].body, legal.copies.guardian)
+    const prev = wx.getAccountInfoSync
+    try {
+      for (const envVersion of ['trial', 'release', 'unknown']) {
+        wx.getAccountInfoSync = () => ({ miniProgram: { envVersion } })
+        assert.strictEqual(legal.available(), false)
+      }
+      wx.getAccountInfoSync = () => ({ miniProgram: { envVersion: 'develop' } })
+      assert.strictEqual(legal.available(), true)
+    } finally { wx.getAccountInfoSync = prev }
+    console.log('✓ read-only legal review: frozen copy hashes and release denial')
+  }
   await require('./education-compass-client.test').run()
 })().catch((error) => {
   console.error(error)

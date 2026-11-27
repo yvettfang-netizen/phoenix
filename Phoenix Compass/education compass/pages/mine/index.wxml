@@ -81,6 +81,12 @@
         </view>
       </view>
 
+      <view wx:if="{{legalPreview}}" class="mine-orders">
+        <text class="h3 mine-orders__title">协议与隐私 · 审阅候选</text>
+        <button class="btn btn--outline" data-type="terms" bindtap="openLegal">用户协议</button>
+        <button class="btn btn--outline" data-type="ai-report" bindtap="openLegal">AI 报告声明</button>
+        <button class="btn btn--outline" data-type="guardian-consent" bindtap="openLegal">监护人同意与学生自愿作答</button>
+      </view>
       <view class="mine-section-head">
         <view><text class="eyebrow">HELP &amp; SUPPORT</text><text class="h2 mine-section-title">帮助与支持</text></view>
       </view>

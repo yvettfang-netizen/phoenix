@@ -174,7 +174,7 @@ const protectedBaseline = readJson(protectedBaselinePath)
 const app = readJson(path.join(root, 'app.json'))
 
 // Preserve the historical baseline; allow exactly the approved additive order-center route.
-assert.deepStrictEqual(app.pages, [...routeBaseline.pages, 'pages/orders/index'], 'original page order and additive order center must remain intact')
+assert.deepStrictEqual(app.pages, [...routeBaseline.pages, 'pages/orders/index', 'pages/legal/index'], 'original page order and additive order center must remain intact')
 assert.strictEqual(app.lazyCodeLoading, routeBaseline.lazyCodeLoading, 'lazyCodeLoading changed from the approved baseline')
 assert(app.tabBar && Array.isArray(app.tabBar.list), 'tabBar list is missing')
 assert.deepStrictEqual(
@@ -197,6 +197,8 @@ assertInteractionContract({ path: 'pages/orders/index.wxml', handlers: [
   { attribute: 'bindtap', handler: 'openOrder' }, { attribute: 'bindtap', handler: 'goCompass' }
 ], dataAttributes: [{ attribute: 'data-id', value: '{{item.orderId}}' }] })
 assert(readSource('pages/mine/index.wxml').includes('bindtap="openOrderCenter"'))
+assert.strictEqual(countMatches(readSource('pages/mine/index.wxml'), /bindtap="openLegal"/g), 3)
+assert(!/\b(?:bindtap|bindchange|open-type)\s*=/.test(readSource('pages/legal/index.wxml')), 'legal review must remain read-only')
 assert(readSource('pages/mine/index.wxml').includes('open-type="contact"'))
 assert.strictEqual(countMatches(readSource('pages/report/index.wxml'), /wx:if="\{\{pdfExportEnabled\}\}"/g), 2)
 
@@ -651,7 +653,7 @@ for (const lockPath of ['package-lock.json', 'server/package-lock.json']) {
   assert.strictEqual(sha256(path.join(root, ...lockPath.split('/'))), baseline.sha256, `${lockPath} changed during the UI-only update`)
 }
 
-console.log('✓ UI route contract: original 16 ordered pages plus order center, 3 tab paths and lazy loading preserved')
+console.log('✓ UI route contract: original 16 ordered pages plus order center and legal review, 3 tab paths and lazy loading preserved')
 console.log('✓ UI interaction contract: required WXML handlers and data-* bindings preserved')
 console.log('✓ UI V2 screen contract: seven screen hooks, Level 2/report/Askwise gates and Consent controls preserved')
 console.log('✓ UI share contract: native sharing is limited to preview/report and exposes only the generic welcome entry')

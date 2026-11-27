@@ -8,6 +8,8 @@ const account = require('../../services/account')
 const dataExport = require('../../services/data-export')
 const runtime = require('../../config/runtime')
 const currentStudent = require('../../utils/current-student')
+const notices = require('../../config/legal-notices')
+const { toView, destination } = require('../../utils/order-center')
 
 // 订单区默认只展示最近几笔，其余点"显示全部"展开。
 const ORDER_PREVIEW_COUNT = 5
@@ -19,7 +21,7 @@ function studentMeta(student) {
 }
 
 Page({
-  data: { user: { name: '', initial: '家' }, family: null, primaryStudent: null, consentStudents: [], consentStudentNames: [], consentStudentIndex: 0, consentStudent: null, studentCount: 0, reportCount: 0, orderCount: 0, unlockedReportCount: 0, recentOrders: [], allOrders: [], showAllOrders: false, students: [], studentBusy: false, loading: true, isV05: !runtime.isDemo(), consentBusy: false, deleteBusy: false, exportBusy: false },
+  data: { legalPreview: notices.available(), user: { name: '', initial: '家' }, family: null, primaryStudent: null, consentStudents: [], consentStudentNames: [], consentStudentIndex: 0, consentStudent: null, studentCount: 0, reportCount: 0, orderCount: 0, unlockedReportCount: 0, recentOrders: [], allOrders: [], showAllOrders: false, students: [], studentBusy: false, loading: true, isV05: !runtime.isDemo(), consentBusy: false, deleteBusy: false, exportBusy: false },
   async onShow() {
     const user = session.guard(['family_user'])
     if (!user) return
@@ -72,12 +74,17 @@ Page({
     wx.navigateTo({ url: `/pages/compass/index?studentId=${student.id}` })
   },
   openOrder({ currentTarget }) {
-    const order = this.data.recentOrders.find((item) => item.orderId === currentTarget.dataset.id)
-    if (!order) return
-    if (order.status === 'PAID') return wx.navigateTo({ url: `/pages/report/index?id=${order.reportId}` })
-    // 删除孩子或问卷后，没付款的订单只剩财务记录，已经没有报告可去。
-    if (!order.reportId) return wx.showToast({ title: `订单${order.statusLabel}，没有可查看的报告`, icon: 'none' })
-    wx.navigateTo({ url: `/pages/payment-result/index?orderId=${order.orderId}&reportId=${order.reportId}` })
+    const user = session.currentUser()
+    if (!user || user.role !== 'family_user' || user.id !== this.data.user.id) return
+    const order = this.data.recentOrders.find(item => item.orderId === currentTarget.dataset.id)
+    const url = order && destination(toView(order, runtime.isDemo()))
+    if (url) return wx.navigateTo({ url })
+    wx.showToast({ title: '该订单当前没有可查看的报告，请联系客服', icon: 'none' })
+  },
+  openLegal({ currentTarget }) {
+    if (!notices.available()) return
+    const type = currentTarget.dataset.type
+    if (notices.getNotice(type)) wx.navigateTo({ url: '/pages/legal/index?type=' + encodeURIComponent(type) })
   },
   openOrderCenter() { wx.navigateTo({ url: '/pages/orders/index' }) },
   toggleOrders() {
