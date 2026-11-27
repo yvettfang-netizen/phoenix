@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { isAbsolute } from "node:path";
 
-export async function verifyLinkedFamilyApi({ db, Pool, connection, backend, identity, project, expectedFeedback }) {
+export async function verifyLinkedFamilyApi({ db, Pool, connection, backend, identity, project, expectedFeedback, openBrowser }) {
   assert.equal(connection.host, "127.0.0.1");
   assert.equal(connection.database, "phoenix_website_intake_fixture");
   assert.ok(isAbsolute(backend));
@@ -62,10 +62,11 @@ export async function verifyLinkedFamilyApi({ db, Pool, connection, backend, ide
       assert.deepEqual(input, { customerId: session.id, sessionHash: session.token_hash });
       return { token, assertCurrent };
     } };
-    const proxy = (resource, headers = {}) => handleCustomerServices(
+    const bridge = (request, resource) => handleCustomerServices(request, env, "development", resource, config, provider);
+    const proxy = (resource, headers = {}) => bridge(
       new Request(origin + "/api/family-services/" + resource, {
         headers: { cookie: "fixture-session=linked-family", ...headers },
-      }), env, "development", resource, config, provider);
+      }), resource);
     assert.equal((await proxy("summary", { cookie: "" })).status, 401);
     const result = await proxy("summary");
     assert.equal(result.status, 200, await result.clone().text());
@@ -80,10 +81,14 @@ export async function verifyLinkedFamilyApi({ db, Pool, connection, backend, ide
     assert.equal(detail.status, 200);
     assert.ok((await detail.json()).messages.some(entry => entry.id === expectedFeedback));
     assert.equal((await proxy("summary", { "x-role": "Founder" })).status, 403);
-    sessionLive = false;
-    assert.equal((await proxy("summary")).status, 401);
     assert.deepEqual(audit, ["CANONICAL_ACCESS_ATTEMPT", "CANONICAL_ACCESS_PREPARED",
       "CANONICAL_ACCESS_ATTEMPT", "CANONICAL_ACCESS_PREPARED"]);
+    if (openBrowser) {
+      const { verifyLinkedFamilyBrowser } = await import("./verify-linked-family-browser.mjs");
+      await verifyLinkedFamilyBrowser({ origin, project, bridge, revoke: () => { sessionLive = false; }, openBrowser });
+    }
+    sessionLive = false;
+    assert.equal((await proxy("summary")).status, 401);
     console.log("PASS same synthetic family project through existing Family BFF and Service Workbench HTTP API");
   } finally {
     if (server.listening) {

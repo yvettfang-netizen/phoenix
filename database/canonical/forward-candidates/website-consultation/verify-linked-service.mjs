@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 // This verifier runs only inside verify-local's fresh synthetic CRM database.
 // Operations events here are fixture references, not evidence of a contract or a payment.
-export async function verifyLinkedService({ db, Client, Pool, connection, fixtureId, lineage, family, otherFamily }) {
+export async function verifyLinkedService({ db, Client, Pool, connection, fixtureId, lineage, family, otherFamily, openBrowser }) {
   assert.equal(connection.host, "127.0.0.1");
   assert.equal(connection.database, "phoenix_website_intake_fixture");
 
@@ -165,7 +165,7 @@ export async function verifyLinkedService({ db, Client, Pool, connection, fixtur
   if (backend) {
     const { verifyLinkedFamilyApi } = await import("./verify-linked-family-api.mjs");
     await verifyLinkedFamilyApi({
-      db, Pool, connection, backend, project, expectedFeedback: familyEvidence.feedback_event,
+      db, Pool, connection, backend, project, expectedFeedback: familyEvidence.feedback_event, openBrowser,
       identity: { principalId: customer, actorPersonId: customerPerson, familyId: family },
     });
   } else {

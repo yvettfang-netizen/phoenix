@@ -20,6 +20,14 @@ import { handleWebsiteConsultation } from "../../../../website/phoenix-nova-webs
 if (process.argv[2] !== "--synthetic-loopback" || !process.argv[3]) throw new Error("A disposable runtime directory is required");
 const loadRuntime = createRequire(resolve(process.argv[3], "harness.cjs"));
 const { Client, Pool } = loadRuntime("pg");
+const openBrowser = process.argv[4] ? async () => {
+  const { chromium } = process.env.PLAYWRIGHT_MODULE
+    ? loadRuntime(process.env.PLAYWRIGHT_MODULE) : loadRuntime("playwright-core");
+  return chromium.launch({
+    ...(process.argv[4] === "--bundled-chromium" ? {} : { executablePath: process.argv[4] }),
+    headless: true,
+  });
+} : null;
 const port = Number(process.env.CRM_FIXTURE_POSTGRES_PORT ?? 55487);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error("Invalid disposable fixture port");
 const database = "phoenix_website_intake_fixture";
@@ -587,12 +595,7 @@ try {
     const thirdRequest = "028347ec-7740-4000-a000-000000000003";
     assert.equal((await submit("education", thirdRequest)).status, 202);
     const browserLead = (await db.query("SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [thirdRequest])).rows[0].lead_id;
-    const { chromium } = process.env.PLAYWRIGHT_MODULE
-      ? loadRuntime(process.env.PLAYWRIGHT_MODULE) : loadRuntime("playwright-core");
-    const browser = await chromium.launch({
-      ...(process.argv[4] === "--bundled-chromium" ? {} : { executablePath: process.argv[4] }),
-      headless: true,
-    });
+    const browser = await openBrowser();
     const open = async (token, width) => {
       const context = await browser.newContext({ viewport: { width, height: 850 } });
       await context.route(staffOrigin + "/**", async route => {
@@ -1217,7 +1220,7 @@ try {
   });
   await verifyLinkedService({
     db, Client, Pool, connection: { host, port, database }, fixtureId, lineage: lineage[0],
-    family: otherFamily, otherFamily: mismatchFamily,
+    family: otherFamily, otherFamily: mismatchFamily, openBrowser,
   });
   const listeners = [];
   function requestLocal(listener, hostHeader, path, method = "GET", body, headers = {}) {
