@@ -769,7 +769,7 @@ try {
   const conversionRequest = "028347ec-7740-4000-a000-000000000043";
   const conversionReceipt = await submit("education", conversionRequest, "synthetic-conversion@example.test");
   assert.equal(conversionReceipt.status, 202);
-  assert.deepEqual(await conversionReceipt.json(), { status: "persisted", requestId: conversionRequest });
+  assert.deepEqual(await conversionReceipt.json(), { status: "received", requestId: conversionRequest });
   const { rows: receivedLeads } = await db.query(
     "SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [conversionRequest],
   );
