@@ -161,7 +161,7 @@ function request(path, options = {}) {
     const config = options && typeof options === 'object' && !Array.isArray(options) ? options : {}
     try {
       requestUrl = `${normalizeBaseUrl(runtime.apiBaseUrl())}${normalizeRequestPath(path)}`
-      token = accessToken()
+      token = path === '/v1/education-compass/free-assessment/evaluate' ? '' : accessToken()
       headers = requestHeaders(config, token)
     } catch (error) {
       reject(error)

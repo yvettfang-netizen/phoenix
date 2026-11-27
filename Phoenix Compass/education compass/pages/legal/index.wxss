@@ -1,0 +1,5 @@
+.legal-title, .legal-notice, .legal-heading, .legal-version, .legal-body { display: block; }
+.legal-notice { color: var(--pn-ink-secondary); background: var(--pn-surface-warm); padding: 24rpx; margin: 24rpx 0; border-radius: 16rpx; line-height: 1.7; font-size: 24rpx; }
+.legal-section { padding: 30rpx; margin: 20rpx 0; background: var(--pn-surface); border: 1rpx solid var(--pn-line); border-radius: 20rpx; }
+.legal-version { font-size: 20rpx; color: var(--pn-muted); margin-top: 12rpx; overflow-wrap: anywhere; }
+.legal-body { margin-top: 18rpx; line-height: 1.8; color: var(--pn-ink); white-space: pre-wrap; }

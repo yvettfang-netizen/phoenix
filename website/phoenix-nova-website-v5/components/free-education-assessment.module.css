@@ -1,0 +1,32 @@
+.main{background:linear-gradient(145deg,#f3f7ee,#fbf8ef);min-height:100svh;color:#19392e;padding:clamp(6rem,13vw,9rem) 1rem 3rem}
+.shell{max-width:48rem;margin:0 auto}
+.back,.identity{display:flex;align-items:center;gap:.6rem;font-weight:600}
+.back{width:max-content;color:#315648;text-underline-offset:.2rem}
+.identity{margin:1.4rem 0 .9rem;letter-spacing:.08em;color:#45664a}
+.panel{background:#fffdf6;border:1px solid #d6ded0;border-radius:1.2rem;padding:clamp(1.15rem,5vw,2.4rem);box-shadow:0 12px 38px #264d3110}
+.panel h1{font-size:clamp(1.5rem,4vw,2.45rem);font-weight:650;line-height:1.24;margin:0 0 1rem}
+.panel p{line-height:1.65;margin:.5rem 0;color:#41554b}
+.options{display:grid;gap:.55rem;margin:1.2rem 0}
+.options button,.primary,.secondary{min-height:2.8rem;border-radius:.7rem;padding:.6rem .8rem;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:.6rem;font-weight:600}
+.options button{border:1px solid #c6d3c3;background:#f7faf4;color:#19392e}
+.options button[aria-pressed="true"]{border-color:#567d56;background:#e0edda;box-shadow:inset 3px 0 #466e45}
+.controls{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
+.primary{background:#22523c;color:#fff;margin-left:auto}
+.secondary{border:1px solid #c6d3c3;color:#315648}
+.panel button:disabled{opacity:.5;cursor:not-allowed}
+.panel button:focus-visible,.back:focus-visible{outline:3px solid #8b652a;outline-offset:3px}
+.progress{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem}
+.progress progress{width:37%;height:.55rem;accent-color:#466e45}
+.cards{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))}
+.cards article{border:1px solid #d6ded0;border-radius:.9rem;background:#f7faf4;padding:.9rem;overflow-wrap:anywhere}
+.cards h2{font-weight:700;margin-bottom:.55rem}
+.cards h3{font-weight:600}
+.finding+.finding{border-top:1px solid #d6ded0;margin-top:.7rem;padding-top:.7rem}
+.finding small{color:#4a614c}
+.evidence{font-size:.85rem;color:#315648}
+.evidence summary{cursor:pointer;width:fit-content;padding:.35rem 0;text-decoration:underline;text-underline-offset:.2rem}
+.evidence summary:focus-visible{outline:3px solid #8b652a;outline-offset:3px}
+.missing{border-top:1px solid #d6ded0;margin-top:.75rem;padding-top:.75rem;color:#41554b;font-size:.875rem}
+.missing ul{list-style:disc;padding-inline-start:1.25rem;margin:.35rem 0 0}
+.panel .action{font-size:.85rem}
+.message{margin-top:.9rem}

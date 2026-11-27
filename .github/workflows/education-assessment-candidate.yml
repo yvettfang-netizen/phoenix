@@ -1,0 +1,63 @@
+name: Education assessment Canonical candidate
+
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/education-assessment-report/**'
+      - 'database/canonical/verification/education-assessment-report/**'
+      - 'database/canonical/verification/education-isolated-e2e.mjs'
+      - 'docs/database/education-assessment-report-20261118/**'
+      - 'Phoenix Compass/education compass/server/**'
+      - '.github/workflows/education-assessment-candidate.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: education-assessment-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  candidate:
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16', '17']
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Build existing Education backend
+        working-directory: Phoenix Compass/education compass/server
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run typecheck
+          npm run build
+      - name: Regress Education backend and Mini Program contracts
+        run: |
+          npm --prefix 'Phoenix Compass/education compass/server' test
+          npm --prefix 'Phoenix Compass/education compass' run test:client
+      - name: Verify candidate manifest and fail-closed evidence gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node database/canonical/verification/education-assessment-report/gate-manifest.mjs
+          node database/canonical/verification/education-assessment-report/business-readiness-gate.mjs
+          node database/canonical/verification/education-assessment-report/live-evidence-gate.mjs --template
+          node database/canonical/verification/education-assessment-report/live-evidence-gate.mjs --self-test
+          if node database/canonical/verification/education-assessment-report/live-evidence-gate.mjs \
+              --promotion docs/database/education-assessment-report-20261118/live-evidence/LIVE_EVIDENCE_INTAKE_TEMPLATE.json; then
+            echo 'FAIL HOLD template was accepted for promotion'
+            exit 1
+          fi
+          echo 'PASS HOLD template rejected for promotion'
+      - name: Run isolated candidate and old-database-off acceptance
+        run: |
+          node database/canonical/verification/education-assessment-report/candidate-acceptance.mjs '${{ matrix.pg }}'
+          node database/canonical/verification/education-isolated-e2e.mjs '${{ matrix.pg }}'

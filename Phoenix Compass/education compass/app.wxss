@@ -69,8 +69,13 @@ scroll-view {
 }
 
 button {
+  align-items: center;
+  display: flex;
   font-family: var(--font-body);
+  justify-content: center;
+  line-height: 1.2;
   min-height: var(--tap-min-size);
+  text-align: center;
 }
 
 /* 微信 style v2 用 button:not([size=mini]) 给所有按钮加了 width: 184px 和左右 auto 外边距。

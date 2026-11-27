@@ -1,0 +1,12 @@
+<view class="page legal-page">
+  <view wx:if="{{unavailable}}" class="legal-notice">当前版本不提供该审阅页面。正式协议及隐私政策以获准发布的版本为准。</view>
+  <block wx:else>
+    <text class="h1 legal-title">{{title}}</text>
+    <text class="legal-notice">仅供产品与合规审阅。尚未经正式法务、隐私及未成年人专业签署；本页不收集资料、不取得同意、不替代正式协议。</text>
+    <view wx:for="{{sections}}" wx:key="title" class="legal-section">
+      <text class="h3 legal-heading">{{item.title}}</text>
+      <text wx:if="{{item.version}}" class="legal-version">{{item.version}}</text>
+      <text class="legal-body">{{item.body}}</text>
+    </view>
+  </block>
+</view>

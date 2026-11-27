@@ -1,0 +1,114 @@
+const runtime = require('../config/runtime')
+const api = require('./api')
+const shared = require('../models/free-education-assessment.js')
+const { presentGrowthCards } = require('../models/free-education-presentation.js')
+
+const PATH = '/v1/education-compass/free-assessment/evaluate'
+
+// Only an explicitly marked offline-test build may use the anonymous preview in
+// DevTools. A normal trial/release build remains closed, even with an invalid URL.
+function offlineTestPreviewAvailable() {
+  if (runtime.OFFLINE_TEST_ONLY !== true ||
+      runtime.API_BASE_URL !== 'https://education-compass-offline-test.invalid') return false
+  try {
+    return typeof wx !== 'undefined' &&
+      wx.getAccountInfoSync().miniProgram.envVersion === 'develop'
+  } catch {
+    return false
+  }
+}
+
+function previewAvailable() {
+  return ['develop', 'test'].includes(runtime.accountEnvironment()) || offlineTestPreviewAvailable()
+}
+
+function useLocalPreview() {
+  if (!previewAvailable()) return false
+  return runtime.isDemo() || offlineTestPreviewAvailable() ||
+    (runtime.accountEnvironment() === 'develop' &&
+      /^http:\/\/127\.0\.0\.1:\d+$/.test(runtime.API_BASE_URL || '') &&
+      runtime.allowsDevelopmentLoopbackHttp(runtime.API_BASE_URL))
+}
+
+function renderStep(answers, index) {
+  const { questions } = shared.assessmentPath(answers)
+  const question = questions[index]
+  const answer = answers[question.question_id]
+  const selected = [].concat(answer ?? [])
+  return {
+    index, total: questions.length, step: index + 1, question, canContinue: answer !== null && shared.isValidAnswer(question, answer),
+    options: question.allowed_values.map(o => ({ ...o, selected: selected.includes(o.value) }))
+  }
+}
+
+const freeAssessmentControls = {
+  startFreeAssessment(event) {
+    const role = event.currentTarget.dataset.role
+    if (!['PARENT_GUARDIAN','STUDENT','UNDECLARED'].includes(role)) return
+    this.freeAnswers = {}
+    this.setData({ freeRole: role, freeError: '', freeSnapshot: null, freeStep: renderStep(this.freeAnswers, 0) })
+  },
+  selectFreeAnswer(event) {
+    if (this.data.freeBusy) return
+    const question = this.data.freeStep.question
+    const { value } = event.currentTarget.dataset
+    let picked = value
+    if (question.answer_type === 'MULTI_CHOICE') {
+      const values = [].concat(this.freeAnswers[question.question_id] ?? [])
+      picked = values.includes(value) ? values.filter(code => code !== value)
+        : question.exclusive_options.includes(value) ? [value]
+          : [...values.filter(code => !question.exclusive_options.includes(code)), value]
+      if (picked.length > question.max_selections) return
+      picked = picked.length ? picked : null
+    }
+    this.freeAnswers = shared.reviseAnswer(this.freeAnswers, question.question_id, picked)
+    this.setData({ freeStep: renderStep(this.freeAnswers, this.data.freeStep.index), freeError: '' })
+  },
+  async nextFreeQuestion(event) {
+    if (this.data.freeBusy) return
+    const step = this.data.freeStep
+    const skip = event.currentTarget.dataset.skip === 'yes'
+    if (skip && step.question.required || !skip && !step.canContinue) return
+    if (skip) this.freeAnswers = shared.reviseAnswer(this.freeAnswers, step.question.question_id, null)
+    if (step.index + 1 < shared.assessmentPath(this.freeAnswers).questions.length) {
+      this.setData({ freeStep: renderStep(this.freeAnswers, step.index + 1), freeError: '' })
+      return
+    }
+    this.setData({ freeBusy: true, freeError: '' })
+    const payload = { versions: shared.VERSIONS, respondent_role: this.data.freeRole, answers: this.freeAnswers }
+    try {
+      const snapshot = useLocalPreview() ? shared.evaluateFreeAssessment(payload)
+        : await api.request(PATH, { method: 'POST', data: payload })
+      if (JSON.stringify(snapshot?.versions) !== JSON.stringify(shared.VERSIONS) ||
+        snapshot.cards?.length !== 4) throw new Error('INVALID_SNAPSHOT')
+      if (!this.freeClosed) this.setData({
+        freeSnapshot: { cards: presentGrowthCards(snapshot) }, freeEvidenceOpen: ''
+      })
+    } catch {
+      if (!this.freeClosed) this.setData({ freeError: '暂时无法生成快照。答案仍在当前页面，可重试。' })
+    } finally {
+      if (!this.freeClosed) this.setData({ freeBusy: false })
+    }
+  },
+  toggleFreeEvidence(event) {
+    const { findingId } = event.currentTarget.dataset
+    this.setData({ freeEvidenceOpen: this.data.freeEvidenceOpen === findingId ? '' : findingId })
+  },
+  backFreeQuestion() {
+    if (this.data.freeBusy) return
+    if (this.data.freeSnapshot) {
+      this.setData({ freeSnapshot: null, freeStep: renderStep(this.freeAnswers, 0), freeError: '' })
+    } else if (this.data.freeStep.index > 0) {
+      this.setData({ freeStep: renderStep(this.freeAnswers, this.data.freeStep.index - 1), freeError: '' })
+    } else {
+      this.freeAnswers = {}
+      this.setData({ freeRole: null, freeStep: null, freeError: '' })
+    }
+  },
+  discardFreeAssessment() {
+    this.freeClosed = true
+    this.freeAnswers = null
+  }
+}
+
+module.exports = { PATH, previewAvailable, useLocalPreview, freeAssessmentControls }

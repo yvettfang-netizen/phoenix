@@ -121,7 +121,7 @@ export class ReportService {
   }
 
   async pdf(userId: string, reportId: string): Promise<Buffer> {
-    const report = await this.store.transaction(async (tx) => {
+    const bytes = await this.store.transaction(async (tx) => {
       const report = await tx.findById('reports', reportId)
       invariant(report, 404, 'REPORT_NOT_FOUND', '报告不存在')
       invariant(report.userId === userId, 403, 'REPORT_FORBIDDEN', '无权访问该报告')
@@ -136,12 +136,15 @@ export class ReportService {
         409, 'REPORT_NOT_READY', '报告尚未交付完成')
       // 只记第一次：退款政策要判断的是"有没有下过"，重复写入既无意义，
       // 也会让"首次下载时间"这个事实随后续下载漂移。
+      // Render before recording first download: failed generation must not alter refund eligibility.
+      const pdf = renderSimpleReportPdf(report)
       if (!report.pdfFirstDownloadedAt) {
-        return tx.update('reports', report.id, { pdfFirstDownloadedAt: iso(this.clock) })
+        await tx.update('reports', report.id, { pdfFirstDownloadedAt: iso(this.clock) })
       }
-      return report
+      return pdf
     })
-    return renderSimpleReportPdf(report)
+    // Transaction implementations may structured-clone a Buffer into Uint8Array.
+    return Buffer.from(bytes)
   }
 
   async submitFeedback(

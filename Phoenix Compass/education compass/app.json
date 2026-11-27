@@ -15,7 +15,9 @@
     "pages/advisor-request/index",
     "pages/mine/index",
     "pages/admin-families/index",
-    "pages/admin-family/index"
+    "pages/admin-family/index",
+    "pages/orders/index",
+    "pages/legal/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#FFFDF9",

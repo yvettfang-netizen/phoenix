@@ -3,8 +3,10 @@ import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } fr
 import handler from "vinext/server/app-router-entry";
 import { getDocumentLocale } from "../lib/locale-navigation";
 import { wealthEdgeRequest, wealthEdgeResponse } from "../lib/wealth-edge";
+import { recordWebsiteTraffic, type WebsiteTrafficDataset } from "../lib/website-traffic";
 
 interface Env {
+  WEBSITE_TRAFFIC?: WebsiteTrafficDataset;
   ASSETS: Fetcher;
   IMAGES: {
     input(stream: ReadableStream): {
@@ -48,10 +50,13 @@ const worker = {
     // This display hint is derived from the post-routing URL by the Worker,
     // never trusted from a client header. It has no authentication meaning.
     const headers = new Headers(request.headers);
+    headers.set("x-phoenix-request-origin", url.origin);
     const documentLocale = getDocumentLocale(url.pathname);
     headers.delete("x-phoenix-health-locale");
     if (documentLocale) headers.set("x-phoenix-health-locale", documentLocale);
-    return wealthEdgeResponse(await handler.fetch(new Request(request, { headers }), env, ctx), original);
+    const response = await wealthEdgeResponse(await handler.fetch(new Request(request, { headers }), env, ctx), original);
+    recordWebsiteTraffic(original, response, env.WEBSITE_TRAFFIC);
+    return response;
   },
 };
 

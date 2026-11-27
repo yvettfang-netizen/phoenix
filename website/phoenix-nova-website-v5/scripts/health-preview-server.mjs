@@ -5,7 +5,10 @@ import { resolve, sep, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createV5Worker } from "../tests/worker-fixture.mjs";
 const root = fileURLToPath(new URL("../dist/client", import.meta.url));
-const worker = createV5Worker({ HEALTH_COMPASS_PREVIEW: process.env.HEALTH_COMPASS_PREVIEW ?? "" });
+const worker = createV5Worker({
+  HEALTH_COMPASS_PREVIEW: process.env.HEALTH_COMPASS_PREVIEW ?? "",
+  EDUCATION_FREE_ASSESSMENT_PREVIEW: process.env.EDUCATION_FREE_ASSESSMENT_PREVIEW ?? "",
+});
 const types = { ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".jpg": "image/jpeg", ".svg": "image/svg+xml", ".woff2": "font/woff2", ".ico": "image/x-icon" };
 async function asset(request) {
   let path;
@@ -20,9 +23,17 @@ async function asset(request) {
 const port = Number(process.env.HEALTH_TEST_PORT || "4387");
 const server = createServer(async (req, res) => {
   try {
-    const request = new Request(`http://127.0.0.1:${port}${req.url}`, { headers: req.headers, method: "GET" });
-    let response = await asset(request);
-    if (response.status === 404) response = await worker.dispatchFetch(request.url, { headers: request.headers, redirect: "manual" });
+    const url = `http://127.0.0.1:${port}${req.url}`;
+    const { method, headers } = req;
+    let response = method === "GET" ? await asset(new Request(url, { headers })) : null;
+    if (!response || response.status === 404) {
+      const options = { method, headers, redirect: "manual" };
+      if (method !== "GET" && method !== "HEAD") {
+        options.body = req;
+        options.duplex = "half";
+      }
+      response = await worker.dispatchFetch(url, options);
+    }
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(Buffer.from(await response.arrayBuffer()));
   } catch { res.writeHead(500); res.end("Preview adapter error"); }

@@ -26,6 +26,63 @@ const {
   buildDevelopment, validateDevelopmentApiBaseUrl
 } = require('../scripts/build-development')
 
+test('DevTools release mirror refuses offline, missing and unknown provenance', () => {
+  const { assertReleaseMirrorArtifact } = require('../scripts/build-devtools')
+  const staging = fs.mkdtempSync(path.join(os.tmpdir(), 'phoenix-release-mirror-'))
+  const manifest = path.join(staging, 'RELEASE_BUILD.json')
+  try {
+    assert.throws(() => assertReleaseMirrorArtifact(staging))
+    for (const artifactClass of ['OFFLINE_TEST_ONLY', 'LOCAL_DEVTOOLS_LOOPBACK_ONLY', 'UNKNOWN']) {
+      fs.writeFileSync(manifest, JSON.stringify({ artifactClass }))
+      assert.throws(() => assertReleaseMirrorArtifact(staging), /must not replace dist\/release/)
+    }
+    fs.writeFileSync(manifest, JSON.stringify({ artifactClass: 'STAGING_OR_RELEASE_BUILD' }))
+    assert.equal(assertReleaseMirrorArtifact(staging).artifactClass, 'STAGING_OR_RELEASE_BUILD')
+  } finally {
+    fs.rmSync(staging, { recursive: true, force: true })
+  }
+})
+
+test('anonymous local preview is restricted to demo, authorized loopback and explicit offline DevTools builds', () => {
+  const runtime = require('../config/runtime')
+  const { previewAvailable, useLocalPreview } = require('../services/free-education-assessment')
+  const original = { ...runtime }
+  const originalWx = global.wx
+  try {
+    runtime.isDemo = () => false
+    runtime.accountEnvironment = () => 'develop'
+    runtime.API_BASE_URL = 'http://127.0.0.1:3000'
+    runtime.allowsDevelopmentLoopbackHttp = value => value === runtime.API_BASE_URL
+    assert.equal(previewAvailable(), true)
+    assert.equal(useLocalPreview(), true)
+    runtime.API_BASE_URL = 'https://api.example.invalid'
+    assert.equal(useLocalPreview(), false)
+    runtime.accountEnvironment = () => 'release'
+    runtime.API_BASE_URL = 'https://education-compass-offline-test.invalid'
+    global.wx = { getAccountInfoSync: () => ({ miniProgram: { envVersion: 'develop' } }) }
+    assert.equal(previewAvailable(), false)
+    assert.equal(useLocalPreview(), false)
+    runtime.OFFLINE_TEST_ONLY = true
+    assert.equal(previewAvailable(), true)
+    assert.equal(useLocalPreview(), true)
+    for (const envVersion of ['trial', 'release', 'unknown']) {
+      global.wx.getAccountInfoSync = () => ({ miniProgram: { envVersion } })
+      assert.equal(previewAvailable(), false)
+      assert.equal(useLocalPreview(), false)
+    }
+    global.wx.getAccountInfoSync = () => { throw new Error('unavailable') }
+    assert.equal(previewAvailable(), false)
+    runtime.OFFLINE_TEST_ONLY = false
+    runtime.accountEnvironment = () => 'test'
+    runtime.isDemo = () => true
+    assert.equal(useLocalPreview(), true)
+  } finally {
+    delete runtime.OFFLINE_TEST_ONLY
+    Object.assign(runtime, original)
+    global.wx = originalWx
+  }
+})
+
 test('release API URL validation rejects credential-bearing and structurally unsafe URLs', () => {
   assert.equal(validateApiBaseUrl('https://api.example.invalid/base').hostname, 'api.example.invalid')
   for (const value of [

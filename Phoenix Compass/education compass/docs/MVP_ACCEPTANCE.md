@@ -23,8 +23,8 @@
 - `[x-auto]` 页面流程覆盖：家庭/孩子档案 → 同意 → 问卷 → 预览 → 支付结果 → 完整报告 → 反馈/顾问/时间线。
 - `[x-auto]` `COMPASS_REPORT_SINGLE_39_9` 在小程序侧固定为3990分、CNY、单次解锁。
 - `[x-auto]` 自动测试断言服务端订单、微信下单和支付回调固定并复核3990分、CNY。
-- `[ ] test-gap` 创单HTTP DTO不绑定客户端金额，但当前测试没有专门发送伪造金额字段来验证其被忽略。
-- `[ ] test-gap` `PHOENIX_MEMBER_199` 在实现中保持独立且停用，但当前服务端测试没有直接尝试以会员SKU购买或解锁39.9报告。
+- `[x-auto]` 创单HTTP DTO不接受客户端金额；发送伪造 `amountFen` 会以 `UNKNOWN_REQUEST_FIELDS` 拒绝，服务端订单仍只采用固定3990分定价。
+- `[x-auto]` `PHOENIX_MEMBER_199` 保持独立且停用；领域及HTTP回归均直接尝试会员SKU，无法购买或解锁39.9报告。
 - `[x-auto]` 旧版免费成长洞察与新版付费报告使用不同展示和访问语义，不会误标成已购报告。
 - `[x-auto]` Partner/Permission 仍为空模型；Culture、Health、Identity、Wealth、商城及会员入口不在本次验收范围。
 
@@ -40,8 +40,8 @@
 - `[x-auto]` 未付费及跨用户读取只能得到预览或拒绝，无法取得完整报告/PDF；已付费路径才返回六模块和PDF字节。
 - `[x-auto]` demo完整报告严格包含六模块且顺序固定：成长画像、优势能力、专业方向、大学匹配、升学路线、6—24个月行动规划。
 - `[x-auto]` submit时在服务端生成全部六模块并以 `qaPassed=true、status=LOCKED、deliveryStatus=LOCKED` 保存；placeholder目录、QA失败或生成失败不能创建订单。
-- `[ ] test-gap` 报告实现保存 Source ID、适用年份/数据日期及 student/questionnaire/rule/data/prompt/template 版本，但当前测试没有逐字段断言整个版本快照。
-- `[ ] test-gap` QA实现包含模块顺序及禁止承诺词检查，但当前测试没有注入候选集外事实或每个禁止词验证拒绝。
+- `[x-auto]` 报告测试逐字段断言 Source ID、适用年份、核验时间、数据日期以及 student/questionnaire/rule/data/prompt/template 版本快照。
+- `[x-auto]` QA回归逐一注入全部禁止承诺词，并另行伪造候选集外事实；两类均在报告持久化和创单前拒绝。
 
 ## 4. 订单、支付与权益验收
 
@@ -49,14 +49,14 @@
 - `[x-auto]` 小程序不会依据 `wx.requestPayment` 的 success/cancel/fail 直接写 `PAID`，而是查询服务端订单。
 - `[x-auto]` `PAID_COMPASS_ENABLED` 默认 `false`、非法配置被拒绝；关闭时新的创单返回 `PAID_COMPASS_DISABLED`。
 - `[x-auto]` 创单受verified Source Catalog及QA锁定闸门保护；收银台等待阶段使用 `PENDING` 主状态。
-- `[ ] test-gap` 预支付实现会再次检查购买开关、Source Catalog版本及QA锁定，但当前测试没有分别篡改这三项后调用预支付。
-- `[ ] test-gap` 创单实现按用户/幂等键和用户/测评/商品有效订单去重，但当前测试没有直接覆盖并发重复创单。
+- `[x-auto]` 预支付回归分别关闭购买开关、替换未核验 Source Catalog、撤销 Consent、破坏 QA 及停用商品，均在调用支付提供方前拒绝。
+- `[x-auto]` 20路并发重复创单只产生一个订单；相同测评、商品和幂等键不会重复扣款准备。
 - `[x-auto]` 微信下单携带订单 `time_expire`；主动查单至少间隔5秒。PENDING到期先查单，NOTPAY且关单成功后才CANCELLED；丢通知可由可信查单恢复PAID。
 - `[x-auto]` API v3请求/响应签名、成功通知原始body验签与AES-256-GCM解密已用fixture验证；篡改签名/密文及错误appid、mchid、金额、币种、transaction_id或付款OpenID均不能授权。
 - `[x-auto]` 重复成功通知保持一次订单、一次 `ACTIVE` entitlement、一次报告任务及一次交付时间线；只把收费前QA通过的报告切换为 `READY/DELIVERED`，支付后不再生成报告。
-- `[ ] test-gap` kill switch关闭或当前目录撤回后的“已发支付参数仍可信交付”已在实现中保持，但当前测试未直接模拟开关/目录在预支付后的切换；目录撤回事故与人工退款也必须人工演练。
+- `[x-auto]` 新增直接回归：订单取得支付参数后同时关闭购买开关并替换为未核验 Source Catalog，已签可信成功仍只交付一次；新的创单继续拒绝。目录撤回事故登记与人工退款仍须人工演练。
 - `[x-auto]` 未付费、无权益或跨用户无法取得完整报告/PDF；有权益用户得到鉴权PDF文件字节，接口不返回永久对象URL。
-- `[ ] test-gap` 失效会话访问完整报告/PDF的HTTP级路径未在当前测试中单独覆盖。
+- `[x-auto]` HTTP回归已执行退出并撤销 bearer，会话失效后完整报告和PDF接口均返回401。
 - `[x-auto]` 管理退款具备RBAC、幂等和审计；退款成功只撤权一次，主动/定时查退款可补偿丢失回调，退款请求前崩溃会以同一out_refund_no重放，`SUCCESS` 不会被后到的PROCESSING/CLOSED/ABNORMAL倒退。
 - `[x-auto]` 当前bearer可由 `DELETE /v1/auth/session` 撤销，小程序退出会调用该接口；撤销后旧token访问受保护资源返回401。
 - `[x-auto]` 回调入口在占处理槽前拒绝缺失签名头，应用设置128KB/5秒body边界及短Server超时；production URL同源和PostgreSQL `sslmode=verify-full` 配置已有自动断言。

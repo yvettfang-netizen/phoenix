@@ -464,6 +464,34 @@ test('prepay independently rechecks launch switch, source catalog, report QA, co
   await expectCode(disabled.orders.createVirtualPayment(disabled.session.user.id, disabledOrder.orderId, await payer(disabled)), 'PRODUCT_UNAVAILABLE')
 })
 
+test('a trusted in-flight payment remains deliverable after the purchase switch and source catalog close', async () => {
+  const context = await setup()
+  const { submitted } = await createSubmitted(context)
+  const order = await context.orders.createOrder(context.session.user.id, submitted.assessmentId, {
+    productCode: 'COMPASS_REPORT_SINGLE_39_9', idempotencyKey: 'in-flight-after-gates-close'
+  })
+  const payment = await context.orders.createVirtualPayment(context.session.user.id, order.orderId, await payer(context))
+  context.mockPay.setOrderState(payment.outTradeNo, 'SUCCESS')
+
+  const closedGates = new OrderService(
+    context.store,
+    context.mockPay,
+    PLACEHOLDER_SOURCE_CATALOG,
+    false,
+    clock
+  )
+  await closedGates.handleDelivery(deliveryFor(context, payment.outTradeNo))
+
+  const settled = await closedGates.getOrder(context.session.user.id, order.orderId, false)
+  assert.equal(settled.status, 'PAID')
+  assert.equal((await context.reports.get(context.session.user.id, submitted.reportId)).access, 'full')
+  assert.equal((await context.store.read((tx) => tx.findMany('entitlements', { orderId: order.orderId }))).length, 1)
+
+  await expectCode(closedGates.createOrder(context.session.user.id, submitted.assessmentId, {
+    productCode: 'COMPASS_REPORT_SINGLE_39_9', idempotencyKey: 'new-order-after-gates-close'
+  }), 'PAID_COMPASS_DISABLED')
+})
+
 test('concurrent duplicate order creation is idempotent and membership SKU cannot unlock a report', async () => {
   const context = await setup()
   const { submitted } = await createSubmitted(context)

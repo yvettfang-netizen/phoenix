@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "website/phoenix-nova-website-v5/**"
+      - "Phoenix Compass/education compass/models/free-education-*.js"
       - ".github/workflows/education-page-validation.yml"
 
 permissions:
@@ -30,6 +31,7 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: node --test tests/education-landing.test.mjs
+      - run: node --experimental-strip-types --test tests/free-education-assessment.test.mjs
       - name: Preserve existing Education Compass client and UI contracts
         working-directory: Phoenix Compass/education compass
         run: |
@@ -58,6 +60,20 @@ jobs:
           node tests/education-browser.mjs
           EDUCATION_KNOWLEDGE_EVIDENCE_DIR=education-evidence/knowledge node tests/education-knowledge-browser.mjs
           EDUCATION_KNOWLEDGE_EVIDENCE_DIR=education-evidence/readiness node tests/education-readiness-browser.mjs
+      - name: Anonymous Education Compass browser checks with preview enabled
+        run: |
+          export PLAYWRIGHT_MODULE="$(python -c 'import pathlib, playwright; print(pathlib.Path(playwright.__file__).parent / "driver" / "package")')"
+          export EDUCATION_FREE_ASSESSMENT_PREVIEW=true
+          export HEALTH_TEST_PORT=4412
+          export EDUCATION_ORIGIN=http://127.0.0.1:4412
+          node scripts/health-preview-server.mjs > education-evidence/free-assessment-preview.log 2>&1 &
+          preview_pid=$!
+          trap 'kill "$preview_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent "$EDUCATION_ORIGIN/zh/education/free-assessment" > /dev/null; then break; fi
+            sleep 1
+          done
+          node tests/free-education-assessment-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

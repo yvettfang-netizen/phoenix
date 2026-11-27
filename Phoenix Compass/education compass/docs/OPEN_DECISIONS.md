@@ -6,6 +6,8 @@
 > OD-05 法律审查所需的字段、去向与保留期事实见 [DATA_INVENTORY.md](DATA_INVENTORY.md)；
 > OD-04 的文件格式与校验工具见 [SOURCE_CATALOG.md](SOURCE_CATALOG.md)。
 
+> 2026-11-19 产品政策批准边界：Founder 已批准现有 Consent／Assent 产品文案、退款规则、当前保留删除行为，以及“工作日 24 小时首次响应、3 个工作日退款结论、经核验请求后 30 天完成第三方删除或最小化”的 SLA 数值。精确文件摘要与边界见 [C2 产品政策批准记录](../../../docs/database/education-assessment-report-20261118/C2_POLICY_APPROVAL_RECORD_20261119.md)。Source Catalog 目前只有格式和模板，没有正式条目、适用年份与核验人，因此 OD-04 仍为 HOLD；Consent 文本仍缺法务、隐私及未成年人专业签署，因此 OD-05 仍为 HOLD；OD-10 的发票／税务部分及 OD-16 的外部合同与运行证据仍未关闭。
+
 当前工作副本未附带P0批准/配置证据：OD-01至OD-06不得视为关闭，`PAID_COMPASS_ENABLED=false`；OD-05、OD-06、OD-12和OD-15不得视为关闭，`OPENAI_AGENT_ENABLED=false`、`AI_WORKER_ENABLED=false`。`.env.example`、测试Key、Mock Provider、`store:false`、占位域名和自动化通过均不能替代真实审批。
 
 | ID | 优先级 | 决策 | 负责人建议 | 未决时默认行为 |

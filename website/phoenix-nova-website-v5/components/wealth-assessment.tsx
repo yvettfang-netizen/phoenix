@@ -10,7 +10,7 @@ import {
   score,
   validateAnswer,
   type Answers,
-} from "../../../Phoenix Compass/Wealth Compass/src/domain/wealth-compass/frozen-v1";
+} from "@/lib/wealth-frozen-v1";
 import styles from "./wealth.module.css";
 const DRAFT_KEY = "phoenix-wealth-frozen-v1-draft";
 const riskLabels: Record<string, readonly [string, string]> = {

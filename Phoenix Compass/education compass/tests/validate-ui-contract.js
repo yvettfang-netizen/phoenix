@@ -173,8 +173,8 @@ const interactionBaseline = readJson(interactionBaselinePath)
 const protectedBaseline = readJson(protectedBaselinePath)
 const app = readJson(path.join(root, 'app.json'))
 
-assert.strictEqual(app.pages.length, 16, 'source Mini Program must keep all 16 registered pages')
-assert.deepStrictEqual(app.pages, routeBaseline.pages, 'app.json page order changed from the approved pre-UI baseline')
+// Preserve the historical baseline; allow exactly the approved additive order-center route.
+assert.deepStrictEqual(app.pages, [...routeBaseline.pages, 'pages/orders/index', 'pages/legal/index'], 'original page order and additive order center must remain intact')
 assert.strictEqual(app.lazyCodeLoading, routeBaseline.lazyCodeLoading, 'lazyCodeLoading changed from the approved baseline')
 assert(app.tabBar && Array.isArray(app.tabBar.list), 'tabBar list is missing')
 assert.deepStrictEqual(
@@ -192,6 +192,15 @@ for (const page of app.pages) {
 
 assert.strictEqual(interactionBaseline.pages.length, 16, 'required-handler baseline must cover all 16 pages')
 for (const page of interactionBaseline.pages) assertInteractionContract(page)
+assertInteractionContract({ path: 'pages/orders/index.wxml', handlers: [
+  { attribute: 'bindtap', handler: 'login' }, { attribute: 'bindtap', handler: 'load' },
+  { attribute: 'bindtap', handler: 'openOrder' }, { attribute: 'bindtap', handler: 'goCompass' }
+], dataAttributes: [{ attribute: 'data-id', value: '{{item.orderId}}' }] })
+assert(readSource('pages/mine/index.wxml').includes('bindtap="openOrderCenter"'))
+assert.strictEqual(countMatches(readSource('pages/mine/index.wxml'), /bindtap="openLegal"/g), 3)
+assert(!/\b(?:bindtap|bindchange|open-type)\s*=/.test(readSource('pages/legal/index.wxml')), 'legal review must remain read-only')
+assert(readSource('pages/mine/index.wxml').includes('open-type="contact"'))
+assert.strictEqual(countMatches(readSource('pages/report/index.wxml'), /wx:if="\{\{pdfExportEnabled\}\}"/g), 2)
 
 const copyContract = {
   'pages/compass/index.wxml': [
@@ -491,6 +500,20 @@ assert(tapToken && /44px/.test(tapToken[1]),
 const nativeButtonRules = cssRuleBodies(globalWxss, 'button')
 assert(nativeButtonRules.some((body) => /min-height\s*:\s*(?:var\(\s*--tap-min-size\s*\)|(?:4[4-9]|[5-9]\d)px)/i.test(body)),
   'app.wxss native button rule must apply the 44px tap minimum to non-.btn controls too')
+assert(nativeButtonRules.some(body => /display\s*:\s*flex/i.test(body) && /align-items\s*:\s*center/i.test(body) && /justify-content\s*:\s*center/i.test(body)), 'native buttons must centre labels independently of tap target height')
+for (const [file, selectors] of [
+  ['pages/compass-questionnaire/index.wxss', ['.questionnaire__save-exit', '.matrix__remove', '.questionnaire__back']],
+  ['pages/welcome/index.wxss', ['.welcome__login']],
+  ['pages/admin-families/index.wxss', ['.advisor-list__logout']]
+]) {
+  for (const selector of selectors) {
+    const rules = cssRuleBodies(readSource(file), selector)
+    assert(rules.length && rules.every(body => !/line-height\s*:\s*\d+(?:\.\d+)?rpx/i.test(body)), file + ' ' + selector + ' must not fake button height using fixed line-height')
+  }
+}
+const freeStyles = readSource('pages/compass/index.wxss')
+assert(/button\.free-education__option\{[^}]*justify-content:flex-start/.test(freeStyles), 'anonymous assessment answer options must retain left aligned row layout')
+assert(/button\.free-education__evidence-toggle\{[^}]*align-items:center/.test(freeStyles), 'evidence disclosure button must vertically centre its label')
 const sharedButtonRules = cssRuleBodies(globalWxss, '.btn')
 assert(sharedButtonRules.some((body) => /min-height\s*:\s*var\(\s*--tap-min-size\s*\)/i.test(body)),
   'app.wxss .btn must continue to consume --tap-min-size')
@@ -644,7 +667,7 @@ for (const lockPath of ['package-lock.json', 'server/package-lock.json']) {
   assert.strictEqual(sha256(path.join(root, ...lockPath.split('/'))), baseline.sha256, `${lockPath} changed during the UI-only update`)
 }
 
-console.log('✓ UI route contract: 16 ordered pages, 3 tab paths and lazy loading preserved')
+console.log('✓ UI route contract: original 16 ordered pages plus order center and legal review, 3 tab paths and lazy loading preserved')
 console.log('✓ UI interaction contract: required WXML handlers and data-* bindings preserved')
 console.log('✓ UI V2 screen contract: seven screen hooks, Level 2/report/Askwise gates and Consent controls preserved')
 console.log('✓ UI share contract: native sharing is limited to preview/report and exposes only the generic welcome entry')

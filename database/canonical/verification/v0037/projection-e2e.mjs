@@ -21,6 +21,16 @@ const originalReview=process.argv.includes('--review-original');
 const familyCenterV2=process.argv.includes('--family-center-v2');
 const failureDrills=process.argv.includes('--failure-drills');
 const familyCenterFlags=familyCenterV2?'FAMILY_CENTER_V2_ENABLED=true\n':'';
+const testPort=(name,fallback)=>{
+  const value=process.env[name];
+  if(value===undefined)return fallback;
+  const port=Number(value);
+  assert(Number.isInteger(port)&&port>=1024&&port<=65535,`${name} must be a non-privileged TCP port`);
+  return port;
+};
+const previewPort=testPort('CANONICAL_TEST_PREVIEW_PORT',4499);
+const sessionPreviewPort=testPort('CANONICAL_TEST_SESSION_PREVIEW_PORT',4500);
+const brokerPort=testPort('CANONICAL_TEST_BROKER_PORT',4506);
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../../..');
 const combinedPath=path.join(root,'database/canonical/migration-manifests/combined-0036-0037-candidate.json');
 const combined=existsSync(combinedPath)?JSON.parse(readFileSync(combinedPath)):undefined;
@@ -188,14 +198,14 @@ function acquisitionRegression(db,base){
 
 async function sessionBrowserProbe({apiOrigin,tokens,revokeBrowserSession,expectedNames,changeStudentName}){
   let ownVite,ownBrowser,ownConfig=false,context;
-  const target=vite?'http://127.0.0.1:4499':'http://127.0.0.1:4500';
+  const target=`http://127.0.0.1:${vite?previewPort:sessionPreviewPort}`;
   try{
     if(!vite){
       assert(!existsSync(devVars),'Existing preview config preserved');
       save(devVars,`${familyCenterFlags}CANONICAL_FAMILY_PROJECTION_ENABLED=true\nCANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED=true\nCANONICAL_BROKER_SESSION_BRIDGE_ENABLED=true\nCANONICAL_SESSION_API_ORIGIN=${apiOrigin}\n`);ownConfig=true;
       const childEnv={...process.env,NODE_ENV:'development',WRANGLER_SEND_METRICS:'false',NO_PROXY:'127.0.0.1,localhost'};
       for(const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy'])delete childEnv[k];
-      ownVite=spawn(process.execPath,[path.join(website,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port','4500','--strictPort'],{cwd:website,env:childEnv,stdio:['ignore','pipe','pipe'],windowsHide:true});
+      ownVite=spawn(process.execPath,[path.join(website,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port',String(sessionPreviewPort),'--strictPort'],{cwd:website,env:childEnv,stdio:['ignore','pipe','pipe'],windowsHide:true});
       ownVite.stdout.on('data',x=>webLog+=x);ownVite.stderr.on('data',x=>webLog+=x);
       let ready=false;for(let n=0;n<100;n++){if(ownVite.exitCode!==null)throw Error('Session preview exited');try{const r=await fetch(target+'/api/canonical/session-projections/family',{signal:AbortSignal.timeout(2000)});if(r.status===403){ready=true;break;}}catch{}await sleep(500);}assert(ready);
     }
@@ -282,7 +292,7 @@ try{
   seed(db);
   acquisitionRegression(db,36000);
   await runReadAuditRegression({db,sql,connection,Pool,appPassword,binderPassword,id,issuer,familyKey,randomUUID,docker});console.log(`PASS PG${version} 0001-0035 plus independent 0037; synthetic principals, managed family mappings and guardian fixtures`);
-  await runBrokerSessionRegression({db,sql,id,familyKey,root,work,save,connection,appPassword,binderPassword,docker,nonce,listenPort:combined?4506:0,probeBrowser:combined?sessionBrowserProbe:undefined});
+  await runBrokerSessionRegression({db,sql,id,familyKey,root,work,save,connection,appPassword,binderPassword,docker,nonce,listenPort:combined?brokerPort:0,probeBrowser:combined?sessionBrowserProbe:undefined});
   const rawApp=new Pool(connection(db,'projection_app',appPassword)),rawBinder=new Pool(connection(db,'projection_binder',binderPassword));
   try{
     for(const q of ['SET ROLE phoenix_canonical_app','SET ROLE phoenix_canonical_context_binder','SELECT * FROM auth.external_identities',
@@ -332,12 +342,12 @@ try{
   sql(db,'GRANT pg_read_server_files TO phoenix_canonical_projection_reader');assert.equal((await call()).status,503);
   sql(db,'REVOKE pg_read_server_files FROM phoenix_canonical_projection_reader');assert.equal((await call()).status,200);
   console.log('PASS excessive app membership rejected; structured outcome audit contains no identities or DTO fields');
-  save(devVars,`${familyCenterFlags}CANONICAL_FAMILY_PROJECTION_ENABLED=true\nCANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED=true\nCANONICAL_FAMILY_API_ORIGIN=${origin}\n${combined?'CANONICAL_BROKER_SESSION_BRIDGE_ENABLED=true\nCANONICAL_SESSION_API_ORIGIN=http://127.0.0.1:4506\n':''}`);ownsVars=true;
+  save(devVars,`${familyCenterFlags}CANONICAL_FAMILY_PROJECTION_ENABLED=true\nCANONICAL_FAMILY_PROJECTION_AUDITED_ENABLED=true\nCANONICAL_FAMILY_API_ORIGIN=${origin}\n${combined?`CANONICAL_BROKER_SESSION_BRIDGE_ENABLED=true\nCANONICAL_SESSION_API_ORIGIN=http://127.0.0.1:${brokerPort}\n`:''}`);ownsVars=true;
   const webEnv={...process.env,NODE_ENV:'development',WRANGLER_SEND_METRICS:'false',NO_PROXY:'127.0.0.1,localhost'};
   for(const k of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy'])delete webEnv[k];
-  vite=spawn(process.execPath,[path.join(website,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port','4499','--strictPort'],{cwd:website,env:webEnv,stdio:['ignore','pipe','pipe'],windowsHide:true});
+  vite=spawn(process.execPath,[path.join(website,'node_modules/vite/bin/vite.js'),'--host','127.0.0.1','--port',String(previewPort),'--strictPort'],{cwd:website,env:webEnv,stdio:['ignore','pipe','pipe'],windowsHide:true});
   vite.stdout.on('data',x=>{webLog+=x;});vite.stderr.on('data',x=>{webLog+=x;});
-  const web='http://127.0.0.1:4499';let ready=false;
+  const web=`http://127.0.0.1:${previewPort}`;let ready=false;
   for(let n=0;n<100;n++){if(vite.exitCode!==null)throw Error('Website exited');try{const r=await fetch(web+'/api/canonical/projections/family',{signal:AbortSignal.timeout(2000)});if(r.status===403){ready=true;break;}}catch{}await sleep(500);}assert(ready);
   browser=await chromium.launch({headless:true,channel:process.env.CATALOG_BROWSER_CHANNEL||(process.platform==='win32'&&!existsSync(chromium.executablePath())?'msedge':'chromium')});
   const context=await browser.newContext();await context.route('**/*',route=>['127.0.0.1','localhost'].includes(new URL(route.request().url()).hostname)?route.continue():route.abort());
@@ -395,7 +405,7 @@ try{
   acquisitionRegression(restored,46000);
   sql(restored,`ALTER ROLE projection_app PASSWORD '${appPassword}';ALTER ROLE projection_binder PASSWORD '${binderPassword}';`);
   await runReadAuditRegression({db:restored,sql,connection,Pool,appPassword,binderPassword,id,issuer,familyKey,randomUUID,docker});
-  await runBrokerSessionRegression({db:restored,sql,id,familyKey,root,work,save,connection,appPassword,binderPassword,docker,nonce,listenPort:combined?4506:0,probeBrowser:combined?sessionBrowserProbe:undefined});
+  await runBrokerSessionRegression({db:restored,sql,id,familyKey,root,work,save,connection,appPassword,binderPassword,docker,nonce,listenPort:combined?brokerPort:0,probeBrowser:combined?sessionBrowserProbe:undefined});
   await close(api);api=undefined;await projection.close();projection=await adapter(restored,'restored');api=await serve(projection,apiPort);
   await reviewRuntimeProbes({db:restored,sql,call,original:originalReview});
   assert.equal((await call()).status,200);assert.equal((await call('students/'+publicStudent(4))).status,404);

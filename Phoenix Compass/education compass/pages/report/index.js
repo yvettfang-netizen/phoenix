@@ -6,6 +6,7 @@ const payment = require('../../services/payment')
 const session = require('../../services/session')
 const educationNavigation = require('../../utils/education-compass-navigation')
 const runtime = require('../../config/runtime')
+const features = require('../../config/features')
 const { dateLabel } = require('../../utils/date')
 
 const FIELD_LABELS = {
@@ -197,6 +198,7 @@ Page({
     student: null, family: null, dateLabel: '', userRole: '',
     loading: true, error: '', pdfLoading: false, feedbackSending: false, feedbackSent: false,
     paidAnalysisVisible: false, agentEntryVisible: false, agentManagementVisible: false, agentEntryLabel: '了解并开启 AI 追问',
+    pdfExportEnabled: features.pdfExport,
     isDemo: runtime.isDemo(), ratings: [1, 2, 3, 4, 5],
     feedbackTags: [
       { text: '方向清晰', selected: false }, { text: '建议可执行', selected: false },
@@ -306,13 +308,14 @@ Page({
     const limitReached = capability.reasonCode === 'AGENT_REPLY_LIMIT_REACHED'
     const eligible = paidReportEligible && (capability.available === true || (limitReached && hasConversation))
     return {
-      paidAnalysisVisible: paidReportEligible,
+      paidAnalysisVisible: features.paidReportAnalysis && paidReportEligible,
       agentEntryVisible: eligible,
       agentManagementVisible: familyUser && !eligible && hasConversation,
       agentEntryLabel: limitReached ? '查看 AI 追问记录' : (capability.activeConversationId ? '继续 AI 追问' : '了解并开启 AI 追问')
     }
   },
   openPaidAnalysis() {
+    if (!features.paidReportAnalysis) return wx.showToast({ title: 'AI 总分析暂未开放', icon: 'none' })
     if (runtime.isDemo()) {
       wx.showModal({
         title: '后端联调能力',
@@ -324,6 +327,7 @@ Page({
     wx.navigateTo({ url: `/pages/assessment-analysis/index?mode=paid&reportId=${encodeURIComponent(this.data.reportId)}` })
   },
   async openPdf() {
+    if (!features.pdfExport) return wx.showToast({ title: 'PDF 导出暂未开放', icon: 'none' })
     if (this.data.pdfLoading) return
     this.setData({ pdfLoading: true })
     try { await reportService.openPdf(this.data.reportId) }
