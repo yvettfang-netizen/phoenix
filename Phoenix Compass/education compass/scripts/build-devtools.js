@@ -1,3 +1,4 @@
+const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
 const { buildDevelopment } = require('./build-development')
@@ -37,15 +38,26 @@ function buildDevtools(options = {}) {
 // what build:release produces; only the way it reaches dist/release differs.
 function buildDevtoolsRelease(options = {}) {
   const staging = buildRelease({ ...options, outputDirectory: RELEASE_STAGING_DIRECTORY })
+  const provenance = JSON.parse(fs.readFileSync(path.join(staging, 'RELEASE_BUILD.json'), 'utf8'))
+  // 没有 PHOENIX_API_BASE_URL / PHOENIX_MINIPROGRAM_APPID 时，buildRelease 会回落到
+  // OFFLINE_TEST_ONLY（touristappid + education-compass-offline-test.invalid）。
+  // 这种包一旦被镜像进 dist/release，开发工具里就会显示"无 AppID 关联"并在控制台
+  // 报 ERR_NAME_NOT_RESOLVED，还可能被当成正式包上传。直接拦住，不再静默覆盖。
+  if (provenance.artifactClass !== 'STAGING_OR_RELEASE_BUILD') {
+    throw new Error(
+      'build:devtools:release 需要 PHOENIX_API_BASE_URL 与 PHOENIX_MINIPROGRAM_APPID；' +
+      `本次只生成了 ${provenance.artifactClass} 离线包（${staging}），未同步到 dist/release。`
+    )
+  }
   const summary = mirrorDirectory(staging, RELEASE_TARGET_DIRECTORY)
-  return { staging, target: RELEASE_TARGET_DIRECTORY, summary }
+  return { staging, target: RELEASE_TARGET_DIRECTORY, summary, artifactClass: provenance.artifactClass }
 }
 
 if (require.main === module) {
   const wantsRelease = process.argv.slice(2).includes('--release')
-  const { staging, target, summary } = wantsRelease ? buildDevtoolsRelease() : buildDevtools()
+  const { staging, target, summary, artifactClass } = wantsRelease ? buildDevtoolsRelease() : buildDevtools()
   if (summary) console.log(summary)
-  console.log(`${wantsRelease ? 'STAGING_OR_RELEASE_BUILD' : 'LOCAL_DEVTOOLS_LOOPBACK_ONLY'} build synced: ${staging} -> ${target}`)
+  console.log(`${artifactClass || 'LOCAL_DEVTOOLS_LOOPBACK_ONLY'} build synced: ${staging} -> ${target}`)
 }
 
 module.exports = {

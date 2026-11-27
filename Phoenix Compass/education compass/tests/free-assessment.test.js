@@ -5,16 +5,31 @@ const assert = require('assert')
 async function run() {
   const runtime = require('../config/runtime')
   const api = require('../services/api')
-  const { freeAssessmentAvailable, PATH } = require('../services/free-education-assessment')
+  const { freeAssessmentAvailable, remoteEnabled, PATH } = require('../services/free-education-assessment')
   const engine = require('../models/free-education-assessment')
 
   const originalEnvironment = runtime.accountEnvironment
   const originalBaseUrl = runtime.apiBaseUrl
+  const originalIsDemo = runtime.isDemo
+  const originalConstant = runtime.API_BASE_URL
   const originalRequest = wx.request
   try {
     for (const [environment, expected] of [['develop', true], ['test', true], ['trial', true], ['release', true], ['unknown', false]]) {
       runtime.accountEnvironment = () => environment
       assert.strictEqual(freeAssessmentAvailable(), expected, `free assessment must be ${expected ? 'visible' : 'hidden'} in ${environment}`)
+    }
+
+    // 本地预览包（loopback）与离线包（.invalid）不应发出评测请求：发了只会得到
+    // ERR_CONNECTION_REFUSED / ERR_NAME_NOT_RESOLVED，然后仍然回落到端内引擎。
+    runtime.isDemo = () => false
+    for (const [base, expected] of [
+      ['https://api.phoenixnova.com.cn', true],
+      ['http://127.0.0.1:3000', false],
+      ['https://education-compass-offline-test.invalid', false],
+      ['', false]
+    ]) {
+      runtime.API_BASE_URL = base
+      assert.strictEqual(remoteEnabled(), expected, `remote evaluation must be ${expected} for ${base || 'an empty base'}`)
     }
 
     const answers = {
@@ -44,6 +59,8 @@ async function run() {
   } finally {
     runtime.accountEnvironment = originalEnvironment
     runtime.apiBaseUrl = originalBaseUrl
+    runtime.isDemo = originalIsDemo
+    runtime.API_BASE_URL = originalConstant
     wx.request = originalRequest
     api.setAccessToken('')
   }
