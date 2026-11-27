@@ -45,6 +45,7 @@ try {
       const stageCard = page.locator("main article").filter({ has: page.getByRole("heading", { name: "教育阶段", exact: true }) });
       assert.equal(await stageCard.getByRole("heading", { name: "还需要了解" }).count(), 0);
       assert.ok(await page.getByRole("heading", { name: "还需要了解" }).count());
+      assert.equal(await page.getByText("尚未了解孩子近期的学习状态。", { exact: true }).count(), 1);
       const cards = page.locator("main article");
       assert.doesNotMatch((await cards.allInnerTexts()).join("\n"), /\b(?:L[1-4]|Q\d+|EDU-R\d+)\b|learning_state_self_reported/);
       assert.equal(await page.getByText("相关招生要求有待官方核实。", { exact: true }).isVisible(), true);

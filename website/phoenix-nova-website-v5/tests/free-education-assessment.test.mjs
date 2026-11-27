@@ -145,6 +145,7 @@ test("display merges card and finding gaps, uses evidence copy, and leaves the s
   assert.equal(stage.findings[0].evidenceLabel, "根据本次填写的信息");
   assert.equal(growth.findings.find(f => f.title === "兴趣与投入线索").evidenceLabel, "根据多项回答形成的观察");
   assert.ok(next.findings.some(f => f.evidenceLabel === "需要进一步资料或专业评估"));
+  assert.ok(!next.missingInformation.includes("尚未了解孩子近期的学习状态。"));
   assert.deepEqual(stage.findings[0].questionPrompts, ["孩子现在读几年级？"]);
   assert.deepEqual(snapshot, original);
 });

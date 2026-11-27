@@ -68,15 +68,23 @@ function presentFinding(finding) {
 
 // Derive display text without changing the assessment snapshot or any answers.
 function presentGrowthCards(snapshot) {
-  return snapshot.cards.map(card => ({
-    id: card.id,
-    label: card.label,
-    findings: card.findings.map(presentFinding),
-    missingInformation: unique([
+  const shownMissingLabels = new Set()
+  return snapshot.cards.map(card => {
+    const missingInformation = []
+    const keys = [
       ...card.missing_information,
       ...card.findings.flatMap(finding => finding.missing_information)
-    ].map(key => Object.prototype.hasOwnProperty.call(missingLabels, key) ? missingLabels[key] : null).filter(Boolean))
-  }))
+    ]
+    // The final card summarizes some gaps already listed on earlier cards.
+    for (const key of keys) {
+      if (!Object.prototype.hasOwnProperty.call(missingLabels, key)) continue
+      const label = missingLabels[key]
+      if (shownMissingLabels.has(label)) continue
+      shownMissingLabels.add(label)
+      missingInformation.push(label)
+    }
+    return { id: card.id, label: card.label, findings: card.findings.map(presentFinding), missingInformation }
+  })
 }
 
 module.exports = { presentGrowthCards }
