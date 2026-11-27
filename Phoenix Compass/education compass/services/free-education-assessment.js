@@ -4,8 +4,11 @@ const shared = require('../models/free-education-assessment.js')
 
 const PATH = '/v1/education-compass/free-assessment/evaluate'
 
+// 免费初评目前只对开发/测试/体验版开放，正式版（envVersion=release）保持关闭。
+const PREVIEW_ENVIRONMENTS = ['develop', 'test', 'trial']
+
 function previewAvailable() {
-  return ['develop', 'test'].includes(runtime.accountEnvironment())
+  return PREVIEW_ENVIRONMENTS.includes(runtime.accountEnvironment())
 }
 
 function renderStep(answers, index) {

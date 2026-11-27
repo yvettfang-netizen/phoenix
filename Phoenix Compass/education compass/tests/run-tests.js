@@ -453,6 +453,7 @@ console.log('✓ paid Compass: versioned questionnaire, 70-point gate, six-modul
   assessmentService.clearRemoteSessionData()
   console.log('✓ production privacy: fail-closed runtime, no local DB init, questionnaire answer persistence or local analytics')
 
+  await require('./free-assessment.test').run()
   await require('./education-compass-client.test').run()
 })().catch((error) => {
   console.error(error)

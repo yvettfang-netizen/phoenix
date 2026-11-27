@@ -13,6 +13,7 @@ import { AgentService } from '../services/agent-service'
 import { EducationCompassService } from '../services/education-compass-service'
 import { FeishuSyncService } from '../integrations/feishu/sync-service'
 import { routeAgentRequest } from './agent-routes'
+import { evaluateAnonymousFreeAssessment } from './free-assessment-route'
 import { InMemoryRateLimiter, RateLimiter } from './rate-limiter'
 
 export interface AppDependencies {
@@ -231,6 +232,16 @@ export function createHttpHandler(deps: AppDependencies): (request: IncomingMess
           response.setHeader('Content-Type', 'application/json; charset=utf-8')
           return void response.end(reply.body)
         } finally { activeWebhooks -= 1 }
+      }
+
+      // 免费教育初评：匿名、无状态、不落库。答案只用于当场生成四卡快照，所以必须
+      // 在 authToken 之前处理；按 IP 限流，避免匿名入口被脚本刷。
+      if (method === 'POST' && url.pathname === '/v1/education-compass/free-assessment/evaluate') {
+        exactQuery(url)
+        invariant(await rateLimiter.consume(`free-assessment:${clientAddress(request)}`, 30, 60_000),
+          429, 'RATE_LIMITED', '请求过于频繁，请稍后重试')
+        const body = parseJson(await readRawBody(request, 64_000))
+        return json(response, 200, evaluateAnonymousFreeAssessment(body))
       }
 
       const token = authToken(request)

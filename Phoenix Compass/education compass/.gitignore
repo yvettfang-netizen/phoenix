@@ -19,6 +19,7 @@ project.private.config.json
 
 server/.data/
 server/tmp/
+server/.evidence-test-*/
 *.log
 .DS_Store
 Thumbs.db
