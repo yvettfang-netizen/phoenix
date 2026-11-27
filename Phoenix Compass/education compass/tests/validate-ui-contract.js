@@ -500,6 +500,20 @@ assert(tapToken && /44px/.test(tapToken[1]),
 const nativeButtonRules = cssRuleBodies(globalWxss, 'button')
 assert(nativeButtonRules.some((body) => /min-height\s*:\s*(?:var\(\s*--tap-min-size\s*\)|(?:4[4-9]|[5-9]\d)px)/i.test(body)),
   'app.wxss native button rule must apply the 44px tap minimum to non-.btn controls too')
+assert(nativeButtonRules.some(body => /display\s*:\s*flex/i.test(body) && /align-items\s*:\s*center/i.test(body) && /justify-content\s*:\s*center/i.test(body)), 'native buttons must centre labels independently of tap target height')
+for (const [file, selectors] of [
+  ['pages/compass-questionnaire/index.wxss', ['.questionnaire__save-exit', '.matrix__remove', '.questionnaire__back']],
+  ['pages/welcome/index.wxss', ['.welcome__login']],
+  ['pages/admin-families/index.wxss', ['.advisor-list__logout']]
+]) {
+  for (const selector of selectors) {
+    const rules = cssRuleBodies(readSource(file), selector)
+    assert(rules.length && rules.every(body => !/line-height\s*:\s*\d+(?:\.\d+)?rpx/i.test(body)), file + ' ' + selector + ' must not fake button height using fixed line-height')
+  }
+}
+const freeStyles = readSource('pages/compass/index.wxss')
+assert(/button\.free-education__option\{[^}]*justify-content:flex-start/.test(freeStyles), 'anonymous assessment answer options must retain left aligned row layout')
+assert(/button\.free-education__evidence-toggle\{[^}]*align-items:center/.test(freeStyles), 'evidence disclosure button must vertically centre its label')
 const sharedButtonRules = cssRuleBodies(globalWxss, '.btn')
 assert(sharedButtonRules.some((body) => /min-height\s*:\s*var\(\s*--tap-min-size\s*\)/i.test(body)),
   'app.wxss .btn must continue to consume --tap-min-size')

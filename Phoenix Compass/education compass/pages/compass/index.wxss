@@ -652,6 +652,7 @@
 .free-education__heading{font-size:42rpx;line-height:1.32;font-weight:650;margin:18rpx 0}
 .free-education__note{font-size:27rpx;line-height:1.6;color:#41554b;margin:8rpx 0}
 .free-education__option,.free-education__outline,.free-education__continue{min-height:88rpx;margin:12rpx 0;font-size:28rpx;line-height:1.48;text-align:left;padding:16rpx 18rpx;border-radius:14rpx;color:#19392e;background:#f7faf4;border:1px solid #c6d3c3;font-weight:600}
+button.free-education__option{justify-content:flex-start;text-align:left;width:100%}
 .free-education__option--selected{border-color:#567d56;background:#e0edda}
 .free-education__controls{display:flex;gap:10rpx;flex-wrap:wrap}
 button.free-education__continue{color:#fff;background:#22523c;margin-left:auto}
@@ -659,6 +660,6 @@ button.free-education__continue{color:#fff;background:#22523c;margin-left:auto}
 .free-education__title{font-weight:650;font-size:29rpx}
 .free-education__finding{margin-top:12rpx;padding-top:12rpx;border-top:1px solid #d6ded0}
 .free-education__evidence{font-size:24rpx;color:#45664a}
-button.free-education__evidence-toggle{display:block;min-height:88rpx;margin:0;padding:0;background:transparent;color:#315648;font-size:26rpx;text-align:left;text-decoration:underline}
+button.free-education__evidence-toggle{display:flex;align-items:center;justify-content:flex-start;min-height:88rpx;margin:0;padding:0;background:transparent;color:#315648;font-size:26rpx;text-align:left;text-decoration:underline}
 .free-education__evidence-toggle::after{border:0}
 .free-education__source{word-break:break-all}
