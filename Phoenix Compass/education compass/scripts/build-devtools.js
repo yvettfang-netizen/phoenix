@@ -1,3 +1,4 @@
+const fs = require('fs')
 const path = require('path')
 const { spawnSync } = require('child_process')
 const { buildDevelopment } = require('./build-development')
@@ -35,8 +36,18 @@ function buildDevtools(options = {}) {
 // Same trick for the remote build, so a release candidate can be regenerated while
 // the tester-facing project is still open in DevTools. The artifact is byte-for-byte
 // what build:release produces; only the way it reaches dist/release differs.
+function assertReleaseMirrorArtifact(staging) {
+  const provenance = JSON.parse(fs.readFileSync(path.join(staging, 'RELEASE_BUILD.json'), 'utf8'))
+  if (provenance.artifactClass !== 'STAGING_OR_RELEASE_BUILD') {
+    throw new Error('build:devtools:release requires PHOENIX_API_BASE_URL and PHOENIX_MINIPROGRAM_APPID; ' +
+      'offline or unknown artifact must not replace dist/release')
+  }
+  return provenance
+}
+
 function buildDevtoolsRelease(options = {}) {
   const staging = buildRelease({ ...options, outputDirectory: RELEASE_STAGING_DIRECTORY })
+  assertReleaseMirrorArtifact(staging)
   const summary = mirrorDirectory(staging, RELEASE_TARGET_DIRECTORY)
   return { staging, target: RELEASE_TARGET_DIRECTORY, summary }
 }
@@ -49,6 +60,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  buildDevtools, buildDevtoolsRelease, mirrorDirectory,
+  buildDevtools, buildDevtoolsRelease, mirrorDirectory, assertReleaseMirrorArtifact,
   RELEASE_STAGING_DIRECTORY, RELEASE_TARGET_DIRECTORY, STAGING_DIRECTORY, TARGET_DIRECTORY
 }

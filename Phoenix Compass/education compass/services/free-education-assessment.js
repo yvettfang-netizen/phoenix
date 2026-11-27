@@ -5,8 +5,29 @@ const { presentGrowthCards } = require('../models/free-education-presentation.js
 
 const PATH = '/v1/education-compass/free-assessment/evaluate'
 
+// Only an explicitly marked offline-test build may use the anonymous preview in
+// DevTools. A normal trial/release build remains closed, even with an invalid URL.
+function offlineTestPreviewAvailable() {
+  if (runtime.OFFLINE_TEST_ONLY !== true ||
+      runtime.API_BASE_URL !== 'https://education-compass-offline-test.invalid') return false
+  try {
+    return typeof wx !== 'undefined' &&
+      wx.getAccountInfoSync().miniProgram.envVersion === 'develop'
+  } catch {
+    return false
+  }
+}
+
 function previewAvailable() {
-  return ['develop', 'test'].includes(runtime.accountEnvironment())
+  return ['develop', 'test'].includes(runtime.accountEnvironment()) || offlineTestPreviewAvailable()
+}
+
+function useLocalPreview() {
+  if (!previewAvailable()) return false
+  return runtime.isDemo() || offlineTestPreviewAvailable() ||
+    (runtime.accountEnvironment() === 'develop' &&
+      /^http:\/\/127\.0\.0\.1:\d+$/.test(runtime.API_BASE_URL || '') &&
+      runtime.allowsDevelopmentLoopbackHttp(runtime.API_BASE_URL))
 }
 
 function renderStep(answers, index) {
@@ -56,7 +77,7 @@ const freeAssessmentControls = {
     this.setData({ freeBusy: true, freeError: '' })
     const payload = { versions: shared.VERSIONS, respondent_role: this.data.freeRole, answers: this.freeAnswers }
     try {
-      const snapshot = runtime.isDemo() ? shared.evaluateFreeAssessment(payload)
+      const snapshot = useLocalPreview() ? shared.evaluateFreeAssessment(payload)
         : await api.request(PATH, { method: 'POST', data: payload })
       if (JSON.stringify(snapshot?.versions) !== JSON.stringify(shared.VERSIONS) ||
         snapshot.cards?.length !== 4) throw new Error('INVALID_SNAPSHOT')
@@ -90,4 +111,4 @@ const freeAssessmentControls = {
   }
 }
 
-module.exports = { PATH, previewAvailable, freeAssessmentControls }
+module.exports = { PATH, previewAvailable, useLocalPreview, freeAssessmentControls }
