@@ -5,11 +5,13 @@ import { bundleComponents } from "../../verification/p1/browser.mjs";
 
 const site = new URL("../../../../website/phoenix-nova-website-v5/", import.meta.url);
 const projectTitle = "Synthetic linked education service";
+const brandPath = "/brand/official/v3/phoenix-nova-header@2x.png";
 
 export async function verifyLinkedFamilyBrowser({ origin, project, bridge, revoke, openBrowser }) {
   const bundle = await bundleComponents();
   const css = (await Promise.all(["family-center-v2.css", "family-service-overview.css", "service-workbench.css"]
     .map(name => readFile(new URL("components/" + name, site), "utf8")))).join("\n");
+  const logo = await readFile(new URL("public" + brandPath, site));
   const html = '<!doctype html><html lang="en"><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<link rel="stylesheet" href="/fixture.css"><body>' +
@@ -28,6 +30,7 @@ export async function verifyLinkedFamilyBrowser({ origin, project, bridge, revok
           if (url.origin !== origin) return route.abort();
           if (url.pathname === "/fixture.js") return route.fulfill({ body: bundle, contentType: "text/javascript; charset=utf-8" });
           if (url.pathname === "/fixture.css") return route.fulfill({ body: css, contentType: "text/css; charset=utf-8" });
+          if (url.pathname === brandPath) return route.fulfill({ body: logo, contentType: "image/png" });
           const match = /^\/api\/(?:family-services|service-workbench)\/(.+)$/.exec(url.pathname);
           if (match) {
             const request = new Request(url, { method: inbound.method(), headers: await inbound.allHeaders() });
@@ -46,6 +49,8 @@ export async function verifyLinkedFamilyBrowser({ origin, project, bridge, revok
         await page.goto(home);
         const overview = page.locator("[data-family-service-overview]");
         await overview.getByRole("heading", { name: projectTitle, exact: true }).waitFor();
+        await page.waitForFunction(path => Array.from(document.images).some(image =>
+          new URL(image.currentSrc || image.src).pathname === path && image.complete && image.naturalWidth > 0), brandPath);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
         if (output) await page.screenshot({ path: resolve(output, "linked-family-" + locale + "-" + width + ".png"), fullPage: true });
         await overview.locator('a[href="' + detail + '"]').first().click();
