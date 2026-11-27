@@ -907,6 +907,39 @@ try {
   `, [cancelLead, clientLink])).rowCount, 1);
   console.log("PASS CRM conversion rejects absent, person-only, family-only, pending, revoked, missing-client and mismatched-family identities; distinct verified client converts once with audit and atomic contact cleanup");
 
+  // Carry the converted consultation into a managed deal using the existing CRM authority.
+  const dealId = fixtureId(280);
+  const dealEventId = fixtureId(282);
+  const openDeal = async primaryLead => (await crmService.query(`
+    SELECT crm.create_managed_deal($1,$2,$3,$4,$5,NULL,
+      'Synthetic education service proposal','EDUCATION',0,'HKD',NULL,$6,NULL,$7) AS created
+  `, [dealId, fixtureId(281), clientId, otherFamily, primaryLead, employee, dealEventId])).rows[0].created;
+  await bindConversionContext(principal, otherFamily);
+  assert.equal(await openDeal(lead), false, "a lead without a verified client link cannot open this deal");
+  assert.equal(await openDeal(cancelLead), true);
+  assert.equal(await openDeal(cancelLead), false, "replaying the proposal must not create a duplicate deal");
+  await crmService.query("SELECT auth.clear_context()");
+  const { rows: lineage } = await db.query(`
+    SELECT i.request_id, l.lead_id, c.client_id, d.deal_id, i.service_domain,
+      i.recorded_at, e.deal_event_id, a.event_id AS deal_audit_ref
+    FROM crm.website_consultation_intake i
+    JOIN crm.leads l ON l.lead_id=i.lead_id AND l.lead_status='CONVERTED'
+    JOIN crm.lead_identity_links k ON k.lead_id=l.lead_id AND k.target_kind='CLIENT' AND k.status='VERIFIED'
+    JOIN crm.clients c ON c.client_id=k.client_id AND c.family_id=l.family_id
+    JOIN crm.deals d ON d.client_id=c.client_id AND d.primary_lead_id=l.lead_id AND d.family_id=c.family_id
+    JOIN crm.deal_events e ON e.deal_id=d.deal_id AND e.event_kind='CREATED'
+    JOIN audit.access_events a ON a.resource_id=d.deal_id AND a.action='CREATE'
+      AND a.decision='ALLOW' AND a.reason_code='MANAGED_DEAL_CREATED'
+    WHERE i.request_id=$1
+  `, [cancelRequest]);
+  assert.equal(lineage.length, 1);
+  assert.deepEqual(
+    [lineage[0].lead_id, lineage[0].client_id, lineage[0].deal_id, lineage[0].service_domain, lineage[0].deal_event_id],
+    [cancelLead, clientId, dealId, "EDUCATION", dealEventId],
+  );
+  assert.ok(lineage[0].recorded_at && lineage[0].deal_audit_ref);
+  console.log("PASS same synthetic request → lead → verified client → managed deal", JSON.stringify(lineage[0]));
+
   const nonWebsiteLead = fixtureId(85);
   await db.query(`
     INSERT INTO crm.leads(lead_id,lead_source_id,family_id,lead_status,qualification_status,created_by_principal_id,updated_by_principal_id)
