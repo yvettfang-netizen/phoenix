@@ -81,7 +81,18 @@
         </view>
       </view>
 
+      <view class="mine-section-head">
+        <view><text class="eyebrow">HELP &amp; SUPPORT</text><text class="h2 mine-section-title">帮助与支持</text></view>
+      </view>
+      <view class="mine-menu">
+        <button class="mine-menu__item mine-menu__item--action" open-type="contact" session-from="mine_help" aria-label="联系客服">
+          <view class="mine-menu__icon" aria-hidden="true">客</view>
+          <view class="mine-menu__copy"><text>联系客服</text><text>报告售后、退款与问题反馈</text></view>
+          <text class="chevron">›</text>
+        </button>
+      </view>
       <view class="mine-orders">
+        <button class="btn btn--outline" bindtap="openOrderCenter">进入订单中心</button>
         <view class="section-head">
           <view><text class="eyebrow">ORDER HISTORY</text><text class="h3 mine-orders__title">历史订单</text></view>
           <text class="mine-count">{{orderCount}} 笔</text>

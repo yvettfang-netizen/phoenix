@@ -453,6 +453,24 @@ console.log('✓ paid Compass: versioned questionnaire, 70-point gate, six-modul
   assessmentService.clearRemoteSessionData()
   console.log('✓ production privacy: fail-closed runtime, no local DB init, questionnaire answer persistence or local analytics')
 
+  const { toView, destination } = require('../utils/order-center')
+  const rawOrder = { orderId: 'order/test', reportId: 'report/test', status: 'PAID', amountFen: 3990, currency: 'CNY', canViewReport: true }
+  const order = toView(rawOrder)
+  assert.strictEqual(order.status, 'PAID')
+  assert.strictEqual(order.amountLabel, '¥39.90')
+  assert.strictEqual(order.metaLabel, '时间待确认')
+  assert.strictEqual(destination(order), '/pages/report/index?id=report%2Ftest')
+  assert.strictEqual(destination(toView({ ...rawOrder, canViewReport: false })), '')
+  assert.strictEqual(destination(toView({ ...rawOrder, reportId: '' })), '')
+  for (const status of ['REFUNDED', 'REFUNDING', 'FAILED', 'CANCELLED', 'EXPIRED', 'UNKNOWN']) {
+    assert.strictEqual(destination(toView({ ...rawOrder, status })), '')
+  }
+  assert.strictEqual(destination(toView({ ...rawOrder, status: 'PENDING' })), '/pages/payment-result/index?orderId=order%2Ftest&reportId=report%2Ftest')
+  assert.strictEqual(toView({ ...rawOrder, currency: undefined }).amountLabel, '金额待核实')
+  const features = require('../config/features')
+  assert.strictEqual(features.pdfExport, false)
+  assert.strictEqual(features.paidReportAnalysis, false)
+  console.log('✓ order center: paid entitlement, pending navigation, closed orders and disabled report capabilities')
   await require('./education-compass-client.test').run()
 })().catch((error) => {
   console.error(error)

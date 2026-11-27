@@ -79,6 +79,7 @@ Page({
     if (!order.reportId) return wx.showToast({ title: `订单${order.statusLabel}，没有可查看的报告`, icon: 'none' })
     wx.navigateTo({ url: `/pages/payment-result/index?orderId=${order.orderId}&reportId=${order.reportId}` })
   },
+  openOrderCenter() { wx.navigateTo({ url: '/pages/orders/index' }) },
   toggleOrders() {
     const showAllOrders = !this.data.showAllOrders
     this.setData({

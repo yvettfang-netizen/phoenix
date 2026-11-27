@@ -173,8 +173,8 @@ const interactionBaseline = readJson(interactionBaselinePath)
 const protectedBaseline = readJson(protectedBaselinePath)
 const app = readJson(path.join(root, 'app.json'))
 
-assert.strictEqual(app.pages.length, 16, 'source Mini Program must keep all 16 registered pages')
-assert.deepStrictEqual(app.pages, routeBaseline.pages, 'app.json page order changed from the approved pre-UI baseline')
+// Preserve the historical baseline; allow exactly the approved additive order-center route.
+assert.deepStrictEqual(app.pages, [...routeBaseline.pages, 'pages/orders/index'], 'original page order and additive order center must remain intact')
 assert.strictEqual(app.lazyCodeLoading, routeBaseline.lazyCodeLoading, 'lazyCodeLoading changed from the approved baseline')
 assert(app.tabBar && Array.isArray(app.tabBar.list), 'tabBar list is missing')
 assert.deepStrictEqual(
@@ -192,6 +192,13 @@ for (const page of app.pages) {
 
 assert.strictEqual(interactionBaseline.pages.length, 16, 'required-handler baseline must cover all 16 pages')
 for (const page of interactionBaseline.pages) assertInteractionContract(page)
+assertInteractionContract({ path: 'pages/orders/index.wxml', handlers: [
+  { attribute: 'bindtap', handler: 'login' }, { attribute: 'bindtap', handler: 'load' },
+  { attribute: 'bindtap', handler: 'openOrder' }, { attribute: 'bindtap', handler: 'goCompass' }
+], dataAttributes: [{ attribute: 'data-id', value: '{{item.orderId}}' }] })
+assert(readSource('pages/mine/index.wxml').includes('bindtap="openOrderCenter"'))
+assert(readSource('pages/mine/index.wxml').includes('open-type="contact"'))
+assert.strictEqual(countMatches(readSource('pages/report/index.wxml'), /wx:if="\{\{pdfExportEnabled\}\}"/g), 2)
 
 const copyContract = {
   'pages/compass/index.wxml': [
@@ -644,7 +651,7 @@ for (const lockPath of ['package-lock.json', 'server/package-lock.json']) {
   assert.strictEqual(sha256(path.join(root, ...lockPath.split('/'))), baseline.sha256, `${lockPath} changed during the UI-only update`)
 }
 
-console.log('✓ UI route contract: 16 ordered pages, 3 tab paths and lazy loading preserved')
+console.log('✓ UI route contract: original 16 ordered pages plus order center, 3 tab paths and lazy loading preserved')
 console.log('✓ UI interaction contract: required WXML handlers and data-* bindings preserved')
 console.log('✓ UI V2 screen contract: seven screen hooks, Level 2/report/Askwise gates and Consent controls preserved')
 console.log('✓ UI share contract: native sharing is limited to preview/report and exposes only the generic welcome entry')

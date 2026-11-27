@@ -86,7 +86,7 @@ button.mine-orders__toggle { width: 100%; }
 .mine-child__head { align-items: center; display: flex; }
 .mine-child__badge { background: #f6ecd9; border-radius: 999rpx; color: #8d672a; flex-shrink: 0; font-size: 19rpx; padding: 7rpx 14rpx; }
 .mine-child__actions { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 16rpx; padding-left: 68rpx; }
-.mine-child__action { background: #fffdf9; border: 1rpx solid #ded2c1; border-radius: 999rpx; color: #2d4052; font-size: 22rpx; line-height: 1.2; padding: 14rpx 24rpx; }
+.mine-child__action { align-items: center; background: #fffdf9; border: 1rpx solid #ded2c1; border-radius: 999rpx; color: #2d4052; display: flex; font-size: 22rpx; justify-content: center; line-height: 1.2; min-height: var(--tap-min-size); padding: 0 24rpx; text-align: center; }
 .mine-child__action::after { border: 0; }
 .mine-child__action--critical { background: #fffaf7; border-color: rgba(145,67,57,.22); color: #873f37; }
 .mine-child__action[disabled] { background: #f4f0e9; color: #8b867e; opacity: .72; }
@@ -134,3 +134,6 @@ button.mine-logout { width: 100%; }
 .mine-export[disabled] {
   opacity: 0.45;
 }
+
+button.mine-menu__item--action { font: inherit; justify-content: flex-start; line-height: normal; margin-left: 0; margin-right: 0; padding: 20rpx 24rpx; text-align: left; width: 100%; }
+button.mine-menu__item--action::after { border: none; }
