@@ -1,0 +1,90 @@
+{
+  "task": "PHOENIX-META-CANONICAL-ACCEPTANCE-ROLLBACK-20261105",
+  "candidate_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+  "environment": "Windows Node24 isolated mock; no DB, no production identity",
+  "overall_status": "HOLD",
+  "scope": "Partial detection/containment probes only; NO ROLLBACK_DRILL_PASS",
+  "rows": [
+    {
+      "scenario": "M7-02",
+      "mode": "LOCAL_MOCK_COMPONENT_PROBE",
+      "candidate_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+      "failure": "Canonical API500",
+      "detection": {
+        "http_status": 502
+      },
+      "containment": "New request with feature flag false returned 503 and made zero additional binding calls",
+      "rollback": "NOT RUN: no Staging route, prior API or deployment changed",
+      "verification": {
+        "component_assertions": "PASS",
+        "sensitive_error_body": false,
+        "persistent_audit": "NOT RUN"
+      },
+      "recovery_decision": "HOLD: does not establish M7 rollback success"
+    },
+    {
+      "scenario": "M7-03",
+      "mode": "LOCAL_MOCK_COMPONENT_PROBE",
+      "candidate_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+      "failure": "Gateway does not settle within deadline; not an actual PostgreSQL timeout",
+      "detection": {
+        "http_status": 502
+      },
+      "containment": "New request with feature flag false returned 503 and made zero additional binding calls",
+      "rollback": "NOT RUN: no Staging route, prior API or deployment changed",
+      "verification": {
+        "component_assertions": "PASS",
+        "sensitive_error_body": false,
+        "persistent_audit": "NOT RUN"
+      },
+      "recovery_decision": "HOLD: does not establish M7 rollback success"
+    },
+    {
+      "scenario": "M7-04",
+      "mode": "LOCAL_MOCK_COMPONENT_PROBE",
+      "candidate_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+      "failure": "Gateway rejects context with403; real ticket expiry not exercised",
+      "detection": {
+        "http_status": 403
+      },
+      "containment": "New request with feature flag false returned 503 and made zero additional binding calls",
+      "rollback": "NOT RUN: no Staging route, prior API or deployment changed",
+      "verification": {
+        "component_assertions": "PASS",
+        "sensitive_error_body": false,
+        "persistent_audit": "NOT RUN"
+      },
+      "recovery_decision": "HOLD: does not establish M7 rollback success"
+    },
+    {
+      "scenario": "M7-05",
+      "mode": "LOCAL_MOCK_COMPONENT_PROBE",
+      "candidate_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+      "failure": "Gateway returns other Spirit row",
+      "detection": {
+        "http_status": 502
+      },
+      "containment": "New request with feature flag false returned 503 and made zero additional binding calls",
+      "rollback": "NOT RUN: no Staging route, prior API or deployment changed",
+      "verification": {
+        "component_assertions": "PASS",
+        "sensitive_error_body": false,
+        "persistent_audit": "NOT RUN"
+      },
+      "recovery_decision": "HOLD: does not establish M7 rollback success"
+    },
+    {
+      "scenario": "M7-09",
+      "mode": "LOCAL_MOCK_COMPONENT_PROBE",
+      "failure": "Feature flag false",
+      "detection": "503",
+      "containment": "Binding call count unchanged",
+      "rollback": "NOT RUN: no real environment variable changed",
+      "verification": {
+        "component_assertions": "PASS",
+        "persistent_audit": "NOT RUN"
+      },
+      "recovery_decision": "HOLD: real configuration propagation and inflight handling not tested"
+    }
+  ]
+}

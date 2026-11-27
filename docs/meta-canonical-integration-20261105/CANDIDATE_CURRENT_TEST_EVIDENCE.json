@@ -1,0 +1,21 @@
+{
+  "application_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+  "environment": "Windows Node v24.19.0; existing built worker; mock binding; no DB",
+  "command": "node --test tests/meta-canonical-read.test.mjs tests/meta-canonical-ui.test.mjs",
+  "run_after_addendum": true,
+  "exit_code": 0,
+  "total": 12,
+  "pass": 12,
+  "fail": 0,
+  "scope": "7 adapter component groups plus5 source/SSR/page-scope/worker groups; not full browser/Gateway/PG E2E",
+  "test_file_hashes": [
+    {
+      "name": "tests/meta-canonical-read.test.mjs",
+      "sha256": "ca346ea0629a9d6afd0089cfcc53cbb5273de8a528d2fd988efff786324538af"
+    },
+    {
+      "name": "tests/meta-canonical-ui.test.mjs",
+      "sha256": "d3ac5f0fd5790f274ad309822933a1873b18c32874104cc05a7076504802f29f"
+    }
+  ]
+}

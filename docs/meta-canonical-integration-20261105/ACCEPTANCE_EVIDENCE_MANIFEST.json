@@ -1,0 +1,59 @@
+{
+  "task": "PHOENIX-META-CANONICAL-ACCEPTANCE-ROLLBACK-20261105",
+  "source_addendum_sha256": "7fc35aabcbffedce4eafa54833eda2c92ff93569e79111412f4db527bd9f051b",
+  "application_candidate_sha": "640451c1ddfc799cf2bf2a304e6c2d1e93b0549a",
+  "baseline_sha": "a96de29bbfdf32558b202123f15a3ca3c5b2a9a3",
+  "site_remote_branch": "main",
+  "site_remote_head": "a96de29bbfdf32558b202123f15a3ca3c5b2a9a3",
+  "canonical_main_sha": "19feef190dcba13ccc9181c998d4c82527377803",
+  "canonical_tree": "032ebba00cbeb08cbb24c767e55f5c2aa606f459",
+  "migrations": 35,
+  "artifact_hashes": [
+    {
+      "name": "META_ACCEPTANCE_RELEASE_GATE_REGISTER.md",
+      "sha256": "69fcddb27b378a084becd9ab52db3a5c44b2d15159a24d4f49c363cfd2e91729"
+    },
+    {
+      "name": "META_M0_BASELINE_AND_RECOVERY_SOURCE.md",
+      "sha256": "48cb33cd2f000a81d6c1e7f78dcc34b68f53793013caed5f465c46d6564f5558"
+    },
+    {
+      "name": "META_COMPLETE_ACCEPTANCE_MATRIX.md",
+      "sha256": "7947e1ba34daa5de30f097ee9344ac78a456d6c5541c95202a6a66d7985ad822"
+    },
+    {
+      "name": "META_STAGING_UAT_THRESHOLD_PROPOSAL.md",
+      "sha256": "c5015e38ea039b746745254e92f3d95202a81d5f842c3b5d4efd4f0576de5f70"
+    },
+    {
+      "name": "META_FOUR_LAYER_ROLLBACK_RUNBOOK.md",
+      "sha256": "292819b1fe551f253667fddd4a4782cb3fa9e299f821b0a7eec43d520efd9317"
+    },
+    {
+      "name": "META_ROLLBACK_DRILL_REPORT.md",
+      "sha256": "a35734b81a677acc1507586a26ffb664496a82ce12429a19a898376cec64cc54"
+    },
+    {
+      "name": "META_INDEPENDENT_REVIEW_AND_CHANGE_GATE.md",
+      "sha256": "e971f55512164d7f1ff4387724e4ba02bc77b63f8a56a085267b2606c7e4f1ba"
+    },
+    {
+      "name": "BASELINE_TEST_EVIDENCE.json",
+      "sha256": "54c69bcf862a70d3fdf71b31feac0308bc81d306e8c1743fd85db9c4701e6eb4"
+    },
+    {
+      "name": "LOCAL_FAULT_PROBES.json",
+      "sha256": "f0e750296f1524768c29874e455656d96fb782fc0f84583ee0bf10bc2d2e756a"
+    },
+    {
+      "name": "META_ACCEPTANCE_GATE_STATUS.json",
+      "sha256": "db9a59877105e41529856b98cc2e3d0eaea26f5f3eba4fb6f4f7f028b6735c47"
+    },
+    {
+      "name": "CANDIDATE_CURRENT_TEST_EVIDENCE.json",
+      "sha256": "2bcdbbfd6c5307bb16cdbe6d25373fd5ae30e92b4864d88fa24a0839a16e20d7"
+    }
+  ],
+  "claim_boundary": "Only local source/build/component evidence; no synthetic PG integration, UAT, rollback or production pass",
+  "application_modified_in_addendum": false
+}
