@@ -26,7 +26,17 @@
   </view>
 
   <view class="welcome__actions">
-    <button wx:if="{{showFreeAssessment}}" class="btn btn--gold" bindtap="openFreeAssessment">开始免费教育初评</button>
+    <button wx:if="{{showFreeAssessment}}" class="welcome__free" bindtap="openFreeAssessment">
+      <view class="welcome__free-inner">
+        <view class="welcome__free-mark" aria-hidden="true">◇</view>
+        <view class="welcome__free-copy">
+          <text class="welcome__free-eyebrow">FREE · 3—5 MIN · 约 12 题</text>
+          <text class="welcome__free-title">开始免费教育初评</text>
+          <text class="welcome__free-note">不登录、不填姓名，立刻看到四维成长快照</text>
+        </view>
+        <text class="welcome__free-arrow" aria-hidden="true">→</text>
+      </view>
+    </button>
     <button class="btn btn--gold" loading="{{loading}}" bindtap="start">开始家庭成长规划</button>
     <button class="welcome__login" bindtap="start">已有档案，登录</button>
     <text class="welcome__privacy">资料仅用于已授权的家庭成长服务</text>
