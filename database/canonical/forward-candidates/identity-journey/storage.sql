@@ -130,6 +130,16 @@ BEGIN
     SELECT 1 FROM identity.journey_date_revisions d
     WHERE d.date_revision_id = NEW.date_revision_id AND d.target_on = NEW.target_on
       AND (d.verification = 'VERIFIED' OR d.date_basis = 'INTERNAL')
+      AND CASE
+        WHEN d.date_kind IN ('FIRST_ENTRY_DEADLINE','STAY_EXPIRY','PASSPORT_EXPIRY','TRAVEL_DOCUMENT_EXPIRY')
+          THEN d.date_basis = 'CASE_APPROVAL'
+        WHEN d.date_kind = 'RENEWAL_WINDOW_OPEN' THEN d.date_basis = 'OFFICIAL_WINDOW'
+        WHEN d.date_kind = 'RETURN_BY' THEN d.date_basis IN ('CASE_APPROVAL','INTERNAL')
+        WHEN d.date_kind IN ('HKIC_AGE_11','HKIC_AGE_18') THEN d.date_basis IN ('STATUTORY','INTERNAL')
+        WHEN d.date_kind IN ('ABSENCE_REVIEW','GRADUATION','STATUS_TRANSITION','EMPLOYMENT_REVIEW','SPONSOR_REVIEW')
+          THEN d.date_basis = 'INTERNAL'
+        ELSE false
+      END
       AND NOT EXISTS (SELECT 1 FROM identity.journey_date_revisions n WHERE n.supersedes_id = d.date_revision_id)
   ) THEN RAISE EXCEPTION 'IDENTITY_JOURNEY_REMINDER_SOURCE_INVALID'; END IF;
   RETURN NEW;
