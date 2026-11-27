@@ -15,3 +15,6 @@ export function presentGrowthCards(snapshot: Snapshot): {
   }[]
   missingInformation: string[]
 }[]
+
+declare const presentation: { presentGrowthCards: typeof presentGrowthCards }
+export default presentation

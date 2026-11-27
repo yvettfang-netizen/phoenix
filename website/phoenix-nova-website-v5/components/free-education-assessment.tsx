@@ -4,8 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Compass, Share2 } from "lucide-react";
 import { assessmentPath, isValidAnswer, reviseAnswer, VERSIONS,
   type Answer, type Answers, type RespondentRole, type Snapshot } from "@/lib/free-education-assessment";
-import { presentGrowthCards } from "../../../Phoenix Compass/education compass/models/free-education-presentation.js";
+import presentation from "../../../Phoenix Compass/education compass/models/free-education-presentation.js";
 import styles from "./free-education-assessment.module.css";
+
+const { presentGrowthCards } = presentation;
 
 const roles: { id: RespondentRole; label: string }[] = [
   { id: "PARENT_GUARDIAN", label: "以家长视角填写" },
