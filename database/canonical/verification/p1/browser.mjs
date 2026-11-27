@@ -177,6 +177,11 @@ async function main(){
  await view.page.locator('.fsv-source').waitFor()
  await view.page.getByRole('button',{name:/Summarize my next step/}).click()
  await view.page.locator('.fsv-guidance').waitFor()
+ const firstGuidance=await view.page.locator('.fsv-guidance').innerText()
+ assert.match(firstGuidance,/Synthetic HK Masters 31[01]/,
+   'authorized guidance must derive from client A actual project summary')
+ assert.doesNotMatch(firstGuidance,/Synthetic Identity Hong Kong 319/,
+   'assistant must not reveal client B data')
  await navigation.getByRole('button',{name:/Overview/}).click()
  await view.page.locator('[data-family-service-overview]').waitFor()
  check('unified Family Service tabs reuse the authorized P1 session with no cross-family data')
@@ -212,6 +217,18 @@ async function main(){
  assert.equal(await view.page.getByRole('heading',{name:'Synthetic HK Masters 310',exact:true}).count(),0)
  await noOverflow(view.page,'identity-en-1440');await shot(view.page,'identity-en-1440')
  check('client B Identity view contains only its authorized Identity project')
+ const identityNav=view.page.getByRole('navigation',{name:'Family Center navigation'})
+ await identityNav.getByRole('button',{name:/Service Updates/}).click()
+ await view.page.locator('.fsv-source').waitFor()
+ assert.equal(await view.page.locator('.fsv-entry').filter({hasText:'Synthetic HK Masters 310'}).count(),0,
+   'client B notifications cannot reveal client A')
+ await identityNav.getByRole('button',{name:/Family Assistant/}).click()
+ await view.page.locator('.fsv-source').waitFor()
+ await view.page.getByRole('button',{name:/Summarize my next step/}).click()
+ const identityGuidance=await view.page.locator('.fsv-guidance').innerText()
+ assert.doesNotMatch(identityGuidance,/Synthetic HK Masters 31[01]/,
+   'client B assistant cannot reveal family A')
+ check('client B scoped service updates and assistant cannot read client A')
  await view.context.close()
 
  view=await pageFor('client-c','zh',1440)
@@ -223,6 +240,12 @@ async function main(){
  await view.page.setViewportSize({width:390,height:1100})
  await noOverflow(view.page,'client-c-zh-390');await shot(view.page,'client-c-zh-390')
  check('client C Chinese view contains multiple authorized project cards')
+ const familyCNav=view.page.getByRole('navigation',{name:'家庭中心导航'})
+ await familyCNav.getByRole('button',{name:/通知与待办/}).click()
+ await view.page.locator('.fsv-source').waitFor()
+ assert.equal(await view.page.locator('.fsv-entry').filter({hasText:'Synthetic Identity Hong Kong 319'}).count(),0,
+   'client C notifications cannot reveal another family Identity service')
+ check('client C localized service updates stay scoped')
  await view.context.close()
 
  const cancelRead=await fixture.rt.call('manager','projects/'+fixture.project(312))
@@ -271,6 +294,26 @@ async function main(){
  await view.page.getByRole('heading',{name:'Synthetic HK Masters 311',exact:true}).waitFor()
  const revokedDetail=await fixture.call('client-a','projects/'+fixture.project(310))
  assert.equal(revokedDetail.status,403)
+ const revokedNav=view.page.getByRole('navigation',{name:'Family Center navigation'})
+ await revokedNav.getByRole('button',{name:/Service Updates/}).click()
+ await view.page.locator('.fsv-source').waitFor()
+ assert.equal(await view.page.locator('.fsv-entry').filter({hasText:'Synthetic HK Masters 310'}).count(),0,
+   'after DB grant revocation, notification panel must not show revoked project')
+ await revokedNav.getByRole('button',{name:/Family Assistant/}).click()
+ await view.page.locator('.fsv-source').waitFor()
+ await view.page.getByRole('button',{name:/Summarize my next step/}).click()
+ const postRevokeGuidance=await view.page.locator('.fsv-guidance').innerText()
+ assert.doesNotMatch(postRevokeGuidance,/Synthetic HK Masters 310/,
+   'after grant revocation, assistant must not mention revoked project')
+ check('new unified panels refuse revoked project on next authorized read')
+ fixture.identity.sessions.delete(fixture.accounts['client-a'].sessionHash)
+ await view.page.getByRole('button',{name:/Recheck authorization/}).click()
+ await view.page.getByText('This account is not authorized',{exact:false}).waitFor()
+ assert.equal(await view.page.locator('.fsv-entry').count(),0,
+   'revoked login cannot retain tasks')
+ assert.equal(await view.page.locator('.fsv-guidance').count(),0,
+   'revoked login cannot retain assistant guidance')
+ check('expired Canonical login clears existing assistant projection and fails closed')
  await noOverflow(view.page,'revoked-en-1440')
  check('revoked project disappears and the UI does not retain stale progress')
  await view.context.close()
