@@ -13,6 +13,7 @@ import { listenConsultationLoopback } from "./loopback-http.mjs";
 import { verifyBrowserConsultation } from "./verify-browser-form.mjs";
 import { verifyNativeCompass } from "./verify-native-compass.mjs";
 import { verifyLinkedService } from "./verify-linked-service.mjs";
+import { linkedOperatingInputs } from "./verify-linked-operating-inputs.mjs";
 import { verifyStaffViews } from "./verify-staff-views.mjs";
 import { handleWebsiteConsultation } from "../../../../website/phoenix-nova-website-v5/lib/website-consultation-intake.ts";
 
@@ -768,22 +769,27 @@ try {
   `, [newLead])).rows, [{ no_contact: true, no_mac: true, no_duplicate_match: true, recorded: true }]);
   console.log("PASS approved retention configuration, expiry denial and scoped contact erasure");
   const conversionRequest = "028347ec-7740-4000-a000-000000000043";
+  const operating = linkedOperatingInputs({ staffHttp, staffOrigin, assignee: employee });
+  const beforeConversionIntake = await operating.dispatcher();
   const conversionReceipt = await submit("education", conversionRequest, "synthetic-conversion@example.test");
   assert.equal(conversionReceipt.status, 202);
   assert.deepEqual(await conversionReceipt.json(), { status: "received", requestId: conversionRequest });
   const { rows: receivedLeads } = await db.query(
-    "SELECT lead_id FROM crm.website_consultation_intake WHERE request_id=$1", [conversionRequest],
+    "SELECT lead_id,recorded_at FROM crm.website_consultation_intake WHERE request_id=$1", [conversionRequest],
   );
   assert.equal(receivedLeads.length, 1);
   const conversionLead = receivedLeads[0].lead_id;
+  const afterConversionIntake = await operating.received(beforeConversionIntake, conversionLead, receivedLeads[0].recorded_at);
   const conversionPost = (operation, token, body) => staffLeadPost(conversionLead, operation, token, body);
   assert.equal((await conversionPost("contact", "synthetic-staff")).status, 404);
   const conversionAssignment = await conversionPost("assign", "synthetic-dispatcher", { assigneeId: employee });
   assert.equal(conversionAssignment.status, 200);
   const { taskId: conversionFollowUp } = await conversionAssignment.json();
   assert.ok(conversionFollowUp);
+  const afterConversionAssignment = await operating.assigned(afterConversionIntake, conversionLead);
   assert.equal((await conversionPost("contact", "synthetic-staff")).status, 200);
   assert.equal((await conversionPost("complete", "synthetic-staff")).status, 200);
+  await operating.followedUp(afterConversionAssignment, conversionLead);
   assert.deepEqual((await db.query(`
     SELECT f.status, f.assigned_principal_id, l.lead_status
     FROM crm.follow_ups f JOIN crm.leads l USING(lead_id)
@@ -894,6 +900,7 @@ try {
   await db.query("UPDATE auth.principals SET status='ACTIVE' WHERE principal_id=$1", [principal]);
   await crmService.query("SELECT auth.clear_context()");
   assert.equal((await conversionPost("contact", "synthetic-staff")).status, 404);
+  await operating.converted(conversionLead);
   assert.equal((await retention.query("SELECT crm.erase_expired_website_contacts() AS erased")).rows[0].erased, 0);
   assert.deepEqual((await db.query(`
     SELECT contact_envelope IS NULL AND payload_mac IS NULL AND duplicate_match_mac IS NULL AS cleared
