@@ -1,0 +1,38 @@
+# 状态、HOLD 与 Jimson 非生产步骤
+
+## 当前状态（2026-11-20）
+
+| 能力 | 状态 |
+|---|---|
+| 网站 P0 PR #76 | 自动化检查 PASS；仍为 Draft |
+| 0042 Canonical context consolidation | PG16/17 20/20 PASS |
+| 两张重复临时上下文表 | 已从候选移除，复用 Canonical 既有表 |
+| Family OS 旧上下文兼容与同连接重绑清理 | PG16/17 PASS |
+| 跨机构隔离、撤权、登出、审计、RLS | PG16/17 PASS |
+| 真实身份与员工/伙伴/家庭映射 | HOLD |
+| 独立安全/数据库复审 | HOLD |
+| 非生产启用 | HOLD，等待 Founder 指定环境与身份事实 |
+| 生产、真实数据、腾讯云 | 未授权 |
+
+## 0043 复审决定
+
+当前不引入 0043。正式 0035 的 `service.transfer_task()` 已承接既有 service-managed 转派；但它当前不检查 assignment `valid_from`、recipient Principal status/role，也不是 Staff workspace 的直接授权入口。0043 增加双边审批与更严格 Staff/Organization 检查，却重复实现 task 更新和 TRANSFERRED 事件。PR #78 已关闭未合并，PR #82 不再依赖 0043。若未来确需 Staff 转派或接收方审批，应先扩展/抽取唯一转移 authority，再由审批层调用。
+
+## Jimson 唯一补证项与后续工程门禁
+
+Jimson 本轮只需按 [PR #85 的 P0.1 非生产工单](https://github.com/yvettfang-netizen/phoenix/blob/187c885d2613bbca3e80c22762ece2ab97db6973/docs/architecture/academic-studio-v21-p0-20261120/P0_1_JIMSON_NONPROD_TICKET.md)，在明确指定的 `canonical-nonprod` 实例上用独立只读 LOGIN 返回实际数据库/PG 版本、正式迁移账本及哈希、角色权限、Learning RLS/FORCE、UTC 执行时间与脱敏原始输出。实例或凭据不明时保持 HOLD；不安装任何候选 Migration，也不要求 Jimson 重做架构审查或本地 PG16/17。
+
+以下是未来 0042 接线的工程门禁，**并非分派给 Jimson 的本轮补证任务**；当前 PR 不执行这些操作。
+
+1. 对固定候选 SHA `9fdfef2a566eaa73fec98405e0d5d1ac5ea066c6319b0c2a5111482275562991` 做独立安全/数据库复审；确认 manifest SHA、PG16/17 workflow 和 0001–0037 不变。
+2. 登记真实登录提供方的 `issuer/audience/JWKS`、会话撤销接口和脱敏配置摘要；私钥、token、密码及 `.env` 不得提交 Git。
+3. 登记“外部身份 → auth.principals”的权威映射，以及总部员工、伙伴机构、家庭的受控非生产账号；记录停用与撤权责任人。
+4. 分别配置 binder LOGIN 与 workspace reader/app LOGIN，使用受保护 secret reference；不得共用凭据。运行时账号不得获得新表直接权限。
+5. 只有在备份和回滚收据准备完成、Founder 明确指定环境后，才可申请非生产安装；不得把候选伪装成正式 Migration。
+6. 显式组合 API 模块并保持默认关闭；启用前验证可信反向代理、Origin、CSRF、真实会话撤销和登录解析器。
+7. 使用受控账号重跑 Founder/Staff/Partner/Family 工作区切换、两伙伴隔离、旧 Family OS 兼容、成员停用、角色撤回、登出和连接池清理。
+8. 保存脱敏运行、审计、备份和回滚收据。回滚应用开关/API 版本，不删除 Canonical 主数据或审计历史。
+
+## 下一道 Gate
+
+真实身份映射证据 + 固定 SHA 独立复审 + Founder 指定的隔离非生产环境。三项完成前，保持默认关闭，不合并、不部署。
