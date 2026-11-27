@@ -6,7 +6,7 @@ const runtime = require('../../config/runtime')
 const { PRODUCT, CONSENT_VERSION } = require('../../config/compass')
 const { dateLabel } = require('../../utils/date')
 const educationNavigation = require('../../utils/education-compass-navigation')
-const { previewAvailable, freeAssessmentControls } = require('../../services/free-education-assessment')
+const { freeAssessmentAvailable, freeAssessmentControls } = require('../../services/free-education-assessment')
 const currentStudent = require('../../utils/current-student')
 const reportModel = require('../../models/education-compass-report')
 
@@ -60,7 +60,7 @@ Page({
   },
 
   onLoad(options) {
-    if (options?.mode === 'free-assessment' && previewAvailable()) {
+    if (options?.mode === 'free-assessment' && freeAssessmentAvailable()) {
       this.freeClosed = false
       this.setData({ freeMode: true })
       return

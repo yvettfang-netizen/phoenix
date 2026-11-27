@@ -4,11 +4,12 @@ const shared = require('../models/free-education-assessment.js')
 
 const PATH = '/v1/education-compass/free-assessment/evaluate'
 
-// 免费初评目前只对开发/测试/体验版开放，正式版（envVersion=release）保持关闭。
-const PREVIEW_ENVIRONMENTS = ['develop', 'test', 'trial']
+// 免费初评是匿名开放能力：开发、测试、体验版与正式版走同一份实现与同一份题库，
+// 只有识别不出环境（unknown）时才关闭，避免在未知环境里误开匿名出口。
+const AVAILABLE_ENVIRONMENTS = ['develop', 'test', 'trial', 'release']
 
-function previewAvailable() {
-  return PREVIEW_ENVIRONMENTS.includes(runtime.accountEnvironment())
+function freeAssessmentAvailable() {
+  return AVAILABLE_ENVIRONMENTS.includes(runtime.accountEnvironment())
 }
 
 function renderStep(answers, index) {
@@ -93,4 +94,4 @@ const freeAssessmentControls = {
   }
 }
 
-module.exports = { PATH, previewAvailable, freeAssessmentControls }
+module.exports = { PATH, freeAssessmentAvailable, freeAssessmentControls }

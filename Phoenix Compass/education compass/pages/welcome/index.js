@@ -1,18 +1,18 @@
 const auth = require('../../services/auth')
 const analytics = require('../../services/analytics')
-const { previewAvailable } = require('../../services/free-education-assessment')
+const { freeAssessmentAvailable } = require('../../services/free-education-assessment')
 const { getNavigationMetrics } = require('../../utils/navigation')
 
 Page({
   data: {
     loading: false,
     showAdvisorDemo: auth.isDemo(),
-    showFreeAssessment: previewAvailable(),
+    showFreeAssessment: freeAssessmentAvailable(),
     navigation: getNavigationMetrics()
   },
 
   openFreeAssessment() {
-    if (previewAvailable()) wx.navigateTo({ url: '/pages/compass/index?mode=free-assessment' })
+    if (freeAssessmentAvailable()) wx.navigateTo({ url: '/pages/compass/index?mode=free-assessment' })
   },
 
   async start() {

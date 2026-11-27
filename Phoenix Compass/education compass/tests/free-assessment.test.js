@@ -1,20 +1,20 @@
 const assert = require('assert')
 
 // 免费初评是唯一一个不登录也能走的出口，因此单独锁三件事：
-// 环境门（体验版开、正式版关）、规则引擎四卡、以及 evaluate 请求绝不带会话。
+// 环境门（正式版与体验版同一份能力，仅未知环境关闭）、规则引擎四卡、以及 evaluate 请求绝不带会话。
 async function run() {
   const runtime = require('../config/runtime')
   const api = require('../services/api')
-  const { previewAvailable, PATH } = require('../services/free-education-assessment')
+  const { freeAssessmentAvailable, PATH } = require('../services/free-education-assessment')
   const engine = require('../models/free-education-assessment')
 
   const originalEnvironment = runtime.accountEnvironment
   const originalBaseUrl = runtime.apiBaseUrl
   const originalRequest = wx.request
   try {
-    for (const [environment, expected] of [['develop', true], ['test', true], ['trial', true], ['release', false], ['unknown', false]]) {
+    for (const [environment, expected] of [['develop', true], ['test', true], ['trial', true], ['release', true], ['unknown', false]]) {
       runtime.accountEnvironment = () => environment
-      assert.strictEqual(previewAvailable(), expected, `preview gate must be ${expected} in ${environment}`)
+      assert.strictEqual(freeAssessmentAvailable(), expected, `free assessment must be ${expected ? 'visible' : 'hidden'} in ${environment}`)
     }
 
     const answers = {
@@ -48,7 +48,7 @@ async function run() {
     api.setAccessToken('')
   }
 
-  console.log('✓ free assessment: trial preview gate, four-card engine and anonymous evaluate request')
+  console.log('✓ free assessment: released-and-trial entry, four-card engine and anonymous evaluate request')
 }
 
 module.exports = { run }
