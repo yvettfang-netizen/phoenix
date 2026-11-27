@@ -12,6 +12,7 @@ import { createWebsiteConsultationGateway } from "./gateway.mjs";
 import { listenConsultationLoopback } from "./loopback-http.mjs";
 import { verifyBrowserConsultation } from "./verify-browser-form.mjs";
 import { verifyNativeCompass } from "./verify-native-compass.mjs";
+import { verifyLinkedService } from "./verify-linked-service.mjs";
 import { verifyStaffViews } from "./verify-staff-views.mjs";
 import { handleWebsiteConsultation } from "../../../../website/phoenix-nova-website-v5/lib/website-consultation-intake.ts";
 
@@ -1206,6 +1207,10 @@ try {
     sourceFile: process.env.CRM_FIXTURE_EDUCATION_CANDIDATE,
     bindFamily, actor, familyPrincipal, otherFamily, mismatchFamily, principal,
     reviewerPrincipal, educationLead, cancelLead: conversionLead, publisherContracts, fixtureId, hash,
+  });
+  await verifyLinkedService({
+    db, Client, connection: { host, port, database }, fixtureId, lineage: lineage[0],
+    family: otherFamily, otherFamily: mismatchFamily,
   });
   const listeners = [];
   function requestLocal(listener, hostHeader, path, method = "GET", body, headers = {}) {
