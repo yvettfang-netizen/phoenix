@@ -659,3 +659,6 @@ button.free-education__continue{color:#fff;background:#22523c;margin-left:auto}
 .free-education__title{font-weight:650;font-size:29rpx}
 .free-education__finding{margin-top:12rpx;padding-top:12rpx;border-top:1px solid #d6ded0}
 .free-education__evidence{font-size:24rpx;color:#45664a}
+button.free-education__evidence-toggle{display:block;min-height:88rpx;margin:0;padding:0;background:transparent;color:#315648;font-size:26rpx;text-align:left;text-decoration:underline}
+.free-education__evidence-toggle::after{border:0}
+.free-education__source{word-break:break-all}

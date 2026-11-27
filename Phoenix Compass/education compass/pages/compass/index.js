@@ -45,7 +45,7 @@ function recordView(record) {
 Page({
   ...freeAssessmentControls,
   data: {
-    freeMode: false, freeRole: null, freeStep: null, freeSnapshot: null, freeBusy: false, freeError: '',
+    freeMode: false, freeRole: null, freeStep: null, freeSnapshot: null, freeBusy: false, freeError: '', freeEvidenceOpen: '',
     isV05: !runtime.isDemo(), level: 1,
     uiScreen: runtime.isDemo() ? UI_SCREENS.LEGACY : UI_SCREENS.FREE,
     student: null, family: null, reports: [], state: null, loading: true, creating: false, error: '',

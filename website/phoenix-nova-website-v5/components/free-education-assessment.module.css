@@ -23,5 +23,10 @@
 .cards h3{font-weight:600}
 .finding+.finding{border-top:1px solid #d6ded0;margin-top:.7rem;padding-top:.7rem}
 .finding small{color:#4a614c}
+.evidence{font-size:.85rem;color:#315648}
+.evidence summary{cursor:pointer;width:fit-content;padding:.35rem 0;text-decoration:underline;text-underline-offset:.2rem}
+.evidence summary:focus-visible{outline:3px solid #8b652a;outline-offset:3px}
+.missing{border-top:1px solid #d6ded0;margin-top:.75rem;padding-top:.75rem;color:#41554b;font-size:.875rem}
+.missing ul{list-style:disc;padding-inline-start:1.25rem;margin:.35rem 0 0}
 .panel .action{font-size:.85rem}
 .message{margin-top:.9rem}

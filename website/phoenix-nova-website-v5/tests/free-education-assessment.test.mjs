@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { REGISTRY, BRANCHES, CARDS, VERSIONS, isValidAnswer, reviseAnswer, assessmentPath,
   evaluateFreeAssessment, verifyOfficialRule, anonymousActionAllowed } from "../../../Phoenix Compass/education compass/models/free-education-assessment.js";
 import { handleFreeEducationAssessment, freeAssessmentPreviewEnabled } from "../lib/free-education-assessment.ts";
+import { presentGrowthCards } from "../../../Phoenix Compass/education compass/models/free-education-presentation.js";
 
 const require = createRequire(import.meta.url);
 const mini = require("../../../Phoenix Compass/education compass/services/free-education-assessment.js");
@@ -36,7 +37,11 @@ test("every frozen registry choice has the right cardinality and type", () => {
   }
   const q5 = REGISTRY.find(q => q.question_id === "Q5");
   assert.ok(isValidAnswer(q5, ["BROAD_INTERESTS", "STEM_TECH"]));
-  assert.throws(() => evaluateFreeAssessment(input({ Q1: base.Q1, Q3: base.Q3 })));
+  for (const required of ["Q1", "Q2", "Q3"]) {
+    const answers = { ...base };
+    delete answers[required];
+    assert.throws(() => evaluateFreeAssessment(input(answers)));
+  }
   assert.throws(() => evaluateFreeAssessment(input({ ...base, Q13: "SYNTHETIC" })));
 });
 
@@ -53,6 +58,7 @@ for (const [branch, concern] of Object.entries(BRANCHES)) {
     }
     const snapshot = evaluateFreeAssessment(input(answers));
     assert.deepEqual(snapshot.cards.map(c => c.id), CARDS.map(c => c.id));
+    assert.deepEqual(presentGrowthCards(snapshot).map(c => c.label), CARDS.map(c => c.label));
     for (const f of findings(snapshot)) {
       assert.ok(f.evidence_refs.length);
       assert.ok(f.evidence_refs.every(ref => answers[ref.question_id] !== undefined));
@@ -83,6 +89,9 @@ test("changing branch removes old answers; skip only when evidence is semantical
   assert.ok(assessmentPath({ ...base, Q1: "CURRICULUM_CHOICE" }).questions.some(q => q.question_id === "Q12.B"));
   assert.equal(evaluateFreeAssessment(input({ ...base, Q4: null })).question_status.Q4, "USER_SKIPPED");
   assert.equal(evaluateFreeAssessment(input(base)).question_status.Q4, "MISSING");
+  const skipped = Object.fromEntries(["Q4", "Q5", "Q6", "Q7", "Q8"].map(id => [id, null]));
+  const snapshot = evaluateFreeAssessment(input({ ...base, ...skipped }));
+  assert.ok(Object.keys(skipped).every(id => snapshot.question_status[id] === "USER_SKIPPED"));
 });
 
 test("official rule gate applies current, precise, independently reviewed rules and subject evidence", () => {
@@ -106,6 +115,38 @@ test("official rule gate applies current, precise, independently reviewed rules 
   assert.ok(findings(evaluateFreeAssessment(hk)).some(f => f.rule_id === "EDU-R012" &&
     f.evidence_level === "L3" && f.official_verification_status === "UNVERIFIED"));
   assert.ok(!findings(evaluateFreeAssessment(hk, { ...fixture, applicant: {} })).some(f => f.evidence_level === "L4"));
+  const officialDisplay = context => presentGrowthCards(evaluateFreeAssessment(hk, context))
+    .flatMap(card => card.findings).find(f => f.id.startsWith("EDU-R012:"));
+  assert.equal(officialDisplay(fixture).evidenceLabel, "依据已核验的适用官方规则");
+  assert.deepEqual(officialDisplay(fixture).officialSources, [rule.source_url]);
+  assert.equal(officialDisplay(fixture).officialNotice, "");
+  for (const context of [undefined, { ...fixture, asOf: rule.valid_until },
+    { ...fixture, records: [rule, { ...rule, clause_key: "conflict" }] }]) {
+    const finding = officialDisplay(context);
+    assert.equal(finding.evidenceLabel, "需要进一步资料或专业评估");
+    assert.equal(finding.officialNotice, "相关招生要求有待官方核实。");
+    assert.deepEqual(finding.officialSources, []);
+  }
+  assert.equal(officialDisplay({ ...fixture, applicant: {} }).officialNotice, "相关招生要求对本次申请是否适用，仍需核实。");
+});
+
+test("display merges card and finding gaps, uses evidence copy, and leaves the snapshot intact", () => {
+  const snapshot = evaluateFreeAssessment(input({ ...base, Q1: "GROWTH_EXPLORATION", Q5: ["PRACTICAL_PROBLEM_SOLVING"],
+    Q7: "VOLATILE_RESULTS", "Q10.D": ["PROJECT"] }));
+  snapshot.cards[1].missing_information.push("academic_period");
+  const original = structuredClone(snapshot);
+  const [stage, growth, , next] = presentGrowthCards(snapshot);
+  assert.deepEqual(stage.missingInformation, []);
+  assert.deepEqual(growth.missingInformation, [
+    "尚未了解孩子近期的学习状态。",
+    "尚未了解成绩所属学期或考试时间。",
+    "尚未了解孩子在相关活动中持续投入的时间。"
+  ]);
+  assert.equal(stage.findings[0].evidenceLabel, "根据本次填写的信息");
+  assert.equal(growth.findings.find(f => f.title === "兴趣与投入线索").evidenceLabel, "根据多项回答形成的观察");
+  assert.ok(next.findings.some(f => f.evidenceLabel === "需要进一步资料或专业评估"));
+  assert.deepEqual(stage.findings[0].questionPrompts, ["孩子现在读几年级？"]);
+  assert.deepEqual(snapshot, original);
 });
 
 test("stateless website and native page generate the same anonymous golden result", async () => {
@@ -122,7 +163,15 @@ test("stateless website and native page generate the same anonymous golden resul
   const website = await handleFreeEducationAssessment(request(input(screen.freeAnswers)), true);
   assert.equal(website.status, 200);
   assert.equal(website.headers.get("cache-control"), "no-store");
-  assert.deepEqual(await website.json(), screen.data.freeSnapshot);
+  const snapshot = await website.json();
+  assert.deepEqual(snapshot, evaluateFreeAssessment(input(screen.freeAnswers)));
+  assert.deepEqual(presentGrowthCards(snapshot), screen.data.freeSnapshot.cards);
+  const id = screen.data.freeSnapshot.cards[0].findings[0].id;
+  assert.equal(screen.data.freeEvidenceOpen, "");
+  screen.toggleFreeEvidence(event({ findingId: id }));
+  assert.equal(screen.data.freeEvidenceOpen, id);
+  screen.toggleFreeEvidence(event({ findingId: id }));
+  assert.equal(screen.data.freeEvidenceOpen, "");
   screen.backFreeQuestion();
   assert.equal(screen.data.freeStep.index, 0);
   screen.discardFreeAssessment();

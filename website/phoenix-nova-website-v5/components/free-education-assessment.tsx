@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Compass, Share2 } from "lucide-react";
 import { assessmentPath, isValidAnswer, reviseAnswer, VERSIONS,
   type Answer, type Answers, type RespondentRole, type Snapshot } from "@/lib/free-education-assessment";
+import { presentGrowthCards } from "../../../Phoenix Compass/education compass/models/free-education-presentation.js";
 import styles from "./free-education-assessment.module.css";
 
 const roles: { id: RespondentRole; label: string }[] = [
@@ -85,13 +86,23 @@ export function FreeEducationAssessment({ locale }: { locale: "zh" | "en" }) {
         <button type="button" className={styles.secondary} onClick={share}><Share2 size={16} aria-hidden /> 分享初评入口</button>
       </section> : snapshot ? <section className={styles.panel}>
         <h1 tabIndex={-1} ref={target}>成长快照</h1>
-        <div className={styles.cards}>{snapshot.cards.map(card => <article key={card.id}>
+        <div className={styles.cards}>{presentGrowthCards(snapshot).map(card => <article key={card.id}>
           <h2>{card.label}</h2>
-          {card.findings.length ? card.findings.map(finding => <div className={styles.finding} key={finding.finding_id}>
+          {card.findings.length ? card.findings.map(finding => <div className={styles.finding} key={finding.id}>
             <h3>{finding.title}</h3><p>{finding.summary}</p>
-            <small>证据 {finding.evidence_level} · {finding.evidence_refs.map(item => item.question_id).join("、")}</small>
-            {finding.recommended_next_actions.map(text => <p className={styles.action} key={text}>{text}</p>)}
+            <small>{finding.evidenceLabel}</small>
+            {finding.officialNotice && <p className={styles.action}>{finding.officialNotice}</p>}
+            {(finding.questionPrompts.length > 0 || finding.officialSources.length > 0) && <details className={styles.evidence}>
+              <summary>查看判断依据</summary>
+              {finding.questionPrompts.map(prompt => <p key={prompt}>已填写题目：{prompt}</p>)}
+              {finding.officialSources.map(source => <p key={source}>官方来源：{source}</p>)}
+            </details>}
+            {finding.actions.map(text => <p className={styles.action} key={text}>{text}</p>)}
           </div>) : <p>目前可用信息较少。</p>}
+          {card.missingInformation.length > 0 && <section className={styles.missing}>
+            <h3>还需要了解</h3>
+            <ul>{card.missingInformation.map(text => <li key={text}>{text}</li>)}</ul>
+          </section>}
         </article>)}</div>
         <div className={styles.controls}><button type="button" className={styles.secondary}
           onClick={() => { setSnapshot(null); setIndex(0); setMessage(""); }}>回看并修改</button>

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { REGISTRY } from "../../../Phoenix Compass/education compass/models/free-education-assessment.js";
 
 const origin = process.env.EDUCATION_ORIGIN ?? "http://127.0.0.1:4402";
 const require = createRequire(import.meta.url);
@@ -22,7 +23,12 @@ try {
       await page.waitForURL(target);
       await page.getByRole("button", { name: "不说明身份，直接开始" }).click();
       for (let i = 0; i < 3; i += 1) {
-        const question = page.getByRole("group").getByRole("button").first();
+        const options = page.getByRole("group").getByRole("button");
+        const question = i === 0 ? page.getByRole("group").getByRole("button", {
+          name: REGISTRY[0].allowed_values.find(option => option.value === "HK_ADMISSION_GOAL").label,
+          exact: true,
+        }) : options.first();
+        assert.equal(await page.getByRole("button", { name: "下一题" }).isDisabled(), true);
         await question.click();
         await page.getByRole("button", { name: "下一题" }).click();
       }
@@ -36,6 +42,17 @@ try {
       const snapshot = await response.json();
       await page.getByRole("heading", { name: "成长快照" }).waitFor();
       assert.equal(await page.locator("main article").count(), 4);
+      const stageCard = page.locator("main article").filter({ has: page.getByRole("heading", { name: "教育阶段", exact: true }) });
+      assert.equal(await stageCard.getByRole("heading", { name: "还需要了解" }).count(), 0);
+      assert.ok(await page.getByRole("heading", { name: "还需要了解" }).count());
+      const cards = page.locator("main article");
+      assert.doesNotMatch((await cards.allInnerTexts()).join("\n"), /\b(?:L[1-4]|Q\d+|EDU-R\d+)\b|learning_state_self_reported/);
+      assert.equal(await page.getByText("相关招生要求有待官方核实。", { exact: true }).isVisible(), true);
+      const firstEvidence = stageCard.locator("details").first();
+      assert.equal(await firstEvidence.getByText("已填写题目：孩子现在读几年级？").isVisible(), false);
+      await firstEvidence.locator("summary").click();
+      assert.equal(await firstEvidence.getByText("已填写题目：孩子现在读几年级？").isVisible(), true);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.deepEqual(writes.map(request => new URL(request.url()).pathname), ["/api/free-education-assessment"]);
       assert.equal((await writes[0].allHeaders()).authorization, undefined);
       assert.equal((await writes[0].allHeaders()).cookie, undefined);

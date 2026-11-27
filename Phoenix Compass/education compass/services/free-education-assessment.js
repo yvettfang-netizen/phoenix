@@ -1,6 +1,7 @@
 const runtime = require('../config/runtime')
 const api = require('./api')
 const shared = require('../models/free-education-assessment.js')
+const { presentGrowthCards } = require('../models/free-education-presentation.js')
 
 const PATH = '/v1/education-compass/free-assessment/evaluate'
 
@@ -59,12 +60,18 @@ const freeAssessmentControls = {
         : await api.request(PATH, { method: 'POST', data: payload })
       if (JSON.stringify(snapshot?.versions) !== JSON.stringify(shared.VERSIONS) ||
         snapshot.cards?.length !== 4) throw new Error('INVALID_SNAPSHOT')
-      if (!this.freeClosed) this.setData({ freeSnapshot: snapshot })
+      if (!this.freeClosed) this.setData({
+        freeSnapshot: { cards: presentGrowthCards(snapshot) }, freeEvidenceOpen: ''
+      })
     } catch {
       if (!this.freeClosed) this.setData({ freeError: '暂时无法生成快照。答案仍在当前页面，可重试。' })
     } finally {
       if (!this.freeClosed) this.setData({ freeBusy: false })
     }
+  },
+  toggleFreeEvidence(event) {
+    const { findingId } = event.currentTarget.dataset
+    this.setData({ freeEvidenceOpen: this.data.freeEvidenceOpen === findingId ? '' : findingId })
   },
   backFreeQuestion() {
     if (this.data.freeBusy) return

@@ -15,11 +15,22 @@
         <view wx:for="{{freeSnapshot.cards}}" wx:for-item="card" wx:key="id" class="free-education__card">
           <text class="free-education__title">{{card.label}}</text>
           <text wx:if="{{!card.findings.length}}" class="free-education__note">目前可用信息较少。</text>
-          <view wx:for="{{card.findings}}" wx:for-item="finding" wx:key="finding_id" class="free-education__finding">
+          <view wx:for="{{card.findings}}" wx:for-item="finding" wx:key="id" class="free-education__finding">
             <text class="free-education__title">{{finding.title}}</text>
             <text class="free-education__note">{{finding.summary}}</text>
-            <text class="free-education__evidence">证据 {{finding.evidence_level}}<text wx:for="{{finding.evidence_refs}}" wx:for-item="ref" wx:key="question_id"> · {{ref.question_id}}</text></text>
-            <text wx:for="{{finding.recommended_next_actions}}" wx:for-item="action" wx:key="*this" class="free-education__note">{{action}}</text>
+            <text class="free-education__evidence">{{finding.evidenceLabel}}</text>
+            <text wx:if="{{finding.officialNotice}}" class="free-education__note">{{finding.officialNotice}}</text>
+            <button wx:if="{{finding.questionPrompts.length || finding.officialSources.length}}" class="free-education__evidence-toggle"
+              data-finding-id="{{finding.id}}" bindtap="toggleFreeEvidence">{{freeEvidenceOpen === finding.id ? '收起判断依据' : '查看判断依据'}}</button>
+            <view wx:if="{{freeEvidenceOpen === finding.id}}">
+              <text wx:for="{{finding.questionPrompts}}" wx:key="*this" class="free-education__note">已填写题目：{{item}}</text>
+              <text wx:for="{{finding.officialSources}}" wx:key="*this" class="free-education__note free-education__source">官方来源：{{item}}</text>
+            </view>
+            <text wx:for="{{finding.actions}}" wx:for-item="action" wx:key="*this" class="free-education__note">{{action}}</text>
+          </view>
+          <view wx:if="{{card.missingInformation.length}}" class="free-education__finding">
+            <text class="free-education__title">还需要了解</text>
+            <text wx:for="{{card.missingInformation}}" wx:key="*this" class="free-education__note">{{item}}</text>
           </view>
         </view>
         <button class="free-education__outline" bindtap="backFreeQuestion">回看并修改</button>
