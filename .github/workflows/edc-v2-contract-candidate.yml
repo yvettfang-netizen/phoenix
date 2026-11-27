@@ -1,0 +1,50 @@
+name: EDC V2 unnumbered contract candidate
+on:
+  pull_request:
+    paths:
+      - 'database/canonical/forward-candidates/education-data-contract-v2/**'
+      - 'database/canonical/verification/education-data-contract-v2/**'
+      - '.github/workflows/edc-v2-contract-candidate.yml'
+      - 'database/canonical/migrations/**'
+permissions:
+  contents: read
+concurrency:
+  group: edc-v2-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+      - name: Source, scope and syntax check
+        run: |
+          node --check database/canonical/verification/education-data-contract-v2/acceptance.mjs
+          node --check database/canonical/verification/education-data-contract-v2/verify-source.mjs
+          node database/canonical/verification/education-data-contract-v2/verify-source.mjs
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ['16','17']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22.13.0'
+          cache: npm
+          cache-dependency-path: 'Phoenix Compass/education compass/server/package-lock.json'
+      - name: Install existing PostgreSQL client
+        working-directory: Phoenix Compass/education compass/server
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Canonical formal 37 plus synthetic EDC candidate tests
+        run: node database/canonical/verification/education-data-contract-v2/acceptance.mjs '${{ matrix.pg }}'
