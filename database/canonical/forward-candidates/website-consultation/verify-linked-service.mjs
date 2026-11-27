@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 // This verifier runs only inside verify-local's fresh synthetic CRM database.
 // Operations events here are fixture references, not evidence of a contract or a payment.
-export async function verifyLinkedService({ db, Client, connection, fixtureId, lineage, family, otherFamily }) {
+export async function verifyLinkedService({ db, Client, Pool, connection, fixtureId, lineage, family, otherFamily }) {
   assert.equal(connection.host, "127.0.0.1");
   assert.equal(connection.database, "phoenix_website_intake_fixture");
 
@@ -161,6 +161,16 @@ export async function verifyLinkedService({ db, Client, connection, fixtureId, l
     assert.equal(fresh.data.projects.find(row => row.service_project_id === project).customer_todo_count, 0);
     return { read_at: fresh.data.as_of, task_event: complete.result.eventId, feedback_event: feedback.result.eventId };
   });
+  const backend = process.env.CRM_FIXTURE_FAMILY_API_MODULE;
+  if (backend) {
+    const { verifyLinkedFamilyApi } = await import("./verify-linked-family-api.mjs");
+    await verifyLinkedFamilyApi({
+      db, Pool, connection, backend, project, expectedFeedback: familyEvidence.feedback_event,
+      identity: { principalId: customer, actorPersonId: customerPerson, familyId: family },
+    });
+  } else {
+    console.log("NOT RUN linked Family HTTP API: CRM_FIXTURE_FAMILY_API_MODULE is unset");
+  }
   await workbench(outsider, outsiderPerson, otherFamily, "FAMILY", async client => {
     assert.deepEqual(await snapshot(client), { status: "DENY" });
     assert.deepEqual((await summary(client)).data.projects, []);

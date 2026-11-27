@@ -1209,7 +1209,7 @@ try {
     reviewerPrincipal, educationLead, cancelLead: conversionLead, publisherContracts, fixtureId, hash,
   });
   await verifyLinkedService({
-    db, Client, connection: { host, port, database }, fixtureId, lineage: lineage[0],
+    db, Client, Pool, connection: { host, port, database }, fixtureId, lineage: lineage[0],
     family: otherFamily, otherFamily: mismatchFamily,
   });
   const listeners = [];
