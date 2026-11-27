@@ -7,4 +7,8 @@
 # 两边保持一致。
 cd "/home/ubuntu/education-compass/Phoenix Compass/education compass/server" || exit 1
 export LISTEN_HOST=127.0.0.1
-exec /home/ubuntu/.nvm/versions/node/v24.20.0/bin/node --env-file=./.env.uat dist/index.js
+# dist-candidate 是 update-education-compass.sh 暂存的候选构建：存在时联调跑候选，
+# 生产仍跑 dist；--promote 成功后候选目录被清掉，这里自动回落到 dist。
+DIST_DIR=dist
+[ -d dist-candidate ] && DIST_DIR=dist-candidate
+exec /home/ubuntu/.nvm/versions/node/v24.20.0/bin/node --env-file=./.env.uat "$DIST_DIR/index.js"

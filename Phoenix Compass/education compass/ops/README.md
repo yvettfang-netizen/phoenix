@@ -52,7 +52,7 @@ git checkout
 
 | 脚本 | 作用 | 何时运行 |
 | --- | --- | --- |
-| `update-education-compass.sh <分支>` | 把服务器代码快进到指定分支；后端有改动时跑测试、构建、重启联调后端与 AI 处理进程，测试不过就不构建、不重启 | 每次部署 |
+| `update-education-compass.sh [--promote] <分支>` | 把服务器代码快进到指定分支；后端有改动时跑测试、构建，构建产物先暂存到 `dist-candidate` 并重启联调后端与 AI 处理进程，生产 `dist` 保持发布前版本；加 `--promote` 才把候选构建落到生产并重启 `education-compass`（3100），健康检查失败自动回滚 | 每次部署 |
 | `apply-migrations.sh [库名]` | 以数据库管理员身份应用未执行的迁移并登记到 `schema_migrations`，校验和与 `server/scripts/migrate.js` 一致，可重复运行 | 新增迁移后（默认 `phoenix_uat`） |
 | `backup-databases.sh` | 备份 `compass` 和 `phoenix_uat`，校验备份可读，保留 14 天，日志写入 `~/backups/db/backup.log` | 每天 03:30（cron） |
 | `sync-backups-to-cos.sh` | 把备份上传到腾讯云 COS，云端保留 30 天，日志写入 `~/backups/db/cos-sync.log` | 每天 04:10（cron） |
@@ -186,8 +186,11 @@ pm2 启动脚本和生产 systemd 单元统一用 `node --env-file=`。
 git push fork <分支>
 git push tencent <分支>
 
-# 服务器：快进到指定分支，必要时测试、构建并重启
+# 服务器：快进到指定分支；后端有改动时测试、构建，产物暂存到 dist-candidate 并重启联调
 ssh phoenix-tencent '~/update-education-compass.sh <分支>'
+
+# 验收通过后发布到生产（3100），健康检查失败会自动回滚
+ssh phoenix-tencent '~/update-education-compass.sh --promote <分支>'
 ```
 
 分支必须显式写出。脚本作用于本项目专属的 worktree（见上文「服务器上的代码目录」），切换分支不影响其他项目：
