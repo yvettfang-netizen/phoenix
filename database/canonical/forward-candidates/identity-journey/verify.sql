@@ -83,6 +83,24 @@ BEGIN
       AND retry_not_before = TIMESTAMPTZ '2028-02-29 09:30:00+08'
       AND send_on = DATE '2028-02-29' AND delivered_at IS NULL
   ) THEN RAISE EXCEPTION 'REMINDER_REBIND_LOST_RETRY_STATE'; END IF;
+
+  UPDATE identity.journey_station_reminders SET state = 'DELIVERED',
+    delivered_at = '2028-02-29 09:30:00+08', retry_not_before = NULL
+    WHERE reminder_id = reminder;
+  BEGIN
+    UPDATE identity.journey_station_reminders SET state = 'PENDING', delivered_at = NULL
+      WHERE reminder_id = reminder;
+    RAISE EXCEPTION 'DELIVERED_REMINDER_REOPENED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'IDENTITY_JOURNEY_DELIVERED_RECEIPT_IMMUTABLE' THEN RAISE; END IF;
+  END;
+  BEGIN
+    UPDATE identity.journey_station_reminders SET date_revision_id = revision
+      WHERE reminder_id = reminder;
+    RAISE EXCEPTION 'DELIVERED_REMINDER_REBOUND';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'IDENTITY_JOURNEY_DELIVERED_RECEIPT_IMMUTABLE' THEN RAISE; END IF;
+  END;
 END
 $test$;
 ROLLBACK;

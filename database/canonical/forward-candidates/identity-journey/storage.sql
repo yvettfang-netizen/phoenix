@@ -149,6 +149,21 @@ REVOKE ALL ON FUNCTION identity.guard_journey_reminder() FROM PUBLIC;
 CREATE TRIGGER journey_reminder_source BEFORE INSERT OR UPDATE OF date_revision_id, target_on ON identity.journey_station_reminders
 FOR EACH ROW EXECUTE FUNCTION identity.guard_journey_reminder();
 
+CREATE FUNCTION identity.guard_journey_delivery_receipt() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $fn$
+BEGIN
+  IF OLD.state = 'DELIVERED' THEN
+    RAISE EXCEPTION 'IDENTITY_JOURNEY_DELIVERED_RECEIPT_IMMUTABLE';
+  END IF;
+  RETURN NEW;
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.guard_journey_delivery_receipt() FROM PUBLIC;
+CREATE TRIGGER journey_delivery_receipt BEFORE UPDATE ON identity.journey_station_reminders
+FOR EACH ROW EXECUTE FUNCTION identity.guard_journey_delivery_receipt();
+
 -- No operational principals have grants in this candidate; fine-grained API
 -- policies and revocation/retention writers require a separately reviewed contract.
 ALTER TABLE identity.journey_episodes ENABLE ROW LEVEL SECURITY;
