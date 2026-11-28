@@ -27,4 +27,30 @@ SELECT '01910000-0000-7000-8100-000000000008', identity_case_id, episode_id, dat
   date_kind, target_on, 1, '01910000-0000-7000-8100-000000000003', 'RETRY', 2,
   clock_timestamp() - interval '1 hour'
 FROM identity.journey_date_revisions WHERE date_revision_id = '01910000-0000-7000-8100-000000000007';
+
+-- A second offset exercises the scheduler with a CI-only authorization source.
+-- This fixture never represents a Canonical grant or installs a new purpose.
+INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id, date_revision_id,
+  date_kind, target_on, offset_days, recipient_principal_id, state)
+SELECT '01910000-0000-7000-8100-000000000009', identity_case_id, episode_id, date_revision_id,
+  date_kind, target_on, 7, '01910000-0000-7000-8100-000000000003', 'PENDING'
+FROM identity.journey_date_revisions WHERE date_revision_id = '01910000-0000-7000-8100-000000000007';
+-- Temporarily exclude this reminder from the preceding concurrency checks.
+UPDATE identity.journey_station_reminders SET state = 'RETRY', retry_not_before = clock_timestamp() + interval '1 day'
+WHERE reminder_id = '01910000-0000-7000-8100-000000000009';
+
+CREATE SCHEMA identity_journey_test;
+CREATE TABLE identity_journey_test.station_grant (
+  identity_case_id uuid NOT NULL REFERENCES identity.cases,
+  family_id uuid NOT NULL REFERENCES core.families,
+  subject_person_id uuid NOT NULL REFERENCES core.people,
+  recipient_principal_id uuid NOT NULL REFERENCES auth.principals,
+  expires_at timestamptz NOT NULL,
+  withdrawn_at timestamptz,
+  PRIMARY KEY (identity_case_id, recipient_principal_id)
+);
+INSERT INTO identity_journey_test.station_grant
+VALUES ('01910000-0000-7000-8100-000000000005', '01910000-0000-7000-8100-000000000001',
+  '01910000-0000-7000-8100-000000000002', '01910000-0000-7000-8100-000000000003',
+  clock_timestamp() + interval '1 day', clock_timestamp());
 COMMIT;

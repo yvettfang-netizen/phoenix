@@ -35,3 +35,7 @@ Canonical `identity.cases`、`identity.external_facts`、Docs、Consent 及 37 �
 [两条独立数据库会话回归](https://github.com/yvettfang-netizen/phoenix/actions/runs/46110455427)记录了锁竞争、回滚后的领取恢复、成员关系失效时拒绝和仅一份回执。该验证是数据库执行层证据，通知用途授权仍需私有环境复验。
 
 领取接口单批最多 50 条，按香港日期及重试时间筛选，使用两分钟租约并返回仅供 Worker 使用的 opaque 令牌。Worker 必须先提交领取事务，再在发布事务中核对独立用途授权。过期、换绑以及其他 Worker 重新领取会使旧令牌失效。暂时性失败使用当前令牌写回重试及次数，退避从 5 分钟开始，上限 80 分钟。状态、角色及权限控制都在隔离 SQL 候选，未接入调度运行环境。
+
+[`515ed54` 的 PostgreSQL 16/17 回归](https://github.com/yvettfang-netizen/phoenix/actions/runs/46110670635)核验租约到期回收、旧令牌拒绝和持久退避。
+
+服务端批处理入口 `runStationReminderBatch` 只返回计数。数据库发布必须在同一事务内锁定精确对应家庭、身份主体、接收人的站内提醒授权，提交后才报告送达。授权不可用、发布中断时，Worker 使用现有租约写回退避。若回写失败，数据库允许在租约过期后重新领取。CI 发布适配器仅连接无外网的合成 PostgreSQL，授权来自测试夹具，正式用途、Worker 调度及家序收件箱的线上绑定因此仍待完成。

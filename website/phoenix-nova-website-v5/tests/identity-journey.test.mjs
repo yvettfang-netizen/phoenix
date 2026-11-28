@@ -3,6 +3,39 @@ import test from "node:test";
 import { deliverIdentityReminder, hkCivilDate, identityConsultationSummary, planIdentityReminders,
   reconcileIdentityReminders, reminderOffsets, summarizeResidenceYear } from "../lib/identity-journey.ts";
 import { identityPathways, identityPolicyRules } from "../lib/identity-journey-policy.ts";
+import { runStationReminderBatch } from "../lib/identity-journey-reminder-worker.ts";
+
+test("station batch rejects invalid configuration before touching the queue", async () => {
+  for (const limit of [0, 51, 1.5, NaN]) {
+    await assert.rejects(runStationReminderBatch({}, limit), RangeError);
+  }
+});
+
+test("station batch defers transient failures, ignores stale claims and keeps delivering", async () => {
+  const publications = ["AUTHORIZATION_UNAVAILABLE", "ERROR", "CLAIM_LOST", "ALREADY_DELIVERED", "DELIVERED"];
+  const claims = publications.map((_, index) => ({ reminderId: String(index), recipientPrincipalId: "recipient",
+    revisionId: "revision", claimToken: `token-${index}` }));
+  const deferred = [];
+  const queue = {
+    async claimDue(limit) {
+      assert.equal(limit, 10);
+      return claims;
+    },
+    async publishWithAuthorization(claim) {
+      const outcome = publications[Number(claim.reminderId)];
+      if (outcome === "ERROR") throw new Error("Simulated connection failure");
+      return outcome;
+    },
+    async deferWithBackoff(claim) {
+      deferred.push(claim.claimToken);
+      if (claim === claims[0]) throw new Error("Simulated retry write failure");
+      return true;
+    },
+  };
+  assert.deepEqual(await runStationReminderBatch(queue), { claimed: 5, delivered: 1, alreadyDelivered: 1,
+    denied: 0, deferred: 1, skipped: 1, deferredWriteFailed: 1 });
+  assert.deepEqual(deferred, ["token-0", "token-1"]);
+});
 
 const now = new Date("2028-02-28T16:00:00Z");
 const scope = { family: "synthetic-family", subject: "synthetic-adult" };
