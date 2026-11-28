@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { runStationReminderBatch } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-reminder-worker.ts";
+import { handleIdentityInbox, identityNoticePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-inbox.ts";
 
 const container = process.argv[2];
 assert.match(container ?? "", /^[0-9a-f]{64}$/);
@@ -89,3 +90,134 @@ assert.equal(delivered.delivered, 1);
 verifyReceipt(1);
 assert.equal((await runStationReminderBatch(queue, 1)).claimed, 0);
 console.log("PASS station scheduler, revoked synthetic grant, delivery rollback and backoff, recovery and one notice/receipt");
+
+const recipient = {
+  familyId: "01910000-0000-7000-8100-000000000001",
+  caseId: "01910000-0000-7000-8100-000000000005",
+  principalId: "01910000-0000-7000-8100-000000000003",
+  noticeId: candidate,
+};
+const scopeArgs = ":'familyId'::uuid, :'caseId'::uuid, :'principalId'::uuid";
+const list = `SELECT COALESCE(jsonb_agg(to_jsonb(n)), '[]') FROM locked_grant g
+  CROSS JOIN LATERAL identity.list_journey_station_notices(${scopeArgs}, g.page_limit) n;`;
+const acknowledge = `SELECT identity.acknowledge_journey_station_notice(${scopeArgs}, g.notice_id) FROM locked_grant g;`;
+
+function inbox(statement, scope = recipient) {
+  return query(`BEGIN;
+    WITH locked_grant AS MATERIALIZED (
+      SELECT 50 AS page_limit, :'noticeId'::uuid AS notice_id
+      FROM identity_journey_test.station_grant
+      WHERE family_id = :'familyId'::uuid AND identity_case_id = :'caseId'::uuid
+        AND recipient_principal_id = :'principalId'::uuid AND withdrawn_at IS NULL
+        AND expires_at > clock_timestamp()
+      FOR SHARE
+    )
+    ${statement}
+    COMMIT;`, scope);
+}
+
+const notices = JSON.parse(inbox(list));
+assert.equal(notices.length, 2);
+assert.equal(notices.find(row => row.notice_id === candidate).read_at, null);
+assert.deepEqual(Object.keys(notices[0]).sort(), ["notice_id", "published_at", "read_at"]);
+assert.equal(query("SELECT count(*) FROM identity.journey_station_notice_reads;"), "0");
+
+const firstReadAt = inbox(acknowledge);
+assert.ok(Number.isFinite(Date.parse(firstReadAt)));
+assert.equal(inbox(acknowledge), firstReadAt);
+assert.equal(Date.parse(JSON.parse(inbox(list)).find(row => row.notice_id === candidate).read_at), Date.parse(firstReadAt));
+assert.equal(query("SELECT count(*) FROM identity.journey_station_notice_reads;"), "1");
+assert.equal(inbox(acknowledge, { ...recipient, noticeId: recipient.familyId }), "");
+
+// Even a trusted resolver calling with a wrong scope must not reach this inbox.
+assert.equal(query(`SELECT count(*) FROM identity.list_journey_station_notices(${scopeArgs}, 50);`,
+  { ...recipient, familyId: recipient.caseId }), "0");
+assert.equal(query(`SELECT identity.acknowledge_journey_station_notice(${scopeArgs}, :'noticeId'::uuid);`,
+  { ...recipient, principalId: recipient.caseId }), "");
+
+query(`UPDATE core.family_memberships SET valid_until = clock_timestamp()
+  WHERE family_id = :'familyId'::uuid;`, recipient);
+assert.deepEqual(JSON.parse(inbox(list)), []);
+assert.equal(inbox(acknowledge), "");
+query(`UPDATE core.family_memberships SET valid_until = NULL WHERE family_id = :'familyId'::uuid;
+  UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_timestamp();`, recipient);
+assert.deepEqual(JSON.parse(inbox(list)), []);
+assert.equal(inbox(acknowledge), "");
+verifyReceipt(1);
+assert.equal(query("SELECT count(*) FROM identity.journey_station_notice_reads;"), "1");
+
+for (const table of ["journey_station_notices", "journey_station_notice_reads"]) {
+  for (const role of ["phoenix_canonical_app", "phoenix_canonical_reader"]) {
+    assert.equal(query("SELECT has_table_privilege(:'role', :'table', 'SELECT,UPDATE,DELETE');",
+      { role, table: `identity.${table}` }), "f");
+  }
+}
+assert.throws(() => query("UPDATE identity.journey_station_notice_reads SET read_at = clock_timestamp();"),
+  error => String(error.stderr).includes("IDENTITY_JOURNEY_STATION_RECEIPT_IMMUTABLE"));
+assert.throws(() => query("UPDATE identity.journey_station_notices SET published_at = clock_timestamp();"),
+  error => String(error.stderr).includes("IDENTITY_JOURNEY_STATION_RECEIPT_IMMUTABLE"));
+console.log("PASS scoped inbox, acknowledgement idempotency, access withdrawal and immutable timestamps");
+
+// Run the same delivered notification through the HTTP handler and SQL
+// transactions using a CI-only session/provider. The browser receives only
+// notice identity and timestamps; fixture subjects never cross the response.
+query("UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;");
+const origin = "https://family.synthetic.invalid";
+const events = [];
+let authActive = true;
+const authConfig = {
+  origin,
+  async verifySession() {
+    return authActive ? { id: "ci-only-account", username: "fixture", token_hash: "ci-only-session",
+      created_at: Date.now() - 1000, valid_until: Date.now() + 60_000 } : null;
+  },
+  async recordAccess(_, action) { events.push(action); },
+};
+const env = {
+  FAMILY_IDENTITY_INBOX_ENABLED: "true",
+  FAMILY_IDENTITY_INBOX_PROVIDER: {
+    async resolve(session) {
+      assert.deepEqual(session, { customerId: "ci-only-account", sessionHash: "ci-only-session" });
+      return {
+        async assertCurrent() {
+          return query(`SELECT count(*) FROM identity_journey_test.station_grant
+            WHERE withdrawn_at IS NULL AND expires_at > clock_timestamp();`) === "1";
+        },
+        async listAuthorized() {
+          return JSON.parse(inbox(list)).map(n => ({ id: n.notice_id, publishedAt: n.published_at, readAt: n.read_at }));
+        },
+        async acknowledgeAuthorized(id) { return inbox(acknowledge, { ...recipient, noticeId: id }) || null; },
+      };
+    },
+  },
+};
+const get = (headers = {}) => handleIdentityInbox(new Request(origin + identityNoticePath, { headers }), env, authConfig);
+const post = (id, writeOrigin = origin) => handleIdentityInbox(new Request(origin + identityNoticePath,
+  { method: "POST", headers: { origin: writeOrigin, "content-type": "application/json" }, body: JSON.stringify({ id }) }), env, authConfig);
+const response = await get();
+assert.equal(response.status, 200);
+assert.equal(response.headers.get("Cache-Control"), "private, no-store");
+const publicNotices = (await response.json()).notices;
+assert.equal(publicNotices.length, 2);
+assert.deepEqual(Object.keys(publicNotices[0]).sort(), ["id", "publishedAt", "readAt"]);
+const unread = publicNotices.find(notice => notice.readAt === null);
+assert.ok(unread);
+assert.equal((await post(candidate, "https://cross-origin.invalid")).status, 403);
+assert.equal((await get({ "x-family-id": recipient.familyId })).status, 403);
+assert.equal((await post(recipient.familyId)).status, 403);
+const acknowledged = await post(candidate);
+assert.equal(acknowledged.status, 200);
+assert.equal((await acknowledged.json()).readAt, new Date(firstReadAt).toISOString());
+const newAcknowledgement = await post(unread.id);
+assert.equal(newAcknowledgement.status, 200);
+const newReadAt = (await newAcknowledgement.json()).readAt;
+assert.equal((await (await post(unread.id)).json()).readAt, newReadAt);
+assert.equal(query("SELECT count(*) FROM identity.journey_station_notice_reads;"), "2");
+assert.ok(events.includes("IDENTITY_INBOX_ACKNOWLEDGE_PREPARED"));
+authActive = false;
+assert.equal((await get()).status, 401);
+authActive = true;
+query("UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_timestamp();");
+assert.equal((await get()).status, 403);
+assert.equal((await post(candidate)).status, 403);
+console.log("PASS Family OS inbox HTTP session, same-origin, minimized response, acknowledgement and revocation");

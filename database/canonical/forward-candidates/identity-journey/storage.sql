@@ -339,6 +339,107 @@ $fn$;
 REVOKE ALL ON FUNCTION identity.publish_journey_station_notice(uuid,uuid,uuid,uuid)
   FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
 
+-- Delivery and the family's first explicit acknowledgement are different facts.
+CREATE TABLE identity.journey_station_notice_reads (
+  reminder_id uuid PRIMARY KEY REFERENCES identity.journey_station_notices,
+  read_at timestamptz NOT NULL
+);
+ALTER TABLE identity.journey_station_notice_reads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE identity.journey_station_notice_reads FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON identity.journey_station_notice_reads FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
+
+CREATE FUNCTION identity.reject_journey_station_receipt_update() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $fn$
+BEGIN
+  RAISE EXCEPTION 'IDENTITY_JOURNEY_STATION_RECEIPT_IMMUTABLE';
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.reject_journey_station_receipt_update() FROM PUBLIC;
+CREATE TRIGGER journey_station_notice_immutable BEFORE UPDATE ON identity.journey_station_notices
+FOR EACH ROW EXECUTE FUNCTION identity.reject_journey_station_receipt_update();
+CREATE TRIGGER journey_station_notice_read_immutable BEFORE UPDATE ON identity.journey_station_notice_reads
+FOR EACH ROW EXECUTE FUNCTION identity.reject_journey_station_receipt_update();
+
+-- Only the reviewed server-side adapter may call these invoker-rights
+-- primitives, after verifying the session and locking a matching notice grant
+-- in the same transaction. These arguments must be derived server-side.
+CREATE FUNCTION identity.lock_journey_station_self_scope(
+  p_family_id uuid, p_case_id uuid, p_recipient_principal_id uuid
+) RETURNS boolean
+LANGUAGE plpgsql
+SET search_path = pg_catalog, identity, auth, core
+AS $fn$
+DECLARE
+  now_at timestamptz := clock_timestamp();
+BEGIN
+  PERFORM 1 FROM identity.cases c
+    JOIN auth.principals p ON p.person_id = c.subject_person_id
+    JOIN core.family_memberships m ON m.family_id = c.family_id AND m.person_id = p.person_id
+    WHERE c.identity_case_id = p_case_id AND c.family_id = p_family_id
+      AND p.principal_id = p_recipient_principal_id AND p.status = 'ACTIVE' AND p.principal_kind = 'FAMILY'
+      AND m.valid_from <= now_at AND (m.valid_until IS NULL OR m.valid_until > now_at)
+    FOR SHARE OF c, p, m;
+  RETURN FOUND;
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.lock_journey_station_self_scope(uuid,uuid,uuid)
+  FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
+
+CREATE FUNCTION identity.list_journey_station_notices(
+  p_family_id uuid, p_case_id uuid, p_recipient_principal_id uuid, p_limit integer
+) RETURNS TABLE (notice_id uuid, published_at timestamptz, read_at timestamptz)
+LANGUAGE plpgsql
+SET search_path = pg_catalog, identity
+AS $fn$
+BEGIN
+  IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 50 THEN
+    RAISE EXCEPTION 'IDENTITY_JOURNEY_NOTICE_LIMIT_INVALID';
+  END IF;
+  IF NOT identity.lock_journey_station_self_scope(p_family_id, p_case_id, p_recipient_principal_id) THEN
+    RETURN;
+  END IF;
+  RETURN QUERY SELECT n.reminder_id, n.published_at, acknowledgement.read_at
+    FROM identity.journey_station_notices n
+    JOIN identity.journey_station_reminders r USING (reminder_id)
+    LEFT JOIN identity.journey_station_notice_reads acknowledgement USING (reminder_id)
+    WHERE r.identity_case_id = p_case_id AND r.recipient_principal_id = p_recipient_principal_id
+      AND r.state = 'DELIVERED'
+    ORDER BY n.published_at DESC, n.reminder_id DESC
+    LIMIT p_limit;
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.list_journey_station_notices(uuid,uuid,uuid,integer)
+  FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
+
+CREATE FUNCTION identity.acknowledge_journey_station_notice(
+  p_family_id uuid, p_case_id uuid, p_recipient_principal_id uuid, p_notice_id uuid
+) RETURNS timestamptz
+LANGUAGE plpgsql
+SET search_path = pg_catalog, identity
+AS $fn$
+DECLARE
+  sent_at timestamptz;
+  first_read_at timestamptz;
+BEGIN
+  IF NOT identity.lock_journey_station_self_scope(p_family_id, p_case_id, p_recipient_principal_id) THEN
+    RETURN NULL;
+  END IF;
+  SELECT n.published_at INTO sent_at FROM identity.journey_station_notices n
+    JOIN identity.journey_station_reminders r USING (reminder_id)
+    WHERE r.reminder_id = p_notice_id AND r.identity_case_id = p_case_id
+      AND r.recipient_principal_id = p_recipient_principal_id AND r.state = 'DELIVERED';
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  INSERT INTO identity.journey_station_notice_reads(reminder_id, read_at)
+    VALUES (p_notice_id, GREATEST(clock_timestamp(), sent_at)) ON CONFLICT (reminder_id) DO NOTHING;
+  SELECT a.read_at INTO first_read_at FROM identity.journey_station_notice_reads a WHERE a.reminder_id = p_notice_id;
+  RETURN first_read_at;
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.acknowledge_journey_station_notice(uuid,uuid,uuid,uuid)
+  FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
+
 -- No operational principals have grants in this candidate; fine-grained API
 -- policies and revocation/retention writers require a separately reviewed contract.
 ALTER TABLE identity.journey_episodes ENABLE ROW LEVEL SECURITY;

@@ -101,5 +101,6 @@ psql_synthetic -qAt -d "$db" -c "$(printf "$membership" NULL)"
     AND n.published_at = r.delivered_at AND r.state = 'DELIVERED'
     AND r.attempt_count = 3 AND r.retry_not_before IS NULL AND r.claim_token IS NULL")" == '1' ]]
 echo "PASS competing sessions, expired claim recovery, stale Worker fencing, durable retry, membership revocation and single receipt: PG$1"
-node --experimental-strip-types "$candidate/verify-worker.mjs" "$container"
+node --experimental-strip-types --import "$canonical/../../website/phoenix-nova-website-v5/tests/register-typescript.mjs" \
+  "$candidate/verify-worker.mjs" "$container"
 echo "PASS Identity Journey candidate PostgreSQL $1; synthetic fixture only"
