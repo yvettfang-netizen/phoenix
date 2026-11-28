@@ -43,6 +43,7 @@ function assertEducationStructure(html, locale) {
   assert.ok(educationLanding(html), `${locale}: data-education-landing marker is missing`);
   assert.equal((html.match(/<h1\b/gi) ?? []).length, 1, `${locale}: Education needs one h1`);
   assert.equal(testIdCount(html, "education-service"), 4, `${locale}: Education needs four services`);
+  assert.equal(testIdCount(html, "education-pricing-package"), 4, "Education pricing needs four package cards");
   assert.equal(testIdCount(html, "education-value"), 5, `${locale}: Education needs five values`);
   assert.equal(testIdCount(html, "learning-step"), 7, `${locale}: Education needs seven ordered learning steps`);
   assert.equal(testIdCount(html, "education-consultation"), 1, `${locale}: Education consultation panel must be unique`);
@@ -51,9 +52,16 @@ function assertEducationStructure(html, locale) {
     assert.equal((html.match(new RegExp(`\\bid=["']${escapeRegExp(id)}["']`, "gi")) ?? []).length, 1, `${locale}: #${id} must be unique`);
   }
   const servicesAt = html.indexOf('id="education-services"');
+  const packagesAt = html.indexOf('id="education-packages"');
   const compassAt = html.indexOf('id="education-compass"');
   const academyAt = html.indexOf('id="academy"');
-  assert.ok(servicesAt >= 0 && servicesAt < compassAt && compassAt < academyAt, `${locale}: education Compass section order changed`);
+  assert.ok(servicesAt >= 0 && servicesAt < packagesAt && packagesAt < compassAt && compassAt < academyAt, "Education pricing order changed");
+  const pricing = html.slice(packagesAt, compassAt);
+  assert.ok(pricing.includes(locale === "zh" ? "¥39,980" : "RMB 39,980"), "Approved Standard price is missing");
+  assert.ok(pricing.includes(locale === "zh" ? "¥89,980" : "RMB 89,980"), "VIP reference fee is missing");
+  assert.ok(pricing.includes(locale === "zh" ? "评估后报价" : "Quoted after assessment"), "Custom tiers must remain scoped quotations");
+  assert.ok(pricing.includes(locale === "zh" ? "不保证录取" : "admission is not guaranteed"), "Non-guarantee wording is missing");
+  assert.ok(!pricing.includes("<form") && !pricing.includes("checkout") && !pricing.includes("payment"), "Pricing preview cannot expose checkout or payment");
   assert.match(html.slice(compassAt, academyAt), /education-compass-controlled/i, `${locale}: controlled Education Compass marker is missing`);
   assert.match(html.slice(compassAt, academyAt), unavailableCopy, `${locale}: Compass state must be truthful and unavailable`);
   assert.match(html, hasAttribute("select", "id", "education-direction"), `${locale}: consultation direction select is missing`);
