@@ -6,6 +6,7 @@ on:
       - 'website/phoenix-nova-website-v5/lib/identity-journey*.ts'
       - 'website/phoenix-nova-website-v5/components/family-identity-inbox.tsx'
       - 'website/phoenix-nova-website-v5/components/family-center-v2.tsx'
+      - 'website/phoenix-nova-website-v5/components/family-center-v2.css'
       - 'website/phoenix-nova-website-v5/app/**/family-center/page.tsx'
       - 'website/phoenix-nova-website-v5/app/api/family-services/identity-notices/**'
       - 'website/phoenix-nova-website-v5/tests/identity-journey.test.mjs'

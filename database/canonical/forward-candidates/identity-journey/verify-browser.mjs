@@ -112,14 +112,15 @@ export async function verifyFamilyInboxBrowser({ handle, noticePath, revokeGrant
     };
     const desktop = await run("en", 1440, "family-inbox-en-desktop-1440");
     assert.equal(receiptCount(), 2);
+    const readButton = desktop.inbox.getByRole("button", { name: "Mark as read" });
     const post = desktop.page.waitForResponse(response => response.url().endsWith(noticePath) && response.request().method() === "POST");
-    await desktop.inbox.getByRole("button", { name: "Mark as read" }).click();
+    await readButton.click();
     const acknowledged = await post;
     assert.equal(acknowledged.status(), 200);
     assert.equal(acknowledged.headers()["cache-control"], "private, no-store");
     assert.equal(receiptCount(), 3);
-    await desktop.inbox.getByText("Read", { exact: true }).last().waitFor();
-    assert.equal(await desktop.inbox.getByRole("button", { name: "Mark as read" }).count(), 0);
+    await readButton.waitFor({ state: "hidden" });
+    assert.equal(await desktop.inbox.getByText("Read", { exact: true }).count(), 3);
     const mobile = await run("zh", 390, "family-inbox-zh-mobile-390");
     assert.equal(await mobile.inbox.getByText("已读", { exact: true }).count(), 3);
     revokeGrant();
