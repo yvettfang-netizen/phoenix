@@ -93,7 +93,9 @@ export function planIdentityReminders(
   return [...result.values()].sort((a, b) => a.sendOn.localeCompare(b.sendOn) || a.key.localeCompare(b.key));
 }
 
-type QueueItem = Readonly<{ key: string; state: "PENDING" | "RETRY" | "DELIVERED" | "CANCELED" }>;
+type QueueItem = Readonly<{
+  key: string; sourceId?: string; state: "PENDING" | "RETRY" | "DELIVERED" | "CANCELED";
+}>;
 
 // Existing rows are scoped by the caller to the same family + subject before reconciliation.
 // Keep past-due valid rows for the delivery worker, even if planning runs after sendOn.
@@ -101,10 +103,15 @@ export function reconcileIdentityReminders(
   desired: readonly IdentityReminder[], existing: readonly QueueItem[],
   isStillActive: (key: string) => boolean,
 ) {
-  const previous = new Map(existing.map(item => [item.key, item.state]));
+  const previous = new Map(existing.map(item => [item.key, item]));
   const desiredKeys = new Set(desired.map(item => item.key));
   return {
-    enqueue: desired.filter(item => !previous.has(item.key) || previous.get(item.key) === "CANCELED"),
+    enqueue: desired.filter(item => !previous.has(item.key) || previous.get(item.key)?.state === "CANCELED"),
+    // Rebind the pending row without resetting its retry count or creating a receipt.
+    rebind: desired.filter(item => {
+      const current = previous.get(item.key);
+      return (current?.state === "PENDING" || current?.state === "RETRY") && current.sourceId !== item.sourceId;
+    }).map(({ key, sourceId }) => ({ key, sourceId })),
     cancel: existing.filter(item => (item.state === "PENDING" || item.state === "RETRY") &&
       !desiredKeys.has(item.key) && !isStillActive(item.key)).map(item => item.key),
   };

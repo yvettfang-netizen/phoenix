@@ -89,6 +89,17 @@ test("verified renewal cancels old pending notices and retains completed history
   assert.deepEqual(changes.enqueue.map(event => event.targetDate), ["2028-12-01"]);
 });
 
+test("same-date evidence correction rebinds a retry but preserves a delivered receipt", () => {
+  const expiry = fact("STAY_EXPIRY", "2028-04-01");
+  const old = reminders([expiry], { offsets: [14, 7] });
+  const corrected = reminders([{ ...expiry, id: "verified-correction" }], { offsets: [14, 7] });
+  assert.deepEqual(reconcileIdentityReminders(corrected, [
+    { ...old[0], state: "RETRY" }, { ...old[1], state: "DELIVERED" }
+  ], () => false), {
+    enqueue: [], cancel: [], rebind: [{ key: old[0].key, sourceId: "verified-correction" }],
+  });
+});
+
 test("duplicate and invalid offsets, cross-family access, expired grants and revocation", () => {
   const expiry = fact("STAY_EXPIRY", "2029-05-01");
   assert.equal(reminders([expiry, expiry], { offsets: [...reminderOffsets, 1, 7] }).length, 8);
