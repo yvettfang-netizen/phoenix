@@ -60,7 +60,7 @@ function assertEducationStructure(html, locale) {
   const pricing = html.slice(packagesAt, compassAt);
   assert.ok(pricing.includes(locale === "zh" ? "¥39,980" : "RMB 39,980"), "Approved Standard price is missing");
   assert.ok(pricing.includes(locale === "zh" ? "¥89,980" : "RMB 89,980"), "VIP reference fee is missing");
-  assert.ok(pricing.includes(locale === "zh" ? "评估后报价" : "Quoted after assessment"), "Custom tiers must remain scoped quotations");
+  assert.ok(pricing.includes(locale === "zh" ? "评估后书面报价" : "Written quote after assessment"), "Custom tiers must remain scoped quotations");
   assert.ok(pricing.includes(locale === "zh" ? "不保证录取" : "admission is not guaranteed"), "Non-guarantee wording is missing");
   assert.ok(!pricing.includes("<form") && !pricing.includes('href="/checkout') && !pricing.includes('href="/payment'), "Pricing preview cannot expose a checkout or payment route");
   assert.ok(pricing.includes(locale === "zh" ? "香港小学入学" : "Hong Kong Primary School"), "Primary entry/transfer package is missing");
