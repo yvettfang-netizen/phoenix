@@ -34,10 +34,12 @@ $fn$;
 CREATE TRIGGER journey_crm_service_link_immutable BEFORE UPDATE OR DELETE ON identity.journey_crm_service_links
   FOR EACH ROW EXECUTE FUNCTION identity.protect_journey_crm_service_link();
 
--- Invoker rights. The adapter must resolve the opaque receipt with a
--- current renewal consultation grant and hold that grant on this transaction.
+-- Invoker rights. The adapter resolves the opaque durable CRM handoff with
+-- its live consultation intent and holds both rows for this transaction.
 -- A Canonical need by itself is evidence of intake, not authority to book.
-CREATE FUNCTION identity.lock_journey_crm_need(p_need uuid, p_consent uuid, p_link uuid)
+CREATE FUNCTION identity.lock_journey_crm_need(
+  p_need uuid, p_consent uuid, p_link uuid, p_renewal_only boolean DEFAULT true
+)
 RETURNS TABLE(lead uuid, client uuid, family uuid, subject uuid)
 LANGUAGE plpgsql SET search_path = pg_catalog
 AS $fn$
@@ -58,11 +60,22 @@ BEGIN
     FROM crm.lead_events e JOIN crm.leads l USING (lead_id)
     JOIN crm.lead_identity_links link ON link.lead_id=l.lead_id
     JOIN crm.clients c ON c.client_id=link.client_id AND c.family_id=l.family_id
+    JOIN consent.identity_journey_crm_intents intent ON intent.consent_id=p_consent
+    JOIN identity.journey_crm_handoffs handoff ON handoff.consent_id=intent.consent_id
+      AND handoff.lead_event_id=e.lead_event_id
     JOIN auth.principals recipient ON recipient.principal_id=e.asserted_by_principal_id
       AND recipient.person_id=e.need_subject_person_id
     JOIN core.family_memberships m ON m.person_id=recipient.person_id AND m.family_id=l.family_id
     WHERE e.lead_event_id=p_need AND e.event_kind='NEED_ASSERTED'
       AND e.need_assertion_kind='USER_SELECTED' AND e.need_domain='IDENTITY' AND e.source_event_ref=p_consent::text
+      AND intent.lead_id=l.lead_id AND intent.verified_link_id=p_link
+      AND e.acquisition_contract_id=intent.source_contract_id
+      AND intent.recipient_id=e.asserted_by_principal_id
+      AND ((coalesce(p_renewal_only,true) AND intent.accepted_topic='RENEWAL')
+        OR (NOT coalesce(p_renewal_only,true)
+          AND intent.accepted_topic IN ('RENEWAL','DOCUMENT','STATUS_REVIEW')))
+      AND handoff.topic=intent.accepted_topic AND intent.authorized_at<=clock_timestamp()
+      AND intent.withdrawn_at IS NULL AND intent.expires_at > clock_timestamp()
       AND NOT EXISTS (SELECT 1 FROM crm.lead_events n WHERE n.need_supersedes_event_id=p_need)
       AND l.family_id=auth.current_family_id() AND l.lead_status <> 'MERGED'
       AND link.lead_identity_link_id=p_link AND link.target_kind='CLIENT'
@@ -70,7 +83,28 @@ BEGIN
       AND c.lifecycle_status IN ('ACTIVE','PAUSED') AND recipient.status='ACTIVE' AND recipient.principal_kind='FAMILY'
       AND m.valid_from<=clock_timestamp() AND (m.valid_until IS NULL OR m.valid_until>clock_timestamp())
       AND auth.write_context_is_live()
-    FOR SHARE OF link, c, recipient, m;
+    FOR SHARE OF intent, handoff, link, c, recipient, m;
+END
+$fn$;
+
+-- Private CRM projection.  The guarded lock is the authorization boundary;
+-- only the minimum service summary crosses it, never participant identifiers,
+-- dates, consent metadata, or evidence references.
+CREATE FUNCTION identity.read_journey_crm_summary(p_need uuid, p_consent uuid, p_link uuid)
+RETURNS TABLE(domain text, topic text, horizon text)
+LANGUAGE plpgsql SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  binding record;
+BEGIN
+  SELECT * INTO binding FROM identity.lock_journey_crm_need(p_need,p_consent,p_link,false);
+  IF NOT FOUND THEN RETURN; END IF;
+  RETURN QUERY
+    SELECT 'IDENTITY'::text, h.topic, h.horizon
+    FROM identity.journey_crm_handoffs h
+    JOIN consent.identity_journey_crm_intents i ON i.consent_id=h.consent_id
+    WHERE h.consent_id=p_consent AND h.lead_event_id=p_need AND h.topic=i.accepted_topic
+      AND i.withdrawn_at IS NULL AND i.expires_at>clock_timestamp() AND auth.write_context_is_live();
 END
 $fn$;
 
@@ -151,7 +185,8 @@ END
 $fn$;
 
 REVOKE ALL ON FUNCTION identity.protect_journey_crm_service_link(),
-  identity.lock_journey_crm_need(uuid,uuid,uuid),
+  identity.lock_journey_crm_need(uuid,uuid,uuid,boolean),
+  identity.read_journey_crm_summary(uuid,uuid,uuid),
   identity.schedule_journey_crm_consultation(uuid,uuid,uuid,uuid,uuid,timestamptz,uuid),
   identity.create_journey_crm_deal(uuid,uuid,uuid,uuid,text,numeric,text,uuid)
   FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader, phoenix_canonical_service_workbench;

@@ -28,76 +28,79 @@ VALUES ('01910000-0000-7000-8100-000000000026', '01910000-0000-7000-8100-0000000
   '01910000-0000-7000-8100-000000000023', 'VERIFIED', repeat('a', 64),
   '01910000-0000-7000-8100-000000000021', '01910000-0000-7000-8100-000000000022', clock_timestamp());
 
--- This independent test grant and receipt exercise the boundary without
--- changing the approved Canonical purpose enum or assigning live authority.
-CREATE TABLE identity_journey_test.crm_intent (
-  consent_id uuid PRIMARY KEY,
-  notice_id uuid NOT NULL REFERENCES identity.journey_station_notices,
-  recipient_id uuid NOT NULL REFERENCES auth.principals,
-  lead_id uuid NOT NULL REFERENCES crm.leads,
-  source_contract_id uuid NOT NULL REFERENCES crm.acquisition_contract_revisions,
-  accepted_topic text NOT NULL CHECK (accepted_topic IN ('RENEWAL','DOCUMENT','STATUS_REVIEW')),
-  consent_revision text NOT NULL,
-  expires_at timestamptz NOT NULL,
-  withdrawn_at timestamptz,
-  UNIQUE (notice_id, recipient_id, accepted_topic, consent_revision)
-);
-CREATE TABLE identity_journey_test.crm_receipt (
-  consent_id uuid PRIMARY KEY REFERENCES identity_journey_test.crm_intent,
-  lead_event_id uuid NOT NULL UNIQUE REFERENCES crm.lead_events,
-  topic text NOT NULL CHECK (topic IN ('RENEWAL','DOCUMENT','STATUS_REVIEW')),
-  horizon text NOT NULL CHECK (horizon IN ('WITHIN_90_DAYS','WITHIN_180_DAYS','LATER','TO_REVIEW'))
-);
+-- The private candidate owns the authoritative intent and handoff rows.  The
+-- synthetic app LOGIN gets only these test-only SECURITY DEFINER adapters so
+-- the CI path still exercises the real session_user and FAMILY context.  No
+-- synthetic intent/receipt tables are created and no consent is pre-seeded.
+CREATE FUNCTION identity_journey_test.authorize_journey_crm_consultation(
+  p_consent uuid, p_notice uuid, p_lead uuid, p_link uuid, p_contract uuid,
+  p_topic text, p_version text, p_expires timestamptz, p_confirmed boolean
+) RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+BEGIN
+  IF session_user <> 'identity_journey_fixture_app' THEN RETURN NULL; END IF;
+  RETURN identity.authorize_journey_crm_consultation(
+    p_consent, p_notice, p_lead, p_link, p_contract,
+    p_topic, p_version, p_expires, p_confirmed);
+END
+$fn$;
 
--- No generic query or CRM storage privilege is granted to the test app LOGIN.
--- Canonical itself evaluates the eligible source contract and FAMILY actor.
-CREATE FUNCTION identity_journey_test.record_crm_need(
-  p_notice uuid, p_revision text, p_event uuid, p_topic text, p_horizon text
+CREATE FUNCTION identity_journey_test.record_journey_crm_need(
+  p_consent uuid, p_event uuid, p_expected_horizon text
 ) RETURNS text
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog
 AS $fn$
-DECLARE
-  intent identity_journey_test.crm_intent%ROWTYPE;
-  found_event uuid;
 BEGIN
-  IF session_user <> 'identity_journey_fixture_app' OR auth.current_channel() IS DISTINCT FROM 'FAMILY' THEN
-    RETURN 'DENIED';
-  END IF;
-  SELECT i.* INTO intent FROM identity_journey_test.crm_intent i
-    JOIN crm.acquisition_contract_revisions source ON source.contract_id = i.source_contract_id
-    JOIN identity.journey_station_reminders r ON r.reminder_id = i.notice_id AND r.state = 'DELIVERED'
-    JOIN identity.cases c USING (identity_case_id)
-    JOIN auth.principals principal ON principal.principal_id = i.recipient_id
-      AND principal.person_id = c.subject_person_id AND principal.principal_kind = 'FAMILY' AND principal.status = 'ACTIVE'
-    JOIN core.family_memberships m ON m.family_id = c.family_id AND m.person_id = c.subject_person_id
-    JOIN crm.leads l ON l.lead_id = i.lead_id AND l.family_id = c.family_id
-    JOIN crm.lead_identity_links link ON link.lead_id = l.lead_id AND link.target_kind = 'CLIENT' AND link.status = 'VERIFIED'
-    JOIN crm.clients client ON client.client_id = link.client_id AND client.family_id = c.family_id
-    WHERE i.notice_id = p_notice AND i.accepted_topic = p_topic AND i.consent_revision = p_revision
-      AND c.family_id = auth.current_family_id() AND c.subject_person_id = auth.current_actor_person_id()
-      AND i.recipient_id = auth.current_principal_id() AND r.recipient_principal_id = i.recipient_id
-      AND i.withdrawn_at IS NULL AND i.expires_at > clock_timestamp()
-      AND m.valid_from <= clock_timestamp() AND (m.valid_until IS NULL OR m.valid_until > clock_timestamp())
-      AND l.lead_status <> 'MERGED' AND client.lifecycle_status IN ('ACTIVE', 'PAUSED')
-      AND source.allowed_app_login = session_user AND source.revoked_at IS NULL
-      AND source.valid_from <= clock_timestamp() AND source.valid_until > clock_timestamp()
-    FOR UPDATE OF l, i
-    FOR SHARE OF c, principal, m, link, client, source;
-  IF NOT FOUND OR intent.expires_at <= clock_timestamp() THEN RETURN 'DENIED'; END IF;
-  IF EXISTS (SELECT 1 FROM identity_journey_test.crm_receipt receipt WHERE receipt.consent_id = intent.consent_id) THEN
-    RETURN 'ALREADY_RECEIVED';
-  END IF;
-  SELECT crm.assert_lead_need(p_event, intent.lead_id, intent.source_contract_id, 'IDENTITY',
-    'USER_SELECTED', 'ASSERT', NULL, NULL, intent.consent_id::text,
-    encode(sha256(convert_to(intent.consent_id::text || ':' || p_revision || ':' || p_topic, 'UTF8')), 'hex'))
-  INTO found_event;
-  IF found_event IS NULL THEN RETURN 'DENIED'; END IF;
-  INSERT INTO identity_journey_test.crm_receipt VALUES (intent.consent_id, found_event, p_topic, p_horizon);
-  RETURN 'RECEIVED';
+  IF session_user <> 'identity_journey_fixture_app' THEN RETURN 'DENIED'; END IF;
+  RETURN identity.record_journey_crm_need(p_consent, p_event, p_expected_horizon);
 END
 $fn$;
-REVOKE ALL ON FUNCTION identity_journey_test.record_crm_need(uuid,text,uuid,text,text) FROM PUBLIC;
+
+CREATE FUNCTION identity_journey_test.submit_journey_crm_consultation(
+  p_consent uuid, p_event uuid, p_notice uuid, p_lead uuid, p_link uuid, p_contract uuid,
+  p_topic text, p_version text, p_expires timestamptz, p_confirmed boolean,
+  p_expected_horizon text
+) RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+BEGIN
+  IF session_user <> 'identity_journey_fixture_app' THEN RETURN 'DENIED'; END IF;
+  RETURN identity.submit_journey_crm_consultation(
+    p_consent, p_event, p_notice, p_lead, p_link, p_contract,
+    p_topic, p_version, p_expires, p_confirmed, p_expected_horizon);
+END
+$fn$;
+
+CREATE FUNCTION identity_journey_test.withdraw_journey_crm_consultation(p_consent uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $fn$
+BEGIN
+  IF session_user <> 'identity_journey_fixture_app' THEN RETURN false; END IF;
+  RETURN identity.withdraw_journey_crm_consultation(p_consent);
+END
+$fn$;
+
+REVOKE ALL ON FUNCTION identity_journey_test.authorize_journey_crm_consultation(
+  uuid,uuid,uuid,uuid,uuid,text,text,timestamptz,boolean),
+  identity_journey_test.record_journey_crm_need(uuid,uuid,text),
+  identity_journey_test.submit_journey_crm_consultation(
+    uuid,uuid,uuid,uuid,uuid,uuid,text,text,timestamptz,boolean,text),
+  identity_journey_test.withdraw_journey_crm_consultation(uuid) FROM PUBLIC;
 GRANT USAGE ON SCHEMA identity_journey_test TO identity_journey_fixture_app;
-GRANT EXECUTE ON FUNCTION identity_journey_test.record_crm_need(uuid,text,uuid,text,text) TO identity_journey_fixture_app;
+GRANT EXECUTE ON FUNCTION identity_journey_test.authorize_journey_crm_consultation(
+  uuid,uuid,uuid,uuid,uuid,text,text,timestamptz,boolean),
+  identity_journey_test.record_journey_crm_need(uuid,uuid,text),
+  identity_journey_test.submit_journey_crm_consultation(
+    uuid,uuid,uuid,uuid,uuid,uuid,text,text,timestamptz,boolean,text),
+  identity_journey_test.withdraw_journey_crm_consultation(uuid)
+  TO identity_journey_fixture_app;

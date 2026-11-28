@@ -95,6 +95,7 @@ WITH s AS MATERIALIZED (
       'identity.journey_episodes','identity.journey_date_revisions','identity.journey_residence_intervals',
       'identity.journey_renewal_attestations','identity.journey_station_reminders',
       'identity.journey_station_notices','identity.journey_station_notice_reads','identity.journey_crm_service_links',
+      'consent.identity_journey_crm_intents','identity.journey_crm_handoffs',
       'service.workbench_settings','service.workbench_events','service.workbench_task_scope'])
   ) q
 ), grants AS (
@@ -104,7 +105,10 @@ WITH s AS MATERIALIZED (
     ('workbench_apply_service_renewal',has_function_privilege('phoenix_canonical_service_workbench','identity.apply_journey_service_renewal(uuid,uuid,uuid,smallint[],uuid[],integer,uuid)','EXECUTE')),
     ('app_schedule_journey_consultation',has_function_privilege('phoenix_canonical_app','identity.schedule_journey_crm_consultation(uuid,uuid,uuid,uuid,uuid,timestamptz,uuid)','EXECUTE')),
     ('app_create_journey_deal',has_function_privilege('phoenix_canonical_app','identity.create_journey_crm_deal(uuid,uuid,uuid,uuid,text,numeric,text,uuid)','EXECUTE')),
+    ('app_read_crm_summary',has_function_privilege('phoenix_canonical_app','identity.read_journey_crm_summary(uuid,uuid,uuid)','EXECUTE')),
     ('app_crm_origin_access',has_table_privilege('phoenix_canonical_app','identity.journey_crm_service_links','SELECT,INSERT,UPDATE,DELETE')),
+    ('app_crm_intent_access',has_table_privilege('phoenix_canonical_app','consent.identity_journey_crm_intents','SELECT,INSERT,UPDATE,DELETE')),
+    ('app_crm_handoff_access',has_table_privilege('phoenix_canonical_app','identity.journey_crm_handoffs','SELECT,INSERT,UPDATE,DELETE')),
     ('app_write_renewal_attestations',has_table_privilege('phoenix_canonical_app','identity.journey_renewal_attestations','INSERT,UPDATE,DELETE')),
     ('reader_write_renewal_attestations',has_table_privilege('phoenix_canonical_reader','identity.journey_renewal_attestations','INSERT,UPDATE,DELETE')),
     ('app_write_notice_receipts',has_table_privilege('phoenix_canonical_app','identity.journey_station_notice_reads','INSERT,UPDATE,DELETE')),
@@ -123,12 +127,12 @@ WITH s AS MATERIALIZED (
     AND d.family_id=:'familyId'::uuid AND d.subject_person_id=(SELECT subject_person_id FROM s)
 ), crm AS (
   SELECT jsonb_build_object('intent_exists',i.consent_id IS NOT NULL,
-    'intent_active',i.consent_id IS NOT NULL AND i.withdrawn_at IS NULL,
+    'intent_active',i.consent_id IS NOT NULL AND i.withdrawn_at IS NULL AND i.expires_at > clock_timestamp(),
     'intent_withdrawn',i.withdrawn_at IS NOT NULL,'receipt_exists',r.consent_id IS NOT NULL,
     'receipt_event_id',r.lead_event_id,'consultation_id',chain.consultation_id,'deal_id',chain.deal_id) value
-  FROM (SELECT 1) x LEFT JOIN identity_journey_test.crm_intent i
+  FROM (SELECT 1) x LEFT JOIN consent.identity_journey_crm_intents i
     ON i.notice_id=:'originalNoticeId'::uuid AND i.recipient_id=:'principalId'::uuid AND i.accepted_topic='RENEWAL'
-  LEFT JOIN identity_journey_test.crm_receipt r ON r.consent_id=i.consent_id
+  LEFT JOIN identity.journey_crm_handoffs r ON r.consent_id=i.consent_id
   LEFT JOIN identity.journey_crm_service_links chain ON chain.lead_event_id=r.lead_event_id
 ), authz AS (
   SELECT jsonb_build_object(

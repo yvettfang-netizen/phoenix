@@ -55,8 +55,8 @@ export async function verifyFounderSummary({ query, recipient, crmFixture }) {
   // the approved-source side independently of the planning case whitelist.
   const discoveredConsultations = () => query(`SELECT coalesce(jsonb_agg(jsonb_build_object(
     'case_id', reminder.identity_case_id, 'lead_event_id', receipt.lead_event_id)), '[]')
-    FROM identity_journey_test.crm_receipt receipt
-    JOIN identity_journey_test.crm_intent intent USING(consent_id)
+    FROM identity.journey_crm_handoffs receipt
+    JOIN consent.identity_journey_crm_intents intent USING(consent_id)
     JOIN identity.journey_station_reminders reminder ON reminder.reminder_id=intent.notice_id
     WHERE intent.accepted_topic='RENEWAL' AND intent.withdrawn_at IS NULL AND intent.expires_at > clock_timestamp();`);
   assert.deepEqual(JSON.parse(discoveredConsultations()), []);

@@ -39,27 +39,20 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
 
   // The private CRM bridge is intentionally not executable by the generic
   // app login. Bootstrap is used only by this isolated synthetic harness to
-  // issue the INTERNAL canonical_crm_v2 context and hold the exact fixture
-  // intent/receipt rows for the whole adapter transaction. The adapter still
-  // performs its own binding checks; this lock prevents a different receipt
-  // from being treated as permission.
+  // issue the INTERNAL canonical_crm_v2 context. The candidate production
+  // function now resolves and locks the durable intent/handoff itself; the
+  // verifier must not pre-lock a test-only receipt or create a second access
+  // path around that function.
   function withReceipt(expression, fields) {
-    return invoke("crm", `WITH locked_receipt AS MATERIALIZED (
-      SELECT i.expires_at FROM identity_journey_test.crm_intent i
-      JOIN identity_journey_test.crm_receipt r USING (consent_id)
-      WHERE i.consent_id=:'consent'::uuid AND r.lead_event_id=:'event'::uuid
-        AND i.notice_id=:'noticeId'::uuid AND i.recipient_id=:'principalId'::uuid AND i.lead_id=:'lead'::uuid
-        AND i.accepted_topic='RENEWAL' AND r.topic='RENEWAL' AND i.withdrawn_at IS NULL
-      FOR SHARE OF i,r
-    )
-    SELECT ${expression} FROM locked_receipt
-      WHERE expires_at > clock_timestamp() + interval '4 seconds';`, fields, "bootstrap");
+    return invoke("crm", `SELECT ${expression};`, fields, "bootstrap");
   }
 
   assert.equal(query(`SELECT has_function_privilege(current_user,
     'identity.schedule_journey_crm_consultation(uuid,uuid,uuid,uuid,uuid,timestamptz,uuid)', 'EXECUTE');`, {}, "app"), "f");
   assert.equal(query(`SELECT has_function_privilege(current_user,
     'identity.create_journey_crm_deal(uuid,uuid,uuid,uuid,text,numeric,text,uuid)', 'EXECUTE');`, {}, "app"), "f");
+  assert.equal(query(`SELECT has_function_privilege(current_user,
+    'identity.read_journey_crm_summary(uuid,uuid,uuid)', 'EXECUTE');`, {}, "app"), "f");
 
   // The adapter is the only permitted bridge from the accepted identity need
   // to CRM.  All negative cases must return NULL before any consultation or
@@ -72,11 +65,19 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
     :'advisorPrincipal'::uuid, :'scheduledAt'::timestamptz, :'consultationEvent'::uuid)`;
   const appointment = { scheduledAt, consultationEvent: id(72) };
   const book = (fields = {}) => withReceipt(schedule, { ...appointment, ...fields });
+  const readCrmSummary = () => {
+    const output = invoke("crm", `SELECT row_to_json(summary)::text
+      FROM identity.read_journey_crm_summary(:'event'::uuid, :'consent'::uuid, :'clientLink'::uuid) summary;`, {}, "bootstrap");
+    return output ? JSON.parse(output) : null;
+  };
   assert.equal(book({ consent: id(62) }), "", "a missing receipt cannot schedule a consultation");
   assert.equal(book({ clientLink: id(63) }), "", "an unverified client link cannot schedule a consultation");
   assert.equal(invoke("crm", `SELECT ${schedule};`, { ...appointment, event: vars.educationEvent }, "bootstrap"),
     "", "the private SQL boundary also rejects an education need");
   assert.equal(book(), vars.consultation);
+  assert.deepEqual(readCrmSummary(), {
+    domain: "IDENTITY", topic: "RENEWAL", horizon: "WITHIN_90_DAYS",
+  });
   assert.equal(query(`SELECT count(*) FROM identity.journey_crm_service_links
     WHERE lead_event_id=:'event'::uuid AND verified_link_id=:'clientLink'::uuid
       AND consultation_id=:'consultation'::uuid AND deal_id IS NULL;`, vars), "1");
@@ -125,6 +126,7 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
   // in fresh INTERNAL transactions, while leaving the persisted provenance
   // row immutable and exact.
   await verifyWithdrawnReceipt();
+  assert.equal(readCrmSummary(), null, "withdrawn consent yields no CRM summary");
   assert.equal(book(), "", "withdrawn consent denies later consultation scheduling");
   assert.equal(makeDeal(), "", "withdrawn consent denies later deal creation");
   assert.equal(query(`SELECT count(*) FROM identity.journey_crm_service_links
@@ -189,7 +191,7 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
   assert.equal(ownedTasks.length, 8);
   assert.equal(familyTasks.length, identityRenewalServiceActions.filter(action => action.audience === "CLIENT").length);
   assert.ok(familyTasks.every(task => task.audience === "CLIENT"));
-  assert.equal(query(`SELECT count(*) FROM identity_journey_test.crm_receipt receipt
+  assert.equal(query(`SELECT count(*) FROM identity.journey_crm_handoffs receipt
     JOIN crm.lead_events need USING(lead_event_id)
     JOIN identity.journey_crm_service_links origin ON origin.lead_event_id=need.lead_event_id
     JOIN crm.consultations c ON c.consultation_id=origin.consultation_id AND c.lead_id=need.lead_id
@@ -239,8 +241,8 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
       JOIN identity.journey_station_reminders original_notice ON original_notice.reminder_id=:'noticeId'::uuid
         AND original_notice.identity_case_id=identity_case.identity_case_id
         AND original_notice.date_revision_id=r.supersedes_id AND original_notice.state='DELIVERED'
-      JOIN identity_journey_test.crm_intent consent_receipt ON consent_receipt.notice_id=original_notice.reminder_id
-      JOIN identity_journey_test.crm_receipt handoff ON handoff.consent_id=consent_receipt.consent_id
+      JOIN consent.identity_journey_crm_intents consent_receipt ON consent_receipt.notice_id=original_notice.reminder_id
+      JOIN identity.journey_crm_handoffs handoff ON handoff.consent_id=consent_receipt.consent_id
         AND handoff.lead_event_id=:'event'::uuid
       JOIN identity.journey_crm_service_links origin ON origin.lead_event_id=handoff.lead_event_id
       JOIN service.projects project ON project.deal_id=origin.deal_id AND project.service_project_id=:'project'::uuid

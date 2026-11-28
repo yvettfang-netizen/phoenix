@@ -33,7 +33,7 @@ psql_synthetic() {
   docker exec -i -e PGPASSFILE=/tmp/canonical-premerge.pgpass "$container" psql "${args[@]}" "$@"
 }
 
-for protected_candidate in storage.sql crm-chain.sql service-renewal.sql official-travel.sql document-dates.sql review-plans.sql episode-transition.sql sponsorship.sql adult-delegation.sql station-authorization.sql; do
+for protected_candidate in storage.sql crm-intake.sql crm-chain.sql service-renewal.sql official-travel.sql document-dates.sql review-plans.sql episode-transition.sql sponsorship.sql adult-delegation.sql station-authorization.sql; do
   if output=$(psql_synthetic -d phoenix_canonical_dev < "$candidate/$protected_candidate" 2>&1); then
     echo "The unapproved database-name guard did not block $protected_candidate." >&2
     exit 1
@@ -43,6 +43,8 @@ done
 psql_synthetic -d postgres -c 'ALTER DATABASE phoenix_canonical_dev RENAME TO phoenix_identity_journey_synthetic_ci'
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/storage.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/renewal.sql"
+psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/station-authorization.sql"
+psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/crm-intake.sql"
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/../service-workbench/0038_service_project_workbench.sql"
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/crm-chain.sql"
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/service-renewal.sql"
@@ -52,7 +54,6 @@ psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/sponsorshi
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/timeline.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/document-dates.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/adult-delegation.sql"
-psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/station-authorization.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/member-profile.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/review-plans.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/member-residence.sql"

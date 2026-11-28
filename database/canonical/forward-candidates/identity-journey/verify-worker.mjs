@@ -325,7 +325,9 @@ assert.equal((await get()).status, 403);
 assert.equal((await post(candidate)).status, 403);
 console.log("PASS Family OS inbox HTTP session, same-origin, minimized response, acknowledgement and revocation");
 
+issueNextStationAuthorization();
 const crmFixture = await verifyCrmHandoff({ query, recipient, authConfig });
+revokeStationAuthorization();
 const verifyRenewalReview = await verifyServiceChain({ query, recipient, crmFixture });
 
 let timelineBrowser;
