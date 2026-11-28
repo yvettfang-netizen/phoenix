@@ -14,3 +14,59 @@
 @media(prefers-reduced-motion:reduce){.serviceImage img{transition:none}.serviceCard:hover img{transform:none}}
 @media(max-width:1100px){.stageGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.stageSection{padding:38px 0 43px}.stageHeader{display:block;margin-bottom:20px}.stageGrid{grid-template-columns:1fr;gap:13px}.stageCard{min-height:165px;padding:19px 17px}.stageCard h3{font-size:21px}.stageActions{margin-top:23px}.stageActions>*{width:100%}}
+
+/* Education pricing: review-only, public display requires Founder price approval. */
+.pricingSection{background:#eff4ee;border-top:1px solid #d9e5d8;border-bottom:1px solid #d9e5d8}
+.pricingIntro{max-width:800px;margin-bottom:28px}
+.pricingIntro>p:last-child{font-size:14px;line-height:1.8;color:var(--education-muted)}
+.pricingGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:stretch}
+.pricingCard{display:flex;flex-direction:column;min-width:0;padding:24px 21px;background:#fbfcf7;border:1px solid #cbdccb;border-radius:8px}
+.pricingCard h3{font-size:19px;line-height:1.5;min-height:56px;margin:0 0 10px}
+.pricingPrice{font:600 29px/1.4 var(--serif);color:#164d42;letter-spacing:0;margin:0 0 12px}
+.pricingDescription{font-size:13px;line-height:1.8;color:var(--education-muted);margin-bottom:15px}
+.pricingFeatures{display:grid;gap:10px;padding:15px 0 18px;margin:0;list-style:none;border-top:1px solid #dfe8db}
+.pricingFeatures li{display:flex;align-items:flex-start;gap:8px;color:#36584f;font-size:12px;line-height:1.7}
+.pricingFeatures svg{flex:none;margin-top:2px;color:#477456}
+.pricingAction{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:44px;margin-top:auto;border-top:1px solid #dfe8db;padding-top:12px;color:#164d42;font-size:12px;font-weight:600;text-decoration:underline;text-underline-offset:4px}
+.pricingAction svg{flex:none}
+.pricingTerms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:22px 0 0}
+.pricingTerms article{min-width:0;padding:20px 18px;border:1px solid #d4e0d3;background:#f8faf5}
+.pricingTerms h3{font-size:15px;line-height:1.5;color:#164d42;margin:0 0 9px}
+.pricingTerms p{font-size:12px;line-height:1.85;color:var(--education-muted);margin:0}
+.pricingDisclaimer{margin:20px 0 0;font-size:12px;line-height:1.9;color:var(--education-muted)}
+@media(max-width:1100px){.pricingGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.pricingCard h3{min-height:0}.pricingTerms{grid-template-columns:1fr}}
+@media(max-width:700px){.pricingGrid{grid-template-columns:1fr;gap:12px}.pricingCard{padding:21px 19px}.pricingCard h3{min-height:0;font-size:20px}.pricingPrice{font-size:28px}.pricingIntro{margin-bottom:20px}.pricingTerms{gap:10px}.pricingTerms article{padding:17px 15px}}
+
+/* 2027 nationwide undergraduate price ladder; scoped to the existing education landing. */
+.gaokaoSection{margin:0 0 38px;display:grid;gap:16px}
+.gaokaoHero{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:center;padding:32px;background:#16483f;color:#f5f7ef;border-radius:8px;scroll-margin-top:24px}
+.gaokaoHero h3{font-size:clamp(24px,3vw,36px);margin:8px 0 12px;color:#fff}
+.gaokaoHero p{margin:0 0 12px;color:#e4eee6}
+.gaokaoHero .gaokaoKicker{color:#e4c992;font-size:12px;letter-spacing:.06em;font-weight:600}
+.gaokaoHeroAction{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:#fff;text-decoration:underline;text-underline-offset:4px}
+.gaokaoHeroPrice,.gaokaoReferencePrice{display:flex;flex-direction:column;align-items:flex-end;min-width:0}
+.gaokaoHeroPrice strong{font-size:clamp(32px,5vw,62px);font-weight:700;line-height:1.25;color:#e4c992;letter-spacing:-.025em;overflow-wrap:anywhere}
+.gaokaoHeroPrice span,.gaokaoReferencePrice span{font-size:12px}
+.gaokaoChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.gaokaoPlan{min-width:0;display:flex;flex-direction:column;border:1px solid #cbdccb;border-radius:8px;background:#fbfcf7;padding:26px;scroll-margin-top:24px}
+.gaokaoRecommended{border:2px solid #326b56;background:#e5eee4}
+.gaokaoLabel{font-size:12px;font-weight:600;color:#426456;margin:0 0 7px}
+.gaokaoPlan h3,.gaokaoReference h3{margin:0 0 9px}
+.gaokaoCount{font-size:17px;font-weight:600;color:#164d42;margin:0 0 10px}
+.gaokaoPlan>p:not(.pricingPrice):not(.gaokaoCount):not(.gaokaoLabel){color:var(--education-muted);font-size:13px}
+.gaokaoReference{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#f3f5ef;border:1px solid #d4e0d3;border-radius:6px;padding:20px 24px;scroll-margin-top:24px}
+.gaokaoReference>div:first-child{min-width:0}
+.gaokaoReference p:last-child{font-size:13px;color:var(--education-muted);margin:0}
+.gaokaoReferencePrice{flex-shrink:0;color:#164d42}
+.gaokaoReferencePrice strong{font-size:24px;font-weight:600}
+.gaokaoSection>.small{margin:0}
+.otherPricingTitle{margin:0 0 18px}
+@media(max-width:700px){.gaokaoHero{grid-template-columns:1fr;gap:16px;padding:23px 19px}.gaokaoHeroPrice{align-items:flex-start}.gaokaoHeroPrice strong{font-size:40px}.gaokaoChoices{grid-template-columns:1fr;gap:12px}.gaokaoPlan{padding:21px 19px}.gaokaoReference{align-items:flex-start;flex-direction:column;padding:18px 19px;gap:10px}.gaokaoReferencePrice{align-items:flex-start}.gaokaoReferencePrice strong{font-size:21px}}
+
+.feeJourney{margin:32px 0 0;padding:24px;border:1px solid #d4e0d3;border-radius:8px;background:#f8faf5}.feeJourney h3{margin:0 0 18px}.feeJourneyGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.feeJourneyGrid article{min-width:0;padding:16px;background:#fff;border:1px solid #d9e4d8;border-radius:5px}.feeJourneyGrid h4{font-size:15px;margin:0 0 8px}.feeJourneyGrid strong{font-size:24px;color:#164d42}.feeJourneyGrid article>p:last-child{font-size:12px;color:var(--education-muted);margin:10px 0 0}.feeJourney>.small{margin:15px 0 8px}@media(max-width:1100px){.feeJourneyGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:700px){.feeJourney{padding:18px}.feeJourneyGrid{grid-template-columns:1fr}}
+
+/* Master's risk sharing: actual contract-scoped service-fee refund, not admission guarantee. */
+.mastersRefund{display:grid;gap:5px;padding:12px 14px;margin:12px 0;border:1px solid #c6d8c9;border-radius:5px;background:#eef4ec;color:#164d42;min-width:0;overflow-wrap:anywhere}.mastersRefund span{font-size:12px;line-height:1.65}.mastersRefund b{font-size:21px;line-height:1.45;font-weight:650}.gaokaoHero .mastersRefund{background:transparent;color:#f5f7ef;border-color:#709386}.gaokaoHero .mastersRefund b{color:#e4c992}.gaokaoPlan .mastersRefund{margin-top:auto}.gaokaoPlan .mastersRefund+.pricingAction{margin-top:0}.mastersRiskNote{border-left:3px solid #806237;padding:12px 18px;background:#f8faf5;min-width:0}.mastersRiskNote h3{font-size:18px;margin:0 0 5px}.mastersRiskNote p{font-size:12px;color:var(--education-muted);margin:0;line-height:1.85}
+
+/* Stage-first service navigation; unapproved fees remain off the page. */
+.stageCardBottom{margin-top:auto;padding-top:16px;display:grid;gap:8px}.stageCardAction{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;line-height:1.6;font-weight:500;color:var(--education-forest)}.stageCardAction svg{margin:0;flex:none}.stagePrice{font:600 clamp(21px,2.3vw,32px)/1.3 var(--serif);color:var(--education-forest);overflow-wrap:anywhere}.stageCard.stageFeatured{background:#16483f;border-color:#16483f;color:#f5f7ef}.stageCard.stageFeatured h3,.stageCard.stageFeatured .stageCardAction,.stageCard.stageFeatured .stageCardAction svg{color:#f5f7ef}.stageCard.stageFeatured p{color:#e1ebe3}.stageCard.stageFeatured .stageNumber,.stageCard.stageFeatured .stagePrice{color:#e4c992}.stageCard.stageFeatured:hover{background:#123e36;border-color:#123e36}.stageCard.stageSignature{background:#e5eee4;border-color:#a8bca6}.pricingDisclosure{border:1px solid #cbdccb;background:#fbfcf7;border-radius:8px;margin-bottom:16px;min-width:0}.pricingDisclosure>summary{cursor:pointer;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;list-style:none;font-size:16px;color:var(--education-forest)}.pricingDisclosure>summary::-webkit-details-marker{display:none}.pricingDisclosure>summary:after{content:"+";font-size:22px;flex:none}.pricingDisclosure[open]>summary:after{content:"−"}.pricingDisclosure>summary strong{margin-left:auto;font-size:18px;white-space:nowrap}.pricingDisclosure>.gaokaoSection{margin:0;padding:0 20px 22px}.pricingDisclosure .gaokaoSection>[id]{scroll-margin-top:30px}@media(max-width:700px){.pricingDisclosure>summary{padding:14px 12px;font-size:13px;flex-wrap:wrap}.pricingDisclosure>summary strong{font-size:16px}.pricingDisclosure>.gaokaoSection{padding:0 10px 14px}.stageCardBottom{padding-top:12px}.stagePrice{font-size:25px}}
