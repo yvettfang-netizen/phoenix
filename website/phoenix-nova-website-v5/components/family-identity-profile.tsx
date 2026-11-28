@@ -161,12 +161,12 @@ export function FamilyIdentityProfile({
 }: {
   locale: Locale;
   /**
-   * Notifies the Family Center only after an authorized member profile has
+   * Notifies the parent only after an authorized member profile has
    * loaded.  The parent uses this to mount separately scoped, read-only
    * member modules; it must never be used to submit profile data.
    */
   onMemberSelectionChange?: (member: IdentityProfileMember | null) => void;
-  /** Optional read-only member panel mounted by the Family Center gate. */
+  /** Optional read-only member panel controlled by the residence gate. */
   memberResidence?: ReactNode;
 }) {
   const [members, setMembers] = useState<IdentityProfileMember[]>([]);
