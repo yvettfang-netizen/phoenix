@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { runStationReminderBatch } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-reminder-worker.ts";
 import { handleIdentityInbox, identityNoticePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-inbox.ts";
+import { verifyCrmHandoff } from "./verify-crm.mjs";
 
 const container = process.argv[2];
 assert.match(container ?? "", /^[0-9a-f]{64}$/);
@@ -9,10 +10,13 @@ assert.equal(execFileSync("docker", ["inspect", "--format",
   '{{.HostConfig.NetworkMode}}/{{index .Config.Labels "phoenix.identity-journey"}}', container],
 { encoding: "utf8" }).trim(), "none/synthetic");
 
-function query(sql, variables = {}) {
+function query(sql, variables = {}, role = "bootstrap") {
+  assert.ok(["bootstrap", "app", "binder"].includes(role));
   const args = Object.entries(variables).flatMap(([key, value]) => ["-v", `${key}=${value}`]);
-  return execFileSync("docker", ["exec", "-i", "-e", "PGPASSFILE=/tmp/canonical-premerge.pgpass",
-    container, "psql", "-XqAt", "-h", "127.0.0.1", "-U", "phoenix_bootstrap",
+  const login = role === "bootstrap" ? "phoenix_bootstrap" : `identity_journey_fixture_${role}`;
+  const passfile = role === "bootstrap" ? "/tmp/canonical-premerge.pgpass" : `/tmp/identity-crm-${role}.pgpass`;
+  return execFileSync("docker", ["exec", "-i", "-e", `PGPASSFILE=${passfile}`,
+    container, "psql", "-XqAt", "-h", "127.0.0.1", "-U", login,
     "-d", "phoenix_identity_journey_synthetic_ci", "-v", "ON_ERROR_STOP=1", ...args],
   { input: sql, encoding: "utf8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }).trim();
 }
@@ -221,6 +225,8 @@ query("UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_times
 assert.equal((await get()).status, 403);
 assert.equal((await post(candidate)).status, 403);
 console.log("PASS Family OS inbox HTTP session, same-origin, minimized response, acknowledgement and revocation");
+
+await verifyCrmHandoff({ query, recipient, authConfig });
 
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   const { verifyFamilyInboxBrowser } = await import("./verify-browser.mjs");

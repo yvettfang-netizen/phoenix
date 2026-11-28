@@ -101,5 +101,24 @@ psql_synthetic -qAt -d "$db" -c "$(printf "$membership" NULL)"
     AND n.published_at = r.delivered_at AND r.state = 'DELIVERED'
     AND r.attempt_count = 3 AND r.retry_not_before IS NULL AND r.claim_token IS NULL")" == '1' ]]
 echo "PASS competing sessions, expired claim recovery, stale Worker fencing, durable retry, membership revocation and single receipt: PG$1"
+
+# The CRM handoff must exercise Canonical with a real FAMILY app LOGIN, separate
+# from the issuer and fixture owners. Only the disposable container sees secrets.
+for role in app binder; do
+  synthetic_login="identity_journey_fixture_$role"
+  synthetic_password="$(openssl rand -hex 32)"
+  printf '127.0.0.1:5432:*:%s:%s\n' "$synthetic_login" "$synthetic_password" |
+    docker exec -i "$container" sh -c "umask 077; cat > /tmp/identity-crm-$role.pgpass"
+  psql_synthetic -q -d "$db" -v fixture_login="$synthetic_login" -v fixture_password="$synthetic_password" <<'SQL'
+CREATE ROLE :"fixture_login" LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS INHERIT PASSWORD :'fixture_password';
+GRANT CONNECT ON DATABASE phoenix_identity_journey_synthetic_ci TO :"fixture_login";
+SQL
+done
+unset synthetic_password
+psql_synthetic -q -d "$db" <<'SQL'
+GRANT phoenix_canonical_app TO identity_journey_fixture_app WITH INHERIT TRUE, SET FALSE;
+GRANT phoenix_canonical_context_binder TO identity_journey_fixture_binder WITH INHERIT TRUE, SET FALSE;
+SQL
+psql_synthetic -q -d "$db" < "$candidate/verify-crm-fixture.sql"
 node --experimental-strip-types --import "$candidate/register-native-typescript.mjs" "$candidate/verify-worker.mjs" "$container"
 echo "PASS Identity Journey candidate PostgreSQL $1; synthetic fixture only"
