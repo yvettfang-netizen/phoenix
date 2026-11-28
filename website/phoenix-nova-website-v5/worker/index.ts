@@ -2,9 +2,10 @@
 import { handleImageOptimization, DEFAULT_DEVICE_SIZES, DEFAULT_IMAGE_SIZES } from "vinext/server/image-optimization";
 import handler from "vinext/server/app-router-entry";
 import { getDocumentLocale } from "../lib/locale-navigation";
+import { runIdentityStationSchedule, type IdentityStationScheduleBindings } from "../lib/identity-journey-station-schedule";
 import { wealthEdgeRequest, wealthEdgeResponse } from "../lib/wealth-edge";
 
-interface Env {
+interface Env extends IdentityStationScheduleBindings {
   ASSETS: Fetcher;
   IMAGES: {
     input(stream: ReadableStream): {
@@ -27,6 +28,10 @@ interface ExecutionContext {
 // const imageConfig: ImageConfig = { dangerouslyAllowSVG: true };
 
 const worker = {
+  async scheduled(controller: { cron: string }, env: Env): Promise<void> {
+    const result = await runIdentityStationSchedule(controller.cron, env);
+    if (result) console.info("identity-station-schedule", result);
+  },
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const original=request;
     const routed=wealthEdgeRequest(request);

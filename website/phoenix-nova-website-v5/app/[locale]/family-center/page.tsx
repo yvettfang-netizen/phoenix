@@ -11,11 +11,31 @@ import { centerV2Enabled, centerDemoEnabled } from "@/lib/family-center-v2";
 import { sessionFamilyPreviewEnabled } from "@/lib/canonical-family-projection";
 import {workbenchEnabled} from "@/lib/service-workbench-bff";
 import {customerBridgeEnabled} from "@/lib/customer-canonical-bridge";
+import {identityInboxEnabled} from "@/lib/identity-journey-inbox";
+import {identityConsultationEnabled} from "@/lib/identity-journey-consultation";
+import {identityTimelineEnabled} from "@/lib/identity-journey-timeline";
+import {identityResidenceEnabled} from "@/lib/identity-journey-residence";
+import {identityProfileEnabled} from "@/lib/identity-journey-profile";
+import {identityMemberResidenceEnabled} from "@/lib/identity-journey-member-residence";
+import {identityReviewPlanningEnabled} from "@/lib/identity-journey-review-planning";
+import {identityDelegationManagementEnabled} from "@/lib/identity-journey-delegations";
+import {identityStationConsentEnabled} from "@/lib/identity-journey-station-consent";
 
 function NewCenter({locale,account=false}:{locale:"zh"|"en";account?:boolean}) {
   const values=env as unknown as Record<string,unknown>;
+  const demo=centerDemoEnabled(values,process.env.NODE_ENV,account);
   return <FamilyCenterV2 locale={locale} account={account} workbench={account?customerBridgeEnabled(values,process.env.NODE_ENV):workbenchEnabled(values,process.env.NODE_ENV)}
-    demo={centerDemoEnabled(values,process.env.NODE_ENV,account)}
+    demo={demo}
+    identityInbox={account && !demo && identityInboxEnabled(values)}
+    identityConsultation={account && !demo && identityConsultationEnabled(values)}
+    identityTimeline={account && !demo && identityTimelineEnabled(values)}
+    identityResidence={account && !demo && identityResidenceEnabled(values)}
+    identityProfile={account && !demo && identityProfileEnabled(values)}
+    identityMemberResidence={account && !demo && identityMemberResidenceEnabled(values)}
+    identityReviewPlanning={account && !demo && identityReviewPlanningEnabled(values)}
+    identityDelegationManagement={account && !demo && identityDelegationManagementEnabled(values)}
+    identityStationConsent={account && !demo && identityStationConsentEnabled(values)}
+    identityJourneyPreview={demo && values.FAMILY_IDENTITY_JOURNEY_PREVIEW==="true"}
     canonical={!account && sessionFamilyPreviewEnabled(values,process.env.NODE_ENV)}
     personalized={values.FAMILY_CENTER_PERSONALIZATION_ENABLED==="true"}
     harmony={values.FAMILY_CENTER_HARMONY_ENABLED==="true"}/>;

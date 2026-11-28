@@ -8,3 +8,49 @@
 
 .fc-p1-services .fc-sidebar nav .fc-service-link{display:flex;align-items:center;gap:12px;padding:14px 12px;border-radius:10px;font-size:14px}.fc-p1-services .fc-sidebar nav .fc-service-link:hover{background:#ffffff18}.fc-p1-services .fc-sidebar nav .fc-service-link small{display:block;margin-top:6px;font:11px Georgia,serif}
 @media(max-width:780px){.fc-p1-services .fc-sidebar nav{grid-template-columns:repeat(3,minmax(0,1fr))}.fc-p1-services .fc-sidebar nav .fc-service-link{display:grid;justify-items:center;text-align:center;padding:10px 3px;gap:8px;font-size:11px}.fc-p1-services .fc-sidebar nav .fc-service-link small{display:none}}
+
+.fc-account .fc-identity-inbox-toggle {
+  display: inline-grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+}
+
+.fc-residence-years {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fc-residence-years .fc-harmony-note { margin: 0; }
+.fc-residence-years p { display: block; margin: 0.45em 0; }
+.fc-residence-years details ul { padding-inline-start: 1.1rem; }
+
+.fc-residence-record {
+  display: grid;
+  grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
+  gap: 8px 16px;
+}
+
+.fc-residence-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.fc-residence-record time {
+  display: inline-block;
+  max-width: none;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+@media (max-width: 780px) {
+  .fc-residence-years { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 480px) {
+  .fc-residence-record { grid-template-columns: minmax(0, 1fr); }
+}
