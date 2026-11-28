@@ -1,0 +1,379 @@
+[
+  {
+    "branch": "claude/education-compass-virtual-payment-20261012",
+    "sha": "9f86e4951f507307aa89961a9fe0ff65a564887a",
+    "object_available": false,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 28,
+        "state": "closed",
+        "merged_at": "2026-10-28T09:34:47Z",
+        "head_sha": "79e59fc22c712b500f91c994f62a80e9d546f69f"
+      }
+    ]
+  },
+  {
+    "branch": "codex/askwise-independent-pilot-db-20261101",
+    "sha": "644fab93ccfdd7557c432c57363873c7f62ed9be",
+    "object_available": false,
+    "ancestor_of_main": false,
+    "pull_requests": []
+  },
+  {
+    "branch": "codex/canonical-0035-premerge-audit-20261102",
+    "sha": "568541ddc96b4842a508eb2c1989f57aa33747d6",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 36,
+        "state": "closed",
+        "merged_at": "2026-11-03T06:33:15Z",
+        "head_sha": "568541ddc96b4842a508eb2c1989f57aa33747d6"
+      }
+    ]
+  },
+  {
+    "branch": "codex/canonical-0036-acquisition-contract-20261103",
+    "sha": "3de5c99fcc1974ca542db587fcb01494ffe3dc58",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 41,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "3de5c99fcc1974ca542db587fcb01494ffe3dc58"
+      }
+    ]
+  },
+  {
+    "branch": "codex/canonical-governance-bootstrap-20261102",
+    "sha": "6d36f8bb21c0a7df4449078a35d2b728b2f19661",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 37,
+        "state": "closed",
+        "merged_at": "2026-11-02T09:55:17Z",
+        "head_sha": "6d36f8bb21c0a7df4449078a35d2b728b2f19661"
+      }
+    ]
+  },
+  {
+    "branch": "codex/canonical-postgresql-mainline-copy",
+    "sha": "6176621a79d6493dcb21da4901f0294b5c7c5929",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": []
+  },
+  {
+    "branch": "codex/canonical-postmerge-p1-20261103",
+    "sha": "03f554d796368088a6926daf62e8333b5a0e7e39",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 39,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "03f554d796368088a6926daf62e8333b5a0e7e39"
+      }
+    ]
+  },
+  {
+    "branch": "codex/core-identity-gates-0-1-delivery",
+    "sha": "38199a3ba38a12db82241e0ac8e4e02a57efc18f",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 5,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "38199a3ba38a12db82241e0ac8e4e02a57efc18f"
+      }
+    ]
+  },
+  {
+    "branch": "codex/education-founder-final-alignment",
+    "sha": "6db8db05be630dbd56048c56b3b3741c97b6f101",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": []
+  },
+  {
+    "branch": "codex/education-page-v3",
+    "sha": "fdda155e8b7eddf68619e89ec11f8f65ef1cefbf",
+    "object_available": false,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 32,
+        "state": "closed",
+        "merged_at": "2026-10-31T20:49:27Z",
+        "head_sha": "fdda155e8b7eddf68619e89ec11f8f65ef1cefbf"
+      }
+    ]
+  },
+  {
+    "branch": "codex/education-v20-geo-20261102",
+    "sha": "8c07672a6d3e3b77f373ec32fd282b20bbc8e0b8",
+    "object_available": false,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 38,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "8c07672a6d3e3b77f373ec32fd282b20bbc8e0b8"
+      }
+    ]
+  },
+  {
+    "branch": "codex/family-os-architecture-20260920",
+    "sha": "dcbb5fe6781161ade8953487706a9940ed4e3051",
+    "object_available": true,
+    "ancestor_of_main": true,
+    "pull_requests": [
+      {
+        "number": 19,
+        "state": "closed",
+        "merged_at": "2026-09-20T03:02:28Z",
+        "head_sha": "dcbb5fe6781161ade8953487706a9940ed4e3051"
+      }
+    ]
+  },
+  {
+    "branch": "codex/family-os-contract-prep-20260906",
+    "sha": "eba5828142c6bb1db7f9c0effd4c6287f9d458c8",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 10,
+        "state": "closed",
+        "merged_at": "2026-09-16T06:22:10Z",
+        "head_sha": "eba5828142c6bb1db7f9c0effd4c6287f9d458c8"
+      }
+    ]
+  },
+  {
+    "branch": "codex/family-os-doc-baseline-and-ux-v0.2",
+    "sha": "c32f819abcf3fbf2be8e709f04c7ace3ac337dd9",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": []
+  },
+  {
+    "branch": "codex/family-os-synthetic-contract-validation-20260906",
+    "sha": "f3bd9ee9ba24c7b55170b2d67b70108ed8bfed38",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 11,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "f3bd9ee9ba24c7b55170b2d67b70108ed8bfed38"
+      }
+    ]
+  },
+  {
+    "branch": "codex/family-os-v7-core-alignment-20260912",
+    "sha": "65d7c02573c0e6844027e501bc86b4a376df38ba",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": []
+  },
+  {
+    "branch": "codex/health-v30-geo-platform-20261102",
+    "sha": "5a0fbc4fcee09bcb58668b0f112d1b4f8e13558c",
+    "object_available": false,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 34,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "5a0fbc4fcee09bcb58668b0f112d1b4f8e13558c"
+      }
+    ]
+  },
+  {
+    "branch": "codex/health-v31-founder-20261101",
+    "sha": "5771c910f8d1bb507eabf0cc6a529f6f28774217",
+    "object_available": false,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 33,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "5771c910f8d1bb507eabf0cc6a529f6f28774217"
+      }
+    ]
+  },
+  {
+    "branch": "codex/identity-page-v3",
+    "sha": "3cbf1cb71c36ad074b18f736dbe1b9f325eb93ae",
+    "object_available": false,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 31,
+        "state": "closed",
+        "merged_at": "2026-10-31T20:30:29Z",
+        "head_sha": "3cbf1cb71c36ad074b18f736dbe1b9f325eb93ae"
+      }
+    ]
+  },
+  {
+    "branch": "codex/identity-v31-cbi-review",
+    "sha": "3e0d1957cd997618f89a07cbfedea08af7d11520",
+    "object_available": false,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 35,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "3e0d1957cd997618f89a07cbfedea08af7d11520"
+      }
+    ]
+  },
+  {
+    "branch": "codex/v5-health-compass-integration-20260906",
+    "sha": "21b859fa88f16ec0c6f6dd0d0046eaef049af0c6",
+    "object_available": true,
+    "ancestor_of_main": true,
+    "pull_requests": [
+      {
+        "number": 12,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "21b859fa88f16ec0c6f6dd0d0046eaef049af0c6"
+      }
+    ]
+  },
+  {
+    "branch": "codex/v5-unified-family-center-admissions-20260906",
+    "sha": "91608c1a69a029df903066e409b08d894101cea2",
+    "object_available": true,
+    "ancestor_of_main": true,
+    "pull_requests": [
+      {
+        "number": 18,
+        "state": "closed",
+        "merged_at": "2026-10-28T09:15:42Z",
+        "head_sha": "91608c1a69a029df903066e409b08d894101cea2"
+      },
+      {
+        "number": 13,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "91608c1a69a029df903066e409b08d894101cea2"
+      }
+    ]
+  },
+  {
+    "branch": "codex/wiswealth-family-office-sites-20261009",
+    "sha": "57d10636a8861804130dec91241f97c3b42e05d7",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": []
+  },
+  {
+    "branch": "feat/academy-phase1-shell",
+    "sha": "846f77c120cd00a49d89635dd4297b020af7d03a",
+    "object_available": true,
+    "ancestor_of_main": true,
+    "pull_requests": []
+  },
+  {
+    "branch": "feat/identity-compass-gate2-sprint",
+    "sha": "622f425e1f201e7ac62a2aea920aff240cb1ca73",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 8,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "622f425e1f201e7ac62a2aea920aff240cb1ca73"
+      }
+    ]
+  },
+  {
+    "branch": "feature/phoenix-health-landing-v1",
+    "sha": "294df669e2f151ee05b6af340d1a99e793d4a3b5",
+    "object_available": true,
+    "ancestor_of_main": true,
+    "pull_requests": [
+      {
+        "number": 29,
+        "state": "closed",
+        "merged_at": "2026-10-30T06:55:34Z",
+        "head_sha": "294df669e2f151ee05b6af340d1a99e793d4a3b5"
+      }
+    ]
+  },
+  {
+    "branch": "integration/family-os-sprint2-20260829",
+    "sha": "b97dcd4dca26f08e72d172ccf9e92918512ff068",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": [
+      {
+        "number": 4,
+        "state": "open",
+        "merged_at": null,
+        "head_sha": "b97dcd4dca26f08e72d172ccf9e92918512ff068"
+      }
+    ]
+  },
+  {
+    "branch": "integration/wealth-compass-v0.1-20260829",
+    "sha": "c8a18a91e34c22fe1895168b1332ecede7e2e7a9",
+    "object_available": true,
+    "ancestor_of_main": true,
+    "pull_requests": [
+      {
+        "number": 3,
+        "state": "closed",
+        "merged_at": "2026-08-31T02:41:46Z",
+        "head_sha": "c8a18a91e34c22fe1895168b1332ecede7e2e7a9"
+      }
+    ]
+  },
+  {
+    "branch": "main",
+    "sha": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "object_available": true,
+    "ancestor_of_main": true,
+    "pull_requests": [
+      {
+        "number": 1,
+        "state": "closed",
+        "merged_at": "2026-08-28T10:03:59Z",
+        "head_sha": "f5ea73721befe89a5e550b63b964adf137d5e5bf"
+      }
+    ]
+  },
+  {
+    "branch": "migration/family-os-sprint2-20260829",
+    "sha": "c859a12d0d6ecfaf139579c74b6c9bc621f4fcf8",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": []
+  },
+  {
+    "branch": "migration/wealth-compass-v0.1-20260829",
+    "sha": "340cdace0adcc3db1ad22c6ed47c5559f860c961",
+    "object_available": true,
+    "ancestor_of_main": false,
+    "pull_requests": []
+  }
+]

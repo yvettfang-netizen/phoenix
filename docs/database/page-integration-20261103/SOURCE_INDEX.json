@@ -1,0 +1,357 @@
+[
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "website/phoenix-nova-website-v5/lib/site-directory.ts",
+    "git_blob": "c66f6a0a23e6078b6fe1d23396e92f63db82929e",
+    "checkout_sha256": "ee3da29c434302ffa7ae638358e0c13cec178c89539ee554a53103278837bab6",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/lib/site-directory.ts",
+    "id": "site-directory"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "website/phoenix-nova-website-v5/components/education-consultation.tsx",
+    "git_blob": "c590f81587361884c19c808a7b79b786820584ff",
+    "checkout_sha256": "ea30e1a5d698c5062ec603e7697017676697cd4062002e6fd49448585d485708",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/components/education-consultation.tsx",
+    "id": "edu-page-demo"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "website/phoenix-nova-website-v5/db/index.ts",
+    "git_blob": "19b379900d94124b674f07ffe2dbba8f70bd8d6d",
+    "checkout_sha256": "effa59e46bcbb42dfb7b46911e809a1de0f2c37df1fd935e3dca89023eaf97e4",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/db/index.ts",
+    "id": "site-d1-connect"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "website/phoenix-nova-website-v5/db/schema.ts",
+    "git_blob": "d379700b4b38ac1ddd4fb508d3043b5c7f50d702",
+    "checkout_sha256": "bc8f5a271be4d98f5f185a3fb52ce0d597c9ba81f159deb391b42131866c816f",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/db/schema.ts",
+    "id": "site-d1-schema"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "website/phoenix-nova-website-v5/db/customer-auth.ts",
+    "git_blob": "0f5c35683ba13127754db2ec3ebd5499750d38f8",
+    "checkout_sha256": "be49ac6b24c41179a386c62839f0ceb64fee9f06a890992fcef5aa692b4637d5",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/db/customer-auth.ts",
+    "id": "site-auth-config"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "website/phoenix-nova-website-v5/components/customer-account.tsx",
+    "git_blob": "fd11d6c6104f101ab5a34b2f875cedb7f1c030e1",
+    "checkout_sha256": "12462948da3dae5696f7bfaff8975b921f135df9ac32278cc857269e58596a6f",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/components/customer-account.tsx",
+    "id": "site-account-ui"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "website/phoenix-nova-website-v5/components/family-dashboard-preview.tsx",
+    "git_blob": "40038f03a1f54eda239c618bd3ae12af2cd153b7",
+    "checkout_sha256": "890e9399b80577c85540a5507aebe8df7b0d65600efc18782399df0876d80b18",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/website/phoenix-nova-website-v5/components/family-dashboard-preview.tsx",
+    "id": "site-family-preview"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/education compass/server/src/index.ts",
+    "git_blob": "4e5a6db70dbba76ef787f5c6a0c1d38f2dd5f0dd",
+    "checkout_sha256": "c6930b2e372c904a1c16c0b7ef5b188f3a317202d24b70cde9db8cf69eb9fc7d",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/education%20compass/server/src/index.ts",
+    "id": "edu-node-main"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/education compass/server/src/http/app.ts",
+    "git_blob": "93b72b79dba04ad85033e173732b14907fa534d4",
+    "checkout_sha256": "47ef544ade2e5b523c45bb927270c07eabbd20ddb48f92b4a38bb1762cdb2f3d",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/education%20compass/server/src/http/app.ts",
+    "id": "edu-http-main"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/education compass/server/src/store/postgres-store.ts",
+    "git_blob": "977bd4c4519d36997f05cba3f5336dfaecd33243",
+    "checkout_sha256": "0c20bd184ffdbb8bdbfb25af4bfb3d4ea15053dbcf636f6bab30edf29b98cead",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/education%20compass/server/src/store/postgres-store.ts",
+    "id": "edu-pg-adapter"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/education compass/server/src/domain/model.ts",
+    "git_blob": "dbebf70915f5a2fadbda7d98a2e227ad47d2deab",
+    "checkout_sha256": "e4664348224cca74e43bfc20d5597fca8967be3170a9ddfc284e6197b3a7cfa4",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/education%20compass/server/src/domain/model.ts",
+    "id": "edu-domain-main"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/education compass/server/src/domain/education-compass/contracts.ts",
+    "git_blob": "603edff745826e97427d933307caf864d992a78a",
+    "checkout_sha256": "461d9d9311a0fc8a003b70d30355ba0a64874a309c4d78f7445f9fb2b50cf192",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/education%20compass/server/src/domain/education-compass/contracts.ts",
+    "id": "edu-contract-main"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/Wealth Compass/src/app/api/health/route.ts",
+    "git_blob": "6e9debc2a2a56d4cd06d4d25dc27795dc2474e43",
+    "checkout_sha256": "1e1326f120d509c1d83cd36160fef3a2d767afeb9e78b0f907996f5fde4a8f62",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/Wealth%20Compass/src/app/api/health/route.ts",
+    "id": "wealth-health"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/Wealth Compass/src/server/repositories/idempotent-memory-repository.ts",
+    "git_blob": "0bed4a0bd7a0a903e7a96d1c9467504bd3e1a0f5",
+    "checkout_sha256": "cecf9c618c0b1953929a252e17f01cc6b1ffa68e0f43be6faed23671a32044c3",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/Wealth%20Compass/src/server/repositories/idempotent-memory-repository.ts",
+    "id": "wealth-mem"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/Identity Compass/src/lib/identity/adapters/persist.ts",
+    "git_blob": "cb0618d20ddeab4d4194b9f34e4aace6001d41d9",
+    "checkout_sha256": "48b23a22e1a80e08096394181b9574b8a3f85ddb219feb86f766ef1e9b36f562",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/Identity%20Compass/src/lib/identity/adapters/persist.ts",
+    "id": "identity-persist"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/Identity Compass/src/lib/identity/adapters/mock-feishu.ts",
+    "git_blob": "82aa89c44c3786618b35f0ff72c6c18ee88c5bf9",
+    "checkout_sha256": "4ac16ee95bfe3dc33d8bc527a1cc168a3cb2dbec5356db8807706b6e76ed3a6e",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/Identity%20Compass/src/lib/identity/adapters/mock-feishu.ts",
+    "id": "identity-mock"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Compass/Identity Compass/src/components/identity-assessment-experience.tsx",
+    "git_blob": "07e90c43f1cc68d8ac85ba14a6b01e36fc26e496",
+    "checkout_sha256": "2f345bd85d2fa86ae8bc8b34e08e5ea3bd27754081926d2e23cb8b01707b8d1f",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Compass/Identity%20Compass/src/components/identity-assessment-experience.tsx",
+    "id": "identity-ui"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Family OS/phoenix-family-os-mvp/backend/database.js",
+    "git_blob": "76907312cba3c2e86bffcf2ec05a70a6b35501a8",
+    "checkout_sha256": "4e810feb864442fbdab7155ce2181aea756f389a14b466079f29249148c5381f",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Family%20OS/phoenix-family-os-mvp/backend/database.js",
+    "id": "family-sqlite"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Family OS/phoenix-family-os-mvp/backend/server.js",
+    "git_blob": "ce348596c41d4ea12bbe7763f0700f53fb338aff",
+    "checkout_sha256": "1a25b5404b7498717685bce16a756c0e16a64a3300f6686fa5c0cfe6731c313f",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Family%20OS/phoenix-family-os-mvp/backend/server.js",
+    "id": "family-api"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "Phoenix Family OS/phoenix-family-os-mvp/backend/migrations/001_questionnaire_submissions.sql",
+    "git_blob": "9bd3890a977c1e3123eb4943e9cbc7507e2b8d8f",
+    "checkout_sha256": "4125b2363564d607c0b8728a44fe2baf6974f73fe365649086ef316b048119e0",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/Phoenix%20Family%20OS/phoenix-family-os-mvp/backend/migrations/001_questionnaire_submissions.sql",
+    "id": "family-schema"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "askwise/askwise-learning-engine/src/lib/db.ts",
+    "git_blob": "4a61e52df908285e1da38af33144e0801dc8b483",
+    "checkout_sha256": "be3e30b407c8516f73da2e1470521e72eff4259ce724893b90ea9265bbd25658",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/askwise/askwise-learning-engine/src/lib/db.ts",
+    "id": "askwise-main-db"
+  },
+  {
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "9355d28667ee9cf4761b4abcdaf959f0ad154820",
+    "path": "database/canonical/migrations/0022_learning_core.sql",
+    "git_blob": "bc9ca7db0f23ffdd9d8887451e5e0e07eff11ac9",
+    "checkout_sha256": "4df4b55cc9b2830c357d676906a77a9fa7ac981bbe4673c156285aa40fba2f5f",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/9355d28667ee9cf4761b4abcdaf959f0ad154820/database/canonical/migrations/0022_learning_core.sql",
+    "id": "learning-sql"
+  },
+  {
+    "id": "askwise-pilot-api",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/644fab93ccfdd7557c432c57363873c7f62ed9be/askwise/askwise-learning-engine/src/app/api/pilot/v1/[...path]/route.ts",
+    "git_blob": "4ee723b38759a0d65a3342aa847fd166cf2e82f5",
+    "source_utf8_sha256": "f75b12ab2e96734a5e88770901a81c5c4337cad8ca339a8f888bda2d7588a4b7",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "644fab93ccfdd7557c432c57363873c7f62ed9be",
+    "path": "askwise/askwise-learning-engine/src/app/api/pilot/v1/[...path]/route.ts"
+  },
+  {
+    "id": "askwise-pilot-db",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/644fab93ccfdd7557c432c57363873c7f62ed9be/askwise/askwise-learning-engine/src/lib/db.ts",
+    "git_blob": "280b4ecfdcc6d769306fa0e1252e1332af57cdd9",
+    "source_utf8_sha256": "2e157209e03399aa77299c163aa9c73e08b8486176976c36d7d98636250bec3b",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "644fab93ccfdd7557c432c57363873c7f62ed9be",
+    "path": "askwise/askwise-learning-engine/src/lib/db.ts"
+  },
+  {
+    "id": "askwise-pilot-handoff",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/644fab93ccfdd7557c432c57363873c7f62ed9be/askwise/askwise-learning-engine/src/lib/pilot/compass-service.ts",
+    "git_blob": "2ad0f9782a701104c6982e844a792acd4ff6fea5",
+    "source_utf8_sha256": "79f82803c84bb1aa1ca9129a76abeeaa182f723bcbbcb4de4cfe5869fbe082b2",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "644fab93ccfdd7557c432c57363873c7f62ed9be",
+    "path": "askwise/askwise-learning-engine/src/lib/pilot/compass-service.ts"
+  },
+  {
+    "id": "askwise-pilot-mapping",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/644fab93ccfdd7557c432c57363873c7f62ed9be/askwise/ASKWISE_NOVA_MIGRATION_MAPPING.md",
+    "git_blob": "c1468e73631eafed06019660561a945d2fe7a043",
+    "source_utf8_sha256": "1bbba63d7618c765e1af7bc703d5a5c847143cc13eafd161809acdd92b00b866",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "644fab93ccfdd7557c432c57363873c7f62ed9be",
+    "path": "askwise/ASKWISE_NOVA_MIGRATION_MAPPING.md"
+  },
+  {
+    "id": "education-geo-contract",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/8c07672a6d3e3b77f373ec32fd282b20bbc8e0b8/website/phoenix-nova-website-v5/docs/EDUCATION_V20_DATA_AND_GEO_CONTRACT.md",
+    "git_blob": "c327d4635679aa92c542ecfec90edc2eba7c8cb1",
+    "source_utf8_sha256": "da53f311833d59320252849ab684148ccbc36bc3fa11370afa7bf8f9104b11c2",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "8c07672a6d3e3b77f373ec32fd282b20bbc8e0b8",
+    "path": "website/phoenix-nova-website-v5/docs/EDUCATION_V20_DATA_AND_GEO_CONTRACT.md"
+  },
+  {
+    "id": "education-geo-page",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/8c07672a6d3e3b77f373ec32fd282b20bbc8e0b8/website/phoenix-nova-website-v5/app/[locale]/education/page.tsx",
+    "git_blob": "c00bcadc2d6bebb62b8fc77823cc59395b3af536",
+    "source_utf8_sha256": "d6a8aacad89ddb1d575673a1a2511343aef29249c2ac405fb15eeb0c28e9ec94",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "8c07672a6d3e3b77f373ec32fd282b20bbc8e0b8",
+    "path": "website/phoenix-nova-website-v5/app/[locale]/education/page.tsx"
+  },
+  {
+    "id": "health-geo-contract",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/5a0fbc4fcee09bcb58668b0f112d1b4f8e13558c/website/phoenix-nova-website-v5/lib/health-integration-contract.ts",
+    "git_blob": "7e9aefa4292bd5f0e821838d297be8bae3b53883",
+    "source_utf8_sha256": "d2cea6a525f3b477a520bd68c6d9975adb158857b90d4f487145a58d47a89b00",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "5a0fbc4fcee09bcb58668b0f112d1b4f8e13558c",
+    "path": "website/phoenix-nova-website-v5/lib/health-integration-contract.ts"
+  },
+  {
+    "id": "health-geo-mapping",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/5a0fbc4fcee09bcb58668b0f112d1b4f8e13558c/website/phoenix-nova-website-v5/docs/HEALTH_GEO_CANONICAL_MAPPING.md",
+    "git_blob": "dd3ae77acffe92557a713752fcda0b5bd21db1b5",
+    "source_utf8_sha256": "180a2e075821469557892092f8ff09a681188191268fdd726d84f081dcc38b7d",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "5a0fbc4fcee09bcb58668b0f112d1b4f8e13558c",
+    "path": "website/phoenix-nova-website-v5/docs/HEALTH_GEO_CANONICAL_MAPPING.md"
+  },
+  {
+    "id": "identity-geo-data",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/3e0d1957cd997618f89a07cbfedea08af7d11520/website/phoenix-nova-website-v5/lib/cbi-data.ts",
+    "git_blob": "547feff1fd45393c8446bde172e4fbf70935d956",
+    "source_utf8_sha256": "393ae4af3e328bddf08e344d0a80dbae140a7d11f136fd97903bd27b95c8f25d",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "3e0d1957cd997618f89a07cbfedea08af7d11520",
+    "path": "website/phoenix-nova-website-v5/lib/cbi-data.ts"
+  },
+  {
+    "id": "identity-geo-import",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/3e0d1957cd997618f89a07cbfedea08af7d11520/website/phoenix-nova-website-v5/lib/cbi-import.ts",
+    "git_blob": "c5e14384ffc03dcfb4a6145b3f85325d0f5e8dc9",
+    "source_utf8_sha256": "5bf00c59bbce08e2583d1fce6070ac68402e544258c945653420afa9b5cd4c71",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "3e0d1957cd997618f89a07cbfedea08af7d11520",
+    "path": "website/phoenix-nova-website-v5/lib/cbi-import.ts"
+  },
+  {
+    "id": "identity-geo-schema",
+    "repository": "yvettfang-netizen/phoenix",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/3e0d1957cd997618f89a07cbfedea08af7d11520/website/phoenix-nova-website-v5/lib/cbi-schema.ts",
+    "git_blob": "5d1c394ec78a9cd8df13d8aa68a7e41579dc5b25",
+    "source_utf8_sha256": "1a3626e4f6bf2fba27098c1c47baa1a1587a24475507d4774eaafa786216b54d",
+    "scope": "exact immutable candidate source; not runtime evidence",
+    "commit": "3e0d1957cd997618f89a07cbfedea08af7d11520",
+    "path": "website/phoenix-nova-website-v5/lib/cbi-schema.ts"
+  },
+  {
+    "id": "academy-prototype-page",
+    "repository": "yvettfang-netizen/phoenix-academic-studio",
+    "commit": "f08dad49ec5d87f15e4f9e416762cd7913ff7bd3",
+    "path": "apps/academy-web/app/student/today/page.tsx",
+    "git_blob": "c8bc5609e0d92903f50fc924dd9f8a02992aa403",
+    "source_utf8_sha256": "064924160794e49dbf19689de292c5b7075bff79836820b8deadb087b1b8baef",
+    "url": "https://github.com/yvettfang-netizen/phoenix-academic-studio/blob/f08dad49ec5d87f15e4f9e416762cd7913ff7bd3/apps/academy-web/app/student/today/page.tsx",
+    "scope": "private source code inspection only; not runtime evidence"
+  },
+  {
+    "id": "academy-prototype-package",
+    "repository": "yvettfang-netizen/phoenix-academic-studio",
+    "commit": "f08dad49ec5d87f15e4f9e416762cd7913ff7bd3",
+    "path": "apps/academy-web/package.json",
+    "git_blob": "8fe71b1a0ac390dd6eb5caccc8762865276fd73b",
+    "source_utf8_sha256": "79151065e121310be2dc6a75b1165db37b0c4aba5bd3b8d452e566cf11269d14",
+    "url": "https://github.com/yvettfang-netizen/phoenix-academic-studio/blob/f08dad49ec5d87f15e4f9e416762cd7913ff7bd3/apps/academy-web/package.json",
+    "scope": "private source code inspection only; not runtime evidence"
+  },
+  {
+    "id": "historical-bridge",
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "48bb6c3ae18906f870ea9e8a717c03ebb2da34bd",
+    "path": "Phoenix Compass/education compass/server/src/auth/canonical-application-route-bridge.ts",
+    "git_blob": "e402ca54fa049c665dc50b67da6fe8e4a579fed3",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/48bb6c3ae18906f870ea9e8a717c03ebb2da34bd/Phoenix%20Compass/education%20compass/server/src/auth/canonical-application-route-bridge.ts",
+    "scope": "historical or unmerged supporting source; not current main runtime"
+  },
+  {
+    "id": "historical-http",
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "48bb6c3ae18906f870ea9e8a717c03ebb2da34bd",
+    "path": "Phoenix Compass/education compass/server/src/http/app.ts",
+    "git_blob": "0c01d7127cdd8925fe0feaa0322f31ce04f2faeb",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/48bb6c3ae18906f870ea9e8a717c03ebb2da34bd/Phoenix%20Compass/education%20compass/server/src/http/app.ts",
+    "scope": "historical or unmerged supporting source; not current main runtime"
+  },
+  {
+    "id": "education-contract-v12",
+    "repository": "yvettfang-netizen/phoenix",
+    "commit": "6db8db05be630dbd56048c56b3b3741c97b6f101",
+    "path": "Phoenix Compass/education compass/models/questionnaire-contract.json",
+    "git_blob": "ea29a18bf0bbe36f171e4dff141cfdd719ef31de",
+    "url": "https://github.com/yvettfang-netizen/phoenix/blob/6db8db05be630dbd56048c56b3b3741c97b6f101/Phoenix%20Compass/education%20compass/models/questionnaire-contract.json",
+    "scope": "historical or unmerged supporting source; not current main runtime"
+  }
+]
