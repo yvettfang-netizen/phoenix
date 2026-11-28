@@ -7,12 +7,13 @@ import path from 'node:path'
 import {pathToFileURL,fileURLToPath} from 'node:url'
 import {startP1Fixture} from './fixture.mjs'
 
-const version=process.argv[2]||'16'
+const direct=path.resolve(process.argv[1]??'')===fileURLToPath(import.meta.url)
+const version=(direct&&process.argv[2])||'16'
 assert(['16','17'].includes(version))
 const root=process.cwd()
 const website=path.resolve(root,'website/phoenix-nova-website-v5')
 const output=path.resolve(process.env.P1_EVIDENCE_DIR||('out/p1-family-service/browser-pg'+version))
-mkdirSync(output,{recursive:true})
+if(direct)mkdirSync(output,{recursive:true})
 const record={
  schemaVersion:'phoenix-p1-family-service-browser.v1',
  sourceSha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),
@@ -281,7 +282,7 @@ async function main(){
  console.log('PASS P1 isolated browser component harness on PG'+version)
 }
 
-if(path.resolve(process.argv[1]??'')===fileURLToPath(import.meta.url)){
+if(direct){
 try{await main()}
 catch(error){
  record.status='FAIL'

@@ -46,7 +46,9 @@ jobs:
           cache-dependency-path: "Phoenix Compass/education compass/server/package-lock.json"
       - name: Install locked PostgreSQL client dependencies
         working-directory: "Phoenix Compass/education compass/server"
-        run: npm ci --ignore-scripts --no-audit --no-fund
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
       - name: Build website worker for browser acceptance
         working-directory: website/phoenix-nova-website-v5
         run: |
@@ -64,13 +66,14 @@ jobs:
           CRM_FIXTURE_POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
           CRM_FIXTURE_PREVIEW_DIR: ${{ runner.temp }}/crm-role-previews
           CRM_FIXTURE_EDUCATION_CANDIDATE: ${{ github.workspace }}/database/canonical/forward-candidates/education-assessment-report/education_assessment_report.sql
+          CRM_FIXTURE_FAMILY_API_MODULE: "${{ github.workspace }}/Phoenix Compass/education compass/server/dist/services/service-workbench.js"
         run: |
           node --experimental-strip-types --test website/phoenix-nova-website-v5/tests/free-education-assessment.test.mjs
           test -n "$CRM_FIXTURE_POSTGRES_CONTAINER"
           test -s "$CRM_FIXTURE_EDUCATION_CANDIDATE"
           npm install --prefix "$RUNNER_TEMP/crm-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
           node "$PLAYWRIGHT_MODULE/cli.js" install --with-deps chromium
-          node --experimental-strip-types database/canonical/forward-candidates/website-consultation/verify-local.mjs --synthetic-loopback "Phoenix Compass/education compass/server" --bundled-chromium
+          node --experimental-strip-types --import ./website/phoenix-nova-website-v5/tests/register-typescript.mjs database/canonical/forward-candidates/website-consultation/verify-local.mjs --synthetic-loopback "Phoenix Compass/education compass/server" --bundled-chromium
       - name: Preserve role view previews
         if: always()
         uses: actions/upload-artifact@v4
