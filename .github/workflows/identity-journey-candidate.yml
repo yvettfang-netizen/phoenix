@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'database/canonical/forward-candidates/identity-journey/**'
+      - 'database/canonical/forward-candidates/service-workbench/0038_service_project_workbench.sql'
       - 'website/phoenix-nova-website-v5/lib/identity-journey*.ts'
       - 'website/phoenix-nova-website-v5/components/family-identity-inbox.tsx'
       - 'website/phoenix-nova-website-v5/components/family-identity-consultation.tsx'

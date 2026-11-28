@@ -41,6 +41,7 @@ psql_synthetic -d postgres -c 'ALTER DATABASE phoenix_canonical_dev RENAME TO ph
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/storage.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/renewal.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/timeline.sql"
+psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/../service-workbench/0038_service_project_workbench.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/verify.sql"
 
 db=phoenix_identity_journey_synthetic_ci
@@ -106,7 +107,7 @@ echo "PASS competing sessions, expired claim recovery, stale Worker fencing, dur
 
 # The CRM handoff must exercise Canonical with a real FAMILY app LOGIN, separate
 # from the issuer and fixture owners. Only the disposable container sees secrets.
-for role in app binder; do
+for role in app binder workbench; do
   synthetic_login="identity_journey_fixture_$role"
   synthetic_password="$(openssl rand -hex 32)"
   printf '127.0.0.1:5432:*:%s:%s\n' "$synthetic_login" "$synthetic_password" |
@@ -120,6 +121,7 @@ unset synthetic_password
 psql_synthetic -q -d "$db" <<'SQL'
 GRANT phoenix_canonical_app TO identity_journey_fixture_app WITH INHERIT TRUE, SET FALSE;
 GRANT phoenix_canonical_context_binder TO identity_journey_fixture_binder WITH INHERIT TRUE, SET FALSE;
+GRANT phoenix_canonical_service_workbench TO identity_journey_fixture_workbench WITH INHERIT TRUE, SET FALSE;
 SQL
 psql_synthetic -q -d "$db" < "$candidate/verify-crm-fixture.sql"
 node --experimental-strip-types --import "$candidate/register-native-typescript.mjs" "$candidate/verify-worker.mjs" "$container"

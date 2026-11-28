@@ -112,4 +112,5 @@ export async function verifyCrmHandoff({ query, recipient, authConfig }) {
   assert.equal((await submit()).status, 403);
   assert.equal(identityNeeds(), "1");
   console.log("PASS same-notice HTTP handoff to Canonical 0036 FAMILY need, verified existing Client/Lead, withdrawal and idempotency");
+  return { actor, lead, client, event };
 }

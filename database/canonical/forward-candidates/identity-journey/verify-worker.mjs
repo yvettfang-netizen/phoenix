@@ -4,6 +4,7 @@ import { runStationReminderBatch } from "../../../../website/phoenix-nova-websit
 import { handleIdentityInbox, identityNoticePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-inbox.ts";
 import { verifyCrmHandoff } from "./verify-crm.mjs";
 import { verifyTimeline } from "./verify-timeline.mjs";
+import { verifyServiceChain } from "./verify-service-chain.mjs";
 
 const container = process.argv[2];
 assert.match(container ?? "", /^[0-9a-f]{64}$/);
@@ -12,7 +13,7 @@ assert.equal(execFileSync("docker", ["inspect", "--format",
 { encoding: "utf8" }).trim(), "none/synthetic");
 
 function query(sql, variables = {}, role = "bootstrap") {
-  assert.ok(["bootstrap", "app", "binder"].includes(role));
+  assert.ok(["bootstrap", "app", "binder", "workbench"].includes(role));
   const args = Object.entries(variables).flatMap(([key, value]) => ["-v", `${key}=${value}`]);
   const login = role === "bootstrap" ? "phoenix_bootstrap" : `identity_journey_fixture_${role}`;
   const passfile = role === "bootstrap" ? "/tmp/canonical-premerge.pgpass" : `/tmp/identity-crm-${role}.pgpass`;
@@ -227,7 +228,8 @@ assert.equal((await get()).status, 403);
 assert.equal((await post(candidate)).status, 403);
 console.log("PASS Family OS inbox HTTP session, same-origin, minimized response, acknowledgement and revocation");
 
-await verifyCrmHandoff({ query, recipient, authConfig });
+const crmFixture = await verifyCrmHandoff({ query, recipient, authConfig });
+const recordRenewalReview = await verifyServiceChain({ query, recipient, crmFixture });
 
 let timelineBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
@@ -254,4 +256,4 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   });
   console.log("PASS Chromium desktop and mobile inbox over HTTP and isolated PostgreSQL");
 }
-await verifyTimeline({ query, recipient, authConfig, browser: timelineBrowser });
+await verifyTimeline({ query, recipient, authConfig, browser: timelineBrowser, onRenewal: recordRenewalReview });

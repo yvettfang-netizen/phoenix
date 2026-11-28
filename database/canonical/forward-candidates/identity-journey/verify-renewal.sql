@@ -11,7 +11,6 @@ DECLARE
   advisor_person uuid := (base || '40')::uuid;
   advisor_principal uuid := (base || '41')::uuid;
   other_home uuid := (base || '42')::uuid;
-  casework_case uuid := (base || '43')::uuid;
   doc uuid := (base || '45')::uuid;
   doc_version uuid := (base || '46')::uuid;
   other_doc uuid := (base || '47')::uuid;
@@ -43,13 +42,7 @@ BEGIN
     OR has_table_privilege('phoenix_canonical_app','identity.journey_renewal_attestations','SELECT,INSERT,UPDATE,DELETE')
   THEN RAISE EXCEPTION 'RENEWAL_SCOPE_NOT_CLOSED'; END IF;
 
-  INSERT INTO core.people(person_id,display_name) VALUES(advisor_person,'Synthetic renewal verifier');
-  INSERT INTO auth.principals(principal_id,person_id,principal_kind,status) VALUES(advisor_principal,advisor_person,'ADVISOR','ACTIVE');
   INSERT INTO core.families(family_id,display_name) VALUES(other_home,'Synthetic unrelated household');
-  INSERT INTO casework.cases(case_id,family_id,subject_person_id,title,status,resource_kind,resource_id)
-    VALUES(casework_case,home,subject,'Synthetic renewal review','OPEN','IDENTITY_CASE',journey_case);
-  INSERT INTO casework.advisor_assignments(assignment_id,case_id,advisor_person_id,valid_from,valid_until)
-    VALUES((base || '44')::uuid,casework_case,advisor_person,clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour');
   INSERT INTO docs.documents(document_id,family_id,subject_person_id,data_class,document_kind,retention_until)
     VALUES(doc,home,subject,'IDENTITY_SENSITIVE','SYNTHETIC_RENEWAL_RESULT',clock_timestamp()+interval '1 day'),
           (initial_doc,home,subject,'IDENTITY_SENSITIVE','SYNTHETIC_PRIOR_PERIOD',clock_timestamp()+interval '1 day'),
