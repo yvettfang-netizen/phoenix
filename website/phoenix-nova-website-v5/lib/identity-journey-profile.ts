@@ -6,14 +6,16 @@ import {
   identityProfilePath,
   isIdentityNoFixedExpiryPathway,
   isIdentityInternalOnlyMilestoneKind,
+  isIdentityProfileAccess,
   parseIdentitySponsorship,
   type IdentityMemberProfile,
+  type IdentityProfileAccess,
   type IdentityProfileMember,
 } from "./identity-journey-profile-contract";
 import { identityPrivateHeaders, isIdentityCivilDate, isIdentityMemberRef, readIdentityMemberSelection, sameOriginIdentityRequest } from "./identity-journey-request";
 
 type Session = { customerId: string; sessionHash: string };
-type AuthorizedRead = { assertCurrent(): Promise<boolean> };
+type AuthorizedRead = { assertCurrent(): Promise<boolean>; access?: IdentityProfileAccess };
 
 /** Roster labels and references come from a purpose-specific grant. Reference
  * lookup must be session-bound and cannot fall back to a Canonical identifier.
@@ -21,6 +23,10 @@ type AuthorizedRead = { assertCurrent(): Promise<boolean> };
 export interface IdentityProfileProvider {
   resolveRoster(session: Session): Promise<(AuthorizedRead & { listAuthorized(): Promise<unknown> }) | null>;
   resolveMember(session: Session, memberRef: string): Promise<(AuthorizedRead & { readAuthorized(): Promise<unknown> }) | null>;
+  /** Optional isolated resolver for an independently approved adult delegate. */
+  resolveDelegatedMember?(session: Session, memberRef: string): Promise<(
+    AuthorizedRead & { access: "DELEGATE"; readAuthorized(): Promise<unknown> }
+  ) | null>;
 }
 
 export function identityProfileEnabled(env: Record<string, unknown>) {
@@ -34,18 +40,22 @@ function readObject(input: unknown): Record<string, unknown> {
   return input as Record<string, unknown>;
 }
 
-function privateRoster(value: unknown): { members: IdentityProfileMember[] } {
+function privateRoster(value: unknown, allowDelegated: boolean): { members: IdentityProfileMember[] } {
   if (!Array.isArray(value) || value.length > 24) throw new Error("Invalid member roster");
   const seen = new Set<string>();
-  return {
-    members: value.map(input => {
-      const { ref, label, access } = readObject(input);
-      if (!isIdentityMemberRef(ref) || seen.has(ref) || typeof label !== "string" || label.trim().length < 1 ||
-        label.length > 120 || (access !== "SELF" && access !== "GUARDIAN")) throw new Error("Invalid member roster entry");
-      seen.add(ref);
-      return { ref, label: label.trim(), access };
-    }),
-  };
+  const members: IdentityProfileMember[] = [];
+  for (const input of value) {
+    const { ref, label, access } = readObject(input);
+    if (!isIdentityMemberRef(ref) || seen.has(ref) || typeof label !== "string" || label.trim().length < 1 ||
+      label.length > 120 || !isIdentityProfileAccess(access)) throw new Error("Invalid member roster entry");
+    seen.add(ref);
+    // Delegated adults are an independent, opt-in read-only surface. Keep the
+    // existing SELF/GUARDIAN roster behavior unchanged while filtering them
+    // when the separate rollout flag is not enabled.
+    if (access === "DELEGATE" && !allowDelegated) continue;
+    members.push({ ref, label: label.trim(), access });
+  }
+  return { members };
 }
 
 function privateProfile(input: unknown): IdentityMemberProfile {
@@ -94,6 +104,8 @@ export async function handleIdentityProfile(request: Request, env: Record<string
   if (!sameOriginIdentityRequest(request, identityProfilePath)) return reply(403, "ACCESS_DENIED");
   if (!config || config.origin !== new URL(request.url).origin) return reply(503, "PROFILE_UNAVAILABLE");
   const provider = env.FAMILY_IDENTITY_PROFILE_PROVIDER as IdentityProfileProvider;
+  const allowDelegated = env.FAMILY_IDENTITY_DELEGATED_PROFILE_ENABLED === "true" &&
+    typeof provider.resolveDelegatedMember === "function";
   try {
     const session = await readCustomerSession(request, config, { touch: false });
     if (!session) return reply(401, "SIGN_IN_REQUIRED");
@@ -106,11 +118,33 @@ export async function handleIdentityProfile(request: Request, env: Record<string
     }
     const audit = roster ? "IDENTITY_PROFILE_ROSTER" : "IDENTITY_PROFILE_READ";
     await config.recordAccess(session.id, audit + "_ATTEMPT", requestId + ":attempt");
-    const bound = roster ? await provider.resolveRoster(identity) : await provider.resolveMember(identity, memberRef as string);
+    let bound: (AuthorizedRead & ({ listAuthorized(): Promise<unknown> } | { readAuthorized(): Promise<unknown> })) | null;
+    if (roster) {
+      bound = await provider.resolveRoster(identity);
+    } else {
+      const legacyBound = await provider.resolveMember(identity, memberRef as string);
+      // The legacy resolver is never allowed to mint a delegated scope. This
+      // is deliberately rejected even when the delegate rollout is enabled;
+      // delegated reads must come from the isolated resolver below.
+      if (legacyBound?.access === "DELEGATE") return reply(403, "ACCESS_DENIED");
+      bound = legacyBound;
+      if (!bound && allowDelegated && provider.resolveDelegatedMember) {
+        const delegatedBound = await provider.resolveDelegatedMember(identity, memberRef as string);
+        // Fail closed if a flagged resolver is absent, stale, or returns a
+        // scope other than the exact delegated read grant.
+        if (!delegatedBound || delegatedBound.access !== "DELEGATE") return reply(403, "ACCESS_DENIED");
+        bound = delegatedBound;
+      }
+    }
     if (!bound || await bound.assertCurrent() !== true) return reply(403, "ACCESS_DENIED");
+    // The provider may expose the resolved grant on the session-bound read
+    // authority. Reject a delegated read unless the independent rollout flag
+    // is on; this prevents a stale/cached member reference from widening scope.
+    if (bound.access !== undefined && !isIdentityProfileAccess(bound.access)) return reply(403, "ACCESS_DENIED");
+    if (bound.access === "DELEGATE" && !allowDelegated) return reply(403, "ACCESS_DENIED");
     const source = "listAuthorized" in bound ? await bound.listAuthorized() : await bound.readAuthorized();
     if (source === null) return reply(403, "ACCESS_DENIED");
-    const output = roster ? privateRoster(source) : privateProfile(source);
+    const output = roster ? privateRoster(source, allowDelegated) : privateProfile(source);
     await config.recordAccess(session.id, audit + "_PREPARED", requestId + ":prepared");
     const current = await readCustomerSession(request, config, { touch: false });
     if (!current || current.id !== session.id || current.token_hash !== session.token_hash) return reply(401, "SIGN_IN_REQUIRED");

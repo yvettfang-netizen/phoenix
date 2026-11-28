@@ -22,8 +22,9 @@ async function bundleFamilyCenter(view) {
         createRoot(document.getElementById("root")).render(
           <FamilyCenterV2 locale={locale} account workbench
             identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}}
-            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence" || view === "review-planning"}}
-            identityMemberResidence={${view === "member-residence"}} identityReviewPlanning={${view === "review-planning"}} />
+            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence" || view === "review-planning" || view === "delegated-profile"}}
+            identityMemberResidence={${view === "member-residence" || view === "delegated-profile"}}
+            identityReviewPlanning={${view === "review-planning" || view === "delegated-profile"}} />
         );`,
     },
     bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", jsx: "automatic",
@@ -325,6 +326,35 @@ export async function verifySponsorshipBrowser({ handle, apiPath, sponsorship })
     }
   });
   console.log("PASS Chromium shows only verified dependant sponsorship status and effective date on English desktop and Chinese mobile");
+}
+
+export async function verifyAdultDelegationBrowser({ handle, apiPath, expectedDate, revokeDelegation }) {
+  await withFamilyView({ handle, apiPath, view: "delegated-profile" }, async ({ pageFor, output }) => {
+    async function open(locale, width, title, badge) {
+      const page = await pageFor(locale, width);
+      await page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ }).click();
+      const panel = page.getByRole("region", { name: title });
+      const member = panel.getByRole("button", { name: new RegExp(badge) });
+      await member.click();
+      await panel.locator(`time[datetime="${expectedDate}"]`).waitFor();
+      assert.equal(await page.locator("input[type=date]").count(), 0);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await page.screenshot({ path: join(output, `identity-adult-delegate-${locale}-${width}.png`), fullPage: true });
+      return { page, panel, member };
+    }
+    await open("en", 1440, "Member identity profile", "Adult-authorized read only");
+    const mobile = await open("zh", 390, "成员身份档案", "本人授权查阅");
+    revokeDelegation();
+    const denied = mobile.page.waitForResponse(response =>
+      response.url().endsWith(apiPath) && response.request().method() === "POST");
+    await mobile.member.click();
+    assert.equal((await denied).status(), 403);
+    await mobile.panel.getByText("此资料未获授权，暂不显示。", { exact: true }).waitFor();
+    assert.equal(await mobile.panel.locator("time").count(), 0);
+    assert.equal(await mobile.member.count(), 0);
+    await mobile.page.screenshot({ path: join(output, "identity-adult-delegate-revoked-zh-390.png"), fullPage: true });
+  });
+  console.log("PASS Chromium adult-authorized read-only profile and revoked access on English desktop and Chinese mobile");
 }
 
 export async function verifyFamilyMemberResidenceBrowser({

@@ -18,7 +18,7 @@ ALTER TABLE identity.journey_date_revisions
     'INVESTMENT_REVIEW','PERMANENT_RESIDENCE_PREPARATION'
   ));
 
-CREATE FUNCTION identity.lock_journey_profile_access(p_subject uuid, p_guardian uuid, p_cases uuid[])
+CREATE FUNCTION identity.lock_journey_profile_access(p_subject uuid,p_guardian uuid,p_cases uuid[],p_delegation uuid)
 RETURNS boolean
 LANGUAGE plpgsql
 SET search_path = pg_catalog
@@ -32,18 +32,23 @@ BEGIN
   IF auth.current_channel() IS DISTINCT FROM 'FAMILY' OR auth.write_context_is_live() IS NOT TRUE
     OR family IS NULL OR caller IS NULL OR p_subject IS NULL OR p_cases IS NULL
     OR coalesce(array_ndims(p_cases),1) <> 1 OR cardinality(p_cases) > 32 OR array_position(p_cases,NULL) IS NOT NULL
-    OR (caller = p_subject) IS DISTINCT FROM (p_guardian IS NULL)
+    OR (p_delegation IS NULL AND (caller=p_subject) IS DISTINCT FROM (p_guardian IS NULL))
+    OR (p_delegation IS NOT NULL AND (p_guardian IS NOT NULL OR caller=p_subject))
   THEN RETURN false; END IF;
 
-  PERFORM 1 FROM auth.principals p
-    JOIN core.family_memberships actor ON actor.family_id = family AND actor.person_id = caller
-    JOIN core.family_memberships subject ON subject.family_id = family AND subject.person_id = p_subject
-    WHERE p.principal_id = auth.current_principal_id() AND p.person_id = caller
-      AND p.principal_kind = 'FAMILY' AND p.status = 'ACTIVE'
-      AND actor.valid_from <= now_at AND (actor.valid_until IS NULL OR actor.valid_until > now_at)
-      AND subject.valid_from <= now_at AND (subject.valid_until IS NULL OR subject.valid_until > now_at)
-    FOR SHARE OF p, actor, subject;
-  IF NOT FOUND THEN RETURN false; END IF;
+  IF p_delegation IS NOT NULL THEN
+    IF identity.lock_journey_adult_profile_delegation(p_delegation,p_subject,p_cases) IS NOT TRUE THEN RETURN false; END IF;
+  ELSE
+    PERFORM 1 FROM auth.principals p
+      JOIN core.family_memberships actor ON actor.family_id = family AND actor.person_id = caller
+      JOIN core.family_memberships subject ON subject.family_id = family AND subject.person_id = p_subject
+      WHERE p.principal_id = auth.current_principal_id() AND p.person_id = caller
+        AND p.principal_kind = 'FAMILY' AND p.status = 'ACTIVE'
+        AND actor.valid_from <= now_at AND (actor.valid_until IS NULL OR actor.valid_until > now_at)
+        AND subject.valid_from <= now_at AND (subject.valid_until IS NULL OR subject.valid_until > now_at)
+      FOR SHARE OF p, actor, subject;
+    IF NOT FOUND THEN RETURN false; END IF;
+  END IF;
 
   IF p_guardian IS NOT NULL THEN
     -- A change to capacity appends a row with a foreign key to this person.
@@ -69,7 +74,7 @@ BEGIN
 END
 $fn$;
 
-CREATE FUNCTION identity.read_journey_member_profile(p_subject uuid, p_guardian uuid, p_cases uuid[])
+CREATE FUNCTION identity.read_journey_member_profile(p_subject uuid,p_guardian uuid,p_cases uuid[],p_delegation uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
 SET search_path = pg_catalog
@@ -77,7 +82,7 @@ AS $fn$
 DECLARE
   output jsonb;
 BEGIN
-  IF identity.lock_journey_profile_access(p_subject,p_guardian,p_cases) IS NOT TRUE THEN
+  IF identity.lock_journey_profile_access(p_subject,p_guardian,p_cases,p_delegation) IS NOT TRUE THEN
     PERFORM audit.record_write_decision('READ','IDENTITY_JOURNEY_PROFILE',p_subject,false,'PROFILE_SCOPE_DENIED');
     RETURN NULL;
   END IF;
@@ -135,16 +140,27 @@ BEGIN
       ORDER BY ended_before IS NOT NULL,started_on DESC,episode_id),'[]'))
   INTO output FROM view_rows;
 
-  IF identity.lock_journey_profile_access(p_subject,p_guardian,p_cases) IS NOT TRUE THEN
+  IF identity.lock_journey_profile_access(p_subject,p_guardian,p_cases,p_delegation) IS NOT TRUE THEN
     PERFORM audit.record_write_decision('READ','IDENTITY_JOURNEY_PROFILE',p_subject,false,'PROFILE_SCOPE_EXPIRED');
     RETURN NULL;
   END IF;
-  PERFORM audit.record_write_decision('READ','IDENTITY_JOURNEY_PROFILE',p_subject,true,'PROFILE_SCOPE_CURRENT');
+  PERFORM audit.record_write_decision('READ','IDENTITY_JOURNEY_PROFILE',p_subject,true,
+    CASE WHEN p_delegation IS NOT NULL THEN 'DELEGATED_PROFILE_SCOPE_CURRENT' ELSE 'PROFILE_SCOPE_CURRENT' END);
   RETURN output;
 END
 $fn$;
 
+-- Existing self and guardian callers cannot implicitly enter the delegation path.
+CREATE FUNCTION identity.lock_journey_profile_access(p_subject uuid,p_guardian uuid,p_cases uuid[])
+RETURNS boolean LANGUAGE sql SET search_path = pg_catalog
+AS $fn$ SELECT identity.lock_journey_profile_access(p_subject,p_guardian,p_cases,NULL::uuid); $fn$;
+CREATE FUNCTION identity.read_journey_member_profile(p_subject uuid,p_guardian uuid,p_cases uuid[])
+RETURNS jsonb LANGUAGE sql SET search_path = pg_catalog
+AS $fn$ SELECT identity.read_journey_member_profile(p_subject,p_guardian,p_cases,NULL::uuid); $fn$;
+
 REVOKE ALL ON FUNCTION identity.lock_journey_profile_access(uuid,uuid,uuid[]),
-  identity.read_journey_member_profile(uuid,uuid,uuid[])
+  identity.lock_journey_profile_access(uuid,uuid,uuid[],uuid),
+  identity.read_journey_member_profile(uuid,uuid,uuid[]),
+  identity.read_journey_member_profile(uuid,uuid,uuid[],uuid)
   FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader, phoenix_canonical_service_workbench;
 COMMIT;

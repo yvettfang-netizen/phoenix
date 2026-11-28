@@ -12,6 +12,7 @@ import { verifyResidence } from "./verify-residence.mjs";
 import { verifyDocumentDates } from "./verify-document-dates.mjs";
 import { verifyEpisodeWrite } from "./verify-episode-write.mjs";
 import { verifySponsorship } from "./verify-sponsorship.mjs";
+import { verifyAdultDelegation } from "./verify-delegation.mjs";
 import { verifyIdentityPolicyPaths } from "./verify-policy-paths.mjs";
 import { verifyReviewPlans } from "./verify-review-plans.mjs";
 import { verifyReviewPlanningHttp } from "./verify-review-planning-http.mjs";
@@ -280,10 +281,12 @@ let memberResidenceBrowser;
 let reviewPlanningBrowser;
 let openEndedIdentityBrowser;
 let sponsorshipBrowser;
+let adultDelegationBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser, verifyFamilyResidenceBrowser,
     verifyOfficialTravelBrowser, verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser,
-    verifyIdentityReviewPlanningBrowser, verifyOpenEndedIdentityBrowser, verifySponsorshipBrowser } = await import("./verify-browser.mjs");
+    verifyIdentityReviewPlanningBrowser, verifyOpenEndedIdentityBrowser, verifySponsorshipBrowser,
+    verifyAdultDelegationBrowser } = await import("./verify-browser.mjs");
   timelineBrowser = verifyFamilyTimelineBrowser;
   residenceBrowser = verifyFamilyResidenceBrowser;
   officialTravelBrowser = verifyOfficialTravelBrowser;
@@ -292,6 +295,7 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   reviewPlanningBrowser = verifyIdentityReviewPlanningBrowser;
   openEndedIdentityBrowser = verifyOpenEndedIdentityBrowser;
   sponsorshipBrowser = verifySponsorshipBrowser;
+  adultDelegationBrowser = verifyAdultDelegationBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
@@ -399,6 +403,85 @@ await verifySponsorship({
     if (sponsorshipBrowser) {
       await sponsorshipBrowser({ handle, apiPath: identityProfilePath, sponsorship });
     }
+  },
+});
+await verifyAdultDelegation({
+  query, recipient,
+  async verifyProfile({ readDelegatedProfile, canReadDelegatedProfile, revokeDelegation }) {
+    const memberRef = "member_delegate_000000000000000000";
+    const validSession = session =>
+      session.customerId === "ci-only-account" && session.sessionHash === "ci-only-session";
+    const isAuthorized = () => canReadDelegatedProfile() === true;
+    let resolverCalls = 0;
+    const delegatedEnv = {
+      FAMILY_IDENTITY_PROFILE_ENABLED: "true",
+      FAMILY_IDENTITY_DELEGATED_PROFILE_ENABLED: "true",
+      FAMILY_IDENTITY_PROFILE_PROVIDER: {
+        async resolveRoster(session) {
+          if (!validSession(session)) return null;
+          let projected = false;
+          return {
+            async assertCurrent() { return !projected || isAuthorized(); },
+            async listAuthorized() {
+              projected = isAuthorized();
+              return projected ? [{ ref: memberRef, label: "Synthetic authorized adult", access: "DELEGATE" }] : [];
+            },
+          };
+        },
+        async resolveMember() { return null; },
+        async resolveDelegatedMember(session, ref) {
+          resolverCalls += 1;
+          if (ref !== memberRef || !validSession(session)) return null;
+          return {
+            access: "DELEGATE",
+            async assertCurrent() { return isAuthorized(); },
+            async readAuthorized() {
+              const profile = readDelegatedProfile();
+              return typeof profile === "string" ? JSON.parse(profile) : profile;
+            },
+          };
+        },
+      },
+    };
+    const handle = (request, browserOrigin, hasSession) => handleIdentityProfile(request, delegatedEnv, {
+      ...authConfig, origin: browserOrigin, verifySession: async () => hasSession ? authConfig.verifySession() : null,
+    });
+    const post = () => handle(new Request(origin + identityProfilePath, {
+      method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ memberRef }),
+    }), origin, true);
+    const get = () => handle(new Request(origin + identityProfilePath), origin, true);
+    delegatedEnv.FAMILY_IDENTITY_DELEGATED_PROFILE_ENABLED = "false";
+    assert.deepEqual((await (await get()).json()).members, []);
+    assert.equal((await post()).status, 403);
+    assert.equal(resolverCalls, 0);
+    delegatedEnv.FAMILY_IDENTITY_DELEGATED_PROFILE_ENABLED = "true";
+    const provider = delegatedEnv.FAMILY_IDENTITY_PROFILE_PROVIDER;
+    const legacyResolver = provider.resolveMember;
+    provider.resolveMember = async () => ({ access: "DELEGATE" });
+    assert.equal((await post()).status, 403);
+    assert.equal(resolverCalls, 0);
+    provider.resolveMember = legacyResolver;
+    const delegatedResolver = provider.resolveDelegatedMember;
+    provider.resolveDelegatedMember = undefined;
+    assert.deepEqual((await (await get()).json()).members, []);
+    assert.equal((await post()).status, 403);
+    provider.resolveDelegatedMember = delegatedResolver;
+    assert.deepEqual((await (await get()).json()).members,
+      [{ ref: memberRef, access: "DELEGATE", label: "Synthetic authorized adult" }]);
+    const reply = await post();
+    assert.equal(reply.status, 200);
+    assert.equal(reply.headers.get("cache-control"), "private, no-store");
+    const output = await reply.json();
+    assert.equal(output.episodes.length, 1);
+    const expectedDate = output.episodes[0].milestones.find(row => row.kind === "STAY_EXPIRY")?.on;
+    assert.match(expectedDate, /^\d{4}-\d{2}-\d{2}$/);
+    if (adultDelegationBrowser) {
+      await adultDelegationBrowser({ handle, apiPath: identityProfilePath, expectedDate, revokeDelegation });
+    } else {
+      revokeDelegation();
+    }
+    assert.deepEqual((await (await get()).json()).members, []);
+    assert.equal((await post()).status, 403);
   },
 });
 await verifyDocumentDates({ query, recipient });

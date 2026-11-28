@@ -47,7 +47,14 @@ export function isIdentityInternalOnlyMilestoneKind(value: string): value is Ide
   return (identityInternalOnlyMilestoneKinds as readonly string[]).includes(value);
 }
 
-export type IdentityProfileMember = { ref: string; label: string; access: "SELF" | "GUARDIAN" };
+export const identityProfileAccesses = ["SELF", "GUARDIAN", "DELEGATE"] as const;
+export type IdentityProfileAccess = typeof identityProfileAccesses[number];
+
+export function isIdentityProfileAccess(value: unknown): value is IdentityProfileAccess {
+  return typeof value === "string" && (identityProfileAccesses as readonly string[]).includes(value);
+}
+
+export type IdentityProfileMember = { ref: string; label: string; access: IdentityProfileAccess };
 export type IdentityMemberProfile = {
   episodes: {
     path: string | null;

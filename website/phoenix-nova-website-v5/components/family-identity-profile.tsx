@@ -99,7 +99,7 @@ function parseMembers(value: unknown): IdentityProfileMember[] {
     if (!isRecord(member)) return false;
     return typeof member.ref === "string" && member.ref.length > 0
       && typeof member.label === "string" && member.label.length > 0
-      && (member.access === "SELF" || member.access === "GUARDIAN");
+      && (member.access === "SELF" || member.access === "GUARDIAN" || member.access === "DELEGATE");
   });
 }
 
@@ -161,9 +161,9 @@ function statusMessage(state: LoadState, locale: Locale) {
 }
 
 function accessLabel(member: IdentityProfileMember, locale: Locale) {
-  return member.access === "SELF"
-    ? text(locale, "登录本人", "Signed-in member")
-    : text(locale, "已授权监护子女", "Authorized child under guardianship");
+  if (member.access === "SELF") return text(locale, "登录本人", "Signed-in member");
+  if (member.access === "GUARDIAN") return text(locale, "已授权监护子女", "Authorized child under guardianship");
+  return text(locale, "本人授权查阅", "Adult-authorized read only");
 }
 
 function MilestoneRow({ milestone, locale }: { milestone: Milestone; locale: Locale }) {
@@ -325,7 +325,7 @@ export function FamilyIdentityProfile({
   return <section className="fc-panel" aria-labelledby="fc-identity-profile-title">
     <div className="fc-heading">
       <h2 id="fc-identity-profile-title"><ShieldCheck aria-hidden="true" />{text(locale, "成员身份档案", "Member identity profile")}</h2>
-      <span>{text(locale, "仅显示本人或已获授权的监护子女", "Only self or an authorized child is shown")}</span>
+      <span>{text(locale, "仅显示本人、已获授权的监护子女或本人授权查阅的只读档案", "Only self, an authorized child, or an adult-authorized read-only profile is shown")}</span>
     </div>
     {members.length ? <div className="fc-members" aria-label={text(locale, "已授权成员", "Authorized members")}>
       {members.map((member) => <button
@@ -378,7 +378,7 @@ export function FamilyIdentityProfile({
       enabled
     /> : null}
     {memberResidence}
-    <p className="fc-muted">{text(locale, "家庭关系本身不会授予其他成年成员的资料访问权；当前暂不支持成人委托。", "Family membership alone does not grant access to another adult's records. Adult delegation is not supported at this time.")}</p>
+    <p className="fc-muted">{text(locale, "家庭关系本身不会授予其他成年成员的资料访问权；本人授权查阅仅限只读身份档案，不开放出入境、写入、提醒或 CRM 功能。", "Family membership alone does not grant access to another adult's records. Adult-authorized read-only access is limited to the identity profile and does not open travel, write, reminder, or CRM features.")}</p>
     <button type="button" className="fc-gold" onClick={() => void loadMembers()}><ArrowRight size={17} />{text(locale, "重新核验成员授权", "Verify member access again")}</button>
     <p className="fc-muted"><Clock3 size={13} aria-hidden="true" /> {text(locale, "离开或隐藏页面后，成员资料会自动清除。", "Member information is cleared when you leave or hide this page.")}</p>
   </section>;
