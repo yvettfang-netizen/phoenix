@@ -127,7 +127,16 @@ async function assertCompass(pageRoute) {
   assert.equal(await controlled.count(), 1, `${route}: controlled Education Compass marker missing`);
   assert.match(await controlled.innerText(), /(?:尚未|暂未|未开放|未接通|not open|not connected|unavailable)/i, `${route}: Compass availability copy is not truthful`);
   const start = page.getByRole("button", { name: /开始(?:教育(?:规划)?)?(?:评估|测评)|(?:Start )?Education(?: planning)? assessment/i });
-  assert.equal(await start.count(), 3, `${route}: Hero, pathways and Compass each retain a controlled assessment action`);
+  assert.equal(await start.count(), 2, `${route}: Pathways and Compass retain controlled assessment actions; hero is pricing-first`);
+  const hero = page.locator('section[aria-labelledby="education-title"]');
+  const pricingLink = hero.locator('a[href="#education-packages"]');
+  assert.equal(await hero.getByRole("button", { name: /开始(?:教育(?:规划)?)?(?:评估|测评)|(?:Start )?Education(?: planning)? assessment/i }).count(), 0, `${route}: hero must not retain the assessment button`);
+  assert.equal(await pricingLink.count(), 1, `${route}: hero pricing CTA must be unique`);
+  assert.match(await pricingLink.innerText(), /19,800/, `${route}: hero pricing CTA must show entry fee`);
+  assert.ok(await pricingLink.isVisible(), `${route}: hero pricing CTA must be visible`);
+  assert.equal(await page.locator("#education-pathways").getByRole("button", { name: /开始(?:教育(?:规划)?)?(?:评估|测评)|(?:Start )?Education(?: planning)? assessment/i }).count(), 1, `${route}: pathways assessment action must remain`);
+  await pricingLink.click();
+  assert.equal(new URL(page.url()).hash, "#education-packages", `${route}: hero pricing CTA must navigate to the pricing anchor`);
   for (const action of await start.all()) assert.equal(await action.isDisabled(), true, `${route}: every assessment action must remain disabled`);
   assert.equal(await compass.getByRole("button", { name: /开始(?:教育规划)?(?:评估|测评)|Start(?: education planning)? assessment/i }).count(), 1, `${route}: Compass has one assessment action`);
   assert.equal(await page.locator('a[href*="/education/assessment"],a[href*="/education/result"],a[href*="/education/questionnaire"]').count(), 0, `${route}: controlled Compass must not expose questionnaire/result routes`);
