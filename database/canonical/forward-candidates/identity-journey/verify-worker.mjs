@@ -6,6 +6,7 @@ import { verifyCrmHandoff } from "./verify-crm.mjs";
 import { verifyTimeline } from "./verify-timeline.mjs";
 import { verifyServiceChain } from "./verify-service-chain.mjs";
 import { verifyFounderSummary } from "./verify-founder-summary.mjs";
+import { verifyResidence } from "./verify-residence.mjs";
 
 const container = process.argv[2];
 assert.match(container ?? "", /^[0-9a-f]{64}$/);
@@ -233,9 +234,11 @@ const crmFixture = await verifyCrmHandoff({ query, recipient, authConfig });
 const recordRenewalReview = await verifyServiceChain({ query, recipient, crmFixture });
 
 let timelineBrowser;
+let residenceBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
-  const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser } = await import("./verify-browser.mjs");
+  const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser, verifyFamilyResidenceBrowser } = await import("./verify-browser.mjs");
   timelineBrowser = verifyFamilyTimelineBrowser;
+  residenceBrowser = verifyFamilyResidenceBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
@@ -264,3 +267,4 @@ await verifyTimeline({
     await verifyFounderSummary({ query, recipient, crmFixture });
   },
 });
+await verifyResidence({ query, recipient, authConfig, browser: residenceBrowser });

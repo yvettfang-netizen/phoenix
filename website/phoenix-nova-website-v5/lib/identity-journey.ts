@@ -150,10 +150,7 @@ function merge(segments: Segment[]) {
 
 // Date spans are half-open. Unknown or contradictory records stay in the
 // review bucket. Metrics are recorded physical presence, never ordinary residence.
-export function summarizeResidenceYear(year: number, through: string, spans: readonly ResidenceSpan[]) {
-  if (!Number.isInteger(year) || year < 1900 || year > 9998) throw new RangeError("INVALID_YEAR");
-  const from = day(`${year}-01-01`);
-  const until = Math.max(from, Math.min(day(through), day(`${year + 1}-01-01`)));
+function summarizeResidenceRange(from: number, until: number, spans: readonly ResidenceSpan[]) {
   const clipped = spans.flatMap(span => {
     const start = day(span.from), end = day(span.until);
     if (end <= start) throw new RangeError("INVALID_RESIDENCE_SPAN");
@@ -168,13 +165,29 @@ export function summarizeResidenceYear(year: number, through: string, spans: rea
     bucket.push(interval);
   }
   const duration = (segment: Segment) => (segment.until - segment.from) / dayMs;
+  const mergedAway = merge(away);
+  const latest = mergedAway.at(-1);
   return {
     recordedInHongKongDays: hk.reduce((sum, segment) => sum + duration(segment), 0),
-    longestRecordedAbsenceDays: Math.max(0, ...merge(away).map(duration)),
+    longestRecordedAbsenceDays: Math.max(0, ...mergedAway.map(duration)),
+    currentRecordedAbsenceDays: latest?.until === until ? duration(latest) : null,
     unverified: merge(unresolved).map(segment => ({ from: date(segment.from), until: date(segment.until) })),
+  };
+}
+
+export function summarizeResidenceYear(year: number, through: string, spans: readonly ResidenceSpan[]) {
+  if (!Number.isInteger(year) || year < 1900 || year > 9998) throw new RangeError("INVALID_YEAR");
+  const from = day(`${year}-01-01`);
+  const until = Math.max(from, Math.min(day(through), day(`${year + 1}-01-01`)));
+  const { recordedInHongKongDays, longestRecordedAbsenceDays, unverified } = summarizeResidenceRange(from, until, spans);
+  return { recordedInHongKongDays, longestRecordedAbsenceDays, unverified,
     rightOfAbode: "HUMAN_REVIEW_REQUIRED" as const,
     passportEligibility: "HUMAN_REVIEW_REQUIRED" as const,
   };
+}
+
+export function currentRecordedAbsence(from: string, through: string, spans: readonly ResidenceSpan[]) {
+  return summarizeResidenceRange(day(from), day(through), spans).currentRecordedAbsenceDays;
 }
 
 export function identityConsultationSummary(

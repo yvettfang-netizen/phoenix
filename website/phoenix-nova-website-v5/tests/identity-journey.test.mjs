@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { deliverIdentityReminder, hkCivilDate, identityConsultationSummary, planIdentityReminders,
+import { currentRecordedAbsence, deliverIdentityReminder, hkCivilDate, identityConsultationSummary, planIdentityReminders,
   reconcileIdentityReminders, reminderOffsets, summarizeResidenceYear } from "../lib/identity-journey.ts";
 import { identityPathways, identityPolicyRules } from "../lib/identity-journey-policy.ts";
 import { runStationReminderBatch } from "../lib/identity-journey-reminder-worker.ts";
@@ -111,6 +111,15 @@ test("residence excludes missing and contradictory days; passport and permanent 
   assert.deepEqual(summary, { recordedInHongKongDays: 14, longestRecordedAbsenceDays: 24,
     unverified: [{ from: "2028-02-01", until: "2028-02-05" }, { from: "2028-02-29", until: "2028-03-15" }],
     rightOfAbode: "HUMAN_REVIEW_REQUIRED", passportEligibility: "HUMAN_REVIEW_REQUIRED" });
+});
+
+test("continuous recorded absence crosses a year boundary and stops at conflicting or missing days", () => {
+  const first = { from: "2027-12-28", until: "2028-01-01", place: "AWAY" };
+  const later = { from: "2028-01-01", until: "2028-01-05", place: "AWAY" };
+  const conflict = { from: "2028-01-01", until: "2028-01-03", place: "HK" };
+  assert.equal(currentRecordedAbsence("2027-01-01", "2028-01-05", [first, later, later]), 8);
+  assert.equal(currentRecordedAbsence("2027-01-01", "2028-01-05", [first, later, conflict]), 2);
+  assert.equal(currentRecordedAbsence("2027-01-01", "2028-01-06", [first, later]), null);
 });
 
 test("verified renewal cancels old pending notices and retains completed history", () => {

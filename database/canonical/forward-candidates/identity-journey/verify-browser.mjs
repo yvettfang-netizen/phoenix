@@ -21,7 +21,7 @@ async function bundleFamilyCenter(view) {
         document.documentElement.lang = locale;
         createRoot(document.getElementById("root")).render(
           <FamilyCenterV2 locale={locale} account workbench
-            identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}} />
+            identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}} identityResidence={${view === "residence"}} />
         );`,
     },
     bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", jsx: "automatic",
@@ -175,5 +175,44 @@ export async function verifyFamilyTimelineBrowser({ handle, apiPath, expectedDat
     await mobile.timeline.getByText("当前会话无法读取期限。", { exact: true }).waitFor();
     assert.equal(await mobile.timeline.locator("time").count(), 0);
     console.log("PASS Chromium Family OS permitted stay timeline, history, responsive and revoked access");
+  });
+}
+
+export async function verifyFamilyResidenceBrowser({ handle, apiPath, revokeRead }) {
+  await withFamilyView({ handle, apiPath, view: "residence" }, async ({ pageFor, output }) => {
+    const open = async (locale, width) => {
+      const page = await pageFor(locale, width);
+      const nav = page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ });
+      const residence = page.getByRole("region", { name: locale === "zh"
+        ? "出入境与通常居住记录" : "Travel, entry and ordinary residence records" });
+      await nav.click();
+      await residence.getByText(locale === "zh" ? "护照资格：需人工核验" : "Passport eligibility: human review required").waitFor();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      return { page, residence };
+    };
+    const desktop = await open("en", 1440);
+    const begin = desktop.residence.getByLabel("Start date (inclusive)");
+    const end = desktop.residence.getByLabel("End date (exclusive)");
+    const asOf = Date.parse((await end.getAttribute("max")) + "T00:00:00Z");
+    const fromDay = new Date(asOf - 50 * 86_400_000).toISOString().slice(0, 10);
+    const toDay = new Date(asOf - 49 * 86_400_000).toISOString().slice(0, 10);
+    await begin.fill(fromDay);
+    await end.fill(toDay);
+    await desktop.residence.getByLabel("Location", { exact: true }).selectOption("HK");
+    const pending = desktop.page.waitForResponse(response => response.url().endsWith(apiPath) && response.request().method() === "POST");
+    await desktop.residence.getByRole("button", { name: "Submit record" }).click();
+    assert.equal((await pending).status(), 201);
+    await desktop.residence.locator(`time[datetime="${fromDay}"]`).waitFor();
+    await desktop.page.screenshot({ path: join(output, "identity-residence-en-desktop.png"), fullPage: true });
+    const mobile = await open("zh", 390);
+    await mobile.residence.locator(`time[datetime="${toDay}"]`).waitFor();
+    await mobile.residence.getByText("待核验区间", { exact: false }).first().click();
+    await mobile.page.screenshot({ path: join(output, "identity-residence-zh-mobile.png"), fullPage: true });
+    revokeRead();
+    await mobile.residence.getByRole("button", { name: "刷新记录" }).click();
+    await mobile.residence.getByText("当前会话无法读取这些记录。", { exact: true }).waitFor();
+    assert.equal(await mobile.residence.locator("time").count(), 0);
+    assert.equal(await mobile.residence.getByRole("button", { name: "提交记录" }).count(), 0);
+    console.log("PASS Chromium Family OS residence reporting, bilingual history, no overflow and revoked access");
   });
 }
