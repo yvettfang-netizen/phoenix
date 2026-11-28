@@ -45,6 +45,10 @@ function assertEducationStructure(html, locale) {
   assert.equal((html.match(/<h1\b/gi) ?? []).length, 1, `${locale}: Education needs one h1`);
   assert.equal(testIdCount(html, "education-service"), 4, `${locale}: Education needs four services`);
   assert.equal(testIdCount(html, "education-pricing-package"), 6, "Education pricing needs six package cards");
+  assert.equal(testIdCount(html, "education-pricing-terms"), 1, "Education pricing must explain service boundaries once");
+  for (const id of ["primary", "gaokao-hk-undergraduate", "masters-standard", "masters-vip", "tailored", "research"]) {
+    assert.equal((html.match(new RegExp(`\\bid=["']education-package-${id}["']`, "gi")) ?? []).length, 1, `Package anchor missing: ${id}`);
+  }
   assert.equal(testIdCount(html, "education-value"), 5, `${locale}: Education needs five values`);
   assert.equal(testIdCount(html, "learning-step"), 7, `${locale}: Education needs seven ordered learning steps`);
   assert.equal(testIdCount(html, "education-consultation"), 1, `${locale}: Education consultation panel must be unique`);
@@ -67,6 +71,11 @@ function assertEducationStructure(html, locale) {
   assert.ok(pricing.includes(locale === "zh" ? "内地高考报读香港本科" : "Mainland Gaokao"), "Gaokao HK undergraduate package is missing");
   assert.ok(pricing.includes(locale === "zh" ? "最多10所学校" : "up to 10 schools"), "Primary school scope must be bounded");
   assert.ok(pricing.includes(locale === "zh" ? "最多10个" : "up to 10"), "Undergraduate programme scope must be bounded");
+  assert.ok(pricing.includes(locale === "zh" ? "评估费用与抵扣" : "Assessment fees and credits"), "Assessment credit explanation is missing");
+  assert.ok(pricing.includes(locale === "zh" ? "¥39.9" : "RMB 39.9"), "Independent Discovery fee must be distinguished");
+  assert.ok(pricing.includes(locale === "zh" ? "¥980" : "RMB 980"), "Human Review fee must be explained");
+  assert.ok(pricing.includes(locale === "zh" ? "交付后7天" : "seven days after delivery"), "Credit window must start after review delivery");
+  assert.ok(pricing.includes(locale === "zh" ? "第三方费用" : "Third-party costs"), "Third-party exclusions must be explained");
   assert.match(html.slice(compassAt, academyAt), /education-compass-controlled/i, `${locale}: controlled Education Compass marker is missing`);
   assert.match(html.slice(compassAt, academyAt), unavailableCopy, `${locale}: Compass state must be truthful and unavailable`);
   assert.match(html, hasAttribute("select", "id", "education-direction"), `${locale}: consultation direction select is missing`);
