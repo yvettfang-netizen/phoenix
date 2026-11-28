@@ -16,3 +16,41 @@
   min-height: 44px;
   padding: 0;
 }
+
+.fc-residence-years {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fc-residence-years .fc-harmony-note { margin: 0; }
+.fc-residence-years p { display: block; margin: 0.45em 0; }
+.fc-residence-years details ul { padding-inline-start: 1.1rem; }
+
+.fc-residence-record {
+  display: grid;
+  grid-template-columns: minmax(0, 16rem) minmax(0, 1fr);
+  gap: 8px 16px;
+}
+
+.fc-residence-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.fc-residence-record time {
+  display: inline-block;
+  max-width: none;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+@media (max-width: 780px) {
+  .fc-residence-years { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 480px) {
+  .fc-residence-record { grid-template-columns: minmax(0, 1fr); }
+}

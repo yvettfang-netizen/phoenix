@@ -235,7 +235,7 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
       }
       setForm(initialForm());
       setReportState("success");
-      setReportMessage(t("已记录，正在重新读取授权摘要。", "Recorded. Refreshing the authorized summary."));
+      setReportMessage(t("记录已保存。", "Record saved."));
       setOverview(null);
       setState("loading");
       setReload(value => value + 1);
@@ -269,10 +269,10 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
       {overview.currentRecordedAbsenceDays === null ? null : <p>{t("截至昨日，已连续记录离港", "Consecutive days recorded away through yesterday")}{" "}
         <strong>{overview.currentRecordedAbsenceDays}</strong> {t("天", "days")}</p>}
       <div role="note" className="fc-harmony-note">
-        <p><ShieldCheck size={16} aria-hidden="true" />{t("记录完整性和资格判断仍需人工核验。可选回港日期只是计划记录，不代表法定期限。", "Record completeness and eligibility still require human review. An optional expected return date is a plan, not a statutory deadline.")}</p>
+        <p><ShieldCheck size={16} aria-hidden="true" />{t("计划回港日期仅供安排，法定期限以适用官方资料为准。", "Use expected return dates for planning. Refer to the applicable official information for statutory deadlines.")}</p>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))", gap: 10 }}>
-        {overview.years.map(year => <article className="fc-harmony-note" key={year.year} style={{ margin: 0 }}>
+      <div className="fc-residence-years">
+        {overview.years.map(year => <article className="fc-harmony-note" key={year.year}>
           <h3 style={{ margin: "0 0 8px", fontSize: 15 }}>{year.year}</h3>
           <p>{t("已记录在港", "Recorded in Hong Kong")}: <strong>{year.recordedInHongKongDays}</strong> {t("天", "days")}</p>
           <p>{t("最长已记录离港", "Longest recorded absence")}: <strong>{year.longestRecordedAbsenceDays}</strong> {t("天", "days")}</p>
@@ -283,8 +283,8 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
         </article>)}
       </div>
       <div style={{ display: "grid", gap: 2, marginTop: 14 }}>
-        {overview.records.length > 0 ? overview.records.slice(0, showFullHistory ? undefined : 12).map(record => <article className="fc-date" key={record.id}>
-          <span><time dateTime={record.from}>{formatCivil(record.from, locale)}</time> – <time dateTime={record.untilBefore}>{formatCivil(record.untilBefore, locale)}</time></span>
+        {overview.records.length > 0 ? overview.records.slice(0, showFullHistory ? undefined : 12).map(record => <article className="fc-date fc-residence-record" key={record.id}>
+          <span className="fc-residence-dates"><time dateTime={record.from}>{formatCivil(record.from, locale)}</time> – <time dateTime={record.untilBefore}>{formatCivil(record.untilBefore, locale)}</time></span>
           <span><strong>{labelPlace(record.place, locale)}</strong><small>{labelSource(record.source, locale)}{record.absenceReason ? ` · ${labelReason(record.absenceReason, locale)}` : ""}{record.expectedReturnOn ? ` · ${t("计划回港", "Planned return")}: ${formatCivil(record.expectedReturnOn, locale)}` : ""}</small></span>
         </article>) : <p className="fc-muted">{t("暂无可显示的授权记录。", "No authorized residence records are available.")}</p>}
       </div>
@@ -292,11 +292,12 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
         aria-expanded={showFullHistory}>{showFullHistory ? t("收起较早记录", "Hide earlier records") : t("查看全部记录", "Show all records")}</button> : null}
       <div className="fc-context" role="status" aria-live="polite">
         <span>{t("通常居住辅助规划：需人工核验", "Ordinary-residence planning: human review required")}</span>
+        <span>{t("居留权与永居资格：需人工核验", "Right of abode and permanent residence: human review required")}</span>
         <span>{t("护照资格：需人工核验", "Passport eligibility: human review required")}</span>
       </div>
       {overview.canReport ? <form onSubmit={submitReport} aria-labelledby="identity-residence-report-title">
         <fieldset style={{ border: "1px solid #e6d8c5", borderRadius: 10, padding: 12 }}>
-          <legend id="identity-residence-report-title">{t("在受控授权下补充记录", "Add a record under controlled authorization")}</legend>
+          <legend id="identity-residence-report-title">{t("补充本人记录", "Add your record")}</legend>
           <p className="fc-muted">{t("提交日期和位置即可，无需上传证件。", "Submit dates and location. No documents are required.")}</p>
           <div className="fc-context">
             <label>{t("起始日（含）", "Start date (inclusive)")}<input required type="date" value={form.from} max={overview.asOf} onChange={event => setForm(current => ({ ...current, from: event.target.value }))} /></label>

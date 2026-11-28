@@ -206,6 +206,8 @@ export async function verifyFamilyResidenceBrowser({ handle, apiPath, revokeRead
     await desktop.page.screenshot({ path: join(output, "identity-residence-en-desktop.png"), fullPage: true });
     const mobile = await open("zh", 390);
     await mobile.residence.locator(`time[datetime="${toDay}"]`).waitFor();
+    assert.ok(await mobile.residence.locator(".fc-residence-dates time").evaluateAll(dates => dates.length > 0 &&
+      dates.every(date => getComputedStyle(date).whiteSpace === "nowrap" && date.scrollWidth <= date.clientWidth)));
     await mobile.residence.getByText("待核验区间", { exact: false }).first().click();
     await mobile.page.screenshot({ path: join(output, "identity-residence-zh-mobile.png"), fullPage: true });
     revokeRead();
