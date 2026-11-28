@@ -234,3 +234,27 @@ query("UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_times
 assert.equal((await get()).status, 403);
 assert.equal((await post(candidate)).status, 403);
 console.log("PASS Family OS inbox HTTP session, same-origin, minimized response, acknowledgement and revocation");
+
+if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
+  const { verifyFamilyInboxBrowser } = await import("./verify-browser.mjs");
+  query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
+    INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
+      date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
+    SELECT '01910000-0000-7000-8100-000000000010', identity_case_id, episode_id, date_revision_id,
+      date_kind, target_on, 14, recipient_principal_id, 'PENDING'
+    FROM identity.journey_station_reminders WHERE reminder_id = :'noticeId'::uuid;`, recipient);
+  assert.equal((await runStationReminderBatch(queue, 1)).delivered, 1);
+  await verifyFamilyInboxBrowser({
+    noticePath: identityNoticePath,
+    handle(request, browserOrigin, hasSession) {
+      return handleIdentityInbox(request, env, {
+        ...authConfig,
+        origin: browserOrigin,
+        verifySession: async () => hasSession ? authConfig.verifySession() : null,
+      });
+    },
+    revokeGrant() { query("UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_timestamp();"); },
+    receiptCount() { return Number(query("SELECT count(*) FROM identity.journey_station_notice_reads;")); },
+  });
+  console.log("PASS Chromium desktop and mobile inbox over HTTP and isolated PostgreSQL");
+}

@@ -4,6 +4,10 @@ on:
     paths:
       - 'database/canonical/forward-candidates/identity-journey/**'
       - 'website/phoenix-nova-website-v5/lib/identity-journey*.ts'
+      - 'website/phoenix-nova-website-v5/components/family-identity-inbox.tsx'
+      - 'website/phoenix-nova-website-v5/components/family-center-v2.tsx'
+      - 'website/phoenix-nova-website-v5/app/**/family-center/page.tsx'
+      - 'website/phoenix-nova-website-v5/app/api/family-services/identity-notices/**'
       - 'website/phoenix-nova-website-v5/tests/identity-journey.test.mjs'
       - '.github/workflows/identity-journey-candidate.yml'
 permissions:
@@ -11,7 +15,7 @@ permissions:
 jobs:
   candidate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 16
     strategy:
       fail-fast: false
       matrix:
@@ -24,4 +28,20 @@ jobs:
         with:
           node-version: '22.13.0'
       - run: node --experimental-strip-types --test website/phoenix-nova-website-v5/tests/identity-journey.test.mjs
+      - name: Install pinned browser and website components
+        if: matrix.pg == '17'
+        run: |
+          npm ci --prefix website/phoenix-nova-website-v5 --ignore-scripts --no-audit --no-fund
+          npm install --prefix "$RUNNER_TEMP/identity-journey-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          node "$RUNNER_TEMP/identity-journey-browser/node_modules/playwright/cli.js" install --with-deps chromium
       - run: bash database/canonical/forward-candidates/identity-journey/verify.sh '${{ matrix.pg }}'
+        env:
+          IDENTITY_BROWSER_EVIDENCE_DIR: ${{ matrix.pg == '17' && format('{0}/identity-inbox-evidence', runner.temp) || '' }}
+          PLAYWRIGHT_MODULE: ${{ matrix.pg == '17' && format('{0}/identity-journey-browser/node_modules/playwright', runner.temp) || '' }}
+      - name: Save synthetic inbox desktop and mobile evidence
+        if: matrix.pg == '17' && always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: identity-inbox-browser
+          path: ${{ runner.temp }}/identity-inbox-evidence/
+          if-no-files-found: error
