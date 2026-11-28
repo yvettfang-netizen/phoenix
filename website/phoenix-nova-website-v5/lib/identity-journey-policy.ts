@@ -21,6 +21,7 @@ export const identityPolicySources = {
   asmtp: "https://www.immd.gov.hk/eng/services/visas/ASMTP.html",
   gep: "https://www.immd.gov.hk/eng/services/visas/GEP.html",
   student: "https://www.immd.gov.hk/eng/services/visas/study.html",
+  studentGuidebook: "https://www.immd.gov.hk/pdforms/ID%28E%29996.pdf",
   iang: "https://www.immd.gov.hk/eng/services/visas/IANG.html",
   newCies: "https://www.immd.gov.hk/eng/services/visas/newcies.html",
   newCiesLaunchNotice:
@@ -152,7 +153,10 @@ export const identityPathways = {
     category: "admission",
     candidateOnly: true,
     policyRuleIds: ["IDP-STUDENT", reminderGuardRule],
-    sourceUrls: [identityPolicySources.immDEntryIndex],
+    sourceUrls: [
+      identityPolicySources.student,
+      identityPolicySources.studentGuidebook,
+    ],
   },
   IANG: {
     key: "IANG",
@@ -300,21 +304,32 @@ export type IdentityPolicyReviewedState =
   | "HISTORICAL_SCOPE_REVIEW_REQUIRED"
   | "PRODUCT_GOVERNANCE_REQUIRED";
 
+export type IdentityPolicyProfessionalReviewState =
+  | "PENDING"
+  | "APPROVED_WITH_SCOPE"
+  | "REJECTED";
+
 /** Stable schema version for this candidate registry (not an official policy version). */
 export const IDENTITY_POLICY_REGISTRY_VERSION =
-  "identity-policy-registry-v1.0.0" as const;
+  "identity-policy-registry-v1.1.0" as const;
 
 export type IdentityPolicyRule = Readonly<{
   ruleId: string;
   registryVersion: typeof IDENTITY_POLICY_REGISTRY_VERSION;
   /** Null means the official source did not expose a revision date in this review. */
   officialSourceRevisionDate: string | null;
+  /** Null means the official source did not expose a stable policy-version identifier. */
+  officialPolicyVersion: string | null;
+  historicalScopeZh: string;
+  historicalScopeEn: string;
   titleZh: string;
   titleEn: string;
   pathwayKeys: readonly (IdentityPathwayKey | "GENERAL")[];
   sourceUrls: readonly string[];
   sourceVerified: boolean;
   reviewedState: IdentityPolicyReviewedState;
+  /** Source review is not professional/legal approval. */
+  professionalReviewState: IdentityPolicyProfessionalReviewState;
   sourceCheckedOn: typeof IDENTITY_POLICY_AS_OF;
   effectiveFrom: string | null;
   effectiveTo: string | null;
@@ -332,15 +347,35 @@ const caseReviewEn =
 
 type IdentityPolicyRuleDraft = Omit<
   IdentityPolicyRule,
-  "registryVersion" | "officialSourceRevisionDate"
->;
+  | "registryVersion"
+  | "officialSourceRevisionDate"
+  | "officialPolicyVersion"
+  | "historicalScopeZh"
+  | "historicalScopeEn"
+  | "professionalReviewState"
+> & {
+  officialSourceRevisionDate?: string | null;
+  officialPolicyVersion?: string | null;
+  historicalScopeZh?: string;
+  historicalScopeEn?: string;
+  professionalReviewState?: IdentityPolicyProfessionalReviewState;
+};
+
+const defaultHistoricalScopeZh =
+  "本注册表未主张其他历史适用范围；须按官方来源版本及个案文件人工核验。";
+const defaultHistoricalScopeEn =
+  "This registry asserts no other historical scope; verify the source version and case documents manually.";
 
 const rule = <T extends IdentityPolicyRuleDraft>(
   value: T,
 ): IdentityPolicyRule => ({
   ...value,
   registryVersion: IDENTITY_POLICY_REGISTRY_VERSION,
-  officialSourceRevisionDate: null,
+  officialSourceRevisionDate: value.officialSourceRevisionDate ?? null,
+  officialPolicyVersion: value.officialPolicyVersion ?? null,
+  historicalScopeZh: value.historicalScopeZh ?? defaultHistoricalScopeZh,
+  historicalScopeEn: value.historicalScopeEn ?? defaultHistoricalScopeEn,
+  professionalReviewState: value.professionalReviewState ?? "PENDING",
 });
 
 export const identityPolicyRules = {
@@ -423,14 +458,29 @@ export const identityPolicyRules = {
     titleZh: "学生身份来源",
     titleEn: "Student status source record",
     pathwayKeys: ["STUDENT"],
-    sourceUrls: [identityPolicySources.immDEntryIndex],
-    sourceVerified: false,
-    reviewedState: "SOURCE_REVIEW_REQUIRED",
+    sourceUrls: [
+      identityPolicySources.student,
+      identityPolicySources.studentGuidebook,
+    ],
+    sourceVerified: true,
+    reviewedState: "OFFICIAL_SOURCE_REVIEWED",
     sourceCheckedOn: IDENTITY_POLICY_AS_OF,
     effectiveFrom: null,
     effectiveTo: null,
-    conditionsZh: ["本候选项只标记学习／教育用途；具体学校、课程、签证及逗留期限须另行按官方个案资料核验。"],
-    conditionsEn: ["This candidate marks education/study purpose only; school, programme, visa and stay details require separate official case verification."],
+    officialSourceRevisionDate: "2025-11",
+    officialPolicyVersion: "ID(E) 996 (11/2025) 2-4",
+    historicalScopeZh:
+      "本条仅核验 2025-11 版学生入境指南的当前来源范围；更早或其他历史学生安排须按相应版本和个案文件处理。",
+    historicalScopeEn:
+      "This rule verifies the scope of the 2025-11 study-entry guide only; earlier or other historical student arrangements require their applicable version and case documents.",
+    conditionsZh: [
+      "官方学生页面涵盖合资格学校／课程、学校录取、生活及学费承担，以及相关本地担保和未成年监护安排。",
+      "具体学校、课程、签证、获准逗留期限及续期日期须另按官方个案资料核验；本规则不预设任何期限。",
+    ],
+    conditionsEn: [
+      "The official student page covers qualifying schools/programmes, acceptance, financial support and relevant local sponsorship and minor-guardian arrangements.",
+      "School, programme, visa, permitted stay and extension dates require separate case verification; this rule presets no duration.",
+    ],
     humanReviewConditionZh: caseReviewZh,
     humanReviewConditionEn: caseReviewEn,
     automationGuardrail: "NO_AUTOMATIC_DECISION",
@@ -484,7 +534,14 @@ export const identityPolicyRules = {
     reviewedState: "HISTORICAL_SCOPE_REVIEW_REQUIRED",
     sourceCheckedOn: IDENTITY_POLICY_AS_OF,
     effectiveFrom: null,
-    effectiveTo: "2015-01-15",
+    // General intake was suspended on 2015-01-15; the historical rules
+    // continue to apply to qualifying pending and transitional cases.
+    effectiveTo: null,
+    officialSourceRevisionDate: "2022-11-29",
+    historicalScopeZh:
+      "官方过渡说明覆盖：2015-01-15 前已收件、已获原则上批准／正式批准或仍在处理的申请；停办后仅限符合官方过渡安排的历史投资及申请时限。",
+    historicalScopeEn:
+      "The official transitional material covers applications received before 2015-01-15, including approved, approval-in-principle and pending cases; after suspension, only the official transitional investment and filing windows apply.",
     conditionsZh: ["官方资料显示旧计划自 2015-01-15 起暂停；已批准或历史个案必须按其当时批准文件及适用规则处理。"],
     conditionsEn: ["Official material records suspension from 2015-01-15; approved or historical cases require their contemporaneous approval documents and applicable rules."],
     humanReviewConditionZh: "须人工核对收件日、批准／原则上批准状态及当时适用规则；禁止以现行新计划覆盖历史事实。",

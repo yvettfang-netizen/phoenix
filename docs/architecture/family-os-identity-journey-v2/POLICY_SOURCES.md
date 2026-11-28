@@ -26,12 +26,18 @@ documents.
   governance.
 - A page being marked `OFFICIAL_SOURCE_REVIEWED` means that the source was
   reachable and its scope was understood; it does not mean that every policy
-  condition or a person's eligibility has been verified.
+  condition or a person's eligibility has been verified. Every rule currently
+  carries `professionalReviewState: PENDING`; source review is not legal,
+  immigration or professional approval.
 - `registryVersion` is the stable schema snapshot identifier
-  `identity-policy-registry-v1.0.0`; it is not an official policy version.
+  `identity-policy-registry-v1.1.0`; it is not an official policy version.
 - `officialSourceRevisionDate` is null when the official source does not expose
   a revision date in this review. It is distinct from `sourceCheckedOn`, which
   records when this registry was checked.
+- `professionalReviewState` is a separate gate from source review. It remains
+  `PENDING` until the designated policy professional records an approval with
+  an explicit scope; no current rule is marked approved by this candidate
+  implementation.
 - `effectiveFrom` and `effectiveTo` are null unless a formal date was verified
   in an official source. The only historical dates intentionally recorded in
   this candidate register are the New CIES launch date (2024-03-01) and old
@@ -51,7 +57,7 @@ documents.
 | QMAS | [Quality Migrant Admission Scheme](https://www.immd.gov.hk/eng/services/visas/quality_migrant_admission_scheme.html) | QMAS | `OFFICIAL_SOURCE_REVIEWED` |
 | ASMTP | [Admission Scheme for Mainland Talents and Professionals](https://www.immd.gov.hk/eng/services/visas/ASMTP.html) | ASMTP | `OFFICIAL_SOURCE_REVIEWED` |
 | GEP | [General Employment Policy](https://www.immd.gov.hk/eng/services/visas/GEP.html) | GEP and related dependant context | `OFFICIAL_SOURCE_REVIEWED` |
-| Study | [Immigration Department entry-permit index](https://www.immd.gov.hk/eng/services/index.html) | STUDENT candidate; exact current study page and case terms require review | `SOURCE_REVIEW_REQUIRED` |
+| Study | [Students](https://www.immd.gov.hk/eng/services/visas/study.html), [Guidebook for Entry for Study in Hong Kong (ID(E) 996)](https://www.immd.gov.hk/pdforms/ID%28E%29996.pdf) | STUDENT; qualifying school/programme, acceptance, sponsor/guardian and financial-support scope reviewed; case terms still require review | `OFFICIAL_SOURCE_REVIEWED` |
 | IANG | [Immigration Arrangements for Non-local Graduates](https://www.immd.gov.hk/eng/services/visas/IANG.html) | IANG | `OFFICIAL_SOURCE_REVIEWED` |
 | New CIES | [New Capital Investment Entrant Scheme](https://www.immd.gov.hk/eng/services/visas/newcies.html) | NEW_CIES | `OFFICIAL_SOURCE_REVIEWED` |
 | New CIES (InvestHK) | [InvestHK New CIES resources](https://www.newcies.gov.hk/en/resources/), [InvestHK FAQs](https://www.newcies.gov.hk/en/resources/faqs/) | Financial-asset/investment verification and implementation hand-off context | `OFFICIAL_SOURCE_REVIEWED` |
@@ -79,7 +85,7 @@ persisted as synonyms until the audit is complete.
 | `QMAS` | 优秀人才入境计划 / Quality Migrant Admission Scheme | QMAS official page | Current criteria require case review |
 | `ASMTP` | 输入内地人才计划 / Admission Scheme for Mainland Talents and Professionals | ASMTP official page | Keep separate from GEP and technical stream |
 | `GEP` | 一般就业政策 / General Employment Policy | GEP official page | Employment, sponsor and dependant facts are separate |
-| `STUDENT` | 学生身份（教育／学习） / Student status | ImmD entry index | Exact current study route still requires source review |
+| `STUDENT` | 学生身份（教育／学习） / Student status | ImmD Students page and ID(E) 996 (11/2025) guidebook | Current source scope reviewed; no generic stay duration encoded |
 | `IANG` | 非本地毕业生留港／回港就业安排 / IANG | IANG official page | Graduation, work and case dates require review |
 | `NEW_CIES` | 新资本投资者入境计划 / New CIES | New CIES official page | Separate from legacy CIES and ROA; launch date verified |
 | `LEGACY_CIES` | 资本投资者入境计划（历史记录） / Legacy CIES | Suspension notice and FAQ | Historical-only; do not rewrite with New CIES |
@@ -103,6 +109,26 @@ person's identity history. A person's actual first-entry deadline, permitted
 stay, extension window or document expiry must be sourced from the verified
 case document and stored as a case fact. Historical approved terms remain
 historical facts.
+
+### 4.1a Policy version and source audit metadata
+
+Each exported rule carries:
+
+- `registryVersion: identity-policy-registry-v1.1.0`, the stable snapshot
+  version of this candidate registry;
+- `sourceCheckedOn: 2026-11-28`, the date this implementation checked the
+  official URL; and
+- `officialSourceRevisionDate` and `officialPolicyVersion`, which remain
+  `null` unless the official source itself exposes a revision/version value.
+- `professionalReviewState`, which is currently `PENDING` for every rule and
+  must not be inferred from `sourceVerified` or `reviewedState`.
+
+These fields must not be interpreted as a legal effective date. For example,
+the study guidebook explicitly identifies `ID(E) 996 (11/2025) 2-4`, so the
+Student rule records that document version and `2025-11`; the Legacy CIES FAQ
+displays a page date of `2022-11-29`, which is recorded as source metadata and
+not as a policy commencement date. Every rule also exposes a bilingual
+historical-scope statement; an unknown scope remains a human-review item.
 
 ### 4.2 Right of abode, right to land and unconditional stay are separate
 
@@ -140,6 +166,17 @@ official notice records suspension from 2015-01-15; the official Chinese
 Immigration Department page records the New CIES launch on 2024-03-01. Existing
 historical cases must be assessed against their own approval and transitional
 documents. The New CIES rules must not overwrite the legacy case.
+
+The official legacy CIES FAQ further distinguishes the transitional scope: an
+application received before 2015-01-15 remains within the scheme's handling,
+including approved, approval-in-principle and pending applications; after the
+suspension date, the transitional route required at least HK$10 million in
+permissible assets made within the six months immediately before the suspension
+date and an application within six months of the investment, subject to the
+other scheme conditions. The FAQ also states that, absent approval-in-principle,
+investment completed on or after the suspension date is not accepted. These
+facts are recorded only as historical review context; the registry does not
+calculate or decide a CIES case.
 
 ### 4.7 Reminder gate
 

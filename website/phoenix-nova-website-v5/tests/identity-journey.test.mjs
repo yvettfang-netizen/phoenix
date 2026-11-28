@@ -148,3 +148,15 @@ test("policy pathways remain reference-only, with separately indexed investment 
   assert.notDeepEqual(identityPathways.UNCONDITIONAL_STAY.policyRuleIds, identityPathways.HK_PERMANENT_RESIDENT.policyRuleIds);
   assert.notDeepEqual(identityPathways.STUDENT.policyRuleIds, identityPathways.IANG.policyRuleIds);
 });
+
+test("verified sources do not finalize professional review or terminate transitional CIES scope", () => {
+  const study = identityPolicyRules["IDP-STUDENT"];
+  const legacy = identityPolicyRules[identityPathways.LEGACY_CIES.policyRuleIds[0]];
+  assert.equal(study.sourceVerified, true);
+  assert.equal(study.officialPolicyVersion, "ID(E) 996 (11/2025) 2-4");
+  assert.equal(study.effectiveFrom, null);
+  assert.equal(legacy.effectiveTo, null);
+  assert.equal(legacy.officialPolicyVersion, null);
+  assert.match(legacy.historicalScopeZh, /过渡/);
+  assert.ok(Object.values(identityPolicyRules).every(rule => rule.professionalReviewState === "PENDING"));
+});
