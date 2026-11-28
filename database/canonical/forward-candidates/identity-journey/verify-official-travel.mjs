@@ -64,7 +64,7 @@ export async function verifyOfficialTravel({ query, recipient, authConfig, brows
     return value.toISOString().slice(0, 10);
   };
 
-  // Two unambiguous pairs generate exact interior whole-day intervals.  The
+  // Three unambiguous pairs generate exact interior whole-day intervals. The
   // same-day ARRIVAL/DEPARTURE pair remains visible as source movement data,
   // but cannot create a residence interval or add a day.
   const dates = [
@@ -129,12 +129,18 @@ export async function verifyOfficialTravel({ query, recipient, authConfig, brows
   assert.equal(query(`SELECT count(*) FROM identity.journey_residence_intervals
     WHERE identity_case_id=:'caseId'::uuid AND record_source='OFFICIAL_RECORD'
       AND evidence_version_id=:'documentVersion'::uuid AND document_id=:'document'::uuid
-      AND confirmed_report_id IS NULL AND official_fact_id IS NULL;`, fields), "2");
+      AND confirmed_report_id IS NULL AND official_fact_id IS NULL;`, fields), "3");
   assert.equal(query(`SELECT count(*) FROM identity.journey_residence_intervals
     WHERE identity_case_id=:'caseId'::uuid AND record_source='OFFICIAL_RECORD'
       AND evidence_version_id=:'documentVersion'::uuid
       AND from_on=:'firstFrom'::date AND until_before=:'firstUntil'::date;`, {
     ...fields, firstFrom: addDays(today, -74), firstUntil: addDays(today, -70),
+  }), "1");
+  assert.equal(query(`SELECT count(*) FROM identity.journey_residence_intervals
+    WHERE identity_case_id=:'caseId'::uuid AND record_source='OFFICIAL_RECORD'
+      AND evidence_version_id=:'documentVersion'::uuid AND location_class='AWAY'
+      AND from_on=:'awayFrom'::date AND until_before=:'awayUntil'::date;`, {
+    ...fields, awayFrom: addDays(today, -69), awayUntil: addDays(today, -65),
   }), "1");
   assert.equal(query(`SELECT count(*) FROM identity.journey_residence_intervals
     WHERE identity_case_id=:'caseId'::uuid AND record_source='OFFICIAL_RECORD'
@@ -150,7 +156,7 @@ export async function verifyOfficialTravel({ query, recipient, authConfig, brows
   assert.equal(inAdvisor(`SELECT ${importExpression(dateArray, changedDirections, intervalArray)};`, fields), "DENIED");
   assert.equal(query(`SELECT count(*) FROM identity.journey_residence_intervals
     WHERE identity_case_id=:'caseId'::uuid AND record_source='OFFICIAL_RECORD'
-      AND evidence_version_id=:'documentVersion'::uuid;`, fields), "2");
+      AND evidence_version_id=:'documentVersion'::uuid;`, fields), "3");
 
   // Typed malformed/future input is rejected before any source row can be
   // created.  UUID-array shape and duplicate interval IDs are also bounded.
