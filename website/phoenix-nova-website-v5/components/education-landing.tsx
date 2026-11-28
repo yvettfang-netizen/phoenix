@@ -23,32 +23,66 @@ const educationStages = [
 ] as const;
 const educationPricingPackages = [
   {
-    id: "standard",
-    name: ["香港升学标准套餐", "Hong Kong Admissions · Standard"],
-    price: ["¥39,980 起", "From RMB 39,980"],
-    description: ["适合目标方向较清晰、希望获得专业申请支持的学生及家庭。", "For students and families seeking structured support for a defined admissions direction."],
-    features: [["背景评估与院校专业规划", "Background review and programme planning"], ["申请材料与递交进度支持", "Application materials and submission guidance"]],
+    id: "primary",
+    name: ["香港小学入学／插班标准套餐", "Hong Kong Primary School · Standard"],
+    price: ["¥39,980", "RMB 39,980"],
+    description: ["适合拟赴港读小一或申请小学插班的家庭；按子女资格、学校类别和年级规划。", "For families considering Primary One entry or a transfer; eligibility, school type and year level are reviewed first."],
+    features: [
+      ["资格、校网及学校类别评估", "Eligibility, school-net and school-type review"],
+      ["最多10所学校的选校及适用申请支持", "School selection and applicable application support for up to 10 schools"],
+      ["官津小一派位按教育局制度办理；直资／私立申请按校方规定", "Government/aided Primary One allocation follows EDB rules; DSS/private applications follow individual schools"],
+    ],
   },
   {
-    id: "vip",
+    id: "gaokao-hk-undergraduate",
+    name: ["内地高考报读香港本科标准套餐", "Mainland Gaokao → Hong Kong Undergraduate · Standard"],
+    price: ["¥39,980", "RMB 39,980"],
+    description: ["面向参加内地高考并拟申请香港高校本科的学生；先核对各院校招生资格与申请途径。", "For mainland Gaokao students applying to Hong Kong bachelor's programmes; institutional eligibility and routes are checked first."],
+    features: [
+      ["高考背景评估、大学与专业组合规划", "Gaokao profile review and university/programme shortlist"],
+      ["最多10个适用申请项目的材料与时间节点支持", "Materials and deadline support for up to 10 eligible application choices"],
+      ["独立招生、成绩补交与面试安排以各院校官方规则为准", "Direct admission, score uploads and interviews follow each institution's official rules"],
+    ],
+  },
+  {
+    id: "masters-standard",
+    name: ["香港硕士标准申请套餐", "Hong Kong Master's · Standard"],
+    price: ["¥39,980", "RMB 39,980"],
+    description: ["适合申请方向较清晰、希望获得标准化申请规划与递交协助的学生。", "For master's applicants seeking structured programme planning and submission assistance."],
+    features: [
+      ["背景评估、申请路径与专业选择", "Background assessment, admissions pathway and programme selection"],
+      ["最多10个申请项目的材料与递交进度支持", "Documents and submission tracking for up to 10 application choices"],
+    ],
+  },
+  {
+    id: "masters-vip",
     name: ["香港硕士 VIP 全程申请", "Hong Kong Master's · VIP"],
     price: ["¥89,980", "RMB 89,980"],
-    description: ["适合希望获得更深入申请规划和全过程顾问支持的申请者。", "For applicants seeking more detailed planning and continuing advisory support."],
-    features: [["个性化申请路径与材料策略", "Tailored application and document strategy"], ["多阶段申请跟进与选择建议", "Multi-stage follow-up and offer guidance"]],
+    description: ["适合希望获得更深入申请策略和全过程顾问支持的申请者。", "For applicants seeking a more tailored strategy and continuing advisory support."],
+    features: [
+      ["个性化申请路径与材料策略", "Tailored application and document strategy"],
+      ["多阶段申请跟进及录取结果选择建议", "Multi-stage follow-up and offer selection guidance"],
+    ],
   },
   {
     id: "tailored",
-    name: ["高目标院校与复杂背景定制", "Selective Universities · Tailored"],
-    price: ["评估后报价", "Quoted after assessment"],
-    description: ["涵盖具有特殊背景或较高目标要求的申请，不以学校排名直接承诺结果。", "For complex profiles or selective goals; university rankings are not an outcome promise."],
-    features: [["先评估适配的院校及专业范围", "Evaluate suitable universities and programmes first"], ["风险共担或退款安排须另立书面条款", "Any risk-sharing or refund terms require a separate written agreement"]],
+    name: ["名校目标／复杂背景定制", "Selective Universities · Tailored"],
+    price: ["评估后书面报价", "Written quote after assessment"],
+    description: ["高目标院校、特殊资格或其他复杂需求按实际服务范围定制。", "Selective goals, unusual qualifications and complex applications are scoped individually."],
+    features: [
+      ["先核实适用资格与可行申请范围", "Confirm eligibility and a viable programme scope"],
+      ["任何风险共担及退款条款须单独书面约定", "Any risk-sharing or refund terms require separate written agreement"],
+    ],
   },
   {
     id: "research",
-    name: ["博士 PhD / DBA 进阶规划", "PhD / DBA · Research Pathways"],
-    price: ["评估后报价", "Quoted after assessment"],
-    description: ["按研究方向、申请类型与实际工作量确认服务范围。", "Scope depends on research aims, programme type and the work required."],
-    features: [["研究定位与申请路径评估", "Research positioning and admissions pathway review"], ["导师沟通与材料支持按方案约定", "Supervisor outreach and materials support as contracted"]],
+    name: ["博士 PhD／DBA 进阶规划", "PhD / DBA · Research Pathways"],
+    price: ["评估后书面报价", "Written quote after assessment"],
+    description: ["按照研究方向、申请类型及实际交付范围确定服务。", "Fees are tailored to research interests, programme type and deliverables."],
+    features: [
+      ["研究定位、学术背景与申请路径评估", "Research positioning, academic profile and admissions review"],
+      ["导师沟通和材料支持按合同范围执行", "Supervisor outreach and materials support as contracted"],
+    ],
   },
 ] as const;
 
