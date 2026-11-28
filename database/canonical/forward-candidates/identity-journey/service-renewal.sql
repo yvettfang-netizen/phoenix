@@ -59,6 +59,17 @@ BEGIN
   IF NOT FOUND OR service.workbench_opened(review_project) IS NOT TRUE
     OR service.workbench_writer(review_project) IS NOT TRUE
   THEN RETURN NULL; END IF;
+  -- The intake link is historical provenance. The decision and notice grants
+  -- remain independent and are evaluated when the attested result is applied.
+  PERFORM 1 FROM service.projects project
+    JOIN identity.journey_crm_service_links origin ON origin.deal_id=project.deal_id
+    JOIN crm.consultations c ON c.consultation_id=origin.consultation_id
+    JOIN crm.lead_events e ON e.lead_event_id=origin.lead_event_id AND e.lead_id=c.lead_id
+    WHERE project.service_project_id=review_project AND c.family_id=project.family_id
+      AND c.client_id=project.client_id AND c.subject_person_id=renewal_subject
+      AND e.need_subject_person_id=renewal_subject
+    FOR SHARE OF origin, c;
+  IF NOT FOUND THEN RETURN NULL; END IF;
   PERFORM 1 FROM service.workbench_settings WHERE service_project_id = review_project FOR UPDATE;
   IF NOT FOUND THEN RETURN NULL; END IF;
 

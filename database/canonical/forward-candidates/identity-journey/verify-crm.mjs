@@ -7,11 +7,14 @@ export async function verifyCrmHandoff({ query, recipient, authConfig }) {
   const actor = "01910000-0000-7000-8100-000000000002";
   const lead = "01910000-0000-7000-8100-000000000025";
   const client = "01910000-0000-7000-8100-000000000023";
+  const clientLink = "01910000-0000-7000-8100-000000000026";
   const contract = "01910000-0000-7000-8100-000000000027";
   const consent = "01910000-0000-7000-8100-000000000028";
   const event = "01910000-0000-7000-8100-000000000029";
+  const educationEvent = "01910000-0000-7000-8100-000000000030";
   const revision = identityConsultationRevision;
-  const vars = { ...recipient, actor, lead, client, contract, consent, event, revision };
+  const vars = { ...recipient, actor, lead, client, clientLink, contract, consent, event,
+    educationEvent, revision };
 
   query(`SELECT crm.register_acquisition_contract(:'contract'::uuid,
     '01910000-0000-7000-8100-000000000024', 'fixture-1',
@@ -37,7 +40,6 @@ export async function verifyCrmHandoff({ query, recipient, authConfig }) {
     return output.split("\n").filter(Boolean).at(-1);
   }
 
-  const educationEvent = "01910000-0000-7000-8100-000000000030";
   assert.equal(asFamily(`SELECT crm.assert_lead_need(:'educationEvent'::uuid, :'lead'::uuid, :'contract'::uuid,
     'EDUCATION','USER_SELECTED','ASSERT',NULL,NULL,'ci-education-context',repeat('b',64));`, { educationEvent }), educationEvent);
 
@@ -126,9 +128,26 @@ export async function verifyCrmHandoff({ query, recipient, authConfig }) {
     WHERE e.lead_event_id = :'event'::uuid AND e.recorded_by_login = 'identity_journey_fixture_app'
       AND e.actor_principal_id = :'principalId'::uuid AND l.client_id = :'client'::uuid
       AND r.topic = 'RENEWAL' AND r.horizon = 'WITHIN_90_DAYS' AND r.consent_id = :'consent'::uuid;`, vars), "1");
-  query("UPDATE identity_journey_test.crm_intent SET withdrawn_at = clock_timestamp();");
-  assert.equal((await submit()).status, 403);
-  assert.equal(identityNeeds(), "1");
-  console.log("PASS verified stay-expiry notice to Canonical 0036 FAMILY need, minimal urgency band, existing Client/Lead, withdrawal and idempotency");
-  return { actor, lead, client, event };
+
+  // Keep the synthetic receipt live for the downstream CRM/service-chain
+  // adapter.  The final withdrawal is deliberately exposed as a callback so
+  // the chain can prove that the already-created service link cannot be used
+  // for a later schedule/deal mutation once consent is withdrawn.
+  let withdrawn = false;
+  async function verifyWithdrawnReceipt() {
+    assert.equal(withdrawn, false, "synthetic consent withdrawal is one-way in this fixture");
+    assert.equal(query(`SELECT count(*) FROM identity_journey_test.crm_receipt
+      WHERE consent_id = :'consent'::uuid AND lead_event_id = :'event'::uuid;`, vars), "1");
+    query(`UPDATE identity_journey_test.crm_intent SET withdrawn_at = clock_timestamp()
+      WHERE consent_id = :'consent'::uuid;`, vars);
+    withdrawn = true;
+    assert.equal(query(`SELECT identity_journey_test.record_crm_need(
+      :'noticeId'::uuid, :'revision', :'event'::uuid, 'RENEWAL', 'TO_REVIEW');`, vars), "DENIED");
+    assert.equal((await submit()).status, 403);
+    assert.equal(identityNeeds(), "1");
+    console.log("PASS synthetic CRM receipt withdrawal denies later family handoff");
+  }
+
+  console.log("PASS verified stay-expiry notice to Canonical 0036 FAMILY need, minimal urgency band, existing Client/Lead and idempotency");
+  return { actor, lead, client, clientLink, contract, consent, event, educationEvent, verifyWithdrawnReceipt };
 }

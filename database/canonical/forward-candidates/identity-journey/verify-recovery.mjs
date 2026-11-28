@@ -45,6 +45,8 @@ export async function verifyRenewalRecovery({ container, query, restoredQuery, r
   assert.equal(beforeWithdrawal.service_renewal.task_status, "COMPLETED");
   assert.equal(beforeWithdrawal.service_renewal.completion_event_count, 1);
   assert.equal(beforeWithdrawal.service_renewal.workbench_completion_event_count, 1);
+  assert.deepEqual([beforeWithdrawal.authorization.crm.consultation_id, beforeWithdrawal.authorization.crm.deal_id],
+    [id(70), id(75)]);
   assert.equal(beforeWithdrawal.canonical_ledger.count, 37);
   assert.ok(beforeWithdrawal.candidate_security.grants.every(row => row.allowed === false));
   assert.equal(query(`SELECT count(*) FROM docs.documents d JOIN consent.grants g USING (family_id,subject_person_id)

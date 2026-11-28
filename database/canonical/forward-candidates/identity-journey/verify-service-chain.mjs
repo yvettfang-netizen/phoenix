@@ -3,7 +3,8 @@ import { identityRenewalServiceActions } from "../../../../website/phoenix-nova-
 
 export async function verifyServiceChain({ query, recipient, crmFixture }) {
   const id = sequence => `01910000-0000-7000-8100-${String(sequence).padStart(12, "0")}`;
-  const vars = { ...recipient, ...crmFixture, consultation: id(70), deal: id(75), project: id(80),
+  const { verifyWithdrawnReceipt, ...crmValues } = crmFixture;
+  const vars = { ...recipient, ...crmValues, consultation: id(70), deal: id(75), project: id(80),
     advisorPerson: id(40), advisorPrincipal: id(41) };
   // Existing authorities receive distinct Canonical principals and one-use
   // contexts. Consultation dates and financial references below are synthetic.
@@ -22,7 +23,7 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
     advisor: { principal: vars.advisorPrincipal, person: vars.advisorPerson, channel: "ADVISOR", login: "workbench" },
     family: { principal: recipient.principalId, person: vars.actor, channel: "FAMILY", login: "workbench" },
   };
-  function invoke(name, command, fields = {}) {
+  function invoke(name, command, fields = {}, login = contexts[name].login) {
     const ctx = contexts[name];
     const ticket = query(`SELECT auth.issue_context_ticket(:'principal'::uuid, nullif(:'person','')::uuid, :'familyId'::uuid,
       :'channel', clock_timestamp()+interval '45 seconds', gen_random_uuid(), :'principal'::uuid);`,
@@ -33,15 +34,102 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
       SELECT auth.redeem_context_ticket(:'ticket'::uuid, :'principal'::uuid);
       ${command}
       SELECT auth.clear_context();
-      COMMIT;`, { ...vars, ...ctx, ...fields, ticket }, ctx.login);
+      COMMIT;`, { ...vars, ...ctx, ...fields, ticket }, login);
   }
 
-  assert.equal(invoke("crm", `SELECT crm.create_consultation(:'consultation'::uuid, :'lead'::uuid, :'client'::uuid,
-    :'familyId'::uuid, :'actor'::uuid, 'IDENTITY', 'DISCOVERY', NULL, :'advisorPrincipal'::uuid,
-    clock_timestamp()+interval '1 hour', '${id(71)}');`), "t");
-  assert.equal(invoke("crm", `SELECT crm.create_managed_deal(:'deal'::uuid, '${id(76)}', :'client'::uuid,
-    :'familyId'::uuid, :'lead'::uuid, :'consultation'::uuid, 'Synthetic identity renewal opportunity',
-    'IDENTITY', 0, 'HKD', NULL, :'advisorPrincipal'::uuid, NULL, '${id(77)}');`), "t");
+  // The private CRM bridge is intentionally not executable by the generic
+  // app login. Bootstrap is used only by this isolated synthetic harness to
+  // issue the INTERNAL canonical_crm_v2 context and hold the exact fixture
+  // intent/receipt rows for the whole adapter transaction. The adapter still
+  // performs its own binding checks; this lock prevents a different receipt
+  // from being treated as permission.
+  function withReceipt(expression, fields) {
+    return invoke("crm", `WITH locked_receipt AS MATERIALIZED (
+      SELECT i.expires_at FROM identity_journey_test.crm_intent i
+      JOIN identity_journey_test.crm_receipt r USING (consent_id)
+      WHERE i.consent_id=:'consent'::uuid AND r.lead_event_id=:'event'::uuid
+        AND i.notice_id=:'noticeId'::uuid AND i.recipient_id=:'principalId'::uuid AND i.lead_id=:'lead'::uuid
+        AND i.accepted_topic='RENEWAL' AND r.topic='RENEWAL' AND i.withdrawn_at IS NULL
+      FOR SHARE OF i,r
+    )
+    SELECT ${expression} FROM locked_receipt
+      WHERE expires_at > clock_timestamp() + interval '4 seconds';`, fields, "bootstrap");
+  }
+
+  assert.equal(query(`SELECT has_function_privilege(current_user,
+    'identity.schedule_journey_crm_consultation(uuid,uuid,uuid,uuid,uuid,timestamptz,uuid)', 'EXECUTE');`, {}, "app"), "f");
+  assert.equal(query(`SELECT has_function_privilege(current_user,
+    'identity.create_journey_crm_deal(uuid,uuid,uuid,uuid,text,numeric,text,uuid)', 'EXECUTE');`, {}, "app"), "f");
+
+  // The adapter is the only permitted bridge from the accepted identity need
+  // to CRM.  All negative cases must return NULL before any consultation or
+  // deal row is created; the fixture uses the education need and opaque UUIDs
+  // to prove domain, consent and verified-link binding rather than merely
+  // checking that the input is well formed.
+  const scheduledAt = query("SELECT clock_timestamp() + interval '1 hour';");
+  const schedule = `identity.schedule_journey_crm_consultation(
+    :'event'::uuid, :'consent'::uuid, :'clientLink'::uuid, :'consultation'::uuid,
+    :'advisorPrincipal'::uuid, :'scheduledAt'::timestamptz, :'consultationEvent'::uuid)`;
+  const appointment = { scheduledAt, consultationEvent: id(72) };
+  const book = (fields = {}) => withReceipt(schedule, { ...appointment, ...fields });
+  assert.equal(book({ consent: id(62) }), "", "a missing receipt cannot schedule a consultation");
+  assert.equal(book({ clientLink: id(63) }), "", "an unverified client link cannot schedule a consultation");
+  assert.equal(invoke("crm", `SELECT ${schedule};`, { ...appointment, event: vars.educationEvent }, "bootstrap"),
+    "", "the private SQL boundary also rejects an education need");
+  assert.equal(book(), vars.consultation);
+  assert.equal(query(`SELECT count(*) FROM identity.journey_crm_service_links
+    WHERE lead_event_id=:'event'::uuid AND verified_link_id=:'clientLink'::uuid
+      AND consultation_id=:'consultation'::uuid AND deal_id IS NULL;`, vars), "1");
+  // Exact replay is idempotent; a different consultation ID is rejected and
+  // cannot create a second provenance link for the same lead event.
+  assert.equal(book(), vars.consultation);
+  assert.equal(book({ consultation: id(60), consultationEvent: id(61) }), "",
+    "a replay with a different consultation ID cannot duplicate the link");
+
+  // A deal is not allowed before the consultation is completed.  This is the
+  // service-chain refusal boundary, not a client-side ordering convention.
+  const dealInput = { dealAssignment: id(76), dealEvent: id(77) };
+  const makeDeal = (fields = {}) => withReceipt(`identity.create_journey_crm_deal(
+    :'event'::uuid, :'consent'::uuid, :'deal'::uuid, :'dealAssignment'::uuid,
+    'Synthetic identity renewal opportunity', 0, 'HKD', :'dealEvent'::uuid)`, { ...dealInput, ...fields });
+  assert.equal(makeDeal(), "", "a deal cannot be created before consultation follow-up is complete");
+
+  const consultationStartedEvent = id(160);
+  const consultationCompletedEvent = id(161);
+  assert.equal(invoke("crm", `SELECT crm.transition_consultation(
+    :'consultation'::uuid, 'IN_PROGRESS', 'IDENTITY_RENEWAL_REVIEW',
+    'IDENTITY_RENEWAL_SERVICE', :'consultationStartedEvent'::uuid);`, {
+    consultationStartedEvent,
+  }), "t");
+  assert.equal(invoke("crm", `SELECT crm.transition_consultation(
+    :'consultation'::uuid, 'COMPLETED', 'IDENTITY_RENEWAL_REVIEW',
+    'IDENTITY_RENEWAL_SERVICE', :'consultationCompletedEvent'::uuid);`, {
+    consultationCompletedEvent,
+  }), "t");
+  assert.equal(query(`SELECT count(*) FROM crm.consultation_events
+    WHERE consultation_id=:'consultation'::uuid AND event_kind='STATUS_CHANGED'
+      AND consultation_event_id IN (:'consultationStartedEvent'::uuid, :'consultationCompletedEvent'::uuid);`, {
+    ...vars, consultationStartedEvent, consultationCompletedEvent,
+  }), "2");
+
+  assert.equal(makeDeal(), vars.deal);
+  assert.equal(makeDeal(), vars.deal, "exact deal replay is idempotent");
+  assert.equal(makeDeal({ deal: id(64), dealAssignment: id(65), dealEvent: id(66) }), "",
+    "a replay with a different deal ID cannot duplicate the link");
+  assert.equal(query(`SELECT count(*) FROM identity.journey_crm_service_links
+    WHERE lead_event_id=:'event'::uuid AND verified_link_id=:'clientLink'::uuid
+      AND consultation_id=:'consultation'::uuid AND deal_id=:'deal'::uuid;`, vars), "1");
+
+  // The accepted handoff is withdrawn only after the natural consultation →
+  // deal chain exists.  The candidate adapter must then deny both operations
+  // in fresh INTERNAL transactions, while leaving the persisted provenance
+  // row immutable and exact.
+  await verifyWithdrawnReceipt();
+  assert.equal(book(), "", "withdrawn consent denies later consultation scheduling");
+  assert.equal(makeDeal(), "", "withdrawn consent denies later deal creation");
+  assert.equal(query(`SELECT count(*) FROM identity.journey_crm_service_links
+    WHERE lead_event_id=:'event'::uuid AND verified_link_id=:'clientLink'::uuid
+      AND consultation_id=:'consultation'::uuid AND deal_id=:'deal'::uuid;`, vars), "1");
   assert.equal(invoke("service", `SELECT service.create_project(:'project'::uuid, :'client'::uuid, :'familyId'::uuid,
     :'deal'::uuid, 'SYN_IDENTITY_RENEWAL', 'Synthetic identity renewal project', 'IDENTITY', NULL, NULL, '${id(81)}');
     SELECT service.add_project_subject_authorized('${id(82)}', :'project'::uuid, :'actor'::uuid, 'IDENTITY', NULL, '${id(83)}');
@@ -103,14 +191,17 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
   assert.ok(familyTasks.every(task => task.audience === "CLIENT"));
   assert.equal(query(`SELECT count(*) FROM identity_journey_test.crm_receipt receipt
     JOIN crm.lead_events need USING(lead_event_id)
-    JOIN crm.consultations c ON c.lead_id=need.lead_id AND c.business_domain='IDENTITY'
-    JOIN crm.deals d ON d.primary_lead_id=need.lead_id AND d.client_id=c.client_id AND d.family_id=c.family_id
+    JOIN identity.journey_crm_service_links origin ON origin.lead_event_id=need.lead_event_id
+    JOIN crm.consultations c ON c.consultation_id=origin.consultation_id AND c.lead_id=need.lead_id
+      AND c.business_domain='IDENTITY' AND c.status='COMPLETED'
+    JOIN crm.deals d ON d.deal_id=origin.deal_id AND d.primary_lead_id=need.lead_id
+      AND d.client_id=c.client_id AND d.family_id=c.family_id
     JOIN service.projects p ON p.deal_id=d.deal_id AND p.client_id=d.client_id AND p.family_id=d.family_id
     WHERE need.lead_event_id=:'event'::uuid AND c.consultation_id=:'consultation'::uuid
       AND d.deal_id=:'deal'::uuid AND p.service_project_id=:'project'::uuid AND p.primary_domain='IDENTITY';`, vars), "1");
   assert.equal(query(`SELECT count(*) FROM service.workbench_commercial_events WHERE service_project_id=:'project'::uuid;`, vars), "5");
   assert.equal(query("SELECT count(*) FROM identity.external_facts WHERE fact_kind='DECISION';"), "0");
-  console.log("PASS same identity need, scheduled consultation, existing Client/Deal, synthetic commercial gate, adviser tasks and Family Workbench");
+  console.log("PASS exact renewal receipt through consultation follow-up, deal, withdrawal denial and the same Family Workbench");
 
   // The result-review task is the existing STAFF task from the service plan.
   // Put it in progress before verify-renewal.sql binds the attestation.  The
@@ -151,6 +242,8 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
       JOIN identity_journey_test.crm_intent consent_receipt ON consent_receipt.notice_id=original_notice.reminder_id
       JOIN identity_journey_test.crm_receipt handoff ON handoff.consent_id=consent_receipt.consent_id
         AND handoff.lead_event_id=:'event'::uuid
+      JOIN identity.journey_crm_service_links origin ON origin.lead_event_id=handoff.lead_event_id
+      JOIN service.projects project ON project.deal_id=origin.deal_id AND project.service_project_id=:'project'::uuid
       JOIN docs.documents document ON document.document_id=r.document_id AND document.withdrawn_at IS NULL
         AND document.retention_until > clock_timestamp()
       JOIN service.project_subjects subject ON subject.family_id=identity_case.family_id

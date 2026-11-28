@@ -33,18 +33,18 @@ psql_synthetic() {
   docker exec -i -e PGPASSFILE=/tmp/canonical-premerge.pgpass "$container" psql "${args[@]}" "$@"
 }
 
-if output=$(psql_synthetic -d phoenix_canonical_dev < "$candidate/storage.sql" 2>&1); then
-  echo 'The unapproved database-name guard did not block installation.' >&2; exit 1
-fi
-[[ "$output" == *IDENTITY_JOURNEY_SYNTHETIC_DATABASE_REQUIRED* ]]
-if output=$(psql_synthetic -d phoenix_canonical_dev < "$candidate/service-renewal.sql" 2>&1); then
-  echo 'The unapproved database-name guard did not block service-renewal installation.' >&2; exit 1
-fi
-[[ "$output" == *IDENTITY_JOURNEY_SYNTHETIC_DATABASE_REQUIRED* ]]
+for protected_candidate in storage.sql crm-chain.sql service-renewal.sql; do
+  if output=$(psql_synthetic -d phoenix_canonical_dev < "$candidate/$protected_candidate" 2>&1); then
+    echo "The unapproved database-name guard did not block $protected_candidate." >&2
+    exit 1
+  fi
+  [[ "$output" == *IDENTITY_JOURNEY_SYNTHETIC_DATABASE_REQUIRED* ]]
+done
 psql_synthetic -d postgres -c 'ALTER DATABASE phoenix_canonical_dev RENAME TO phoenix_identity_journey_synthetic_ci'
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/storage.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/renewal.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/timeline.sql"
+psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/crm-chain.sql"
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/../service-workbench/0038_service_project_workbench.sql"
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/service-renewal.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/residence.sql"
