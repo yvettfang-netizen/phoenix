@@ -5,6 +5,7 @@ import { handleIdentityInbox, identityNoticePath } from "../../../../website/pho
 import { verifyCrmHandoff } from "./verify-crm.mjs";
 import { verifyTimeline } from "./verify-timeline.mjs";
 import { verifyServiceChain } from "./verify-service-chain.mjs";
+import { verifyFounderSummary } from "./verify-founder-summary.mjs";
 
 const container = process.argv[2];
 assert.match(container ?? "", /^[0-9a-f]{64}$/);
@@ -256,4 +257,10 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   });
   console.log("PASS Chromium desktop and mobile inbox over HTTP and isolated PostgreSQL");
 }
-await verifyTimeline({ query, recipient, authConfig, browser: timelineBrowser, onRenewal: recordRenewalReview });
+await verifyTimeline({
+  query, recipient, authConfig, browser: timelineBrowser,
+  async onRenewal() {
+    recordRenewalReview();
+    await verifyFounderSummary({ query, recipient, crmFixture });
+  },
+});
