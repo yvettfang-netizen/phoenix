@@ -1,5 +1,5 @@
--- Isolated candidate. Applicants agree a planning date; it is not inferred
--- from a policy, a residence total, or a case status.
+-- Isolated candidate installed after member-profile.sql. Applicants agree a
+-- planning date independently of policy, residence totals and case status.
 BEGIN;
 DO $guard$
 BEGIN
@@ -13,12 +13,18 @@ ALTER TABLE identity.journey_date_revisions
   ADD CHECK (date_kind NOT IN ('INVESTMENT_REVIEW','PERMANENT_RESIDENCE_PREPARATION') OR (
     date_basis='INTERNAL' AND verification='REPORTED' AND official_fact_id IS NULL AND document_id IS NULL
   ));
-CREATE TRIGGER journey_review_plan_immutable BEFORE UPDATE OR DELETE ON identity.journey_date_revisions
+CREATE TRIGGER journey_review_plan_update_immutable BEFORE UPDATE ON identity.journey_date_revisions
+  FOR EACH ROW WHEN (
+    OLD.date_kind IN ('INVESTMENT_REVIEW','PERMANENT_RESIDENCE_PREPARATION')
+    OR NEW.date_kind IN ('INVESTMENT_REVIEW','PERMANENT_RESIDENCE_PREPARATION')
+  ) EXECUTE FUNCTION identity.reject_journey_evidence_rewrite();
+CREATE TRIGGER journey_review_plan_delete_immutable BEFORE DELETE ON identity.journey_date_revisions
   FOR EACH ROW WHEN (OLD.date_kind IN ('INVESTMENT_REVIEW','PERMANENT_RESIDENCE_PREPARATION'))
   EXECUTE FUNCTION identity.reject_journey_evidence_rewrite();
 
--- The invoker must bind a live family session and hold the independent,
--- case-bound reminder-purpose grant in this transaction before calling.
+-- The trusted adapter must bind a live session and hold a case-bound
+-- reminder-purpose grant through commit. There is no granted runtime
+-- role until the Canonical consent contract is approved.
 CREATE FUNCTION identity.save_journey_review_plan(
   p_case uuid,p_episode uuid,p_revision uuid,p_prior uuid,p_kind text,p_target date,
   p_offsets smallint[],p_job_ids uuid[]

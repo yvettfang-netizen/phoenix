@@ -326,6 +326,24 @@ export async function verifyReviewPlans({ query, recipient }) {
       WHERE identity_case_id=:'journeyCase'::uuid AND date_kind IN
         ('INVESTMENT_REVIEW','PERMANENT_RESIDENCE_PREPARATION')
         AND (official_fact_id IS NOT NULL OR document_id IS NOT NULL);`, { journeyCase }), "0");
+
+  // Replanning to a previously used date preserves its delivered receipt
+  // while reopening the unsent offset against the new current revision.
+  const sameDateRevision = id(8523);
+  assert.equal(savePlan({ revisionId: sameDateRevision, prior: rescheduledRevision,
+    kind: "INVESTMENT_REVIEW", targetOn: target, offsets: [7, 1], jobs: [id(8524), id(8525)] }), sameDateRevision);
+  assert.equal(query(`SELECT count(*) FROM identity.journey_station_notices n
+      JOIN identity.journey_station_reminders r USING (reminder_id)
+      JOIN identity.journey_station_notice_reads viewed USING (reminder_id)
+    WHERE r.reminder_id=:'delivered'::uuid AND r.date_revision_id=:'firstRevision'::uuid AND r.state='DELIVERED';`,
+  { delivered: dueReminder, firstRevision: revision }), "1");
+  assert.equal(query(`SELECT count(*) FROM identity.journey_station_reminders
+    WHERE reminder_id=:'pending'::uuid AND date_revision_id=:'newRevision'::uuid
+      AND state='PENDING' AND claim_token IS NULL;`, { pending: pendingReminder, newRevision: sameDateRevision }), "1");
+  assert.throws(() => query(`UPDATE identity.journey_date_revisions SET target_on=target_on+1
+    WHERE date_revision_id=:'oldRevision'::uuid;`, { oldRevision: revision }),
+  error => String(error.stderr).includes("IDENTITY_JOURNEY_EVIDENCE_IMMUTABLE"));
+
   assert.equal(query(`SELECT count(*) FROM identity.journey_station_reminders
       WHERE identity_case_id=:'journeyCase'::uuid
         AND state IN ('PENDING','RETRY')
