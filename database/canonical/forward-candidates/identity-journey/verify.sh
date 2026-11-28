@@ -39,6 +39,7 @@ fi
 [[ "$output" == *IDENTITY_JOURNEY_SYNTHETIC_DATABASE_REQUIRED* ]]
 psql_synthetic -d postgres -c 'ALTER DATABASE phoenix_canonical_dev RENAME TO phoenix_identity_journey_synthetic_ci'
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/storage.sql"
+psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/renewal.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/verify.sql"
 
 db=phoenix_identity_journey_synthetic_ci
@@ -121,4 +122,5 @@ GRANT phoenix_canonical_context_binder TO identity_journey_fixture_binder WITH I
 SQL
 psql_synthetic -q -d "$db" < "$candidate/verify-crm-fixture.sql"
 node --experimental-strip-types --import "$candidate/register-native-typescript.mjs" "$candidate/verify-worker.mjs" "$container"
+psql_synthetic -d "$db" < "$candidate/verify-renewal.sql"
 echo "PASS Identity Journey candidate PostgreSQL $1; synthetic fixture only"
