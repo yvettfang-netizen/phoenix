@@ -88,8 +88,14 @@ function assertEducationStructure(html, locale) {
   for(const [i, amount] of ["19,800","39,800","80,000","100,000"].entries()) {
     assert.ok(pricing.slice(m[i],m[i+1] ?? endMasters).includes((locale === "zh" ? "¥" : "RMB ")+amount), "Missing masters tier "+amount);
   }
-  assert.ok(pricing.slice(m[0],m[1]).includes(locale === "zh" ? "4个专业申请项目" : "4 programme applications"), "Masters launch quota");
-  assert.ok(pricing.slice(m[1],m[2]).includes(locale === "zh" ? "10个专业申请项目" : "10 programme applications"), "Masters premium quota");
+  assert.ok(pricing.slice(m[0],m[1]).includes(locale === "zh" ? "最多4所院校、8个专业申请项目" : "up to 4 institutions and 8 programme applications"), "Masters launch quota");
+  assert.ok(pricing.slice(m[1],m[2]).includes(locale === "zh" ? "最多6所院校、12个专业申请项目" : "Up to 6 institutions and 12 programme applications"), "Masters premium quota");
+  for (const id of ["a","b","c","d"]) assert.equal(testIdCount(html, "masters-refund-"+id), 1, "Refund tier missing: "+id);
+  assert.equal(testIdCount(html, "masters-risk-sharing"), 1, "Risk-sharing terms missing");
+  for (const [part, amounts] of [[pricing.slice(m[0],m[1]),["8,000","11,800"]],[pricing.slice(m[1],m[2]),["3,000","36,800"]]]) for (const amount of amounts) assert.ok(part.includes(amount), "Refund amount missing "+amount);
+  for (const part of [pricing.slice(m[2],m[3]),pricing.slice(m[3],endMasters)]) assert.ok(part.includes(locale === "zh" ? "服务费全额退还" : "Full service-fee refund"), "Full refund wording missing");
+  assert.ok(pricing.slice(m[3],endMasters).includes(locale === "zh" ? "本科定制退款条款另行书面约定" : "Undergraduate bespoke refund terms are agreed separately"), "Undergraduate scope must be separate");
+  assert.doesNotMatch(pricing.slice(a,other), /data-testid="masters-refund-/, "Do not attach masters refunds to undergraduate tiers");
   assert.ok(pricing.slice(m[3],endMasters).includes(locale === "zh" ? "名校定制服务" : "Bespoke Selective Admissions"), "Shared specialist positioning");
   assert.ok(pricing.slice(m[3],endMasters).includes(locale === "zh" ? "本科与硕士全国统一10万元起" : "for both undergraduate and master’s admissions"), "Shared signature applicability");
   assert.ok(pricing.slice(d,other).includes('href="#education-package-tailored"'), "Undergraduate must link to shared signature");
@@ -102,7 +108,7 @@ function assertEducationStructure(html, locale) {
   assert.ok(pricing.includes(locale === "zh" ? "香港小学入学" : "Hong Kong Primary School"), "Primary entry/transfer package is missing");
   assert.ok(pricing.includes(locale === "zh" ? "内地高考报读香港本科" : "Mainland Gaokao"), "Gaokao HK undergraduate package is missing");
   assert.ok(pricing.includes(locale === "zh" ? "最多10所学校" : "up to 10 schools"), "Primary school scope must be bounded");
-  assert.ok(pricing.includes(locale === "zh" ? "10个专业申请项目" : "10 programme applications"), "Masters programme scope must be bounded");
+  assert.ok(pricing.includes(locale === "zh" ? "12个专业申请项目" : "12 programme applications"), "Masters programme scope must be bounded");
   assert.ok(pricing.includes(locale === "zh" ? "评估费用与抵扣" : "Assessment fees and credits"), "Assessment credit explanation is missing");
   assert.ok(pricing.includes(locale === "zh" ? "¥39.9" : "RMB 39.9"), "Independent Discovery fee must be distinguished");
   assert.ok(pricing.includes(locale === "zh" ? "¥980" : "RMB 980"), "Human Review fee must be explained");
