@@ -36,7 +36,9 @@ BEGIN
       AND document.family_id = p_family AND document.subject_person_id = c.subject_person_id
       AND document.data_class = 'IDENTITY_SENSITIVE' AND document.withdrawn_at IS NULL
       AND document.retention_until > clock_timestamp()
-      AND (r.official_fact_id IS NULL OR (a.prior_revision_id = r.supersedes_id AND a.verified_target_on = r.target_on))
+      AND (r.official_fact_id IS NULL OR (a.prior_revision_id = r.supersedes_id AND a.verified_target_on = r.target_on)
+        OR identity.has_journey_transition_stay_source(
+          r.official_fact_id,e.episode_id,r.identity_case_id,r.target_on,r.document_id,r.verified_by))
     ORDER BY active DESC, coalesce(a.verified_at, r.recorded_at) DESC, r.date_revision_id DESC
     LIMIT p_limit
     FOR SHARE OF document, e;

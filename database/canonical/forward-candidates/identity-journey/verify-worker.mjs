@@ -8,6 +8,7 @@ import { verifyServiceChain } from "./verify-service-chain.mjs";
 import { verifyFounderSummary } from "./verify-founder-summary.mjs";
 import { verifyResidence } from "./verify-residence.mjs";
 import { verifyDocumentDates } from "./verify-document-dates.mjs";
+import { verifyEpisodeWrite } from "./verify-episode-write.mjs";
 import { verifyIdentityPolicyPaths } from "./verify-policy-paths.mjs";
 import { verifyReviewPlans } from "./verify-review-plans.mjs";
 import { verifyReviewPlanningHttp } from "./verify-review-planning-http.mjs";
@@ -324,6 +325,7 @@ const timeline = await verifyTimeline({
   },
 });
 await verifyResidence({ query, recipient, authConfig, browser: residenceBrowser });
+await verifyEpisodeWrite({ query, recipient });
 await verifyDocumentDates({ query, recipient });
 await verifyOfficialTravel({ query, recipient, authConfig, browser: officialTravelBrowser });
 await verifyIdentityMemberProfile({ query, recipient, authConfig, browser: memberProfileBrowser, memberResidenceBrowser });

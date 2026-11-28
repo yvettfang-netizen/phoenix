@@ -112,7 +112,9 @@ BEGIN
                 AND (r.date_kind <> 'APPROVAL_DATE' OR f.fact_kind = 'DECISION')))
             AND (r.date_kind <> 'STAY_EXPIRY' OR r.official_fact_id IS NULL OR EXISTS (
               SELECT 1 FROM identity.journey_renewal_attestations a WHERE a.decision_id = r.official_fact_id
-                AND a.prior_revision_id = r.supersedes_id AND a.verified_target_on = r.target_on))
+                AND a.prior_revision_id = r.supersedes_id AND a.verified_target_on = r.target_on)
+              OR identity.has_journey_transition_stay_source(
+                r.official_fact_id,e.episode_id,r.identity_case_id,r.target_on,r.document_id,r.verified_by))
           ORDER BY current DESC,r.target_on DESC,r.date_revision_id
           LIMIT 97
         ) item) AS milestones
