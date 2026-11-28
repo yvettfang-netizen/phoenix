@@ -1,7 +1,20 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { register } from "node:module";
 import { runStationReminderBatch } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-reminder-worker.ts";
-import { handleIdentityInbox, identityNoticePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-inbox.ts";
+
+// CI exercises native TypeScript stripping without installing website packages.
+// Resolve the server handler's extensionless import as the site bundler does.
+register("data:text/javascript," + encodeURIComponent(`
+  export function resolve(specifier, context, nextResolve) {
+    if (specifier === "./customer-auth" && context.parentURL?.endsWith("/identity-journey-inbox.ts")) {
+      return nextResolve("./customer-auth.ts", context);
+    }
+    return nextResolve(specifier, context);
+  }
+`));
+const { handleIdentityInbox, identityNoticePath } =
+  await import("../../../../website/phoenix-nova-website-v5/lib/identity-journey-inbox.ts");
 
 const container = process.argv[2];
 assert.match(container ?? "", /^[0-9a-f]{64}$/);
