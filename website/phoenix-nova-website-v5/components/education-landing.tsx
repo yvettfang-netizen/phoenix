@@ -127,13 +127,18 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
           <h2 id="education-packages-title">{t("升学服务套餐与参考价格", "Education service packages & reference fees")}</h2>
           <p>{t("先了解不同服务层级，再根据学业背景、目标院校与实际需求确定方案。统一标准价格对应不同阶段的服务范围，具体以书面方案为准。价格以人民币计。", "Compare service levels first, then select a suitable proposal based on your background, university goals and actual needs. All amounts are in CNY (RMB).")}</p>
         </header>
-        <div className={styles.pricingGrid}>{educationPricingPackages.map(plan => <article className={styles.pricingCard} key={plan.id} data-testid="education-pricing-package">
+        <div className={styles.pricingGrid}>{educationPricingPackages.map(plan => <article className={styles.pricingCard} key={plan.id} id={`education-package-${plan.id}`} data-testid="education-pricing-package">
           <h3>{copy(plan.name)}</h3>
           <p className={styles.pricingPrice}>{copy(plan.price)}</p>
           <p className={styles.pricingDescription}>{copy(plan.description)}</p>
           <ul className={styles.pricingFeatures}>{plan.features.map(feature => <li key={feature[1]}><Check size={16} aria-hidden="true" />{copy(feature)}</li>)}</ul>
           <a className={styles.pricingAction} href="#consultation">{t("了解适用条件与书面报价", "Ask about eligibility & a written quote")}<Arrow /></a>
         </article>)}</div>
+        <div className={styles.pricingTerms} aria-label={t("服务收费规则", "Service pricing rules")} data-testid="education-pricing-terms">
+          <article><h3>{t("标准服务范围", "Standard service scope")}</h3><p>{t("以1名学生、约定申请周期为单位。K–12标准申请最多10所学校；本科及硕士标准申请最多10个独立申请项目。具体项目计数以合同为准。", "Standard applications cover one student and one agreed application cycle: up to 10 schools for K–12, or 10 separate programme applications for undergraduate and master's services. The contract defines how items are counted.")}</p></article>
+          <article><h3>{t("评估费用与抵扣", "Assessment fees and credits")}</h3><p>{t("¥39.9教育成长探索为独立服务费，不抵扣。¥980专业评估由授权教育顾问交付；交付后7天内签约符合条件的申请服务，已付评估费可计入后续服务费。", "The RMB 39.9 Education Growth Discovery fee is not credited. A RMB 980 professional review is delivered by an authorised adviser; if an eligible application service is signed within seven days after delivery, the paid review fee may be credited to that service.")}</p></article>
+          <article><h3>{t("第三方费用", "Third-party costs")}</h3><p>{t("院校报名及注册费、考试、成绩寄送、翻译公证、签证、留位费、学费和住宿等通常另计；除非正式合同明确约定包含。", "School and university fees, examinations, score reports, translation, notarisation, visas, deposits, tuition and accommodation are generally separate unless the signed contract expressly includes them.")}</p></article>
+        </div>
         <p className={styles.pricingDisclaimer}>{t("以上为公开参考服务费及套餐介绍，非自动生成的合同报价。具体院校／专业、申请数量、交付内容、付款与退款条件以书面方案和合同为准。院校申请费、考试费、学费、签证及其他第三方费用通常另计。Phoenix Nova 为独立升学规划服务机构，并非香港院校的官方招生代理；院校自主决定录取结果，本服务不保证录取。", "These are indicative service fees and package descriptions, not an automatically binding quotation. Programme choices, application counts, deliverables, payment and refund terms are defined in the written proposal and contract. University fees, examinations, tuition, visas and other third-party charges are generally separate. Phoenix Nova provides independent admissions guidance and is not an official admissions representative of Hong Kong universities. Institutions decide admissions; admission is not guaranteed.")}</p>
       </div></section>
 
