@@ -292,9 +292,8 @@ export async function verifyDocumentDates({ query, recipient }) {
   const passportCorrection = apply({ attestation: passportCorrectionAttestation, revision: passportCorrectionRevision,
     recipientPrincipal: recipient.principalId, offsets: [60], reminders: [passportCorrectionReminder] });
   assert.equal(inAdvisor(passportCorrection.sql, passportCorrection.values), passportCorrectionRevision);
-  const stalePassport = apply({ attestation: passportStaleAttestation, revision: passportStaleRevision,
+  denied(inAdvisor, { attestation: passportStaleAttestation, revision: passportStaleRevision,
     recipientPrincipal: recipient.principalId, offsets: [60], reminders: [id(8485)] });
-  denied(inAdvisor, stalePassport);
   assert.equal(query(`SELECT count(*) FROM identity.journey_station_reminders
       WHERE reminder_id=:'reminder'::uuid AND date_revision_id=:'revision'::uuid
         AND date_kind='PASSPORT_EXPIRY' AND offset_days=60 AND state='PENDING';`,
