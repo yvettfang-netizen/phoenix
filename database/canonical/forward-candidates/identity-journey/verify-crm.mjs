@@ -65,13 +65,29 @@ export async function verifyCrmHandoff({ query, recipient, authConfig }) {
           { ...vars, topic: selection.topic, noticeId: selection.noticeId });
         if (!expiration) return "DENIED";
         const scope = { family: recipient.familyId, subject: actor };
+        const date = query(`SELECT jsonb_build_object('id', r.date_revision_id, 'seriesId', r.episode_id,
+          'family', c.family_id, 'subject', c.subject_person_id, 'date', r.target_on, 'kind', r.date_kind,
+          'basis', r.date_basis, 'state', r.verification, 'evidenceRef', r.document_id)
+          FROM identity.journey_station_notices n
+          JOIN identity.journey_station_reminders ticket USING (reminder_id)
+          JOIN identity.journey_date_revisions r ON r.date_revision_id = ticket.date_revision_id
+          JOIN identity.journey_episodes e ON e.episode_id = r.episode_id
+          JOIN identity.cases c ON c.identity_case_id = ticket.identity_case_id
+          JOIN docs.documents d ON d.document_id = r.document_id
+          WHERE n.reminder_id = :'noticeId'::uuid AND ticket.recipient_principal_id = :'principalId'::uuid
+            AND ticket.state = 'DELIVERED' AND c.family_id = :'familyId'::uuid AND c.subject_person_id = :'actor'::uuid
+            AND e.ended_before IS NULL AND r.date_kind = 'STAY_EXPIRY' AND r.verification = 'VERIFIED'
+            AND d.withdrawn_at IS NULL AND d.retention_until > clock_timestamp()
+            AND NOT EXISTS (SELECT 1 FROM identity.journey_date_revisions next WHERE next.supersedes_id = r.date_revision_id);`,
+        { ...vars, noticeId: selection.noticeId });
+        assert.ok(date, "The consent must refer to a delivered notice backed by the current verified stay expiry");
         return callback({
           scope,
           consultationAuthority: { ...scope, purpose: "IDENTITY_CRM", verified: true,
             revoked: false, validUntil: new Date(expiration).toISOString() },
-          verifiedDate: null,
+          verifiedDate: JSON.parse(date),
           async appendNeed(summary) {
-            assert.deepEqual(summary, { domain: "IDENTITY", topic: "RENEWAL", horizon: "TO_REVIEW" });
+            assert.deepEqual(summary, { domain: "IDENTITY", topic: "RENEWAL", horizon: "WITHIN_90_DAYS" });
             if (revokeBeforeWrite) query("UPDATE identity_journey_test.crm_intent SET withdrawn_at = clock_timestamp();");
             return asFamily(`SELECT identity_journey_test.record_crm_need(
               :'boundNotice'::uuid, :'revision', :'event'::uuid, :'topic', :'horizon');`,
@@ -95,7 +111,9 @@ export async function verifyCrmHandoff({ query, recipient, authConfig }) {
   assert.equal(identityNeeds(), "0");
   revokeBeforeWrite = false;
   query("UPDATE identity_journey_test.crm_intent SET withdrawn_at = NULL;");
-  assert.equal((await submit()).status, 201);
+  const accepted = await submit();
+  assert.equal(accepted.status, 201);
+  assert.deepEqual(await accepted.json(), { status: "RECEIVED" });
   assert.equal((await submit()).status, 200);
   assert.equal(identityNeeds(), "1");
   assert.equal(query("SELECT count(*) FROM crm.clients;"), "1");
@@ -107,10 +125,10 @@ export async function verifyCrmHandoff({ query, recipient, authConfig }) {
     JOIN crm.lead_identity_links l ON l.lead_id = e.lead_id AND l.status = 'VERIFIED'
     WHERE e.lead_event_id = :'event'::uuid AND e.recorded_by_login = 'identity_journey_fixture_app'
       AND e.actor_principal_id = :'principalId'::uuid AND l.client_id = :'client'::uuid
-      AND r.topic = 'RENEWAL' AND r.horizon = 'TO_REVIEW' AND r.consent_id = :'consent'::uuid;`, vars), "1");
+      AND r.topic = 'RENEWAL' AND r.horizon = 'WITHIN_90_DAYS' AND r.consent_id = :'consent'::uuid;`, vars), "1");
   query("UPDATE identity_journey_test.crm_intent SET withdrawn_at = clock_timestamp();");
   assert.equal((await submit()).status, 403);
   assert.equal(identityNeeds(), "1");
-  console.log("PASS same-notice HTTP handoff to Canonical 0036 FAMILY need, verified existing Client/Lead, withdrawal and idempotency");
+  console.log("PASS verified stay-expiry notice to Canonical 0036 FAMILY need, minimal urgency band, existing Client/Lead, withdrawal and idempotency");
   return { actor, lead, client, event };
 }

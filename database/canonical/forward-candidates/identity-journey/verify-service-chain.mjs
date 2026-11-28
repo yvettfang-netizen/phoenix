@@ -7,9 +7,7 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
     advisorPerson: id(40), advisorPrincipal: id(41) };
   // Existing authorities receive distinct Canonical principals and one-use
   // contexts. Consultation dates and financial references below are synthetic.
-  query(`INSERT INTO core.people(person_id,display_name) VALUES(:'advisorPerson'::uuid,'Synthetic renewal adviser');
-    INSERT INTO auth.principals(principal_id,person_id,principal_kind,status,service_label) VALUES
-      (:'advisorPrincipal'::uuid,:'advisorPerson'::uuid,'ADVISOR','ACTIVE',NULL),
+  query(`INSERT INTO auth.principals(principal_id,person_id,principal_kind,status,service_label) VALUES
       ('${id(73)}',NULL,'SERVICE','ACTIVE','canonical_service_v2'),
       ('${id(74)}',NULL,'SERVICE','ACTIVE','operations_entitlement_service');
     INSERT INTO casework.cases(case_id,family_id,subject_person_id,title,status,resource_kind,resource_id)
@@ -119,6 +117,12 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
     assert.equal(query(`SELECT count(*) FROM identity.journey_date_revisions r
       JOIN identity.journey_renewal_attestations attestation ON attestation.decision_id=r.official_fact_id
       JOIN identity.cases identity_case ON identity_case.identity_case_id=r.identity_case_id
+      JOIN identity.journey_station_reminders original_notice ON original_notice.reminder_id=:'noticeId'::uuid
+        AND original_notice.identity_case_id=identity_case.identity_case_id
+        AND original_notice.date_revision_id=r.supersedes_id AND original_notice.state='DELIVERED'
+      JOIN identity_journey_test.crm_intent consent_receipt ON consent_receipt.notice_id=original_notice.reminder_id
+      JOIN identity_journey_test.crm_receipt handoff ON handoff.consent_id=consent_receipt.consent_id
+        AND handoff.lead_event_id=:'event'::uuid
       JOIN docs.documents document ON document.document_id=r.document_id AND document.withdrawn_at IS NULL
         AND document.retention_until > clock_timestamp()
       JOIN service.project_subjects subject ON subject.family_id=identity_case.family_id
@@ -138,6 +142,6 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
     const after = snapshot("advisor").data;
     assert.equal(after.tasks.find(entry => entry.id === task)?.status, "COMPLETED");
     assert.equal(after.project.status, "ACTIVE", "Completing the result review does not close the whole service");
-    console.log("PASS verified renewal updates the same Identity Workbench review task without closing unrelated workflows");
+    console.log("PASS supersession links the original expiry notice, consultation handoff and the same Identity Workbench task");
   };
 }

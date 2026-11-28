@@ -21,16 +21,16 @@ DECLARE
   invalid_receipt uuid := (base || '52')::uuid;
   wrong_document_decision uuid := (base || '53')::uuid;
   stale_decision uuid := (base || '54')::uuid;
-  old_delivered uuid := (base || '55')::uuid;
+  old_delivered uuid := (base || '09')::uuid;
   old_pending uuid := (base || '56')::uuid;
   new_due uuid := (base || '57')::uuid;
   new_later uuid := (base || '58')::uuid;
   already_late uuid := (base || '59')::uuid;
   spare uuid := (base || '60')::uuid;
   active_consent uuid := (base || '62')::uuid;
-  initial_doc uuid := (base || '63')::uuid;
   today_hk date := (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date;
   expected_target date := today_hk + 7;
+  original_target date;
   delivery_token uuid;
   past_token uuid;
   past_receipt timestamptz;
@@ -45,14 +45,10 @@ BEGIN
   INSERT INTO core.families(family_id,display_name) VALUES(other_home,'Synthetic unrelated household');
   INSERT INTO docs.documents(document_id,family_id,subject_person_id,data_class,document_kind,retention_until)
     VALUES(doc,home,subject,'IDENTITY_SENSITIVE','SYNTHETIC_RENEWAL_RESULT',clock_timestamp()+interval '1 day'),
-          (initial_doc,home,subject,'IDENTITY_SENSITIVE','SYNTHETIC_PRIOR_PERIOD',clock_timestamp()+interval '1 day'),
           (other_doc,other_home,subject,'IDENTITY_SENSITIVE','SYNTHETIC_WRONG_FAMILY',clock_timestamp()+interval '1 day');
   INSERT INTO docs.document_versions(version_id,document_id,version_no,content_sha256,storage_key,size_bytes)
     VALUES(doc_version,doc,1,repeat('a',64),'synthetic/renewal-evidence-a',1),
           (other_version,other_doc,1,repeat('b',64),'synthetic/renewal-evidence-b',1);
-  INSERT INTO identity.journey_date_revisions(date_revision_id,identity_case_id,episode_id,date_kind,date_basis,
-    target_on,verification,document_id,verified_by,recorded_by)
-    VALUES(prior,journey_case,episode,'STAY_EXPIRY','CASE_APPROVAL',today_hk+1,'VERIFIED',initial_doc,advisor_principal,advisor_principal);
   INSERT INTO identity.external_facts(fact_id,identity_case_id,fact_kind,source_name,external_reference,observed_at)
     VALUES(decision,journey_case,'DECISION','Synthetic fixture','synthetic-approved',clock_timestamp()),
           (invalid_receipt,journey_case,'OFFICIAL_RECEIPT','Synthetic fixture','synthetic-receipt',clock_timestamp()),
@@ -65,14 +61,13 @@ BEGIN
           (stale_decision,prior,doc_version,expected_target+30,advisor_principal);
   INSERT INTO identity.journey_station_reminders(reminder_id,identity_case_id,episode_id,date_revision_id,
     date_kind,target_on,offset_days,recipient_principal_id,state)
-    VALUES(old_delivered,journey_case,episode,prior,'STAY_EXPIRY',today_hk+1,7,recipient,'PENDING'),
-          (old_pending,journey_case,episode,prior,'STAY_EXPIRY',today_hk+1,1,recipient,'PENDING');
-  PERFORM * FROM identity.claim_journey_station_reminders(2);
-  SELECT claim_token INTO STRICT delivery_token FROM identity.journey_station_reminders WHERE reminder_id = old_delivered;
-  SELECT claim_token INTO STRICT past_token FROM identity.journey_station_reminders WHERE reminder_id = old_pending;
-  IF identity.publish_journey_station_notice(old_delivered,recipient,prior,delivery_token) <> 'DELIVERED'
-    OR past_token IS NULL THEN RAISE EXCEPTION 'RENEWAL_FIXTURE_OLD_NOTICE_NOT_READY'; END IF;
-  SELECT published_at INTO STRICT past_receipt FROM identity.journey_station_notices WHERE reminder_id = old_delivered;
+    SELECT old_pending,identity_case_id,episode_id,date_revision_id,date_kind,target_on,1,recipient,'PENDING'
+    FROM identity.journey_date_revisions WHERE date_revision_id=prior;
+  SELECT c.claim_token INTO STRICT past_token FROM identity.claim_journey_station_reminders(1) c WHERE c.reminder_id=old_pending;
+  SELECT notice.published_at INTO STRICT past_receipt FROM identity.journey_station_notices notice
+    JOIN identity.journey_station_reminders reminder USING (reminder_id)
+    WHERE notice.reminder_id=old_delivered AND reminder.date_revision_id=prior AND reminder.state='DELIVERED';
+  SELECT target_on INTO STRICT original_target FROM identity.journey_date_revisions WHERE date_revision_id=prior;
 
   advisor_ticket := auth.issue_context_ticket(advisor_principal,advisor_person,home,'ADVISOR',
     clock_timestamp()+interval '45 seconds',gen_random_uuid(),advisor_principal);
@@ -94,7 +89,7 @@ BEGIN
     OR identity.apply_journey_renewal(decision,updated,advisor_principal,ARRAY[7]::smallint[],ARRAY[new_due]) IS NOT NULL
   THEN RAISE EXCEPTION 'RENEWAL_ACCEPTED_UNVERIFIED_OR_WRONG_SCOPE'; END IF;
   IF NOT EXISTS (SELECT 1 FROM identity.list_journey_stay_timeline(home,journey_case,recipient,10)
-    WHERE record_id = prior AND is_current AND valid_until = today_hk+1)
+    WHERE record_id = prior AND is_current AND valid_until = original_target)
   THEN RAISE EXCEPTION 'RENEWAL_TIMELINE_PRIOR_NOT_CURRENT'; END IF;
   BEGIN
     PERFORM identity.apply_journey_renewal(decision,updated,recipient,ARRAY[7]::smallint[],ARRAY[old_delivered]);
