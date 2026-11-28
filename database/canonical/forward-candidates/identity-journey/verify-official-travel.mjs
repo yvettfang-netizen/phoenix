@@ -174,13 +174,14 @@ export async function verifyOfficialTravel({ query, recipient, authConfig, brows
     WHERE evidence_version_id=:'documentVersion'::uuid;`, fields), "6");
 
   // A different family/case and a revoked assignment cannot import even when
-  // the source is otherwise well formed.  Revoke inside a bound adviser
-  // transaction so the ticket itself remains valid for the negative check.
+  // the source is otherwise well formed. Isolate the one-way revocation in a
+  // savepoint so later tests can share the original unmodified assignment.
   assert.equal(inAdvisor(`SELECT ${importExpression(dateArray, directionArray, intervalArray, ":'otherCase'::uuid")};`, fields), "DENIED");
-  assert.equal(inAdvisor(`UPDATE casework.advisor_assignments
+  assert.equal(inAdvisor(`SAVEPOINT revoked_assignment;
+    UPDATE casework.advisor_assignments
       SET revoked_at=clock_timestamp() WHERE case_id='${id(43)}'::uuid;
-    SELECT ${importExpression()};`, fields), "DENIED");
-  query(`UPDATE casework.advisor_assignments SET revoked_at=NULL WHERE case_id='${id(43)}'::uuid;`);
+    SELECT ${importExpression()};
+    ROLLBACK TO SAVEPOINT revoked_assignment;`, fields), "DENIED");
 
   // The protected FAMILY projection contains only date/direction movement
   // DTOs.  It must not leak document, version, attestation or case identifiers.
