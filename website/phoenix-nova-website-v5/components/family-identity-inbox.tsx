@@ -3,14 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { identityNoticePath, type IdentityNotice } from "@/lib/identity-journey-inbox";
+import { FamilyIdentityConsultation } from "./family-identity-consultation";
 
 type InboxState = "loading" | "ready" | "stale" | "denied" | "unavailable";
 
-export function FamilyIdentityInbox({ locale }: { locale: "zh" | "en" }) {
+export function FamilyIdentityInbox({ locale, consultationEnabled }: { locale: "zh" | "en"; consultationEnabled?: boolean }) {
   const [notices, setNotices] = useState<IdentityNotice[]>([]);
   const [state, setState] = useState<InboxState>("loading");
   const [refresh, setRefresh] = useState(0);
   const [pending, setPending] = useState<string | null>(null);
+  const [consultationNoticeId, setConsultationNoticeId] = useState<string | null>(null);
   const currentRequest = useRef<AbortController | null>(null);
   const t = (zh: string, en: string) => locale === "zh" ? zh : en;
   const format = new Intl.DateTimeFormat(locale === "zh" ? "zh-CN" : "en-GB", {
@@ -26,6 +28,7 @@ export function FamilyIdentityInbox({ locale }: { locale: "zh" | "en" }) {
       controller.abort();
       setNotices([]);
       setPending(null);
+      setConsultationNoticeId(null);
       setState("stale");
     };
     const onVisibility = () => { if (document.hidden) expire(); };
@@ -99,6 +102,13 @@ export function FamilyIdentityInbox({ locale }: { locale: "zh" | "en" }) {
         {notice.readAt ? <p className="fc-muted">{t("已读", "Read")}</p> :
           <button type="button" className="fc-gold" disabled={pending !== null}
             onClick={() => void acknowledge(notice.id)}>{t("标记为已读", "Mark as read")}</button>}
+        {consultationEnabled && (
+          consultationNoticeId === notice.id
+            ? <FamilyIdentityConsultation locale={locale} noticeId={notice.id} getSignal={() => currentRequest.current?.signal}/>
+            : <button type="button" onClick={() => setConsultationNoticeId(notice.id)}>
+              {t("申请身份咨询", "Request an identity consultation")}
+            </button>
+        )}
       </li>)}</ul>}
   </section>;
 }
