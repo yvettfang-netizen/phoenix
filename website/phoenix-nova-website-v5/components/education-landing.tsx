@@ -34,36 +34,6 @@ const educationPricingPackages = [
     ],
   },
   {
-    id: "masters-standard",
-    name: ["香港硕士标准申请套餐", "Hong Kong Master's · Standard"],
-    price: ["¥39,980", "RMB 39,980"],
-    description: ["适合申请方向较清晰、希望获得标准化申请规划与递交协助的学生。", "For master's applicants seeking structured programme planning and submission assistance."],
-    features: [
-      ["背景评估、申请路径与专业选择", "Background assessment, admissions pathway and programme selection"],
-      ["最多10个申请项目的材料与递交进度支持", "Documents and submission tracking for up to 10 application choices"],
-    ],
-  },
-  {
-    id: "masters-vip",
-    name: ["香港硕士 VIP 全程申请", "Hong Kong Master's · VIP"],
-    price: ["¥89,980", "RMB 89,980"],
-    description: ["适合希望获得更深入申请策略和全过程顾问支持的申请者。", "For applicants seeking a more tailored strategy and continuing advisory support."],
-    features: [
-      ["个性化申请路径与材料策略", "Tailored application and document strategy"],
-      ["多阶段申请跟进及录取结果选择建议", "Multi-stage follow-up and offer selection guidance"],
-    ],
-  },
-  {
-    id: "tailored",
-    name: ["名校目标／复杂背景定制", "Selective Universities · Tailored"],
-    price: ["评估后书面报价", "Written quote after assessment"],
-    description: ["高目标院校、特殊资格或其他复杂需求按实际服务范围定制。", "Selective goals, unusual qualifications and complex applications are scoped individually."],
-    features: [
-      ["先核实适用资格与可行申请范围", "Confirm eligibility and a viable programme scope"],
-      ["任何风险共担及退款条款须单独书面约定", "Any risk-sharing or refund terms require separate written agreement"],
-    ],
-  },
-  {
     id: "research",
     name: ["博士 PhD／DBA 进阶规划", "PhD / DBA · Research Pathways"],
     price: ["评估后书面报价", "Written quote after assessment"],
@@ -90,7 +60,7 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
           <h1 id="education-title">{t("全球教育规划", "Global Education Planning")}</h1>
           <p className={styles.heroSubtitle}>{t("让每一个孩子，看见更广阔的世界。", "From kindergarten to university, from Hong Kong to the world, plan a growth path that fits each family.")}</p>
           <p className={styles.heroBody}>{t("我们整合全球优质教育资源，结合专业规划与智能工具，为每个家庭提供从升学规划、课程学习到海外发展的全程支持，帮助孩子在不同成长阶段找到适合自己的方向。", "We connect global education resources with professional planning and intelligent tools, supporting families from admissions planning and course learning to overseas development, so every learner can find a direction suited to their stage of growth.")}</p>
-          <div className={styles.actions}><Button asChild className={styles.primaryButton}><a href="#education-packages">{t("本科升学 ¥19,800 起 · 查看套餐", "Undergraduate admissions from RMB 19,800 · View packages")}<Arrow /></a></Button><Button asChild variant="outline" className={styles.secondaryButton}><Link href={`/${locale}/education/schools`}>{t("浏览学校与课程", "Browse schools and curricula")}<Arrow /></Link></Button><Button asChild variant="outline" className={styles.secondaryButton}><a href="#consultation">{t("预约专业顾问", "Prepare an advisor consultation")}<Arrow /></a></Button></div>
+          <div className={styles.actions}><Button asChild className={styles.primaryButton}><a href="#education-packages">{t("本科／硕士申请 ¥19,800 起 · 查看套餐", "Undergraduate / master's applications from RMB 19,800 · View packages")}<Arrow /></a></Button><Button asChild variant="outline" className={styles.secondaryButton}><Link href={`/${locale}/education/schools`}>{t("浏览学校与课程", "Browse schools and curricula")}<Arrow /></Link></Button><Button asChild variant="outline" className={styles.secondaryButton}><a href="#consultation">{t("预约专业顾问", "Prepare an advisor consultation")}<Arrow /></a></Button></div>
         </div></div>
         <span className={styles.imageCaption}>{t("品牌场景示意 · 非真实学生或院校合作案例", "Illustrative scene · Not a student case or institutional partnership")}</span>
       </section>
@@ -149,6 +119,37 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
           </article>
           <p className={styles.small}>{t("本科升学套餐实行全国统一服务收费，含升学定位、材料及文书指导、申请进度、面试及择校指导；按适用情况提供签证与入学指导。院校额度按学校计，具体专业数量与服务范围以书面合同为准。内地综评及各境外院校须先核对报考资格、申请时间及官方招生规则；不保证录取。", "Undergraduate packages have standard nationwide service fees and cover admissions planning, document and essay guidance, application tracking, interview and offer selection guidance, plus visa and enrolment guidance where applicable. Institution quotas are counted by institution; programme limits and deliverables are contracted in writing. Eligibility, deadlines and official admissions rules must be checked for every pathway. Admission is not guaranteed.")}</p>
         </section>
+        <section className={styles.gaokaoSection} id="education-masters-pricing" aria-labelledby="masters-pricing-title" data-testid="masters-pricing">
+          <div className={styles.gaokaoHero} id="education-package-masters-launch" data-testid="masters-plan-a">
+            <div><p className={styles.gaokaoKicker}>{t("2027 硕士升学 · 全国统一收费", "2027 master's admissions · Nationwide standard fees")}</p>
+              <h3 id="masters-pricing-title">{t("硕士启航计划", "Master's Launch")}</h3>
+              <p>{t("本科双证 · 常规硕士申请 · 4个专业申请项目", "Standard master's applications for eligible degree holders · 4 programme applications")}</p>
+              <a className={styles.gaokaoHeroAction} href="#consultation">{t("了解硕士申请方案", "Explore master's applications")}<Arrow /></a>
+            </div>
+            <div className={styles.gaokaoHeroPrice}><span>{t("人民币服务费", "Service fee in RMB")}</span><strong>{t("¥19,800", "RMB 19,800")}</strong><span>{t("起 · 4个专业", "From · 4 programmes")}</span></div>
+          </div>
+          <div className={styles.gaokaoChoices}>
+            <article className={`${styles.gaokaoPlan} ${styles.gaokaoRecommended}`} id="education-package-masters-standard" data-testid="masters-plan-b">
+              <p className={styles.gaokaoLabel}>{t("PLAN B · 重点推荐", "PLAN B · RECOMMENDED")}</p>
+              <h3>{t("硕士优才计划", "Master's Premium")}</h3><p className={styles.pricingPrice}>{t("¥39,800", "RMB 39,800")}</p>
+              <p className={styles.gaokaoCount}>{t("10个专业申请项目", "10 programme applications")}</p>
+              <ul className={styles.pricingFeatures}>{[["个性化院校与专业定位", "Tailored institution and programme shortlist"], ["多院校组合申请及定制文书", "Multi-institution applications and tailored documents"], ["专项面试指导与全程申请跟进", "Focused interview guidance and application tracking"], ["录取分析及入学指导", "Offer analysis and enrolment guidance"]].map(([cn,en])=><li key={en}><Check size={16} aria-hidden="true" />{t(cn,en)}</li>)}</ul>
+              <a className={styles.pricingAction} href="#consultation">{t("了解优才方案", "Explore the Premium plan")}<Arrow /></a>
+            </article>
+            <article className={styles.gaokaoPlan} id="education-package-masters-vip" data-testid="masters-plan-c">
+              <p className={styles.gaokaoLabel}>{t("PLAN C · 高端进阶", "PLAN C · ELITE")}</p>
+              <h3>{t("硕士菁英计划", "Master's Elite")}</h3><p className={styles.pricingPrice}>{t("¥80,000", "RMB 80,000")}</p>
+              <p className={styles.gaokaoCount}>{t("高竞争力院校申请", "Competitive university applications")}</p>
+              <ul className={styles.pricingFeatures}>{[["名校冲刺策略与深度背景规划", "Competitive admissions strategy and in-depth profile planning"], ["高阶申请文书定制", "Advanced tailored application documents"], ["强化面试辅导与资深顾问跟进", "Enhanced interview guidance and senior adviser follow-up"]].map(([cn,en])=><li key={en}><Check size={16} aria-hidden="true" />{t(cn,en)}</li>)}</ul>
+              <a className={styles.pricingAction} href="#consultation">{t("了解菁英方案", "Explore the Elite plan")}<Arrow /></a>
+            </article>
+          </div>
+          <article className={styles.gaokaoReference} id="education-package-tailored" data-testid="masters-plan-d">
+            <div><p className={styles.gaokaoLabel}>{t("PLAN D · 高端专项", "PLAN D · SIGNATURE")}</p><h3>{t("名校定制服务", "Bespoke Selective Admissions")}</h3><p>{t("顶尖院校、高难度跨专业、本科单证及其他复杂学历背景；先核实院校资格，个案评估后书面报价。", "Selective universities, complex subject transitions, applicants with non-standard degree credentials and other complex profiles; eligibility is checked before a tailored written quote.")}</p></div>
+            <div className={styles.gaokaoReferencePrice}><span>{t("专项服务参考价", "Indicative specialist fee")}</span><strong>{t("¥100,000起", "From RMB 100,000")}</strong></div>
+          </article>
+          <p className={styles.small}>{t("本科双证指毕业证及学位证；境外学历按院校认可的等效资格核验。高端套餐具体专业数量、背景规划范围、交付及退款条款以书面合同为准；实际科研、培训及第三方费用不默认包含。不保证录取。", "Eligibility is checked against each institution's requirements, including equivalent overseas qualifications. Programme counts, profile planning, deliverables and refunds for specialist plans are specified in writing. Research, training and third-party costs are not included by default. Admission is not guaranteed.")}</p>
+        </section>
         <h3 className={styles.otherPricingTitle}>{t("其他阶段升学服务", "Other education stages")}</h3>
         <div className={styles.pricingGrid}>{educationPricingPackages.map(plan => <article className={styles.pricingCard} key={plan.id} id={`education-package-${plan.id}`} data-testid="education-pricing-package">
           <h3>{copy(plan.name)}</h3>
@@ -157,8 +158,21 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
           <ul className={styles.pricingFeatures}>{plan.features.map(feature => <li key={feature[1]}><Check size={16} aria-hidden="true" />{copy(feature)}</li>)}</ul>
           <a className={styles.pricingAction} href="#consultation">{t("了解适用条件与书面报价", "Ask about eligibility & a written quote")}<Arrow /></a>
         </article>)}</div>
+        <section className={styles.feeJourney} id="education-application-fees" aria-labelledby="application-fees-title" data-testid="application-fee-journey">
+          <h3 id="application-fees-title">{t("申请窗口 · 前期评估与正式服务", "Application journey · Assessment and admissions services")}</h3>
+          <div className={styles.feeJourneyGrid}>
+            {[
+              ["01 · COMPASS", t("教育罗盘免费初步评估", "Free Compass assessment"), t("免费", "Free"), t("初步 Growth Snapshot，不是付费报告。", "Initial Growth Snapshot, not a paid report.")],
+              ["02 · DISCOVERY", t("教育成长探索", "Education Growth Discovery"), t("¥39.9", "RMB 39.9"), t("独立数字化服务，不计入后续申请费。", "Independent digital service; not credited towards application services.")],
+              ["03 · REVIEW", t("专业升学评估", "Professional Decision Review"), t("¥980", "RMB 980"), t("授权顾问交付；交付后7天内签约符合条件的申请服务，已付评估费可计入服务费。", "Delivered by an authorised adviser; the paid review fee may count towards an eligible service signed within seven days after delivery.")],
+              ["04 · ADMISSIONS", t("正式升学申请服务", "Admissions services"), t("¥19,800起", "From RMB 19,800"), t("本科及硕士按上述套餐，签署书面合同后执行。", "Undergraduate and master's packages above; services follow a written contract.")],
+            ].map(([step,title,price,body])=><article key={step}><p className={styles.gaokaoLabel}>{step}</p><h4>{title}</h4><strong>{price}</strong><p>{body}</p></article>)}
+          </div>
+          <p className={styles.small}>{t("以上并非强制逐项购买。目标明确的家庭也可直接咨询套餐。本页为收费说明，不提供在线购买或支付；院校申请费等第三方费用另计。", "These are not mandatory sequential purchases. Families with clear goals may enquire about a package directly. This page explains fees and does not provide checkout or payment. Institutional application fees and other third-party costs are separate.")}</p>
+          <a className={styles.textLink} href="#education-compass">{t("了解教育罗盘", "Explore Education Compass")}<Arrow /></a>
+        </section>
         <div className={styles.pricingTerms} aria-label={t("服务收费规则", "Service pricing rules")} data-testid="education-pricing-terms">
-          <article><h3>{t("标准服务范围", "Standard service scope")}</h3><p>{t("以1名学生、约定申请周期为单位。K–12标准申请最多10所学校；硕士标准申请最多10个独立申请项目；高考套餐按上述院校额度计。具体专业及项目计数以合同为准。", "Standard applications cover one student and one agreed application cycle: up to 10 schools for K–12 or 10 separate programme applications for master's services; Gaokao packages follow the institution quotas above. The contract defines programme limits and counting rules.")}</p></article>
+          <article><h3>{t("标准服务范围", "Standard service scope")}</h3><p>{t("以1名学生、约定申请周期为单位。K–12标准申请最多10所学校；硕士启航4个、优才10个专业申请项目；高端硕士套餐按书面约定，高考套餐按上述院校额度计。具体专业及项目计数以合同为准。", "Standard applications cover one student and one agreed application cycle: up to 10 schools for K–12 4 programme applications for Master's Launch or 10 for Master's Premium; specialist master's scope is agreed in writing; Gaokao packages follow the institution quotas above. The contract defines programme limits and counting rules.")}</p></article>
           <article><h3>{t("评估费用与抵扣", "Assessment fees and credits")}</h3><p>{t("¥39.9教育成长探索为独立服务费，不抵扣。¥980专业评估由授权教育顾问交付；交付后7天内签约符合条件的申请服务，已付评估费可计入后续服务费。", "The RMB 39.9 Education Growth Discovery fee is not credited. A RMB 980 professional review is delivered by an authorised adviser; if an eligible application service is signed within seven days after delivery, the paid review fee may be credited to that service.")}</p></article>
           <article><h3>{t("第三方费用", "Third-party costs")}</h3><p>{t("院校报名及注册费、考试、成绩寄送、翻译公证、签证、留位费、学费和住宿等通常另计；除非正式合同明确约定包含。", "School and university fees, examinations, score reports, translation, notarisation, visas, deposits, tuition and accommodation are generally separate unless the signed contract expressly includes them.")}</p></article>
         </div>
