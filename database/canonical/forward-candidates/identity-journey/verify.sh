@@ -44,6 +44,7 @@ psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/timeline.s
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/../service-workbench/0038_service_project_workbench.sql"
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/founder-summary.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/verify.sql"
+psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/verify-episode-transition.sql"
 
 db=phoenix_identity_journey_synthetic_ci
 psql_synthetic -d "$db" < "$candidate/verify-worker-fixture.sql"

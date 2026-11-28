@@ -125,6 +125,13 @@ CREATE TABLE identity.journey_station_reminders (
 CREATE INDEX journey_station_due_idx ON identity.journey_station_reminders(send_on, retry_not_before)
   WHERE state IN ('PENDING','RETRY');
 
+-- Identity-card and travel-document deadlines run independently of stay stages.
+CREATE FUNCTION identity.journey_reminder_needs_open_episode(p_kind text) RETURNS boolean
+LANGUAGE sql IMMUTABLE STRICT
+SET search_path = pg_catalog
+RETURN p_kind NOT IN ('HKIC_AGE_11','HKIC_AGE_18','PASSPORT_EXPIRY','TRAVEL_DOCUMENT_EXPIRY');
+REVOKE ALL ON FUNCTION identity.journey_reminder_needs_open_episode(text) FROM PUBLIC;
+
 CREATE FUNCTION identity.guard_journey_reminder() RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog, identity
@@ -132,7 +139,9 @@ AS $fn$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM identity.journey_date_revisions d
+    JOIN identity.journey_episodes e USING (episode_id, identity_case_id)
     WHERE d.date_revision_id = NEW.date_revision_id AND d.target_on = NEW.target_on
+      AND (e.ended_before IS NULL OR NOT identity.journey_reminder_needs_open_episode(d.date_kind))
       AND (d.verification = 'VERIFIED' OR d.date_basis = 'INTERNAL')
       AND CASE
         WHEN d.date_kind IN ('FIRST_ENTRY_DEADLINE','STAY_EXPIRY','PASSPORT_EXPIRY','TRAVEL_DOCUMENT_EXPIRY')
@@ -216,7 +225,9 @@ BEGIN
   RETURN QUERY
     WITH due AS (
       SELECT r.reminder_id FROM identity.journey_station_reminders r
+      JOIN identity.journey_episodes e USING (episode_id, identity_case_id)
       WHERE r.state IN ('PENDING','RETRY')
+        AND (e.ended_before IS NULL OR NOT identity.journey_reminder_needs_open_episode(r.date_kind))
         AND r.send_on <= (now_at AT TIME ZONE 'Asia/Hong_Kong')::date
         AND (r.retry_not_before IS NULL OR r.retry_not_before <= now_at)
         AND (r.claim_until IS NULL OR r.claim_until <= now_at)
@@ -249,6 +260,8 @@ BEGIN
   WHERE r.reminder_id = p_reminder_id AND r.date_revision_id = p_expected_revision_id
     AND r.state IN ('PENDING','RETRY')
     AND r.claim_token = p_claim_token AND r.claim_until > clock_timestamp()
+    AND EXISTS (SELECT 1 FROM identity.journey_episodes e WHERE e.episode_id = r.episode_id
+      AND (e.ended_before IS NULL OR NOT identity.journey_reminder_needs_open_episode(r.date_kind)) FOR SHARE SKIP LOCKED)
     AND NOT EXISTS (SELECT 1 FROM identity.journey_date_revisions n WHERE n.supersedes_id = r.date_revision_id);
   RETURN FOUND;
 END
@@ -296,6 +309,14 @@ BEGIN
     OR job.claim_until <= now_at THEN RETURN 'CLAIM_LOST'; END IF;
   IF job.send_on > (now_at AT TIME ZONE 'Asia/Hong_Kong')::date
     OR (job.state = 'RETRY' AND job.retry_not_before > now_at) THEN RETURN 'NOT_DUE'; END IF;
+
+  -- Keep the stage open through publication. An in-flight stage change is
+  -- temporary unavailability, while an ended stage invalidates an old claim.
+  PERFORM 1 FROM identity.journey_episodes e WHERE e.episode_id = job.episode_id FOR SHARE SKIP LOCKED;
+  IF NOT FOUND THEN RETURN 'UNAVAILABLE'; END IF;
+  IF identity.journey_reminder_needs_open_episode(job.date_kind)
+    AND EXISTS (SELECT 1 FROM identity.journey_episodes e WHERE e.episode_id = job.episode_id AND e.ended_before IS NOT NULL)
+    THEN RETURN 'CANCELED'; END IF;
 
   -- This candidate only verifies direct self-recipient binding. Any enabled
   -- delegate path requires its own reviewed subject + recipient authorization.

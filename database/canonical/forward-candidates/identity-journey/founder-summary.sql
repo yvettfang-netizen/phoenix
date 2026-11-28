@@ -84,7 +84,9 @@ BEGIN
         AND d.withdrawn_at IS NULL AND d.retention_until > clock_timestamp()
     UNION ALL SELECT 'reminderFailures', s.family_id, reminder.reminder_id FROM scoped s
       JOIN identity.journey_station_reminders reminder USING (identity_case_id)
+      JOIN identity.journey_episodes episode USING (episode_id, identity_case_id)
       WHERE reminder.state = 'RETRY' AND reminder.attempt_count > 0
+        AND (episode.ended_before IS NULL OR NOT identity.journey_reminder_needs_open_episode(reminder.date_kind))
         AND NOT EXISTS (SELECT 1 FROM identity.journey_date_revisions later WHERE later.supersedes_id = reminder.date_revision_id)
     UNION ALL SELECT 'serviceExceptions', p.family_id, p.service_project_id FROM project_rows p
       WHERE p.project_status = 'ON_HOLD' OR (p.project_status = 'ACTIVE' AND EXISTS (
