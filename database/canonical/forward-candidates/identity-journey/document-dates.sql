@@ -14,7 +14,7 @@ CREATE TABLE identity.journey_document_date_attestations (
   episode_id uuid NOT NULL,
   document_version_id uuid NOT NULL REFERENCES docs.document_versions,
   date_kind text NOT NULL CHECK (date_kind IN (
-    'VISA_ISSUED','FIRST_ENTRY_DEADLINE','FIRST_ENTRY_ACTUAL','PASSPORT_EXPIRY','TRAVEL_DOCUMENT_EXPIRY'
+    'VISA_ISSUED','FIRST_ENTRY_DEADLINE','FIRST_ENTRY_ACTUAL','PASSPORT_EXPIRY','TRAVEL_DOCUMENT_EXPIRY','RENEWAL_WINDOW_OPEN'
   )),
   target_on date NOT NULL CHECK (target_on BETWEEN DATE '1900-01-01' AND DATE '9999-12-31'),
   prior_revision_id uuid,
@@ -37,7 +37,8 @@ CREATE TRIGGER journey_document_date_attestation_immutable BEFORE UPDATE OR DELE
 ALTER TABLE identity.journey_date_revisions
   ADD COLUMN document_date_attestation_id uuid UNIQUE,
   ADD CHECK (document_date_attestation_id IS NULL OR (
-    verification='VERIFIED' AND date_basis='CASE_APPROVAL' AND document_id IS NOT NULL AND official_fact_id IS NULL
+    verification='VERIFIED' AND document_id IS NOT NULL AND official_fact_id IS NULL
+    AND date_basis=CASE WHEN date_kind='RENEWAL_WINDOW_OPEN' THEN 'OFFICIAL_WINDOW' ELSE 'CASE_APPROVAL' END
   )),
   ADD FOREIGN KEY (document_date_attestation_id,identity_case_id,episode_id,date_kind,target_on)
     REFERENCES identity.journey_document_date_attestations(attestation_id,identity_case_id,episode_id,date_kind,target_on);
@@ -76,7 +77,9 @@ BEGIN
     OR reviewed.verified_at > clock_timestamp() THEN RETURN NULL; END IF;
   today_hk := (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date;
   IF (reviewed.date_kind IN ('VISA_ISSUED','FIRST_ENTRY_ACTUAL') AND reviewed.target_on > today_hk)
-    OR (p_recipient IS NOT NULL AND reviewed.date_kind NOT IN ('FIRST_ENTRY_DEADLINE','PASSPORT_EXPIRY','TRAVEL_DOCUMENT_EXPIRY'))
+    OR (p_recipient IS NOT NULL AND reviewed.date_kind NOT IN (
+      'FIRST_ENTRY_DEADLINE','PASSPORT_EXPIRY','TRAVEL_DOCUMENT_EXPIRY','RENEWAL_WINDOW_OPEN'
+    ))
   THEN RETURN NULL; END IF;
   expected_document_kind := CASE reviewed.date_kind
     WHEN 'VISA_ISSUED' THEN 'HK_ENTRY_PERMIT'
@@ -84,6 +87,7 @@ BEGIN
     WHEN 'FIRST_ENTRY_ACTUAL' THEN 'HK_FIRST_ENTRY_RECORD'
     WHEN 'PASSPORT_EXPIRY' THEN 'PASSPORT'
     WHEN 'TRAVEL_DOCUMENT_EXPIRY' THEN 'TRAVEL_DOCUMENT'
+    WHEN 'RENEWAL_WINDOW_OPEN' THEN 'HK_CASE_RENEWAL_WINDOW'
   END;
 
   SELECT * INTO evidence FROM identity.lock_journey_residence_evidence(reviewed.identity_case_id,reviewed.document_version_id);
@@ -129,7 +133,8 @@ BEGIN
 
   INSERT INTO identity.journey_date_revisions(date_revision_id,identity_case_id,episode_id,date_kind,date_basis,
     target_on,verification,document_id,verified_by,supersedes_id,recorded_by,document_date_attestation_id)
-  VALUES (p_revision,reviewed.identity_case_id,reviewed.episode_id,reviewed.date_kind,'CASE_APPROVAL',
+  VALUES (p_revision,reviewed.identity_case_id,reviewed.episode_id,reviewed.date_kind,
+    CASE WHEN reviewed.date_kind='RENEWAL_WINDOW_OPEN' THEN 'OFFICIAL_WINDOW' ELSE 'CASE_APPROVAL' END,
     reviewed.target_on,'VERIFIED',evidence.document_id,reviewed.verified_by,reviewed.prior_revision_id,reviewed.verified_by,p_attestation);
 
   UPDATE identity.journey_station_reminders r SET state='CANCELED',retry_not_before=NULL
@@ -143,16 +148,7 @@ BEGIN
       WHERE r.episode_id=reviewed.episode_id AND r.date_kind='FIRST_ENTRY_ACTUAL' AND r.verification='VERIFIED'
     )
   ) THEN
-    today_hk := (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date;
-    INSERT INTO identity.journey_station_reminders AS r(reminder_id,identity_case_id,episode_id,date_revision_id,
-      date_kind,target_on,offset_days,recipient_principal_id,state)
-    SELECT plan.job_id,reviewed.identity_case_id,reviewed.episode_id,p_revision,
-      reviewed.date_kind,reviewed.target_on,plan.offset_days,p_recipient,'PENDING'
-    FROM unnest(p_offsets,p_reminder_ids) AS plan(offset_days,job_id)
-    WHERE reviewed.target_on - plan.offset_days::integer >= today_hk
-    ON CONFLICT (identity_case_id,episode_id,date_kind,target_on,offset_days,recipient_principal_id)
-    DO UPDATE SET date_revision_id=EXCLUDED.date_revision_id,state='PENDING',attempt_count=0,retry_not_before=NULL
-    WHERE r.state <> 'DELIVERED';
+    PERFORM identity.schedule_current_journey_revision(p_revision,p_recipient,p_offsets,p_reminder_ids);
   END IF;
 
   IF evidence.valid_until <= clock_timestamp() OR auth.write_context_is_live() IS NOT TRUE

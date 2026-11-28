@@ -3,6 +3,7 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheck, ArrowRight, Clock3 } from "lucide-react";
 import {
+  isIdentityInternalOnlyMilestoneKind,
   identityProfilePath,
   type IdentityMemberProfile,
   type IdentityProfileMember,
@@ -25,6 +26,8 @@ const milestoneLabels: Record<string, [string, string]> = {
   STATUS_TRANSITION: ["身份转换节点", "Status transition"],
   EMPLOYMENT_REVIEW: ["雇佣条件复核", "Employment review"],
   SPONSOR_REVIEW: ["保证关系复核", "Sponsor relationship review"],
+  INVESTMENT_REVIEW: ["投资相关资料复核", "Investment-related review"],
+  PERMANENT_RESIDENCE_PREPARATION: ["永久居民相关资料准备", "Permanent residence preparation"],
   HKIC_AGE_11: ["11 岁身份证登记节点", "HKIC age-11 registration"],
   HKIC_AGE_18: ["18 岁身份证换领节点", "HKIC age-18 replacement"],
   PASSPORT_EXPIRY: ["护照到期", "Passport expiry"],
@@ -109,11 +112,16 @@ function parseProfile(value: unknown): IdentityMemberProfile | null {
     endedBefore: episode.endedBefore as string | null,
     milestones: (episode.milestones as unknown[]).filter((milestone): milestone is Milestone => {
       if (!isRecord(milestone)) return false;
-      return typeof milestone.kind === "string"
-        && (milestone.basis === "STATUTORY" || milestone.basis === "CASE_APPROVAL"
-          || milestone.basis === "OFFICIAL_WINDOW" || milestone.basis === "INTERNAL")
+      const kind = milestone.kind;
+      const basis = milestone.basis;
+      const verification = milestone.verification;
+      if (typeof kind !== "string") return false;
+      return (basis === "STATUTORY" || basis === "CASE_APPROVAL"
+        || basis === "OFFICIAL_WINDOW" || basis === "INTERNAL")
+        && (!isIdentityInternalOnlyMilestoneKind(kind)
+          || (basis === "INTERNAL" && verification === "REPORTED"))
         && typeof milestone.on === "string"
-        && (milestone.verification === "REPORTED" || milestone.verification === "VERIFIED")
+        && (verification === "REPORTED" || verification === "VERIFIED")
         && typeof milestone.current === "boolean";
     }),
   }));
@@ -139,17 +147,25 @@ function accessLabel(member: IdentityProfileMember, locale: Locale) {
 }
 
 function MilestoneRow({ milestone, locale }: { milestone: Milestone; locale: Locale }) {
-  const verification = milestone.verification === "VERIFIED"
-    ? text(locale, "已核验", "Verified")
-    : text(locale, "已记录，待核验", "Recorded, pending verification");
+  const internalPlanning = isIdentityInternalOnlyMilestoneKind(milestone.kind);
+  const status = internalPlanning
+    ? text(locale, "内部规划", "Internal planning")
+    : milestone.verification === "VERIFIED"
+      ? text(locale, "已核验", "Verified")
+      : text(locale, "已记录，待核验", "Recorded, pending verification");
   const current = milestone.current
     ? text(locale, "当前", "Current")
     : text(locale, "历史", "History");
+  const planningBoundary = internalPlanning
+    ? text(locale, "仅供规划，资格由人工核验", "Planning only. Eligibility requires human review.")
+    : null;
+  const metadata = [status, current, !internalPlanning ? labelFor(basisLabels, milestone.basis, locale) : null, planningBoundary]
+    .filter((value): value is string => Boolean(value)).join(" · ");
   return <div className="fc-date" role="listitem">
     <time dateTime={milestone.on}>{formatDate(milestone.on, locale)}</time>
     <span>
       <strong>{milestoneLabel(milestone, locale)}</strong>
-      <small>{verification} · {current} · {labelFor(basisLabels, milestone.basis, locale)}</small>
+      <small>{metadata}</small>
     </span>
   </div>;
 }

@@ -149,7 +149,8 @@ BEGIN
         WHEN d.date_kind = 'RENEWAL_WINDOW_OPEN' THEN d.date_basis = 'OFFICIAL_WINDOW'
         WHEN d.date_kind = 'RETURN_BY' THEN d.date_basis IN ('CASE_APPROVAL','INTERNAL')
         WHEN d.date_kind IN ('HKIC_AGE_11','HKIC_AGE_18') THEN d.date_basis IN ('STATUTORY','INTERNAL')
-        WHEN d.date_kind IN ('ABSENCE_REVIEW','GRADUATION','STATUS_TRANSITION','EMPLOYMENT_REVIEW','SPONSOR_REVIEW')
+        WHEN d.date_kind IN ('ABSENCE_REVIEW','GRADUATION','STATUS_TRANSITION','EMPLOYMENT_REVIEW','SPONSOR_REVIEW',
+          'INVESTMENT_REVIEW','PERMANENT_RESIDENCE_PREPARATION')
           THEN d.date_basis = 'INTERNAL'
         ELSE false
       END
@@ -208,6 +209,27 @@ $fn$;
 REVOKE ALL ON FUNCTION identity.clear_stale_journey_station_claim() FROM PUBLIC;
 CREATE TRIGGER journey_station_claim_scope BEFORE UPDATE ON identity.journey_station_reminders
 FOR EACH ROW EXECUTE FUNCTION identity.clear_stale_journey_station_claim();
+
+-- The caller must lock the date series and reminder-purpose authority before
+-- replacing its plan. An already delivered receipt remains bound to its date.
+CREATE FUNCTION identity.schedule_current_journey_revision(
+  p_revision uuid,p_recipient uuid,p_offsets smallint[],p_job_ids uuid[]
+) RETURNS void
+LANGUAGE sql SET search_path = pg_catalog
+AS $fn$
+  INSERT INTO identity.journey_station_reminders AS r(reminder_id,identity_case_id,episode_id,date_revision_id,
+    date_kind,target_on,offset_days,recipient_principal_id,state)
+  SELECT plan.job_id,d.identity_case_id,d.episode_id,d.date_revision_id,
+    d.date_kind,d.target_on,plan.offset_days,p_recipient,'PENDING'
+  FROM identity.journey_date_revisions d CROSS JOIN unnest(p_offsets,p_job_ids) AS plan(offset_days,job_id)
+  WHERE d.date_revision_id=p_revision
+    AND d.target_on-plan.offset_days::integer >= (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date
+  ON CONFLICT (identity_case_id,episode_id,date_kind,target_on,offset_days,recipient_principal_id)
+  DO UPDATE SET date_revision_id=EXCLUDED.date_revision_id,state='PENDING',attempt_count=0,retry_not_before=NULL
+  WHERE r.state <> 'DELIVERED';
+$fn$;
+REVOKE ALL ON FUNCTION identity.schedule_current_journey_revision(uuid,uuid,smallint[],uuid[])
+  FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
 
 -- The scheduler commits the short claim transaction before doing any work.
 -- Claims reserve work; they do not grant authority to read a family or publish.

@@ -305,6 +305,33 @@ export async function verifyDocumentDates({ query, recipient }) {
   assert.equal(query(`SELECT date_kind FROM identity.journey_date_revisions
       WHERE date_revision_id=:'revision'::uuid;`, { revision: travelRevision }), "TRAVEL_DOCUMENT_EXPIRY");
 
+  const windowOn = addDays(today, 40);
+  const windowDocument = id(8490);
+  const windowVersion = id(8491);
+  const windowAttestation = id(8492);
+  const windowRevision = id(8493);
+  const windowReminder = id(8494);
+  const wrongWindowAttestation = id(8495);
+  query(`INSERT INTO docs.documents(document_id,family_id,subject_person_id,data_class,document_kind,retention_until)
+    VALUES(:'windowDocument'::uuid,:'familyId'::uuid,:'actor'::uuid,'IDENTITY_SENSITIVE',
+      'HK_CASE_RENEWAL_WINDOW',clock_timestamp()+interval '1 day');
+    INSERT INTO docs.document_versions(version_id,document_id,version_no,content_sha256,storage_key,size_bytes)
+    VALUES(:'windowVersion'::uuid,:'windowDocument'::uuid,1,repeat('3',64),'synthetic/document-date-case-window',1);
+    ${addAttestation({ attestationKey: "windowAttestation", versionKey: "windowVersion", kind: "RENEWAL_WINDOW_OPEN", targetKey: "windowOn" })}
+    ${addAttestation({ attestationKey: "wrongWindowAttestation", versionKey: "visaVersion", kind: "RENEWAL_WINDOW_OPEN", targetKey: "windowOn" })}`,
+  { ...recipient, actor, journeyCase, episode, advisorPrincipal, visaVersion, windowDocument, windowVersion,
+    windowAttestation, wrongWindowAttestation, windowOn });
+  denied(inAdvisor, { attestation: wrongWindowAttestation, revision: id(8496) });
+  const windowApplied = apply({ attestation: windowAttestation, revision: windowRevision,
+    recipientPrincipal: recipient.principalId, offsets: [30], reminders: [windowReminder] });
+  assert.equal(inAdvisor(windowApplied.sql, windowApplied.values), windowRevision);
+  assert.equal(query(`SELECT count(*) FROM identity.journey_date_revisions d
+    JOIN identity.journey_station_reminders r USING (date_revision_id)
+    WHERE d.date_revision_id=:'revision'::uuid AND d.date_kind='RENEWAL_WINDOW_OPEN'
+      AND d.date_basis='OFFICIAL_WINDOW' AND d.target_on=:'windowOn'::date
+      AND d.document_id=:'windowDocument'::uuid AND r.reminder_id=:'windowReminder'::uuid;`,
+  { revision: windowRevision, windowDocument, windowOn, windowReminder }), "1");
+
   // The member projection exposes verified dates but no internal evidence,
   // document, attestation or revision identifiers.
   const profile = inFamily(`SELECT identity.read_journey_member_profile(
@@ -315,6 +342,8 @@ export async function verifyDocumentDates({ query, recipient }) {
   assert.equal(profile.includes(entryDeadlineOn), true);
   assert.equal(profile.includes(passportCorrectionOn), true);
   assert.equal(profile.includes(travelExpiryOn), true);
+  assert.ok(JSON.parse(profile).episodes.flatMap(item => item.milestones).some(date =>
+    date.kind === "RENEWAL_WINDOW_OPEN" && date.basis === "OFFICIAL_WINDOW" && date.on === windowOn));
 
   // Wrong kind, wrong family/subject scope and expired/not-live evidence are
   // denied without changing the existing consent rows. Family context and a
@@ -341,5 +370,5 @@ export async function verifyDocumentDates({ query, recipient }) {
   assert.equal(query(`SELECT count(*) FROM identity.journey_date_revisions
       WHERE identity_case_id=:'journeyCase'::uuid AND episode_id=:'episode'::uuid
         AND date_kind='PASSPORT_EXPIRY' AND verification='VERIFIED';`, { journeyCase, episode }), "2");
-  console.log("PASS isolated document-date case, exact Docs versions and source-pair mappings, same-day deadline, actual-entry cancellation, independent passport/travel reminders, current-head correction, replay, minimal profile projection and denied authority paths");
+  console.log("PASS isolated document dates, actual-entry cancellation, independent documents and case renewal window, revision replay and scoped profile");
 }

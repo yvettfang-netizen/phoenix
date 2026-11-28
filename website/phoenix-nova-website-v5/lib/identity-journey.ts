@@ -6,6 +6,7 @@ type Basis = "STATUTORY" | "CASE_APPROVAL" | "OFFICIAL_WINDOW" | "INTERNAL";
 type Kind = "VISA_ISSUED" | "FIRST_ENTRY_DEADLINE" | "FIRST_ENTRY_ACTUAL" |
   "STAY_EXPIRY" | "RENEWAL_WINDOW_OPEN" | "RETURN_BY" | "ABSENCE_REVIEW" |
   "GRADUATION" | "STATUS_TRANSITION" | "EMPLOYMENT_REVIEW" | "SPONSOR_REVIEW" |
+  "INVESTMENT_REVIEW" | "PERMANENT_RESIDENCE_PREPARATION" |
   "HKIC_AGE_11" | "HKIC_AGE_18" | "PASSPORT_EXPIRY" | "TRAVEL_DOCUMENT_EXPIRY";
 
 export type IdentityDate = Readonly<{
@@ -57,6 +58,10 @@ const reminderBasis: Partial<Record<Kind, readonly Basis[]>> = {
   STATUS_TRANSITION: ["INTERNAL"],
   EMPLOYMENT_REVIEW: ["INTERNAL"],
   SPONSOR_REVIEW: ["INTERNAL"],
+  // These are manually agreed planning dates only. They are not statutory
+  // deadlines, status facts, or an automatic seven-year eligibility date.
+  INVESTMENT_REVIEW: ["INTERNAL"],
+  PERMANENT_RESIDENCE_PREPARATION: ["INTERNAL"],
   HKIC_AGE_11: ["STATUTORY", "INTERNAL"],
   HKIC_AGE_18: ["STATUTORY", "INTERNAL"],
   PASSPORT_EXPIRY: ["CASE_APPROVAL"],

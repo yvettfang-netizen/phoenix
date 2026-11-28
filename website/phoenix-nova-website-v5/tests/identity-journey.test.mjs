@@ -68,6 +68,23 @@ test("an official application window must be independently verified for the case
   assert.deepEqual(reminders([window, expiry]).map(event => event.basis), ["OFFICIAL_WINDOW", "CASE_APPROVAL"]);
 });
 
+test("investment review and permanent residence preparation use only an explicitly set planning date", () => {
+  const investment = fact("INVESTMENT_REVIEW", "2028-03-01", { basis: "INTERNAL", state: "REPORTED", evidenceRef: undefined });
+  const preparation = fact("PERMANENT_RESIDENCE_PREPARATION", "2028-03-15", {
+    basis: "INTERNAL", state: "REPORTED", evidenceRef: undefined,
+  });
+  assert.deepEqual(reminders([investment, preparation]).map(event => [event.kind, event.basis, event.sendOn]), [
+    ["INVESTMENT_REVIEW", "INTERNAL", "2028-02-29"],
+    ["PERMANENT_RESIDENCE_PREPARATION", "INTERNAL", "2028-03-14"],
+  ]);
+  for (const plan of [investment, preparation]) {
+    for (const basis of ["CASE_APPROVAL", "STATUTORY", "OFFICIAL_WINDOW"]) {
+      assert.deepEqual(reminders([{ ...plan, basis, state: "VERIFIED", evidenceRef: "synthetic-evidence" }]), []);
+    }
+  }
+  assert.deepEqual(reminders([investment, preparation], { grant: { ...grant, purpose: "IDENTITY_READ" } }), []);
+});
+
 test("HKIC ages 11 and 18 are independent targets and have distinct bases", () => {
   const events = reminders([fact("HKIC_AGE_11", "2028-03-30", { basis: "STATUTORY" }),
     fact("HKIC_AGE_18", "2028-04-30", { basis: "INTERNAL" })]);

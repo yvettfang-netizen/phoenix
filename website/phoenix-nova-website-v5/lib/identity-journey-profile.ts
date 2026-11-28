@@ -1,6 +1,12 @@
 import { readCustomerSession, type AuthConfig } from "./customer-auth";
 import { identityPathways } from "./identity-journey-policy";
-import { identityMilestoneKinds, identityProfilePath, type IdentityMemberProfile, type IdentityProfileMember } from "./identity-journey-profile-contract";
+import {
+  identityMilestoneKinds,
+  identityProfilePath,
+  isIdentityInternalOnlyMilestoneKind,
+  type IdentityMemberProfile,
+  type IdentityProfileMember,
+} from "./identity-journey-profile-contract";
 import { identityPrivateHeaders, isIdentityCivilDate, isIdentityMemberRef, readIdentityMemberSelection, sameOriginIdentityRequest } from "./identity-journey-request";
 
 type Session = { customerId: string; sessionHash: string };
@@ -56,6 +62,9 @@ function privateProfile(input: unknown): IdentityMemberProfile {
           if (!knownKind || (basis !== "STATUTORY" && basis !== "CASE_APPROVAL" && basis !== "OFFICIAL_WINDOW" && basis !== "INTERNAL") ||
             !isIdentityCivilDate(on) || (verification !== "REPORTED" && verification !== "VERIFIED") || typeof current !== "boolean") {
             throw new Error("Invalid identity milestone");
+          }
+          if (isIdentityInternalOnlyMilestoneKind(knownKind) && (basis !== "INTERNAL" || verification !== "REPORTED")) {
+            throw new Error("Invalid internal planning milestone");
           }
           return { kind: knownKind, basis, on, verification, current };
         }),
