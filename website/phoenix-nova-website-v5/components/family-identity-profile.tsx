@@ -9,6 +9,7 @@ import {
   type IdentityProfileMember,
 } from "@/lib/identity-journey-profile-contract";
 import { identityPathways } from "@/lib/identity-journey-policy";
+import { FamilyIdentityReviewPlanning } from "./family-identity-review-planning";
 
 type Locale = "zh" | "en";
 type LoadState = "loading" | "ready" | "empty" | "denied" | "error" | "stale";
@@ -174,6 +175,7 @@ export function FamilyIdentityProfile({
   locale,
   onMemberSelectionChange,
   memberResidence,
+  reviewPlanningEnabled = false,
 }: {
   locale: Locale;
   /**
@@ -184,6 +186,8 @@ export function FamilyIdentityProfile({
   onMemberSelectionChange?: (member: IdentityProfileMember | null) => void;
   /** Optional read-only member panel controlled by the residence gate. */
   memberResidence?: ReactNode;
+  /** Mounts only for an authorized, loaded SELF member when the server flag is on. */
+  reviewPlanningEnabled?: boolean;
 }) {
   const [members, setMembers] = useState<IdentityProfileMember[]>([]);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
@@ -241,18 +245,20 @@ export function FamilyIdentityProfile({
     }
   }, [armExpiry, clearSensitive, onMemberSelectionChange]);
 
-  const selectMember = useCallback(async (memberRef: string) => {
+  const selectMember = useCallback(async (memberRef: string, refreshCurrent = false) => {
     const selected = members.find((member) => member.ref === memberRef);
-    if (!selected) return;
+    if (!selected || (refreshCurrent && selected.ref !== selectedRef)) return;
     const sequence = ++requestSequence.current;
     requestController.current?.abort();
     const controller = new AbortController();
     requestController.current = controller;
-    // Clear the previous member's profile before loading the new one.
-    setSelectedRef(selected.ref);
-    setProfile(null);
-    setState("loading");
-    onMemberSelectionChange?.(null);
+    // Only the already selected member may stay visible during a refresh.
+    if (!refreshCurrent) {
+      setSelectedRef(selected.ref);
+      setProfile(null);
+      setState("loading");
+      onMemberSelectionChange?.(null);
+    }
     try {
       const response = await fetch(identityProfilePath, {
         method: "POST",
@@ -274,7 +280,7 @@ export function FamilyIdentityProfile({
       if (controller.signal.aborted || sequence !== requestSequence.current) return;
       clearSensitive(error instanceof Error && error.message === "denied" ? "denied" : "error");
     }
-  }, [armExpiry, clearSensitive, members, onMemberSelectionChange]);
+  }, [armExpiry, clearSensitive, members, onMemberSelectionChange, selectedRef]);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadMembers(), 0);
@@ -333,6 +339,13 @@ export function FamilyIdentityProfile({
       </article>) : <p className="fc-muted">{text(locale, "暂无可显示的身份阶段。", "No identity stages are available.")}</p>}
       <p className="fc-muted">{text(locale, "已核验与待核验信息分开显示；日期仅反映授权资料中的记录，不代表资格判断。", "Verified and reported information are shown separately. Dates reflect authorized records and do not determine eligibility.")}</p>
     </div> : null}
+    {reviewPlanningEnabled && selectedMember?.access === "SELF" && profile ? <FamilyIdentityReviewPlanning
+      key={selectedMember.ref}
+      locale={locale}
+      memberRef={selectedMember.ref}
+      onSaved={() => void selectMember(selectedMember.ref, true)}
+      enabled
+    /> : null}
     {memberResidence}
     <p className="fc-muted">{text(locale, "家庭关系本身不会授予其他成年成员的资料访问权；当前暂不支持成人委托。", "Family membership alone does not grant access to another adult's records. Adult delegation is not supported at this time.")}</p>
     <button type="button" className="fc-gold" onClick={() => void loadMembers()}><ArrowRight size={17} />{text(locale, "重新核验成员授权", "Verify member access again")}</button>

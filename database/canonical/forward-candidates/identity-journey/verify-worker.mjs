@@ -10,6 +10,7 @@ import { verifyResidence } from "./verify-residence.mjs";
 import { verifyDocumentDates } from "./verify-document-dates.mjs";
 import { verifyIdentityPolicyPaths } from "./verify-policy-paths.mjs";
 import { verifyReviewPlans } from "./verify-review-plans.mjs";
+import { verifyReviewPlanningHttp } from "./verify-review-planning-http.mjs";
 import { verifyOfficialTravel } from "./verify-official-travel.mjs";
 import { verifyIdentityMemberProfile } from "./verify-member-profile.mjs";
 import { verifyRenewalRecovery } from "./verify-recovery.mjs";
@@ -246,14 +247,17 @@ let residenceBrowser;
 let officialTravelBrowser;
 let memberProfileBrowser;
 let memberResidenceBrowser;
+let reviewPlanningBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser, verifyFamilyResidenceBrowser,
-    verifyOfficialTravelBrowser, verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser } = await import("./verify-browser.mjs");
+    verifyOfficialTravelBrowser, verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser,
+    verifyIdentityReviewPlanningBrowser } = await import("./verify-browser.mjs");
   timelineBrowser = verifyFamilyTimelineBrowser;
   residenceBrowser = verifyFamilyResidenceBrowser;
   officialTravelBrowser = verifyOfficialTravelBrowser;
   memberProfileBrowser = verifyFamilyMemberProfileBrowser;
   memberResidenceBrowser = verifyFamilyMemberResidenceBrowser;
+  reviewPlanningBrowser = verifyIdentityReviewPlanningBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
@@ -325,6 +329,7 @@ await verifyOfficialTravel({ query, recipient, authConfig, browser: officialTrav
 await verifyIdentityMemberProfile({ query, recipient, authConfig, browser: memberProfileBrowser, memberResidenceBrowser });
 await verifyIdentityPolicyPaths({ query });
 await verifyReviewPlans({ query, recipient });
+await verifyReviewPlanningHttp({ query, recipient, authConfig, browser: reviewPlanningBrowser });
 await verifyRenewalRecovery({
   container, query, recipient, timeline, actor: crmFixture.actor,
   restoredQuery: (sql, variables, role) => query(sql, variables, role, true),

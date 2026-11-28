@@ -22,8 +22,8 @@ async function bundleFamilyCenter(view) {
         createRoot(document.getElementById("root")).render(
           <FamilyCenterV2 locale={locale} account workbench
             identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}}
-            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence"}}
-            identityMemberResidence={${view === "member-residence"}} />
+            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence" || view === "review-planning"}}
+            identityMemberResidence={${view === "member-residence"}} identityReviewPlanning={${view === "review-planning"}} />
         );`,
     },
     bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", jsx: "automatic",
@@ -322,5 +322,81 @@ export async function verifyFamilyMemberResidenceBrowser({
       await restoreResidence();
     }
     console.log("PASS Chromium Family OS isolates selected member residence and clears a separately revoked residence grant");
+  });
+}
+
+export async function verifyIdentityReviewPlanningBrowser({
+  profilePath, planningPath, handleProfile, handlePlanning,
+  ownLabel, guardianLabel, initialOn, saveOn, verifySaved,
+}) {
+  assert.equal(typeof profilePath, "string");
+  assert.equal(typeof planningPath, "string");
+  assert.equal(typeof handleProfile, "function");
+  assert.equal(typeof handlePlanning, "function");
+  assert.equal(typeof verifySaved, "function");
+  assert.match(initialOn, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(saveOn, /^\d{4}-\d{2}-\d{2}$/);
+
+  const secondary = { path: planningPath, handle: handlePlanning };
+  await withFamilyView({ handle: handleProfile, apiPath: profilePath, view: "review-planning", secondary }, async ({ pageFor, output }) => {
+    const open = async (locale, width) => {
+      const page = await pageFor(locale, width);
+      await page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ }).click();
+      const profile = page.getByRole("region", { name: locale === "zh" ? "成员身份档案" : "Member identity profile" });
+      const own = profile.getByRole("button", { name: new RegExp(ownLabel) });
+      const guardian = profile.getByRole("button", { name: new RegExp(guardianLabel) });
+      return { page, profile, own, guardian };
+    };
+
+    const desktop = await open("en", 1440);
+    await desktop.own.click();
+    const desktopPlanner = desktop.profile.getByRole("region", { name: "Identity planning" });
+    await desktopPlanner.waitFor();
+    await desktopPlanner.getByText(`Current date: ${initialOn}`).waitFor();
+    const ownPlan = desktopPlanner.getByRole("button").filter({ hasText: initialOn }).first();
+    await ownPlan.click();
+    const date = desktopPlanner.getByLabel("Planning date", { exact: true });
+    await date.fill(saveOn);
+    const reminder = desktopPlanner.getByRole("checkbox", { name: "7 days before", exact: true });
+    await reminder.check();
+    assert.equal(await reminder.isChecked(), true);
+    const saveButton = desktopPlanner.getByRole("button", { name: "Save planning date", exact: true });
+    assert.equal(await saveButton.isDisabled(), true);
+    await desktopPlanner.getByRole("checkbox", { name: /I confirm this date/ }).check();
+
+    const isSave = request => request.url().endsWith(planningPath) && request.method() === "POST" &&
+      request.postDataJSON()?.action === "save";
+    const saveRequest = desktop.page.waitForRequest(isSave);
+    const saveResponse = desktop.page.waitForResponse(response =>
+      isSave(response.request()));
+    await saveButton.click();
+    const request = await saveRequest;
+    const payload = JSON.parse(request.postData() ?? "{}");
+    assert.equal(payload.action, "save");
+    assert.equal(payload.on, saveOn);
+    assert.equal(payload.confirmed, true);
+    assert.ok(Array.isArray(payload.offsets) && payload.offsets.length > 0);
+    assert.equal((await saveResponse).status(), 200);
+    await desktopPlanner.getByText("Planning date saved.", { exact: true }).waitFor();
+    await desktopPlanner.getByText(`Current date: ${saveOn}`).waitFor();
+    await verifySaved();
+    assert.ok(await desktop.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await desktop.page.screenshot({ path: join(output, "identity-review-planning-en-desktop.png"), fullPage: true });
+
+    const mobile = await open("zh", 390);
+    await mobile.own.click();
+    const mobilePlanner = mobile.profile.getByRole("region", { name: "身份规划" });
+    await mobilePlanner.waitFor();
+    await mobilePlanner.getByText(`当前日期：${saveOn}`).waitFor();
+    assert.ok(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await mobile.page.screenshot({ path: join(output, "identity-review-planning-zh-mobile.png"), fullPage: true });
+
+    await mobile.guardian.click();
+    await mobilePlanner.waitFor({ state: "hidden" });
+    assert.equal(await mobile.profile.getByRole("region", { name: "身份规划" }).count(), 0);
+    assert.equal(await mobile.guardian.getAttribute("aria-pressed"), "true");
+    assert.ok(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await mobile.page.screenshot({ path: join(output, "identity-review-planning-zh-mobile-guardian.png"), fullPage: true });
+    console.log("PASS Chromium Family OS identity review planning, consented save, persisted date, guardian isolation and responsive layout");
   });
 }

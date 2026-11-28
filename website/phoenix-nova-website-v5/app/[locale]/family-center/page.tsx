@@ -17,6 +17,7 @@ import {identityTimelineEnabled} from "@/lib/identity-journey-timeline";
 import {identityResidenceEnabled} from "@/lib/identity-journey-residence";
 import {identityProfileEnabled} from "@/lib/identity-journey-profile";
 import {identityMemberResidenceEnabled} from "@/lib/identity-journey-member-residence";
+import {identityReviewPlanningEnabled} from "@/lib/identity-journey-review-planning";
 
 function NewCenter({locale,account=false}:{locale:"zh"|"en";account?:boolean}) {
   const values=env as unknown as Record<string,unknown>;
@@ -29,6 +30,7 @@ function NewCenter({locale,account=false}:{locale:"zh"|"en";account?:boolean}) {
     identityResidence={account && !demo && identityResidenceEnabled(values)}
     identityProfile={account && !demo && identityProfileEnabled(values)}
     identityMemberResidence={account && !demo && identityMemberResidenceEnabled(values)}
+    identityReviewPlanning={account && !demo && identityReviewPlanningEnabled(values)}
     identityJourneyPreview={demo && values.FAMILY_IDENTITY_JOURNEY_PREVIEW==="true"}
     canonical={!account && sessionFamilyPreviewEnabled(values,process.env.NODE_ENV)}
     personalized={values.FAMILY_CENTER_PERSONALIZATION_ENABLED==="true"}
