@@ -41,6 +41,7 @@ function assertLocaleNavigation(html, locale) {
 
 function assertEducationStructure(html, locale) {
   assert.ok(educationLanding(html), `${locale}: data-education-landing marker is missing`);
+  assert.match(html, /href=["\']#education-packages["\']/, `${locale}: primary pricing CTA missing`);
   assert.equal((html.match(/<h1\b/gi) ?? []).length, 1, `${locale}: Education needs one h1`);
   assert.equal(testIdCount(html, "education-service"), 4, `${locale}: Education needs four services`);
   assert.equal(testIdCount(html, "education-pricing-package"), 6, "Education pricing needs six package cards");
