@@ -40,4 +40,35 @@ fi
 psql_synthetic -d postgres -c 'ALTER DATABASE phoenix_canonical_dev RENAME TO phoenix_identity_journey_synthetic_ci'
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/storage.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/verify.sql"
+
+db=phoenix_identity_journey_synthetic_ci
+psql_synthetic -d "$db" < "$candidate/verify-worker-fixture.sql"
+publication="SELECT identity.publish_journey_station_notice('01910000-0000-7000-8100-000000000008', '01910000-0000-7000-8100-000000000003', '01910000-0000-7000-8100-000000000007');"
+membership="UPDATE core.family_memberships SET valid_until = %s WHERE membership_id = '01910000-0000-7000-8100-000000000004';"
+
+# Worker A publishes without committing. Waiting for its explicit result keeps
+# the competing transaction deterministic without a fixed pg_sleep window.
+coproc PUBLISHER { psql_synthetic -qAt -d "$db"; }
+publisher_pid=$PUBLISHER_PID
+printf 'BEGIN;\n%s\n' "$publication" >&"${PUBLISHER[1]}"
+IFS= read -r -t 20 staged <&"${PUBLISHER[0]}"
+[[ "$staged" == 'DELIVERED' ]]
+[[ "$(psql_synthetic -qAt -d "$db" -c "SET statement_timeout='4s'; $publication")" == 'UNAVAILABLE' ]]
+printf 'ROLLBACK;\n\\q\n' >&"${PUBLISHER[1]}"
+wait "$publisher_pid"
+
+# A recipient that lost membership during recovery must not receive the
+# retried notice. Restoring the synthetic membership exercises a valid retry.
+psql_synthetic -qAt -d "$db" -c "$(printf "$membership" 'clock_timestamp()')"
+[[ "$(psql_synthetic -qAt -d "$db" -c "$publication")" == 'RECIPIENT_UNAVAILABLE' ]]
+psql_synthetic -qAt -d "$db" -c "$(printf "$membership" NULL)"
+[[ "$(psql_synthetic -qAt -d "$db" -c "$publication")" == 'DELIVERED' ]]
+[[ "$(psql_synthetic -qAt -d "$db" -c "$publication")" == 'ALREADY_DELIVERED' ]]
+[[ "$(psql_synthetic -qAt -d "$db" -c "
+  SELECT count(*) FROM identity.journey_station_notices n
+  JOIN identity.journey_station_reminders r USING (reminder_id)
+  WHERE n.reminder_id = '01910000-0000-7000-8100-000000000008'
+    AND n.published_at = r.delivered_at AND r.state = 'DELIVERED'
+    AND r.attempt_count = 2 AND r.retry_not_before IS NULL")" == '1' ]]
+echo "PASS competing sessions, rollback recovery, membership revocation and single receipt: PG$1"
 echo "PASS Identity Journey candidate PostgreSQL $1; synthetic fixture only"
