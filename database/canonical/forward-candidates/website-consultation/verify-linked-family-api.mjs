@@ -40,15 +40,24 @@ export async function verifyLinkedFamilyApi({ db, Pool, connection, backend, ide
     },
   });
   const server = createServer((req, res) => void workbench.handle(req, res));
-  try {
-    await new Promise((resolve, reject) => {
-      server.once("error", reject);
-      server.listen(0, "127.0.0.1", resolve);
+  const listen = port => new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, "127.0.0.1", () => {
+      server.removeListener("error", reject);
+      resolve();
     });
+  });
+  const stop = () => new Promise((resolve, reject) => {
+    server.close(error => error ? reject(error) : resolve());
+    server.closeAllConnections();
+  });
+  try {
+    await listen(0);
+    const upstreamPort = server.address().port;
     const origin = "http://127.0.0.1:4699";
     const env = {
       SERVICE_WORKBENCH_ENABLED: "true", CUSTOMER_CANONICAL_BRIDGE_ENABLED: "true",
-      SERVICE_WORKBENCH_API_ORIGIN: "http://127.0.0.1:" + server.address().port,
+      SERVICE_WORKBENCH_API_ORIGIN: "http://127.0.0.1:" + upstreamPort,
     };
     const audit = [];
     const config = {
@@ -83,18 +92,31 @@ export async function verifyLinkedFamilyApi({ db, Pool, connection, backend, ide
     assert.equal((await proxy("summary", { "x-role": "Founder" })).status, 403);
     assert.deepEqual(audit, ["CANONICAL_ACCESS_ATTEMPT", "CANONICAL_ACCESS_PREPARED",
       "CANONICAL_ACCESS_ATTEMPT", "CANONICAL_ACCESS_PREPARED"]);
+    await stop();
+    for (const resource of ["summary", "projects/" + project]) {
+      const response = await proxy(resource);
+      assert.equal(response.status, 503);
+      assert.match(response.headers.get("cache-control"), /no-store/);
+      assert.deepEqual(await response.json(), { error: { code: "WORKBENCH_UNAVAILABLE" } });
+      assert.deepEqual(audit.slice(-2), ["CANONICAL_ACCESS_ATTEMPT", "CANONICAL_ACCESS_UNAVAILABLE"]);
+    }
+    await listen(upstreamPort);
+    const recovered = await proxy("summary");
+    assert.equal(recovered.status, 200);
+    assert.ok((await recovered.json()).projects.some(row => row.service_project_id === project));
+    console.log("PASS same-family upstream outage: private audited 503, no project data, and fresh read after restart");
     if (openBrowser) {
       const { verifyLinkedFamilyBrowser } = await import("./verify-linked-family-browser.mjs");
-      await verifyLinkedFamilyBrowser({ origin, project, bridge, revoke: () => { sessionLive = false; }, openBrowser });
+      await verifyLinkedFamilyBrowser({
+        origin, project, bridge, stop, restart: () => listen(upstreamPort),
+        revoke: () => { sessionLive = false; }, openBrowser,
+      });
     }
     sessionLive = false;
     assert.equal((await proxy("summary")).status, 401);
     console.log("PASS same synthetic family project through existing Family BFF and Service Workbench HTTP API");
   } finally {
-    if (server.listening) {
-      server.closeAllConnections();
-      await new Promise(resolve => server.close(resolve));
-    }
+    if (server.listening) await stop();
     await workbench.close();
   }
 }

@@ -7,7 +7,7 @@ const site = new URL("../../../../website/phoenix-nova-website-v5/", import.meta
 const projectTitle = "Synthetic linked education service";
 const brandPath = "/brand/official/v3/phoenix-nova-header@2x.png";
 
-export async function verifyLinkedFamilyBrowser({ origin, project, bridge, revoke, openBrowser }) {
+export async function verifyLinkedFamilyBrowser({ origin, project, bridge, stop, restart, revoke, openBrowser }) {
   const bundle = await bundleComponents();
   const css = (await Promise.all(["family-center-v2.css", "family-service-overview.css", "service-workbench.css"]
     .map(name => readFile(new URL("components/" + name, site), "utf8")))).join("\n");
@@ -49,6 +49,18 @@ export async function verifyLinkedFamilyBrowser({ origin, project, bridge, revok
         await page.goto(home);
         const overview = page.locator("[data-family-service-overview]");
         await overview.getByRole("heading", { name: projectTitle, exact: true }).waitFor();
+        const refreshOverview = overview.getByRole("button", { name: locale === "en" ? "Refresh service summary" : "刷新服务摘要" });
+        await stop();
+        try {
+          await refreshOverview.click();
+          await overview.getByRole("alert").waitFor();
+          assert.equal(await page.getByText(projectTitle, { exact: true }).count(), 0);
+          assert.equal(await overview.locator('a[href="' + detail + '"]').count(), 0);
+        } finally {
+          await restart();
+        }
+        await refreshOverview.click();
+        await overview.getByRole("heading", { name: projectTitle, exact: true }).waitFor();
         await page.waitForFunction(path => Array.from(document.images).some(image =>
           new URL(image.currentSrc || image.src).pathname === path && image.complete && image.naturalWidth > 0), brandPath);
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
@@ -56,7 +68,21 @@ export async function verifyLinkedFamilyBrowser({ origin, project, bridge, revok
         await overview.locator('a[href="' + detail + '"]').first().click();
         await page.getByRole("heading", { name: projectTitle, exact: true }).waitFor();
         await page.getByRole("button", { name: locale === "en" ? "Messages" : "顾问沟通", exact: true }).click();
-        await page.getByText("Synthetic feedback on the first delivery milestone", { exact: true }).waitFor();
+        const feedback = page.getByText("Synthetic feedback on the first delivery milestone", { exact: true });
+        await feedback.waitFor();
+        const refreshDetail = page.getByRole("button", { name: locale === "en" ? "Refresh" : "刷新资料", exact: true });
+        await stop();
+        try {
+          await refreshDetail.click();
+          await page.locator("[data-service-workbench]").getByRole("alert").waitFor();
+          assert.equal(await page.getByRole("heading", { name: projectTitle, exact: true }).count(), 0);
+          assert.equal(await feedback.count(), 0);
+        } finally {
+          await restart();
+        }
+        await refreshDetail.click();
+        await page.getByRole("heading", { name: projectTitle, exact: true }).waitFor();
+        await feedback.waitFor();
         if (locale === "zh") {
           revoke();
           await page.goto(home);
@@ -67,7 +93,7 @@ export async function verifyLinkedFamilyBrowser({ origin, project, bridge, revok
         await context.close();
       }
     }
-    console.log("PASS Family component browser on the same CRM project: 1440px English, 390px Chinese, feedback and revocation");
+    console.log("PASS Family component browser on the same CRM project: 1440px English, 390px Chinese, outage clears summary/detail, fresh recovery and revocation");
   } finally {
     await browser.close();
   }
