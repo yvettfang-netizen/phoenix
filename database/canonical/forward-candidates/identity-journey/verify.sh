@@ -43,6 +43,7 @@ psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/renewal.sq
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/timeline.sql"
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/../service-workbench/0038_service_project_workbench.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/residence.sql"
+psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/member-profile.sql"
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/founder-summary.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/verify.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/verify-episode-transition.sql"

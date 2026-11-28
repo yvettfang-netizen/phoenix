@@ -5,7 +5,7 @@ import {
   type IdentityResidenceAbsenceReason, type IdentityResidenceOverview,
   type IdentityResidenceRecord, type IdentityResidenceReport,
 } from "./identity-journey-residence-contract";
-import { identityPrivateHeaders, isIdentityNoticeId, readIdentityRequestBody, sameOriginIdentityRequest } from "./identity-journey-request";
+import { identityPrivateHeaders, isIdentityCivilDate, isIdentityNoticeId, readIdentityRequestBody, sameOriginIdentityRequest } from "./identity-journey-request";
 
 type Session = { customerId: string; sessionHash: string };
 type ReadScope = {
@@ -32,22 +32,16 @@ export function identityResidenceEnabled(env: Record<string, unknown>) {
   return env.FAMILY_IDENTITY_RESIDENCE_ENABLED === "true" && typeof provider?.resolveRead === "function";
 }
 
-function isCivilDate(date: unknown): date is string {
-  if (typeof date !== "string" || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(date)) return false;
-  const ms = Date.parse(date + "T00:00:00.000Z");
-  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === date;
-}
-
 function isReason(value: unknown): value is IdentityResidenceAbsenceReason | null {
   return value === null || identityResidenceAbsenceReasons.some(reason => reason === value);
 }
 
 function readRecordFields(input: Record<string, unknown>, latest: string, allowUnknown: boolean): Omit<IdentityResidenceRecord, "id" | "source"> | null {
   const { from, untilBefore, place, absenceReason, expectedReturnOn } = input;
-  if (!isCivilDate(from) || !isCivilDate(untilBefore) || from < "1900-01-01" || from >= untilBefore || untilBefore > latest ||
+  if (!isIdentityCivilDate(from) || !isIdentityCivilDate(untilBefore) || from < "1900-01-01" || from >= untilBefore || untilBefore > latest ||
       (place !== "HK" && place !== "AWAY" && (!allowUnknown || place !== "UNVERIFIED")) ||
       !isReason(absenceReason) || (absenceReason !== null && place !== "AWAY") ||
-      (expectedReturnOn !== null && (place !== "AWAY" || !isCivilDate(expectedReturnOn) || expectedReturnOn < untilBefore))) return null;
+      (expectedReturnOn !== null && (place !== "AWAY" || !isIdentityCivilDate(expectedReturnOn) || expectedReturnOn < untilBefore))) return null;
   return { from, untilBefore, place, absenceReason, expectedReturnOn };
 }
 

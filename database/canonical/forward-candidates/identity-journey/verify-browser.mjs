@@ -21,7 +21,8 @@ async function bundleFamilyCenter(view) {
         document.documentElement.lang = locale;
         createRoot(document.getElementById("root")).render(
           <FamilyCenterV2 locale={locale} account workbench
-            identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}} identityResidence={${view === "residence"}} />
+            identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}}
+            identityResidence={${view === "residence"}} identityProfile={${view === "profile"}} />
         );`,
     },
     bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", jsx: "automatic",
@@ -216,5 +217,40 @@ export async function verifyFamilyResidenceBrowser({ handle, apiPath, revokeRead
     assert.equal(await mobile.residence.locator("time").count(), 0);
     assert.equal(await mobile.residence.getByRole("button", { name: "提交记录" }).count(), 0);
     console.log("PASS Chromium Family OS residence reporting, bilingual history, no overflow and revoked access");
+  });
+}
+
+export async function verifyFamilyMemberProfileBrowser({ handle, apiPath, revokeGuardian, guardianLabel, selfLabel, childDate, selfDate }) {
+  assert.notEqual(childDate, selfDate);
+  await withFamilyView({ handle, apiPath, view: "profile" }, async ({ pageFor, output }) => {
+    const open = async (locale, width) => {
+      const page = await pageFor(locale, width);
+      const nav = page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ });
+      await nav.click();
+      const panel = page.getByRole("region", { name: locale === "zh" ? "成员身份档案" : "Member identity profile" });
+      const self = panel.getByRole("button", { name: new RegExp(selfLabel) });
+      const dependent = panel.getByRole("button", { name: new RegExp(guardianLabel) });
+      return { page, panel, self, dependent };
+    };
+    const desktop = await open("en", 1440);
+    await desktop.self.click();
+    await desktop.panel.locator(`time[datetime="${selfDate}"]`).waitFor();
+    assert.equal(await desktop.panel.locator(`time[datetime="${childDate}"]`).count(), 0);
+    await desktop.dependent.click();
+    await desktop.panel.locator(`time[datetime="${childDate}"]`).waitFor();
+    assert.equal(await desktop.panel.locator(`time[datetime="${selfDate}"]`).count(), 0);
+    await desktop.page.screenshot({ path: join(output, "identity-profile-en-desktop.png"), fullPage: true });
+
+    const mobile = await open("zh", 390);
+    await mobile.dependent.click();
+    await mobile.panel.locator(`time[datetime="${childDate}"]`).waitFor();
+    assert.ok(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await mobile.page.screenshot({ path: join(output, "identity-profile-zh-mobile.png"), fullPage: true });
+    revokeGuardian();
+    await mobile.dependent.click();
+    await mobile.panel.getByText("此资料未获授权，暂不显示。", { exact: true }).waitFor();
+    assert.equal(await mobile.panel.locator("time").count(), 0);
+    assert.equal(await mobile.dependent.count(), 0);
+    console.log("PASS Chromium Family OS switches between authorized member histories and clears revoked guardian profile");
   });
 }

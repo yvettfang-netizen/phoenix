@@ -11,6 +11,12 @@ export function isIdentityNoticeId(value: unknown): value is string {
   return typeof value === "string" && noticeIdPattern.test(value);
 }
 
+export function isIdentityCivilDate(value: unknown): value is string {
+  if (typeof value !== "string" || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)) return false;
+  const timestamp = Date.parse(value + "T00:00:00.000Z");
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
+}
+
 export function sameOriginIdentityRequest(request: Request, path: string) {
   const url = new URL(request.url);
   const origin = request.headers.get("origin");
