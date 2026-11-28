@@ -50,7 +50,8 @@ function queueForBinding(binding: QueueBinding): StationReminderQueue {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
-        redirect: "error",
+        // Workers supports manual redirects. The status check below rejects them.
+        redirect: "manual",
       }));
       if (response.status !== 200) throw queueUnavailable();
       const result: unknown = await response.json();
