@@ -33,7 +33,7 @@ export async function verifyIdentityMemberResidence({
   const caseOne = member.cases[0];
   const caseTwo = member.cases[1] ?? member.cases[0];
 
-  const signature = "identity.read_journey_member_residence(uuid,uuid,uuid[],date,date)";
+  const signature = "identity.read_journey_member_residence_with_travel(uuid,uuid,uuid[],date,date)";
   assert.equal(query("SELECT to_regprocedure(:'signature') IS NOT NULL;", { signature }), "t");
   for (const role of ["phoenix_canonical_app", "phoenix_canonical_reader", "phoenix_canonical_service_workbench"]) {
     assert.equal(query("SELECT has_function_privilege(:'role', :'signature', 'EXECUTE');", { role, signature }), "f");
@@ -161,7 +161,7 @@ export async function verifyIdentityMemberResidence({
               FROM profile_grant, residence_grant
             )
             SELECT COALESCE((
-              SELECT identity.read_journey_member_residence(:'subject'::uuid, :'guardian'::uuid,
+              SELECT identity.read_journey_member_residence_with_travel(:'subject'::uuid, :'guardian'::uuid,
                 ARRAY[:'caseOne'::uuid, :'caseTwo'::uuid], :'from'::date, :'untilBefore'::date)
               FROM profile_scope WHERE live
             ), 'null'::jsonb);`, { ...values, from, untilBefore });
@@ -251,7 +251,7 @@ export async function verifyIdentityMemberResidence({
   // The SQL function must fail closed even if a trusted adapter supplies a
   // case or subject outside the selected member's profile scope.
   const directRead = (readSubject, readCase) => inContext(`
-    SELECT COALESCE(identity.read_journey_member_residence(:'readSubject'::uuid, :'guardian'::uuid,
+    SELECT COALESCE(identity.read_journey_member_residence_with_travel(:'readSubject'::uuid, :'guardian'::uuid,
       ARRAY[:'readCase'::uuid], :'from'::date, :'untilBefore'::date), 'null'::jsonb);`, {
     ...valuesFor({ customerId: "ci-only-account", sessionHash: "ci-only-session" }),
     readSubject,

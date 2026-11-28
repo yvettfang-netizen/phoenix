@@ -222,6 +222,24 @@ export async function verifyFamilyResidenceBrowser({ handle, apiPath, revokeRead
   });
 }
 
+export async function verifyOfficialTravelBrowser({ handle, apiPath, arrivalDate, departureDate }) {
+  await withFamilyView({ handle, apiPath, view: "residence" }, async ({ pageFor, output }) => {
+    for (const [locale, width, title, arrival, departure] of [
+      ["en", 1440, "Verified travel dates", "Arrival", "Departure"],
+      ["zh", 390, "已核验出入境日期", "入境／抵港", "出境／离港"],
+    ]) {
+      const page = await pageFor(locale, width);
+      await page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ }).click();
+      const panel = page.getByRole("region", { name: title });
+      await panel.locator("article").filter({ hasText: arrival }).locator(`time[datetime="${arrivalDate}"]`).waitFor();
+      await panel.locator("article").filter({ hasText: departure }).locator(`time[datetime="${departureDate}"]`).waitFor();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await page.screenshot({ path: join(output, `identity-official-travel-${locale}-${width}.png`), fullPage: true });
+    }
+    console.log("PASS Chromium Family OS verified travel dates in English desktop and Chinese mobile");
+  });
+}
+
 export async function verifyFamilyMemberProfileBrowser({ handle, apiPath, revokeGuardian, guardianLabel, selfLabel, childDate, selfDate }) {
   assert.notEqual(childDate, selfDate);
   await withFamilyView({ handle, apiPath, view: "profile" }, async ({ pageFor, output }) => {

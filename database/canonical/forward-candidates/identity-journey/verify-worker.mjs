@@ -7,6 +7,7 @@ import { verifyTimeline } from "./verify-timeline.mjs";
 import { verifyServiceChain } from "./verify-service-chain.mjs";
 import { verifyFounderSummary } from "./verify-founder-summary.mjs";
 import { verifyResidence } from "./verify-residence.mjs";
+import { verifyOfficialTravel } from "./verify-official-travel.mjs";
 import { verifyIdentityMemberProfile } from "./verify-member-profile.mjs";
 import { verifyRenewalRecovery } from "./verify-recovery.mjs";
 
@@ -239,13 +240,15 @@ const verifyRenewalReview = await verifyServiceChain({ query, recipient, crmFixt
 
 let timelineBrowser;
 let residenceBrowser;
+let officialTravelBrowser;
 let memberProfileBrowser;
 let memberResidenceBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser, verifyFamilyResidenceBrowser,
-    verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser } = await import("./verify-browser.mjs");
+    verifyOfficialTravelBrowser, verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser } = await import("./verify-browser.mjs");
   timelineBrowser = verifyFamilyTimelineBrowser;
   residenceBrowser = verifyFamilyResidenceBrowser;
+  officialTravelBrowser = verifyOfficialTravelBrowser;
   memberProfileBrowser = verifyFamilyMemberProfileBrowser;
   memberResidenceBrowser = verifyFamilyMemberResidenceBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
@@ -314,6 +317,7 @@ const timeline = await verifyTimeline({
   },
 });
 await verifyResidence({ query, recipient, authConfig, browser: residenceBrowser });
+await verifyOfficialTravel({ query, recipient, authConfig, browser: officialTravelBrowser });
 await verifyIdentityMemberProfile({ query, recipient, authConfig, browser: memberProfileBrowser, memberResidenceBrowser });
 await verifyRenewalRecovery({
   container, query, recipient, timeline, actor: crmFixture.actor,

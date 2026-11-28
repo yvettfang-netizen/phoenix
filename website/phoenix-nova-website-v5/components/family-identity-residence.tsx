@@ -9,6 +9,7 @@ import {
   type IdentityResidenceOverview,
   type IdentityResidenceRecord,
   type IdentityResidenceReport,
+  type IdentityTravelMovement,
 } from "@/lib/identity-journey-residence-contract";
 
 type State = "loading" | "ready" | "denied" | "unavailable" | "stale";
@@ -53,6 +54,12 @@ function isResidenceRecord(value: unknown): value is IdentityResidenceRecord {
     isNullableCivilDate(row.expectedReturnOn);
 }
 
+function isTravelMovement(value: unknown): value is IdentityTravelMovement {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+  return isCivilDate(row.on) && (row.direction === "ARRIVAL" || row.direction === "DEPARTURE");
+}
+
 function isResidenceOverview(value: unknown): value is IdentityResidenceOverview {
   if (!value || typeof value !== "object") return false;
   const data = value as Record<string, unknown>;
@@ -62,7 +69,19 @@ function isResidenceOverview(value: unknown): value is IdentityResidenceOverview
       data.rightOfAbode !== "HUMAN_REVIEW_REQUIRED" ||
       data.passportEligibility !== "HUMAN_REVIEW_REQUIRED" ||
       !Array.isArray(data.records) || !data.records.every(isResidenceRecord) ||
+      (data.movements !== undefined && (!Array.isArray(data.movements) || data.movements.length > 512 || !data.movements.every(isTravelMovement))) ||
       !Array.isArray(data.years)) return false;
+  if (Array.isArray(data.movements)) {
+    const asOfYear = Number(data.asOf.slice(0, 4));
+    const windowFrom = `${asOfYear - 6}-01-01`;
+    const keys = new Set<string>();
+    for (const item of data.movements) {
+      const movement = item as IdentityTravelMovement;
+      const key = `${movement.on}:${movement.direction}`;
+      if (movement.on < windowFrom || movement.on > data.asOf || keys.has(key)) return false;
+      keys.add(key);
+    }
+  }
   return data.years.every(year => {
     if (!year || typeof year !== "object") return false;
     const row = year as Record<string, unknown>;
@@ -116,6 +135,12 @@ function labelReason(reason: string, locale: "zh" | "en") {
   return labels[reason]?.[locale === "zh" ? 0 : 1] ?? reason;
 }
 
+function labelTravelDirection(direction: IdentityTravelMovement["direction"], locale: "zh" | "en") {
+  return direction === "ARRIVAL"
+    ? locale === "zh" ? "入境／抵港" : "Arrival"
+    : locale === "zh" ? "出境／离港" : "Departure";
+}
+
 export function FamilyIdentityResidence({
   locale,
   memberRef,
@@ -130,10 +155,12 @@ export function FamilyIdentityResidence({
   const t = (zh: string, en: string) => locale === "zh" ? zh : en;
   const memberMode = Boolean(memberRef);
   const titleId = memberMode ? "identity-member-residence-title" : "identity-residence-title";
+  const movementTitleId = memberMode ? "identity-member-travel-movements-title" : "identity-travel-movements-title";
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<State>("loading");
   const [overview, setOverview] = useState<IdentityResidenceOverview | null>(null);
   const [showFullHistory, setShowFullHistory] = useState(false);
+  const [showFullMovements, setShowFullMovements] = useState(false);
   const [form, setForm] = useState<FormState>(initialForm);
   const [reportState, setReportState] = useState<ReportState>("idle");
   const [reportMessage, setReportMessage] = useState("");
@@ -145,6 +172,7 @@ export function FamilyIdentityResidence({
     reportController.current?.abort();
     setOverview(null);
     setShowFullHistory(false);
+    setShowFullMovements(false);
     setForm(initialForm());
     setReportState("idle");
     setReportMessage("");
@@ -317,6 +345,18 @@ export function FamilyIdentityResidence({
           </details> : null}
         </article>)}
       </div>
+      {overview.movements?.length ? <section className="fc-harmony-note" data-identity-travel-movements="true" aria-labelledby={movementTitleId}>
+        <h3 id={movementTitleId} style={{ margin: "0 0 8px", fontSize: 15 }}>{t("已核验出入境日期", "Verified travel dates")}</h3>
+        <p className="fc-muted">{t("仅显示经授权且已核验的日期，不据此推断通常居住或任何资格。", "Only authorized and verified dates are shown; they do not infer ordinary residence or eligibility.")}</p>
+        <div style={{ display: "grid", gap: 2 }}>
+          {overview.movements.slice(0, showFullMovements ? undefined : 12).map(movement => <article className="fc-date fc-residence-record" key={`${movement.on}:${movement.direction}`}>
+            <time dateTime={movement.on}>{formatCivil(movement.on, locale)}</time>
+            <strong>{labelTravelDirection(movement.direction, locale)}</strong>
+          </article>)}
+        </div>
+        {overview.movements.length > 12 ? <button className="fc-gold" type="button" onClick={() => setShowFullMovements(value => !value)}
+          aria-expanded={showFullMovements}>{showFullMovements ? t("收起较早日期", "Hide earlier dates") : t("查看全部出入境日期", "Show all travel dates")}</button> : null}
+      </section> : null}
       <div style={{ display: "grid", gap: 2, marginTop: 14 }}>
         {overview.records.length > 0 ? overview.records.slice(0, showFullHistory ? undefined : 12).map(record => <article className="fc-date fc-residence-record" key={record.id}>
           <span className="fc-residence-dates"><time dateTime={record.from}>{formatCivil(record.from, locale)}</time> – <time dateTime={record.untilBefore}>{formatCivil(record.untilBefore, locale)}</time></span>

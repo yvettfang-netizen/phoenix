@@ -1,15 +1,17 @@
 import { readCustomerSession, type AuthConfig } from "./customer-auth";
 import { hkCivilDate } from "./identity-journey";
-import { buildIdentityResidenceOverview } from "./identity-journey-residence";
+import { buildIdentityResidenceOverview, type IdentityResidenceReadData } from "./identity-journey-residence";
 import { identityMemberResidencePath } from "./identity-journey-residence-contract";
 import { identityPrivateHeaders, readIdentityMemberSelection, sameOriginIdentityRequest } from "./identity-journey-request";
+
+type IdentityMemberResidenceReadData = Pick<IdentityResidenceReadData, "records" | "movements">;
 
 /** Lock both the live, session-bound profile reference and the separate
  * residence grant in the transaction that performs the Canonical read. */
 export interface IdentityMemberResidenceProvider {
   resolveMember(session: { customerId: string; sessionHash: string }, memberRef: string): Promise<{
     assertCurrent(): Promise<boolean>;
-    listAuthorized(from: string, untilBefore: string): Promise<unknown[] | null>;
+    listAuthorized(from: string, untilBefore: string): Promise<unknown[] | IdentityMemberResidenceReadData | null>;
   } | null>;
 }
 
@@ -37,9 +39,12 @@ export async function handleIdentityMemberResidence(request: Request, env: Recor
     const scope = await provider.resolveMember({ customerId: session.id, sessionHash: session.token_hash }, memberRef);
     if (!scope || await scope.assertCurrent() !== true) return reply(403, "ACCESS_DENIED");
     const asOf = hkCivilDate(new Date());
-    const records = await scope.listAuthorized((Number(asOf.slice(0, 4)) - 6) + "-01-01", asOf);
-    if (records === null) return reply(403, "ACCESS_DENIED");
-    const overview = buildIdentityResidenceOverview({ records, canReport: false }, asOf, false);
+    const source = await scope.listAuthorized((Number(asOf.slice(0, 4)) - 6) + "-01-01", asOf);
+    if (source === null) return reply(403, "ACCESS_DENIED");
+    const data: IdentityResidenceReadData = Array.isArray(source)
+      ? { records: source, canReport: false }
+      : { records: source.records, canReport: false, movements: source.movements };
+    const overview = buildIdentityResidenceOverview(data, asOf, false);
     await config.recordAccess(session.id, "IDENTITY_MEMBER_RESIDENCE_READ_PREPARED", requestId + ":prepared");
     const current = await readCustomerSession(request, config, { touch: false });
     if (!current || current.id !== session.id || current.token_hash !== session.token_hash) return reply(401, "SIGN_IN_REQUIRED");

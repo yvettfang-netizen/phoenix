@@ -21,7 +21,9 @@ ALTER TABLE identity.journey_residence_intervals
       AND official_fact_id IS NULL AND location_class IN ('HK','AWAY'))
     OR (record_source = 'ADVISER_VERIFIED' AND document_id IS NOT NULL AND evidence_version_id IS NOT NULL
       AND confirmed_report_id IS NOT NULL AND official_fact_id IS NULL AND location_class IN ('HK','AWAY'))
-    OR (record_source = 'OFFICIAL_RECORD' AND document_id IS NOT NULL AND evidence_version_id IS NOT NULL AND official_fact_id IS NOT NULL)
+    OR (record_source = 'OFFICIAL_RECORD' AND document_id IS NOT NULL AND evidence_version_id IS NOT NULL
+      AND confirmed_report_id IS NULL AND official_fact_id IS NULL AND location_class IN ('HK','AWAY')
+      AND absence_reason_class IS NULL AND expected_return_on IS NULL)
   ),
   ADD CONSTRAINT journey_residence_planned_return_check CHECK (
     expected_return_on IS NULL OR (location_class = 'AWAY' AND isfinite(expected_return_on) AND expected_return_on >= until_before)
@@ -51,6 +53,7 @@ AS $fn$
       AND (i.document_id IS NULL OR EXISTS (
         SELECT 1 FROM docs.documents d WHERE d.document_id = i.document_id AND d.family_id = c.family_id
           AND d.subject_person_id = c.subject_person_id AND d.data_class = 'IDENTITY_SENSITIVE'
+          AND (i.record_source <> 'OFFICIAL_RECORD' OR d.document_kind = 'HK_IMMD_TRAVEL_STATEMENT')
           AND d.withdrawn_at IS NULL AND d.retention_until > clock_timestamp()
         FOR SHARE OF d))
       AND (i.official_fact_id IS NULL OR EXISTS (
@@ -129,15 +132,14 @@ BEGIN
 END
 $fn$;
 
--- An authenticated adviser confirms one report against one already controlled
--- Docs version. Official import needs its own verified source and provider.
-CREATE FUNCTION identity.confirm_journey_residence_report(p_report uuid, p_revision uuid, p_document_version uuid)
-RETURNS text
+-- Serialize private residence writes and lock the exact case, advisor
+-- assignment, both purposes and Docs evidence through the caller's write.
+CREATE FUNCTION identity.lock_journey_residence_evidence(p_case uuid, p_document_version uuid)
+RETURNS TABLE(document_id uuid, valid_until timestamptz)
 LANGUAGE plpgsql
 SET search_path = pg_catalog
 AS $fn$
 DECLARE
-  report identity.journey_residence_intervals%ROWTYPE;
   target_case identity.cases%ROWTYPE;
   assignment_until timestamptz;
   consent_until timestamptz;
@@ -145,18 +147,14 @@ DECLARE
   evidence_until timestamptz;
   grant_count integer;
 BEGIN
-  IF auth.current_channel() IS DISTINCT FROM 'ADVISOR' OR auth.write_context_is_live() IS NOT TRUE
-    OR core.is_uuid_v7(p_revision) IS NOT TRUE THEN RETURN 'DENIED'; END IF;
-  SELECT * INTO report FROM identity.journey_residence_intervals
-    WHERE interval_id = p_report AND record_source = 'SELF_REPORTED' FOR SHARE;
-  IF NOT FOUND THEN RETURN 'DENIED'; END IF;
+  IF auth.current_channel() IS DISTINCT FROM 'ADVISOR' OR auth.write_context_is_live() IS NOT TRUE THEN RETURN; END IF;
   SELECT * INTO target_case FROM identity.cases
-    WHERE identity_case_id = report.identity_case_id AND family_id = auth.current_family_id() AND status <> 'CLOSED' FOR SHARE;
-  IF NOT FOUND THEN RETURN 'DENIED'; END IF;
+    WHERE identity_case_id = p_case AND family_id = auth.current_family_id() AND status <> 'CLOSED' FOR SHARE;
+  IF NOT FOUND THEN RETURN; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('journey-residence:' || target_case.identity_case_id::text,0));
   PERFORM 1 FROM auth.principals p WHERE p.principal_id = auth.current_principal_id()
     AND p.principal_kind = 'ADVISOR' AND p.status = 'ACTIVE' AND p.person_id = auth.current_actor_person_id() FOR SHARE;
-  IF NOT FOUND THEN RETURN 'DENIED'; END IF;
+  IF NOT FOUND THEN RETURN; END IF;
   SELECT a.valid_until INTO assignment_until FROM casework.cases c
     JOIN casework.advisor_assignments a USING (case_id)
     WHERE c.resource_kind = 'IDENTITY_CASE' AND c.resource_id = target_case.identity_case_id
@@ -165,7 +163,7 @@ BEGIN
       AND a.advisor_person_id = auth.current_actor_person_id()
       AND a.valid_from <= clock_timestamp() AND a.valid_until > clock_timestamp()
     ORDER BY a.valid_until DESC LIMIT 1 FOR SHARE OF c, a;
-  IF NOT FOUND THEN RETURN 'DENIED'; END IF;
+  IF NOT FOUND THEN RETURN; END IF;
   SELECT min(allowed.expires_at), count(*) INTO consent_until, grant_count
     FROM (VALUES ('IDENTITY_CASE'),('DOCUMENT_READ')) required(purpose)
     CROSS JOIN LATERAL (
@@ -177,8 +175,7 @@ BEGIN
       ORDER BY g.expires_at DESC LIMIT 1 FOR SHARE OF g
     ) allowed;
   IF grant_count <> 2 OR docs.can_read_document(target_case.subject_person_id,'IDENTITY_SENSITIVE') IS NOT TRUE THEN
-    PERFORM audit.record_write_decision('VERIFY','IDENTITY_JOURNEY_RESIDENCE',p_revision,false,'ADVISER_EVIDENCE_ACCESS_DENIED');
-    RETURN 'DENIED';
+    RETURN;
   END IF;
   SELECT d.document_id,d.retention_until INTO evidence_document,evidence_until
     FROM docs.document_versions v JOIN docs.documents d USING (document_id)
@@ -188,13 +185,35 @@ BEGIN
     FOR SHARE OF d,v;
   IF NOT FOUND OR least(assignment_until,consent_until,evidence_until) <= clock_timestamp()
     OR auth.write_context_is_live() IS NOT TRUE THEN
+    RETURN;
+  END IF;
+  RETURN QUERY SELECT evidence_document, least(assignment_until,consent_until,evidence_until);
+END
+$fn$;
+
+CREATE FUNCTION identity.confirm_journey_residence_report(p_report uuid, p_revision uuid, p_document_version uuid)
+RETURNS text
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $fn$
+DECLARE
+  report identity.journey_residence_intervals%ROWTYPE;
+  evidence record;
+BEGIN
+  IF auth.current_channel() IS DISTINCT FROM 'ADVISOR' OR auth.write_context_is_live() IS NOT TRUE
+    OR core.is_uuid_v7(p_revision) IS NOT TRUE THEN RETURN 'DENIED'; END IF;
+  SELECT * INTO report FROM identity.journey_residence_intervals
+    WHERE interval_id = p_report AND record_source = 'SELF_REPORTED' FOR SHARE;
+  IF NOT FOUND THEN RETURN 'DENIED'; END IF;
+  SELECT * INTO evidence FROM identity.lock_journey_residence_evidence(report.identity_case_id,p_document_version);
+  IF NOT FOUND OR evidence.valid_until <= clock_timestamp() OR auth.write_context_is_live() IS NOT TRUE THEN
     PERFORM audit.record_write_decision('VERIFY','IDENTITY_JOURNEY_RESIDENCE',p_revision,false,'EVIDENCE_OR_AUTHORITY_UNAVAILABLE');
     RETURN 'DENIED';
   END IF;
   INSERT INTO identity.journey_residence_intervals(interval_id,identity_case_id,from_on,until_before,location_class,
     document_id,evidence_version_id,confirmed_report_id,record_source,recorded_by)
     VALUES (p_revision,report.identity_case_id,report.from_on,report.until_before,report.location_class,
-      evidence_document,p_document_version,p_report,'ADVISER_VERIFIED',auth.current_principal_id())
+      evidence.document_id,p_document_version,p_report,'ADVISER_VERIFIED',auth.current_principal_id())
     ON CONFLICT (confirmed_report_id,evidence_version_id) WHERE record_source = 'ADVISER_VERIFIED' DO NOTHING;
   IF NOT FOUND THEN RETURN 'ALREADY_RECORDED'; END IF;
   PERFORM audit.record_write_decision('VERIFY','IDENTITY_JOURNEY_RESIDENCE',p_revision,true,'ADVISER_VERIFIED');
@@ -205,6 +224,7 @@ $fn$;
 REVOKE ALL ON FUNCTION identity.list_journey_residence(uuid[],date,date),
   identity.collect_journey_residence(uuid,uuid[],date,date),
   identity.record_journey_residence_report(uuid,uuid,date,date,text,text,date),
+  identity.lock_journey_residence_evidence(uuid,uuid),
   identity.confirm_journey_residence_report(uuid,uuid,uuid)
   FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader, phoenix_canonical_service_workbench;
 COMMIT;

@@ -18,11 +18,20 @@ export type IdentityResidenceRecord = Omit<IdentityResidenceReport, "place"> & {
   source: "SELF_REPORTED" | "ADVISER_VERIFIED" | "OFFICIAL_RECORD" | "UNSPECIFIED";
 };
 
+export type IdentityTravelMovementDirection = "ARRIVAL" | "DEPARTURE";
+
+/** A verified travel date projected without document or source identifiers. */
+export type IdentityTravelMovement = {
+  on: string;
+  direction: IdentityTravelMovementDirection;
+};
+
 export type IdentityResidenceOverview = {
   asOf: string;
   canReport: boolean;
   currentRecordedAbsenceDays: number | null;
   records: IdentityResidenceRecord[];
+  movements?: IdentityTravelMovement[];
   years: {
     year: number;
     recordedInHongKongDays: number;

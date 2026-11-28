@@ -3,15 +3,21 @@ import { currentRecordedAbsence, hkCivilDate, summarizeResidenceYear, type Resid
 import {
   identityResidenceAbsenceReasons, identityResidencePath,
   type IdentityResidenceAbsenceReason, type IdentityResidenceOverview,
-  type IdentityResidenceRecord, type IdentityResidenceReport,
+  type IdentityResidenceRecord, type IdentityResidenceReport, type IdentityTravelMovement,
+  type IdentityTravelMovementDirection,
 } from "./identity-journey-residence-contract";
 import { identityPrivateHeaders, isIdentityCivilDate, isIdentityNoticeId, readIdentityRequestBody, sameOriginIdentityRequest } from "./identity-journey-request";
 
 type Session = { customerId: string; sessionHash: string };
+export type IdentityResidenceReadData = {
+  records: unknown[];
+  canReport: boolean;
+  movements?: unknown[];
+};
 type ReadScope = {
   assertCurrent(): Promise<boolean>;
   /** Select records under the exact live grant, including every authorized case in the window. */
-  listAuthorized(from: string, untilBefore: string): Promise<{ records: unknown[]; canReport: boolean } | null>;
+  listAuthorized(from: string, untilBefore: string): Promise<IdentityResidenceReadData | null>;
 };
 type ReportScope = {
   assertCurrent(): Promise<boolean>;
@@ -26,6 +32,7 @@ export interface IdentityResidenceProvider {
 const maxRecords = 512;
 const reportKeys = ["from", "untilBefore", "place", "absenceReason", "expectedReturnOn"] as const;
 const sourceKinds = ["SELF_REPORTED", "ADVISER_VERIFIED", "OFFICIAL_RECORD", "UNSPECIFIED"] as const;
+const travelDirections = ["ARRIVAL", "DEPARTURE"] as const;
 
 export function identityResidenceEnabled(env: Record<string, unknown>) {
   const provider = env.FAMILY_IDENTITY_RESIDENCE_PROVIDER as IdentityResidenceProvider | undefined;
@@ -45,12 +52,32 @@ function readRecordFields(input: Record<string, unknown>, latest: string, allowU
   return { from, untilBefore, place, absenceReason, expectedReturnOn };
 }
 
-export function buildIdentityResidenceOverview(data: { records: unknown[]; canReport: boolean }, asOf: string, canReport: boolean): IdentityResidenceOverview {
+function projectTravelMovements(value: unknown, windowFrom: string, asOf: string): IdentityTravelMovement[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > maxRecords) throw new Error("Invalid travel movement window");
+  const seen = new Set<string>();
+  const movements: IdentityTravelMovement[] = [];
+  for (const input of value) {
+    if (!input || typeof input !== "object") throw new Error("Invalid travel movement");
+    const raw = input as Record<string, unknown>;
+    const on = raw.on;
+    const direction = travelDirections.find(item => item === raw.direction) as IdentityTravelMovementDirection | undefined;
+    if (!isIdentityCivilDate(on) || on < windowFrom || on > asOf || !direction) throw new Error("Invalid travel movement");
+    const key = `${on}:${direction}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    movements.push({ on, direction });
+  }
+  return movements.length > 0 ? movements.sort((left, right) => left.on.localeCompare(right.on) || left.direction.localeCompare(right.direction)) : undefined;
+}
+
+export function buildIdentityResidenceOverview(data: IdentityResidenceReadData, asOf: string, canReport: boolean): IdentityResidenceOverview {
   if (!Array.isArray(data.records) || data.records.length > maxRecords || typeof data.canReport !== "boolean") {
     throw new Error("Invalid or incomplete residence window");
   }
   const year = Number(asOf.slice(0, 4));
   const windowFrom = (year - 6) + "-01-01";
+  const movements = projectTravelMovements(data.movements, windowFrom, asOf);
   const ids = new Set<string>();
   const records: IdentityResidenceRecord[] = data.records.map(input => {
     if (!input || typeof input !== "object") throw new Error("Invalid residence entry");
@@ -75,7 +102,7 @@ export function buildIdentityResidenceOverview(data: { records: unknown[]; canRe
     return { year: current, recordedInHongKongDays: reported.recordedInHongKongDays,
       longestRecordedAbsenceDays: reported.longestRecordedAbsenceDays, unverified: review.unverified };
   });
-  return { asOf, records, years, canReport: data.canReport && canReport,
+  return { asOf, records, ...(movements ? { movements } : {}), years, canReport: data.canReport && canReport,
     currentRecordedAbsenceDays: currentRecordedAbsence(windowFrom, asOf, allSpans),
     rightOfAbode: "HUMAN_REVIEW_REQUIRED", passportEligibility: "HUMAN_REVIEW_REQUIRED" };
 }
