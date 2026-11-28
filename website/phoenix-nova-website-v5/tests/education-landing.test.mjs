@@ -75,6 +75,8 @@ function assertEducationStructure(html, locale) {
     assert.ok(part.includes(locale === "zh" ? count + "所院校" : count + " institutions"), `Missing Gaokao quota ${count}`);
   }
   assert.ok(pricing.slice(c,d).includes(locale === "zh" ? "重点推荐" : "RECOMMENDED"), "Plan C recommendation missing");
+  assert.ok(pricing.includes(locale === "zh" ? "全国统一收费" : "Nationwide standard fees"), "Nationwide undergraduate pricing label missing");
+  assert.doesNotMatch(pricing.slice(a,d), /潮州|Chaozhou|regional offer/i, "Undergraduate fees must not be geographically restricted");
   assert.ok(pricing.slice(d,other).includes(locale === "zh" ? "不含内地综评" : "no mainland comprehensive evaluation"), "Plan D must exclude mainland comprehensive evaluation");
   assert.ok(pricing.includes(locale === "zh" ? "¥39,980" : "RMB 39,980"), "Approved Standard price is missing");
   assert.ok(pricing.includes(locale === "zh" ? "¥89,980" : "RMB 89,980"), "VIP reference fee is missing");

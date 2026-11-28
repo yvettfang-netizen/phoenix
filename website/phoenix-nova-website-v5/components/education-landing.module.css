@@ -37,7 +37,7 @@
 @media(max-width:1100px){.pricingGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.pricingCard h3{min-height:0}.pricingTerms{grid-template-columns:1fr}}
 @media(max-width:700px){.pricingGrid{grid-template-columns:1fr;gap:12px}.pricingCard{padding:21px 19px}.pricingCard h3{min-height:0;font-size:20px}.pricingPrice{font-size:28px}.pricingIntro{margin-bottom:20px}.pricingTerms{gap:10px}.pricingTerms article{padding:17px 15px}}
 
-/* 2027 Chaozhou Gaokao price ladder; scoped to the existing education landing. */
+/* 2027 nationwide undergraduate price ladder; scoped to the existing education landing. */
 .gaokaoSection{margin:0 0 38px;display:grid;gap:16px}
 .gaokaoHero{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:center;padding:32px;background:#16483f;color:#f5f7ef;border-radius:8px;scroll-margin-top:24px}
 .gaokaoHero h3{font-size:clamp(24px,3vw,36px);margin:8px 0 12px;color:#fff}

@@ -90,7 +90,7 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
           <h1 id="education-title">{t("全球教育规划", "Global Education Planning")}</h1>
           <p className={styles.heroSubtitle}>{t("让每一个孩子，看见更广阔的世界。", "From kindergarten to university, from Hong Kong to the world, plan a growth path that fits each family.")}</p>
           <p className={styles.heroBody}>{t("我们整合全球优质教育资源，结合专业规划与智能工具，为每个家庭提供从升学规划、课程学习到海外发展的全程支持，帮助孩子在不同成长阶段找到适合自己的方向。", "We connect global education resources with professional planning and intelligent tools, supporting families from admissions planning and course learning to overseas development, so every learner can find a direction suited to their stage of growth.")}</p>
-          <div className={styles.actions}><Button asChild className={styles.primaryButton}><a href="#education-packages">{t("高考香港本科 ¥19,800 起 · 查看套餐", "Gaokao HK undergraduate from RMB 19,800 · View packages")}<Arrow /></a></Button><Button asChild variant="outline" className={styles.secondaryButton}><Link href={`/${locale}/education/schools`}>{t("浏览学校与课程", "Browse schools and curricula")}<Arrow /></Link></Button><Button asChild variant="outline" className={styles.secondaryButton}><a href="#consultation">{t("预约专业顾问", "Prepare an advisor consultation")}<Arrow /></a></Button></div>
+          <div className={styles.actions}><Button asChild className={styles.primaryButton}><a href="#education-packages">{t("本科升学 ¥19,800 起 · 查看套餐", "Undergraduate admissions from RMB 19,800 · View packages")}<Arrow /></a></Button><Button asChild variant="outline" className={styles.secondaryButton}><Link href={`/${locale}/education/schools`}>{t("浏览学校与课程", "Browse schools and curricula")}<Arrow /></Link></Button><Button asChild variant="outline" className={styles.secondaryButton}><a href="#consultation">{t("预约专业顾问", "Prepare an advisor consultation")}<Arrow /></a></Button></div>
         </div></div>
         <span className={styles.imageCaption}>{t("品牌场景示意 · 非真实学生或院校合作案例", "Illustrative scene · Not a student case or institutional partnership")}</span>
       </section>
@@ -118,7 +118,7 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
         </header>
         <section className={styles.gaokaoSection} aria-labelledby="gaokao-pricing-title" data-testid="gaokao-pricing">
           <div className={styles.gaokaoHero} id="education-package-gaokao-hk-undergraduate" data-testid="education-pricing-package">
-            <div><p className={styles.gaokaoKicker}>{t("2027 高考多元升学 · 潮州地区专属方案", "2027 Gaokao pathways · Chaozhou regional offer")}</p>
+            <div><p className={styles.gaokaoKicker}>{t("2027 本科多元升学 · 全国统一收费", "2027 undergraduate pathways · Nationwide standard fees")}</p>
               <h3 id="gaokao-pricing-title">{t("高考之后，不止一条升学路。", "More than one path after Gaokao.")}</h3>
               <p>{t("内地高考报读香港本科 · 香港启航计划 · 香港4所院校申请", "Mainland Gaokao to Hong Kong undergraduate study · Hong Kong Launch · 4 Hong Kong institutions")}</p>
               <a className={styles.gaokaoHeroAction} href="#consultation">{t("了解香港升学方案", "Explore Hong Kong admissions")}<Arrow /></a>
@@ -147,7 +147,7 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
             <div><p className={styles.gaokaoLabel}>{t("PLAN D · 国际专项方案", "PLAN D · INTERNATIONAL SPECIALIST")}</p><h3>{t("全球菁英计划", "Global Elite")}</h3><p>{t("16所院校：香港4所、澳门4所、英国／美国／澳大利亚任选两国，每国4所；不含内地综评。", "16 institutions: 4 Hong Kong, 4 Macao, plus 4 each in any two of the UK, US and Australia; no mainland comprehensive evaluation.")}</p></div>
             <div className={styles.gaokaoReferencePrice}><span>{t("专项服务参考价", "Indicative specialist fee")}</span><strong>{t("¥69,800", "RMB 69,800")}</strong></div>
           </article>
-          <p className={styles.small}>{t("高考套餐面向潮州地区咨询家庭，含升学定位、材料及文书指导、申请进度、面试及择校指导；按适用情况提供签证与入学指导。院校额度按学校计，具体专业数量与服务范围以书面合同为准。内地综评及各境外院校须先核对报考资格、申请时间及官方招生规则；不保证录取。", "Gaokao packages are for Chaozhou regional enquiries and cover admissions planning, document and essay guidance, application tracking, interview and offer selection guidance, plus visa and enrolment guidance where applicable. Institution quotas are counted by institution; programme limits and deliverables are contracted in writing. Eligibility, deadlines and official admissions rules must be checked for every pathway. Admission is not guaranteed.")}</p>
+          <p className={styles.small}>{t("本科升学套餐实行全国统一服务收费，含升学定位、材料及文书指导、申请进度、面试及择校指导；按适用情况提供签证与入学指导。院校额度按学校计，具体专业数量与服务范围以书面合同为准。内地综评及各境外院校须先核对报考资格、申请时间及官方招生规则；不保证录取。", "Undergraduate packages have standard nationwide service fees and cover admissions planning, document and essay guidance, application tracking, interview and offer selection guidance, plus visa and enrolment guidance where applicable. Institution quotas are counted by institution; programme limits and deliverables are contracted in writing. Eligibility, deadlines and official admissions rules must be checked for every pathway. Admission is not guaranteed.")}</p>
         </section>
         <h3 className={styles.otherPricingTitle}>{t("其他阶段升学服务", "Other education stages")}</h3>
         <div className={styles.pricingGrid}>{educationPricingPackages.map(plan => <article className={styles.pricingCard} key={plan.id} id={`education-package-${plan.id}`} data-testid="education-pricing-package">
