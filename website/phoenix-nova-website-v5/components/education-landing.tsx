@@ -29,7 +29,7 @@ const educationPricingPackages = [
     description: ["适合拟赴港读小一或申请小学插班的家庭；按子女资格、学校类别和年级规划。", "For families considering Primary One entry or a transfer; eligibility, school type and year level are reviewed first."],
     features: [
       ["资格、校网及学校类别评估", "Eligibility, school-net and school-type review"],
-      ["最多10所学校的选校及适用申请支持", "School selection and applicable application support for up to 10 schools"],
+      ["最多10所学校的选校比较；按适用机制指导申请", "Compare up to 10 schools; application guidance follows each applicable route"],
       ["官津小一派位按教育局制度办理；直资／私立申请按校方规定", "Government/aided Primary One allocation follows EDB rules; DSS/private applications follow individual schools"],
     ],
   },
@@ -125,7 +125,7 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
         <header className={styles.pricingIntro}>
           <p className={styles.eyebrow}>{t("透明服务收费", "TRANSPARENT SERVICE PRICING")}</p>
           <h2 id="education-packages-title">{t("升学服务套餐与参考价格", "Education service packages & reference fees")}</h2>
-          <p>{t("先了解不同服务层级，再根据学业背景、目标院校与实际需求确定适合的方案。价格以人民币计。", "Compare service levels first, then select a suitable proposal based on your background, university goals and actual needs. All amounts are in CNY (RMB).")}</p>
+          <p>{t("先了解不同服务层级，再根据学业背景、目标院校与实际需求确定方案。统一标准价格对应不同阶段的服务范围，具体以书面方案为准。价格以人民币计。", "Compare service levels first, then select a suitable proposal based on your background, university goals and actual needs. All amounts are in CNY (RMB).")}</p>
         </header>
         <div className={styles.pricingGrid}>{educationPricingPackages.map(plan => <article className={styles.pricingCard} key={plan.id} data-testid="education-pricing-package">
           <h3>{copy(plan.name)}</h3>
