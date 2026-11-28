@@ -22,6 +22,7 @@ export async function verifyResidence({ query, recipient, authConfig, browser })
   const documentReadConsent = id(188);
   const selfReport = id(189);
   const adviserRevision = id(192);
+  const capacityRecord = id(193);
 
   assert.equal(query(`SELECT has_function_privilege('phoenix_canonical_app',
     'identity.list_journey_residence(uuid[],date,date)', 'EXECUTE')
@@ -55,6 +56,8 @@ export async function verifyResidence({ query, recipient, authConfig, browser })
     VALUES
       (:'caseId'::uuid,:'familyId'::uuid,:'actor'::uuid,:'principalId'::uuid,'READ',clock_timestamp()+interval '1 day'),
       (:'caseId'::uuid,:'familyId'::uuid,:'actor'::uuid,:'principalId'::uuid,'WRITE',clock_timestamp()+interval '1 day');
+    INSERT INTO core.civil_capacity_history(capacity_record_id,person_id,capacity_status,evidence_ref,verified_by_principal_id)
+      VALUES(:'capacityRecord'::uuid,:'actor'::uuid,'ADULT_VERIFIED','synthetic/residence-capacity',:'advisorPrincipal'::uuid);
     INSERT INTO core.families(family_id,display_name)
       VALUES(:'otherFamily'::uuid,'Synthetic unrelated residence household');
     INSERT INTO core.people(person_id,display_name)
@@ -63,7 +66,7 @@ export async function verifyResidence({ query, recipient, authConfig, browser })
       VALUES(:'otherPrincipal'::uuid,:'otherPerson'::uuid,'FAMILY','ACTIVE');
     INSERT INTO identity.cases(identity_case_id,family_id,subject_person_id,case_kind,status)
       VALUES(:'otherCase'::uuid,:'otherFamily'::uuid,:'otherPerson'::uuid,'SYNTHETIC_OTHER_FAMILY','UNDER_REVIEW');`,
-  { ...recipient, actor, otherFamily, otherPerson, otherPrincipal, otherCase });
+  { ...recipient, actor, otherFamily, otherPerson, otherPrincipal, otherCase, capacityRecord, advisorPrincipal });
 
   const today = query("SELECT to_char((clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date, 'YYYY-MM-DD');");
   assert.match(today, /^\d{4}-\d{2}-\d{2}$/);
