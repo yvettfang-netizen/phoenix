@@ -36,3 +36,29 @@
 .pricingDisclaimer{margin:20px 0 0;font-size:12px;line-height:1.9;color:var(--education-muted)}
 @media(max-width:1100px){.pricingGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.pricingCard h3{min-height:0}.pricingTerms{grid-template-columns:1fr}}
 @media(max-width:700px){.pricingGrid{grid-template-columns:1fr;gap:12px}.pricingCard{padding:21px 19px}.pricingCard h3{min-height:0;font-size:20px}.pricingPrice{font-size:28px}.pricingIntro{margin-bottom:20px}.pricingTerms{gap:10px}.pricingTerms article{padding:17px 15px}}
+
+/* 2027 Chaozhou Gaokao price ladder; scoped to the existing education landing. */
+.gaokaoSection{margin:0 0 38px;display:grid;gap:16px}
+.gaokaoHero{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px;align-items:center;padding:32px;background:#16483f;color:#f5f7ef;border-radius:8px;scroll-margin-top:24px}
+.gaokaoHero h3{font-size:clamp(24px,3vw,36px);margin:8px 0 12px;color:#fff}
+.gaokaoHero p{margin:0 0 12px;color:#e4eee6}
+.gaokaoHero .gaokaoKicker{color:#e4c992;font-size:12px;letter-spacing:.06em;font-weight:600}
+.gaokaoHeroAction{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:#fff;text-decoration:underline;text-underline-offset:4px}
+.gaokaoHeroPrice,.gaokaoReferencePrice{display:flex;flex-direction:column;align-items:flex-end;min-width:0}
+.gaokaoHeroPrice strong{font-size:clamp(32px,5vw,62px);font-weight:700;line-height:1.25;color:#e4c992;letter-spacing:-.025em;overflow-wrap:anywhere}
+.gaokaoHeroPrice span,.gaokaoReferencePrice span{font-size:12px}
+.gaokaoChoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.gaokaoPlan{min-width:0;display:flex;flex-direction:column;border:1px solid #cbdccb;border-radius:8px;background:#fbfcf7;padding:26px;scroll-margin-top:24px}
+.gaokaoRecommended{border:2px solid #326b56;background:#e5eee4}
+.gaokaoLabel{font-size:12px;font-weight:600;color:#426456;margin:0 0 7px}
+.gaokaoPlan h3,.gaokaoReference h3{margin:0 0 9px}
+.gaokaoCount{font-size:17px;font-weight:600;color:#164d42;margin:0 0 10px}
+.gaokaoPlan>p:not(.pricingPrice):not(.gaokaoCount):not(.gaokaoLabel){color:var(--education-muted);font-size:13px}
+.gaokaoReference{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#f3f5ef;border:1px solid #d4e0d3;border-radius:6px;padding:20px 24px;scroll-margin-top:24px}
+.gaokaoReference>div:first-child{min-width:0}
+.gaokaoReference p:last-child{font-size:13px;color:var(--education-muted);margin:0}
+.gaokaoReferencePrice{flex-shrink:0;color:#164d42}
+.gaokaoReferencePrice strong{font-size:24px;font-weight:600}
+.gaokaoSection>.small{margin:0}
+.otherPricingTitle{margin:0 0 18px}
+@media(max-width:700px){.gaokaoHero{grid-template-columns:1fr;gap:16px;padding:23px 19px}.gaokaoHeroPrice{align-items:flex-start}.gaokaoHeroPrice strong{font-size:40px}.gaokaoChoices{grid-template-columns:1fr;gap:12px}.gaokaoPlan{padding:21px 19px}.gaokaoReference{align-items:flex-start;flex-direction:column;padding:18px 19px;gap:10px}.gaokaoReferencePrice{align-items:flex-start}.gaokaoReferencePrice strong{font-size:21px}}

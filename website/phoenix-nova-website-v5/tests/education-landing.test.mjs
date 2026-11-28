@@ -46,6 +46,8 @@ function assertEducationStructure(html, locale) {
   assert.equal(testIdCount(html, "education-service"), 4, `${locale}: Education needs four services`);
   assert.equal(testIdCount(html, "education-pricing-package"), 6, "Education pricing needs six package cards");
   assert.equal(testIdCount(html, "education-pricing-terms"), 1, "Education pricing must explain service boundaries once");
+  assert.equal(testIdCount(html, "gaokao-pricing"), 1, "Gaokao pricing section must be unique");
+  for (const id of ["gaokao-plan-b", "gaokao-plan-c", "gaokao-plan-d"]) assert.equal(testIdCount(html, id), 1, `Missing Gaokao tier: ${id}`);
   for (const id of ["primary", "gaokao-hk-undergraduate", "masters-standard", "masters-vip", "tailored", "research"]) {
     assert.equal((html.match(new RegExp(`\\bid=["']education-package-${id}["']`, "gi")) ?? []).length, 1, `Package anchor missing: ${id}`);
   }
@@ -62,6 +64,18 @@ function assertEducationStructure(html, locale) {
   const academyAt = html.indexOf('id="academy"');
   assert.ok(servicesAt >= 0 && servicesAt < packagesAt && packagesAt < compassAt && compassAt < academyAt, "Education pricing order changed");
   const pricing = html.slice(packagesAt, compassAt);
+  const a = pricing.indexOf('id="education-package-gaokao-hk-undergraduate"');
+  const b = pricing.indexOf('id="education-package-gaokao-dual"');
+  const c = pricing.indexOf('id="education-package-gaokao-gba"');
+  const d = pricing.indexOf('id="education-package-gaokao-global"');
+  const other = pricing.indexOf('id="education-package-primary"');
+  assert.ok(a >= 0 && a < b && b < c && c < d && d < other, "Gaokao ladder order must be A/B/C/D before other services");
+  for (const [part, price, count] of [[pricing.slice(a,b), "19,800", 4], [pricing.slice(b,c), "39,800", 6], [pricing.slice(c,d), "49,800", 10], [pricing.slice(d,other), "69,800", 16]]) {
+    assert.ok(part.includes((locale === "zh" ? "¥" : "RMB ") + price), `Missing Gaokao fee ${price}`);
+    assert.ok(part.includes(locale === "zh" ? count + "所院校" : count + " institutions"), `Missing Gaokao quota ${count}`);
+  }
+  assert.ok(pricing.slice(c,d).includes(locale === "zh" ? "重点推荐" : "RECOMMENDED"), "Plan C recommendation missing");
+  assert.ok(pricing.slice(d,other).includes(locale === "zh" ? "不含内地综评" : "no mainland comprehensive evaluation"), "Plan D must exclude mainland comprehensive evaluation");
   assert.ok(pricing.includes(locale === "zh" ? "¥39,980" : "RMB 39,980"), "Approved Standard price is missing");
   assert.ok(pricing.includes(locale === "zh" ? "¥89,980" : "RMB 89,980"), "VIP reference fee is missing");
   assert.ok(pricing.includes(locale === "zh" ? "评估后书面报价" : "Written quote after assessment"), "Custom tiers must remain scoped quotations");

@@ -34,17 +34,6 @@ const educationPricingPackages = [
     ],
   },
   {
-    id: "gaokao-hk-undergraduate",
-    name: ["内地高考报读香港本科标准套餐", "Mainland Gaokao → Hong Kong Undergraduate · Standard"],
-    price: ["¥39,980", "RMB 39,980"],
-    description: ["面向参加内地高考并拟申请香港高校本科的学生；先核对各院校招生资格与申请途径。", "For mainland Gaokao students applying to Hong Kong bachelor's programmes; institutional eligibility and routes are checked first."],
-    features: [
-      ["高考背景评估、大学与专业组合规划", "Gaokao profile review and university/programme shortlist"],
-      ["最多10个适用申请项目的材料与时间节点支持", "Materials and deadline support for up to 10 eligible application choices"],
-      ["独立招生、成绩补交与面试安排以各院校官方规则为准", "Direct admission, score uploads and interviews follow each institution's official rules"],
-    ],
-  },
-  {
     id: "masters-standard",
     name: ["香港硕士标准申请套餐", "Hong Kong Master's · Standard"],
     price: ["¥39,980", "RMB 39,980"],
@@ -101,7 +90,7 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
           <h1 id="education-title">{t("全球教育规划", "Global Education Planning")}</h1>
           <p className={styles.heroSubtitle}>{t("让每一个孩子，看见更广阔的世界。", "From kindergarten to university, from Hong Kong to the world, plan a growth path that fits each family.")}</p>
           <p className={styles.heroBody}>{t("我们整合全球优质教育资源，结合专业规划与智能工具，为每个家庭提供从升学规划、课程学习到海外发展的全程支持，帮助孩子在不同成长阶段找到适合自己的方向。", "We connect global education resources with professional planning and intelligent tools, supporting families from admissions planning and course learning to overseas development, so every learner can find a direction suited to their stage of growth.")}</p>
-          <div className={styles.actions}><Button asChild className={styles.primaryButton}><a href="#education-packages">{t("查看服务套餐与价格", "View packages & pricing")}<Arrow /></a></Button><Button asChild variant="outline" className={styles.secondaryButton}><Link href={`/${locale}/education/schools`}>{t("浏览学校与课程", "Browse schools and curricula")}<Arrow /></Link></Button><Button asChild variant="outline" className={styles.secondaryButton}><a href="#consultation">{t("预约专业顾问", "Prepare an advisor consultation")}<Arrow /></a></Button></div>
+          <div className={styles.actions}><Button asChild className={styles.primaryButton}><a href="#education-packages">{t("高考香港本科 ¥19,800 起 · 查看套餐", "Gaokao HK undergraduate from RMB 19,800 · View packages")}<Arrow /></a></Button><Button asChild variant="outline" className={styles.secondaryButton}><Link href={`/${locale}/education/schools`}>{t("浏览学校与课程", "Browse schools and curricula")}<Arrow /></Link></Button><Button asChild variant="outline" className={styles.secondaryButton}><a href="#consultation">{t("预约专业顾问", "Prepare an advisor consultation")}<Arrow /></a></Button></div>
         </div></div>
         <span className={styles.imageCaption}>{t("品牌场景示意 · 非真实学生或院校合作案例", "Illustrative scene · Not a student case or institutional partnership")}</span>
       </section>
@@ -127,6 +116,40 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
           <h2 id="education-packages-title">{t("升学服务套餐与参考价格", "Education service packages & reference fees")}</h2>
           <p>{t("先了解不同服务层级，再根据学业背景、目标院校与实际需求确定方案。统一标准价格对应不同阶段的服务范围，具体以书面方案为准。价格以人民币计。", "Compare service levels first, then select a suitable proposal based on your background, university goals and actual needs. All amounts are in CNY (RMB).")}</p>
         </header>
+        <section className={styles.gaokaoSection} aria-labelledby="gaokao-pricing-title" data-testid="gaokao-pricing">
+          <div className={styles.gaokaoHero} id="education-package-gaokao-hk-undergraduate" data-testid="education-pricing-package">
+            <div><p className={styles.gaokaoKicker}>{t("2027 高考多元升学 · 潮州地区专属方案", "2027 Gaokao pathways · Chaozhou regional offer")}</p>
+              <h3 id="gaokao-pricing-title">{t("高考之后，不止一条升学路。", "More than one path after Gaokao.")}</h3>
+              <p>{t("内地高考报读香港本科 · 香港启航计划 · 香港4所院校申请", "Mainland Gaokao to Hong Kong undergraduate study · Hong Kong Launch · 4 Hong Kong institutions")}</p>
+              <a className={styles.gaokaoHeroAction} href="#consultation">{t("了解香港升学方案", "Explore Hong Kong admissions")}<Arrow /></a>
+            </div>
+            <div className={styles.gaokaoHeroPrice}><span>{t("人民币服务费", "Service fee in RMB")}</span><strong>{t("¥19,800", "RMB 19,800")}</strong><span>{t("起 · 4所院校", "From · 4 institutions")}</span></div>
+          </div>
+          <div className={styles.gaokaoChoices}>
+            <article className={styles.gaokaoPlan} id="education-package-gaokao-dual" data-testid="gaokao-plan-b">
+              <p className={styles.gaokaoLabel}>{t("PLAN B · 标准方案", "PLAN B · STANDARD")}</p>
+              <h3>{t("双轨升学计划", "Dual Pathways")}</h3><p className={styles.pricingPrice}>{t("¥39,800", "RMB 39,800")}</p>
+              <p className={styles.gaokaoCount}>{t("6所院校", "6 institutions")}</p>
+              <ul className={styles.pricingFeatures}><li><Check size={16} aria-hidden="true" />{t("香港本科4所", "4 Hong Kong institutions")}</li><li><Check size={16} aria-hidden="true" />{t("内地综合评价招生2所", "2 mainland comprehensive-evaluation institutions")}</li></ul>
+              <p>{t("兼顾香港与内地升学机会。", "Combine Hong Kong and mainland admissions pathways.")}</p>
+              <a className={styles.pricingAction} href="#consultation">{t("了解双轨方案", "Explore dual pathways")}<Arrow /></a>
+            </article>
+            <article className={`${styles.gaokaoPlan} ${styles.gaokaoRecommended}`} id="education-package-gaokao-gba" data-testid="gaokao-plan-c">
+              <p className={styles.gaokaoLabel}>{t("PLAN C · 重点推荐", "PLAN C · RECOMMENDED")}</p>
+              <h3>{t("港澳菁英计划", "Hong Kong–Macao Elite")}</h3><p className={styles.pricingPrice}>{t("¥49,800", "RMB 49,800")}</p>
+              <p className={styles.gaokaoCount}>{t("10所院校", "10 institutions")}</p>
+              <ul className={styles.pricingFeatures}><li><Check size={16} aria-hidden="true" />{t("香港本科4所", "4 Hong Kong institutions")}</li><li><Check size={16} aria-hidden="true" />{t("澳门本科4所", "4 Macao institutions")}</li><li><Check size={16} aria-hidden="true" />{t("内地综合评价招生2所", "2 mainland comprehensive-evaluation institutions")}</li></ul>
+              <p>{t("港澳与内地三轨并行。", "Three pathways across Hong Kong, Macao and mainland China.")}</p>
+              <a className={styles.pricingAction} href="#consultation">{t("了解港澳菁英方案", "Explore the Elite plan")}<Arrow /></a>
+            </article>
+          </div>
+          <article className={styles.gaokaoReference} id="education-package-gaokao-global" data-testid="gaokao-plan-d">
+            <div><p className={styles.gaokaoLabel}>{t("PLAN D · 国际专项方案", "PLAN D · INTERNATIONAL SPECIALIST")}</p><h3>{t("全球菁英计划", "Global Elite")}</h3><p>{t("16所院校：香港4所、澳门4所、英国／美国／澳大利亚任选两国，每国4所；不含内地综评。", "16 institutions: 4 Hong Kong, 4 Macao, plus 4 each in any two of the UK, US and Australia; no mainland comprehensive evaluation.")}</p></div>
+            <div className={styles.gaokaoReferencePrice}><span>{t("专项服务参考价", "Indicative specialist fee")}</span><strong>{t("¥69,800", "RMB 69,800")}</strong></div>
+          </article>
+          <p className={styles.small}>{t("高考套餐面向潮州地区咨询家庭，含升学定位、材料及文书指导、申请进度、面试及择校指导；按适用情况提供签证与入学指导。院校额度按学校计，具体专业数量与服务范围以书面合同为准。内地综评及各境外院校须先核对报考资格、申请时间及官方招生规则；不保证录取。", "Gaokao packages are for Chaozhou regional enquiries and cover admissions planning, document and essay guidance, application tracking, interview and offer selection guidance, plus visa and enrolment guidance where applicable. Institution quotas are counted by institution; programme limits and deliverables are contracted in writing. Eligibility, deadlines and official admissions rules must be checked for every pathway. Admission is not guaranteed.")}</p>
+        </section>
+        <h3 className={styles.otherPricingTitle}>{t("其他阶段升学服务", "Other education stages")}</h3>
         <div className={styles.pricingGrid}>{educationPricingPackages.map(plan => <article className={styles.pricingCard} key={plan.id} id={`education-package-${plan.id}`} data-testid="education-pricing-package">
           <h3>{copy(plan.name)}</h3>
           <p className={styles.pricingPrice}>{copy(plan.price)}</p>
@@ -135,7 +158,7 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
           <a className={styles.pricingAction} href="#consultation">{t("了解适用条件与书面报价", "Ask about eligibility & a written quote")}<Arrow /></a>
         </article>)}</div>
         <div className={styles.pricingTerms} aria-label={t("服务收费规则", "Service pricing rules")} data-testid="education-pricing-terms">
-          <article><h3>{t("标准服务范围", "Standard service scope")}</h3><p>{t("以1名学生、约定申请周期为单位。K–12标准申请最多10所学校；本科及硕士标准申请最多10个独立申请项目。具体项目计数以合同为准。", "Standard applications cover one student and one agreed application cycle: up to 10 schools for K–12, or 10 separate programme applications for undergraduate and master's services. The contract defines how items are counted.")}</p></article>
+          <article><h3>{t("标准服务范围", "Standard service scope")}</h3><p>{t("以1名学生、约定申请周期为单位。K–12标准申请最多10所学校；硕士标准申请最多10个独立申请项目；高考套餐按上述院校额度计。具体专业及项目计数以合同为准。", "Standard applications cover one student and one agreed application cycle: up to 10 schools for K–12 or 10 separate programme applications for master's services; Gaokao packages follow the institution quotas above. The contract defines programme limits and counting rules.")}</p></article>
           <article><h3>{t("评估费用与抵扣", "Assessment fees and credits")}</h3><p>{t("¥39.9教育成长探索为独立服务费，不抵扣。¥980专业评估由授权教育顾问交付；交付后7天内签约符合条件的申请服务，已付评估费可计入后续服务费。", "The RMB 39.9 Education Growth Discovery fee is not credited. A RMB 980 professional review is delivered by an authorised adviser; if an eligible application service is signed within seven days after delivery, the paid review fee may be credited to that service.")}</p></article>
           <article><h3>{t("第三方费用", "Third-party costs")}</h3><p>{t("院校报名及注册费、考试、成绩寄送、翻译公证、签证、留位费、学费和住宿等通常另计；除非正式合同明确约定包含。", "School and university fees, examinations, score reports, translation, notarisation, visas, deposits, tuition and accommodation are generally separate unless the signed contract expressly includes them.")}</p></article>
         </div>
