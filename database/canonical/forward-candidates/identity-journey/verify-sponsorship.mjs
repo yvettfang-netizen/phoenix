@@ -89,14 +89,11 @@ export async function verifySponsorship({ query, recipient, verifyProfile }) {
   }
 
   query(`INSERT INTO core.people(person_id,display_name)
-      VALUES(:'sponsor'::uuid,'Synthetic verified sponsor')
-      ON CONFLICT (person_id) DO NOTHING;
+      VALUES(:'sponsor'::uuid,'Synthetic verified sponsor');
     INSERT INTO auth.principals(principal_id,person_id,principal_kind,status)
-      VALUES(:'sponsorPrincipal'::uuid,:'sponsor'::uuid,'FAMILY','ACTIVE')
-      ON CONFLICT (principal_id) DO NOTHING;
+      VALUES(:'sponsorPrincipal'::uuid,:'sponsor'::uuid,'FAMILY','ACTIVE');
     INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from)
-      VALUES(:'sponsorMembership'::uuid,:'familyId'::uuid,:'sponsor'::uuid,'MEMBER',clock_timestamp()-interval '1 day')
-      ON CONFLICT (family_id,person_id) DO NOTHING;
+      VALUES(:'sponsorMembership'::uuid,:'familyId'::uuid,:'sponsor'::uuid,'MEMBER',clock_timestamp()-interval '1 day');
     INSERT INTO core.civil_capacity_history(capacity_record_id,person_id,capacity_status,evidence_ref,verified_by_principal_id)
       VALUES(:'sponsorCapacity'::uuid,:'sponsor'::uuid,'ADULT_VERIFIED','synthetic/sponsorship-capacity',:'advisorPrincipal'::uuid);
     INSERT INTO identity.cases(identity_case_id,family_id,subject_person_id,case_kind,status)
@@ -165,10 +162,9 @@ export async function verifySponsorship({ query, recipient, verifyProfile }) {
   // grant denial above.  No sponsor DOCUMENT_READ grant is created: the
   // reviewer needs the sponsor's affirmative IDENTITY_CASE grant, while the
   // dependant evidence remains covered by the existing dependant grants.
-  query(`INSERT INTO consent.grants(consent_id,family_id,grantor_person_id,grantee_person_id,subject_person_id,purpose,data_class,status,granted_at,expires_at)
-    VALUES(:'sponsorIdentityConsent'::uuid,:'familyId'::uuid,:'sponsor'::uuid,:'advisorPerson'::uuid,:'sponsor'::uuid,
-      'IDENTITY_CASE','IDENTITY_SENSITIVE','ACTIVE',clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour');`,
-  { familyId: family, sponsor, advisorPerson: advisor, sponsorIdentityConsent });
+  assert.equal(inSponsor(`SELECT consent.create_grant(:'sponsorIdentityConsent'::uuid,:'familyId'::uuid,
+    :'advisorPerson'::uuid,:'sponsor'::uuid,'IDENTITY_CASE','IDENTITY_SENSITIVE',clock_timestamp()+interval '1 hour');`,
+  { sponsor, advisorPerson: advisor, sponsorIdentityConsent }), "t");
   assert.equal(query(`SELECT count(*) FROM consent.grants
     WHERE family_id=:'familyId'::uuid AND grantor_person_id=:'sponsor'::uuid
       AND grantee_person_id=:'advisorPerson'::uuid AND subject_person_id=:'sponsor'::uuid
