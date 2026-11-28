@@ -137,6 +137,20 @@ async function assertCompass(pageRoute) {
   assert.equal(await page.locator("#education-pathways").getByRole("button", { name: /开始(?:教育(?:规划)?)?(?:评估|测评)|(?:Start )?Education(?: planning)? assessment/i }).count(), 1, `${route}: pathways assessment action must remain`);
   await pricingLink.click();
   assert.equal(new URL(page.url()).hash, "#education-packages", `${route}: hero pricing CTA must navigate to the pricing anchor`);
+  const stages = page.getByTestId("education-stage-card");
+  assert.equal(await stages.count(), 8, `${route}: eight stage cards`);
+  for (const [target, disclosure] of [["gaokao-hk-undergraduate","undergraduate-pricing-disclosure"],["masters-launch","masters-pricing-disclosure"]]) {
+    const panel = page.getByTestId(disclosure);
+    const card = page.locator(`#education-pathways a[href="#education-package-${target}"]`);
+    assert.match(await card.innerText(), /19,800/);
+    if (await panel.getAttribute("open") !== null) await panel.locator("summary").click();
+    await card.click();
+    assert.equal(new URL(page.url()).hash, "#education-package-"+target);
+    assert.equal(await panel.getAttribute("open") !== null, true, `${route}: fragment must reveal native details`);
+    assert.ok(await page.locator("#education-package-"+target).isVisible());
+  }
+  assert.match(await page.locator('#education-pathways a[href="#education-package-tailored"]').innerText(), /100,000/);
+  assert.doesNotMatch(await stages.allTextContents().then(x=>x.join(" ")), /39,980/, "Unapproved price must not be visible");
   for (const action of await start.all()) assert.equal(await action.isDisabled(), true, `${route}: every assessment action must remain disabled`);
   assert.equal(await compass.getByRole("button", { name: /开始(?:教育规划)?(?:评估|测评)|Start(?: education planning)? assessment/i }).count(), 1, `${route}: Compass has one assessment action`);
   assert.equal(await page.locator('a[href*="/education/assessment"],a[href*="/education/result"],a[href*="/education/questionnaire"]').count(), 0, `${route}: controlled Compass must not expose questionnaire/result routes`);

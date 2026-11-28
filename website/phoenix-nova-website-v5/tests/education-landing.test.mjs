@@ -50,6 +50,11 @@ function assertEducationStructure(html, locale) {
   assert.equal(testIdCount(html, "application-fee-journey"), 1, "Application fee journey must be unique");
   assert.equal(testIdCount(html, "education-pricing-terms"), 1, "Education pricing must explain service boundaries once");
   assert.equal(testIdCount(html, "gaokao-pricing"), 1, "Gaokao pricing section must be unique");
+  assert.equal(testIdCount(html, "education-stage-card"), 8, "Eight stage service cards required");
+  for (const id of ["undergraduate-pricing-disclosure", "masters-pricing-disclosure"]) assert.equal(testIdCount(html, id), 1, "One disclosure per admissions stage");
+  const stages = html.slice(html.indexOf('id="education-pathways"'), html.indexOf('id="education-services"'));
+  for (const anchor of ["gaokao-hk-undergraduate","masters-launch","tailored","research"]) assert.ok(stages.includes('href="#education-package-'+anchor+'"'), "Stage card must lead to package: "+anchor);
+  assert.doesNotMatch(stages, /39,980/, "No pending primary price");
   for (const id of ["gaokao-plan-b", "gaokao-plan-c", "gaokao-plan-d"]) assert.equal(testIdCount(html, id), 1, `Missing Gaokao tier: ${id}`);
   for (const id of ["primary", "gaokao-hk-undergraduate", "masters-standard", "masters-vip", "tailored", "research"]) {
     assert.equal((html.match(new RegExp(`\\bid=["']education-package-${id}["']`, "gi")) ?? []).length, 1, `Package anchor missing: ${id}`);
@@ -81,7 +86,7 @@ function assertEducationStructure(html, locale) {
   assert.ok(pricing.includes(locale === "zh" ? "全国统一收费" : "Nationwide standard fees"), "Nationwide undergraduate pricing label missing");
   assert.doesNotMatch(pricing.slice(a,d), /潮州|Chaozhou|regional offer/i, "Undergraduate fees must not be geographically restricted");
   assert.ok(pricing.slice(d,other).includes(locale === "zh" ? "不含内地综评" : "no mainland comprehensive evaluation"), "Plan D must exclude mainland comprehensive evaluation");
-  assert.ok(pricing.includes(locale === "zh" ? "¥39,980" : "RMB 39,980"), "Approved Standard price is missing");
+  assert.doesNotMatch(pricing, /39,980/, "Unapproved primary price must not be public");
   const m = ["masters-launch","masters-standard","masters-vip","tailored"].map(id=>pricing.indexOf('id="education-package-'+id+'"'));
   const endMasters = pricing.indexOf('id="education-package-primary"');
   assert.ok(other < m[0] && m[0] < m[1] && m[1] < m[2] && m[2] < m[3] && m[3] < endMasters, "Masters tier order");
@@ -107,7 +112,7 @@ function assertEducationStructure(html, locale) {
   assert.ok(!pricing.includes("<form") && !pricing.includes('href="/checkout') && !pricing.includes('href="/payment'), "Pricing preview cannot expose a checkout or payment route");
   assert.ok(pricing.includes(locale === "zh" ? "香港小学入学" : "Hong Kong Primary School"), "Primary entry/transfer package is missing");
   assert.ok(pricing.includes(locale === "zh" ? "内地高考报读香港本科" : "Mainland Gaokao"), "Gaokao HK undergraduate package is missing");
-  assert.ok(pricing.includes(locale === "zh" ? "最多10所学校" : "up to 10 schools"), "Primary school scope must be bounded");
+  assert.ok(pricing.includes(locale === "zh" ? "K–12服务范围按书面约定" : "K–12 scope is agreed in writing"), "Unconfirmed K–12 scope must remain contractual");
   assert.ok(pricing.includes(locale === "zh" ? "12个专业申请项目" : "12 programme applications"), "Masters programme scope must be bounded");
   assert.ok(pricing.includes(locale === "zh" ? "评估费用与抵扣" : "Assessment fees and credits"), "Assessment credit explanation is missing");
   assert.ok(pricing.includes(locale === "zh" ? "¥39.9" : "RMB 39.9"), "Independent Discovery fee must be distinguished");
