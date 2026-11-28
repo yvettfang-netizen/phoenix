@@ -11,6 +11,7 @@ on:
       - 'website/phoenix-nova-website-v5/components/family-identity-residence.tsx'
       - 'website/phoenix-nova-website-v5/components/family-identity-profile.tsx'
       - 'website/phoenix-nova-website-v5/components/family-identity-review-planning.tsx'
+      - 'website/phoenix-nova-website-v5/components/family-identity-delegations.tsx'
       - 'website/phoenix-nova-website-v5/components/family-center-v2.tsx'
       - 'website/phoenix-nova-website-v5/components/family-center-v2.css'
       - 'website/phoenix-nova-website-v5/app/**/family-center/page.tsx'
@@ -22,6 +23,7 @@ on:
       - 'website/phoenix-nova-website-v5/app/api/family-services/identity-member-residence/**'
       - 'website/phoenix-nova-website-v5/tests/identity-journey.test.mjs'
       - 'website/phoenix-nova-website-v5/app/api/family-services/identity-review-planning/**'
+      - 'website/phoenix-nova-website-v5/app/api/family-services/identity-delegations/**'
       - '.github/workflows/identity-journey-candidate.yml'
 permissions:
   contents: read

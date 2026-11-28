@@ -22,9 +22,10 @@ async function bundleFamilyCenter(view) {
         createRoot(document.getElementById("root")).render(
           <FamilyCenterV2 locale={locale} account workbench
             identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}}
-            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence" || view === "review-planning" || view === "delegated-profile"}}
+            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence" || view === "review-planning" || view === "delegated-profile" || view === "delegation-management"}}
             identityMemberResidence={${view === "member-residence" || view === "delegated-profile"}}
-            identityReviewPlanning={${view === "review-planning" || view === "delegated-profile"}} />
+            identityReviewPlanning={${view === "review-planning" || view === "delegated-profile"}}
+            identityDelegationManagement={${view === "delegation-management"}} />
         );`,
     },
     bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", jsx: "automatic",
@@ -355,6 +356,49 @@ export async function verifyAdultDelegationBrowser({ handle, apiPath, expectedDa
     await mobile.page.screenshot({ path: join(output, "identity-adult-delegate-revoked-zh-390.png"), fullPage: true });
   });
   console.log("PASS Chromium adult-authorized read-only profile and revoked access on English desktop and Chinese mobile");
+}
+
+export async function verifyDelegationManagementBrowser({
+  handleProfile, profilePath, handleManagement, managementPath, through, recipientLabel, caseLabel, verifyIssued,
+}) {
+  await withFamilyView({
+    handle: handleProfile, apiPath: profilePath, view: "delegation-management",
+    secondary: { path: managementPath, handle: handleManagement },
+  }, async ({ pageFor, output }) => {
+    async function open(locale, width) {
+      const page = await pageFor(locale, width);
+      await page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ }).click();
+      await page.getByRole("button", { name: /Synthetic profile owner/ }).click();
+      const panel = page.getByRole("region", { name: locale === "zh" ? "身份档案授权查阅" : "Identity profile delegation" });
+      await panel.waitFor();
+      return { page, panel };
+    }
+
+    const desktop = await open("en", 1440);
+    await desktop.panel.getByRole("radio", { name: recipientLabel, exact: true }).check();
+    await desktop.panel.getByRole("checkbox", { name: caseLabel, exact: true }).check();
+    await desktop.panel.getByLabel(/Valid through/).fill(through);
+    const issue = desktop.panel.getByRole("button", { name: "Issue read-only delegation" });
+    assert.equal(await issue.isDisabled(), true);
+    await desktop.panel.getByRole("checkbox", { name: /I confirm that I have read the notice/ }).check();
+    await issue.click();
+    await desktop.panel.getByRole("group", { name: "Revoke an existing read-only delegation" }).waitFor();
+    await desktop.page.screenshot({ path: join(output, "identity-delegation-managed-en-1440.png"), fullPage: true });
+    await verifyIssued();
+
+    const mobile = await open("zh", 390);
+    const revokeGroup = mobile.panel.getByRole("group", { name: "撤回现有只读授权" });
+    await revokeGroup.getByRole("radio", { name: new RegExp(recipientLabel) }).check();
+    const revoke = revokeGroup.getByRole("button", { name: "撤回所选授权" });
+    assert.equal(await revoke.isDisabled(), true);
+    await revokeGroup.getByRole("checkbox", { name: /我确认撤回所选/ }).check();
+    assert.ok(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await mobile.page.screenshot({ path: join(output, "identity-delegation-revoke-zh-390.png"), fullPage: true });
+    await revoke.click();
+    await mobile.panel.getByText("当前没有已发出的只读授权。", { exact: true }).waitFor();
+    await mobile.page.screenshot({ path: join(output, "identity-delegation-revoked-zh-390.png"), fullPage: true });
+  });
+  console.log("PASS Chromium English desktop adult delegation issuance and Chinese mobile revocation");
 }
 
 export async function verifyFamilyMemberResidenceBrowser({

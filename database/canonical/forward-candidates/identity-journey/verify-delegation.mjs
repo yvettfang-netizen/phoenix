@@ -7,10 +7,11 @@ import assert from "node:assert/strict";
  * identity-case, episode, document, and date-projection tables.  It creates
  * only one additional adult and never grants direct table access to an app,
  * reader, or workbench role.  The profile adapter is expected to accept an
- * explicit delegation id in its four-argument serving functions; the legacy
- * three-argument calls remain the null-delegation path.
+ * explicit delegation id in its four-argument profile serving functions; the
+ * versioned issue call has five arguments, while legacy three-argument calls
+ * remain the null-delegation path.
  */
-export async function verifyAdultDelegation({ query, recipient, verifyProfile }) {
+export async function verifyAdultDelegation({ query, recipient, verifyProfile, verifyManagement }) {
   const existing = sequence => `01910000-0000-7000-8100-${String(sequence).padStart(12, "0")}`;
   const id = sequence => `01910000-0000-7000-8800-${String(sequence).padStart(12, "0")}`;
 
@@ -48,6 +49,10 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   const foreignCapacity = id(23);
   const unverifiedCapacity = id(24);
   const foreignMembership = id(25);
+  const managementDelegation = id(26);
+  const wrongNoticeVersionDelegation = id(27);
+  const noticeVersion = "2026-11-28.v1";
+  const wrongNoticeVersion = "2026-11-28.v0";
 
   const today = query("SELECT to_char((clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date,'YYYY-MM-DD');");
   assert.match(today, /^\d{4}-\d{2}-\d{2}$/);
@@ -63,7 +68,8 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   assert.equal(query("SELECT core.current_civil_capacity(:'applicant'::uuid);", { applicant }), "ADULT_VERIFIED");
 
   const signatures = [
-    "identity.issue_journey_profile_delegation(uuid,uuid,uuid[],timestamptz)",
+    "identity.issue_journey_profile_delegation(uuid,uuid,uuid[],timestamptz,text)",
+    "identity.list_journey_profile_delegations()",
     "identity.revoke_journey_profile_delegation(uuid)",
     "identity.lock_journey_profile_access(uuid,uuid,uuid[],uuid)",
     "identity.read_journey_member_profile(uuid,uuid,uuid[],uuid)",
@@ -143,13 +149,18 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   const inApplicant = (statement, values = {}) => inContext(applicantContext, statement, values);
   const inAdvisor = (statement, values = {}) => inContext(advisorContext, statement, values);
 
-  const issue = (delegationId, delegatePrincipal, scope, expiry = validUntil, runner = inAdult) => {
+  const issue = (delegationId, delegatePrincipal, scope, expiry = validUntil, runner = inAdult,
+    submittedNoticeVersion = noticeVersion) => {
     const scopeSql = scope.length === 0
       ? "ARRAY[]::uuid[]"
       : `ARRAY[${scope.map((_, index) => `:'scope${index}'::uuid`).join(",")}]`;
-    const values = { delegationId, delegatePrincipal, expiry, ...Object.fromEntries(scope.map((value, index) => [`scope${index}`, value])) };
+    const values = {
+      delegationId, delegatePrincipal, expiry, noticeVersion: submittedNoticeVersion,
+      ...Object.fromEntries(scope.map((value, index) => [`scope${index}`, value])),
+    };
     return runner(`SELECT COALESCE(identity.issue_journey_profile_delegation(
-      :'delegationId'::uuid,:'delegatePrincipal'::uuid,${scopeSql},:'expiry'::timestamptz)::text,'null');`, values);
+      :'delegationId'::uuid,:'delegatePrincipal'::uuid,${scopeSql},:'expiry'::timestamptz,
+      :'noticeVersion'::text)::text,'null');`, values);
   };
   const lock = (subject, guardian, scope, delegationId, runner = inApplicant) => {
     const scopeSql = `ARRAY[${scope.map((_, index) => `:'lockScope${index}'::uuid`).join(",")}]`;
@@ -177,6 +188,9 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   };
   const revoke = (delegationId, runner = inAdult) => runner(
     "SELECT identity.revoke_journey_profile_delegation(:'delegationId'::uuid);", { delegationId });
+  const listOwnedDelegations = () => JSON.parse(inAdult(`
+    SELECT COALESCE(jsonb_agg(to_jsonb(item) ORDER BY item.delegation_id),'[]'::jsonb)
+      FROM identity.list_journey_profile_delegations() AS item;`));
 
   // The family member can read their own profile through the legacy
   // null-delegation path, but another adult in the same family is not visible
@@ -198,13 +212,19 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   assert.equal(issue(advisorDelegation, advisorPrincipal, [caseA]), "null");
   assert.equal(issue(crossFamilyDelegation, otherPrincipal, [caseA]), "null");
   assert.equal(issue(crossFamilyDelegation, applicantPrincipal, [caseA], "infinity"), "null");
+  assert.equal(issue(wrongNoticeVersionDelegation, applicantPrincipal, [caseA], validUntil,
+    inAdult, wrongNoticeVersion), "null");
 
   const issued = issue(delegation, applicantPrincipal, [caseA]);
   assert.equal(issued, delegation);
   assert.equal(issue(delegation, applicantPrincipal, [caseA]), delegation);
   assert.equal(issue(delegation, applicantPrincipal, [caseB]), "null");
+  assert.equal(query(`SELECT notice_version FROM identity.journey_profile_delegations
+    WHERE delegation_id=:'delegationId'::uuid;`, { delegationId: delegation }), noticeVersion);
   assert.equal(query(`SELECT count(*) FROM identity.journey_profile_delegations
     WHERE delegation_id=:'delegationId'::uuid;`, { delegationId: delegation }), "1");
+  const initiallyListed = listOwnedDelegations();
+  assert.equal(initiallyListed.filter(row => row.delegation_id === delegation).length, 1);
 
   const delegatedLock = (scope = [caseA], guardian = null) => lock(adult, guardian, scope, delegation, inApplicant);
   const delegatedRead = (scope = [caseA], guardian = null) => {
@@ -244,8 +264,9 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   assert.equal(revoke(delegation, inApplicant), "f");
   assert.equal(delegatedLock(), "t");
   assert.equal(inAdvisor(`SELECT COALESCE(identity.issue_journey_profile_delegation(
-    :'delegationId'::uuid,:'applicantPrincipal'::uuid,ARRAY[:'caseA'::uuid],clock_timestamp()+interval '1 hour')::text,'null');`,
-    { delegationId: wrongDelegation, applicantPrincipal, caseA }), "null");
+    :'delegationId'::uuid,:'applicantPrincipal'::uuid,ARRAY[:'caseA'::uuid],clock_timestamp()+interval '1 hour',
+    :'noticeVersion'::text)::text,'null');`,
+    { delegationId: wrongDelegation, applicantPrincipal, caseA, noticeVersion }), "null");
   assert.equal(inAdvisor(`SELECT identity.lock_journey_profile_access(
     :'adult'::uuid,NULL,ARRAY[:'caseA'::uuid],:'delegationId'::uuid);`, { adult, caseA, delegationId: delegation }), "f");
   assert.equal(inAdvisor(`SELECT COALESCE(identity.read_journey_member_profile(
@@ -278,16 +299,69 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   // must reject it without requiring a timing-dependent sleep.
   query(`INSERT INTO identity.journey_profile_delegations(
       delegation_id,family_id,subject_person_id,subject_principal_id,delegate_principal_id,
-      identity_case_ids,issued_at,valid_until)
+      identity_case_ids,notice_version,issued_at,valid_until)
     VALUES(:'expiredDelegation'::uuid,:'familyId'::uuid,:'adult'::uuid,:'adultPrincipal'::uuid,
-      :'applicantPrincipal'::uuid,ARRAY[:'caseB'::uuid],clock_timestamp()-interval '2 hours',
+      :'applicantPrincipal'::uuid,ARRAY[:'caseB'::uuid],:'noticeVersion'::text,clock_timestamp()-interval '2 hours',
       clock_timestamp()-interval '1 hour');`,
-    { expiredDelegation, familyId: family, adult, adultPrincipal, applicantPrincipal, caseB });
+    { expiredDelegation, familyId: family, adult, adultPrincipal, applicantPrincipal, caseB, noticeVersion });
   assert.equal(lock(adult, null, [caseB], expiredDelegation, inApplicant), "f");
   assert.equal(read(adult, null, [caseB], expiredDelegation, inApplicant), "null");
   assert.equal(query(`SELECT issued_at < valid_until AND valid_until < clock_timestamp()
     FROM identity.journey_profile_delegations WHERE delegation_id=:'expiredDelegation'::uuid;`,
     { expiredDelegation }), "t");
+
+  // The management/browser adapter receives a bounded HK civil date and
+  // opaque refs, then uses these disposable SQL closures to exercise the
+  // same owner/list/revoke/read boundary without exposing canonical IDs.
+  if (verifyManagement) {
+    const issueDelegation = ({ through, noticeVersion: submittedNoticeVersion, requestRef }) => {
+      if (typeof through !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(through)
+        || !requestRef || submittedNoticeVersion !== noticeVersion) return false;
+      const scoped = `ARRAY[:'caseA'::uuid]`;
+      const raw = inAdult(`SELECT COALESCE(identity.issue_journey_profile_delegation(
+        :'delegationId'::uuid,:'delegatePrincipal'::uuid,${scoped},
+        ((:'through'::date + 1)::timestamp AT TIME ZONE 'Asia/Hong_Kong'),
+        :'noticeVersion'::text)::text,'null');`, {
+        delegationId: managementDelegation,
+        delegatePrincipal: applicantPrincipal,
+        through,
+        noticeVersion: submittedNoticeVersion,
+      });
+      return raw === managementDelegation;
+    };
+    const readOwnedProfile = () => {
+      const raw = inAdult(`SELECT COALESCE(identity.read_journey_member_profile(
+        :'adult'::uuid,NULL,ARRAY[:'caseA'::uuid])::text,'null');`, { adult, caseA });
+      return raw === "null" ? null : JSON.parse(raw);
+    };
+    const listDelegations = () => listOwnedDelegations();
+    const readManagementProfile = () => {
+      const raw = read(adult, null, [caseA], managementDelegation, inApplicant);
+      return raw === "null" ? null : JSON.parse(raw);
+    };
+    const canReadManagementProfile = () =>
+      lock(adult, null, [caseA], managementDelegation, inApplicant) === "t";
+    const revokeManagementDelegation = () =>
+      revoke(managementDelegation, inAdult) === "t";
+    await verifyManagement({
+      issueDelegation,
+      listDelegations,
+      revokeDelegation: revokeManagementDelegation,
+      readDelegatedProfile: readManagementProfile,
+      canReadDelegatedProfile: canReadManagementProfile,
+      readOwnedProfile,
+      expectedDate: caseAExpiry,
+      today,
+    });
+    assert.equal(canReadManagementProfile(), false);
+    assert.equal(readManagementProfile(), null);
+    assert.equal(query(`SELECT revoked_at IS NOT NULL AND notice_version=:'noticeVersion'::text
+      FROM identity.journey_profile_delegations
+      WHERE delegation_id=:'delegationId'::uuid;`, {
+      delegationId: managementDelegation,
+      noticeVersion,
+    }), "t");
+  }
 
   console.log("PASS adult self-issued exact-principal delegation, family isolation, case scope, human-safe profile projection, expiry, revoke, and API privilege closure");
 }

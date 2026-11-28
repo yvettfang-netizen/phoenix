@@ -15,9 +15,10 @@ import { FamilyIdentityInbox } from './family-identity-inbox';
 import { FamilyIdentityTimeline } from './family-identity-timeline';
 import { FamilyIdentityResidence } from './family-identity-residence';
 import { FamilyIdentityProfile } from './family-identity-profile';
+import { FamilyIdentityDelegations } from './family-identity-delegations';
 import { type IdentityProfileMember } from '@/lib/identity-journey-profile-contract';
 
-type Props = { locale: 'zh'|'en'; demo?: boolean; identityJourneyPreview?: boolean; identityInbox?: boolean; identityConsultation?: boolean; identityTimeline?: boolean; identityResidence?: boolean; identityProfile?: boolean; identityMemberResidence?: boolean; identityReviewPlanning?: boolean; canonical?: boolean; personalized?: boolean; harmony?: boolean; account?: boolean; workbench?: boolean };
+type Props = { locale: 'zh'|'en'; demo?: boolean; identityJourneyPreview?: boolean; identityInbox?: boolean; identityConsultation?: boolean; identityTimeline?: boolean; identityResidence?: boolean; identityProfile?: boolean; identityMemberResidence?: boolean; identityReviewPlanning?: boolean; identityDelegationManagement?: boolean; canonical?: boolean; personalized?: boolean; harmony?: boolean; account?: boolean; workbench?: boolean };
 const domainText = {education:['教育 · 成长','Education'],identity:['身份 · 规划','Identity'],health:['健康 · 守护','Health'],wealth:['财富 · 保障','Wealth']};
 const icons = {education:GraduationCap,identity:Globe,health:Heart,wealth:Coins};
 const art = {education:'/images/education-v3/education-academy.png',identity:'/images/identity-v3/identity-hong-kong.png',health:'/images/health-v31-gba-family.png',wealth:'/images/wealth-v3/family-harbour.png'};
@@ -30,7 +31,7 @@ export function FamilyCenterV2(props: Props) {
   // Distinct identities and modes own distinct component state.
   return <ScopedCenter key={`${props.demo?'demo':props.canonical?'canonical':'account'}:${props.locale}`} {...props}/>;
 }
-function ScopedCenter({locale,demo=false,identityJourneyPreview=false,identityInbox=false,identityConsultation=false,identityTimeline=false,identityResidence=false,identityProfile=false,identityMemberResidence=false,identityReviewPlanning=false,canonical=false,personalized=false,harmony=false,account=false,workbench=false}:Props) {
+function ScopedCenter({locale,demo=false,identityJourneyPreview=false,identityInbox=false,identityConsultation=false,identityTimeline=false,identityResidence=false,identityProfile=false,identityMemberResidence=false,identityReviewPlanning=false,identityDelegationManagement=false,canonical=false,personalized=false,harmony=false,account=false,workbench=false}:Props) {
   const en=locale==='en', t=(zh:string,english:string)=>en?english:zh;
   const [view,setView]=useState('overview'), [scenario,setScenario]=useState<Scenario>('multi');
   const [family,setFamily]=useState('demo-family-a'), [member,setMember]=useState<string|null>(null), [pin,setPin]=useState<Domain|null>(null);
@@ -80,6 +81,13 @@ function ScopedCenter({locale,demo=false,identityJourneyPreview=false,identityIn
           locale={locale}
           onMemberSelectionChange={setSelectedIdentityMember}
           reviewPlanningEnabled={identityReviewPlanning && account && !demo}
+          identityDelegationManagement={identityDelegationManagement && account && !demo && selectedIdentityMember?.access === 'SELF' && selectedIdentityMember.ref
+            ? <FamilyIdentityDelegations
+              key={selectedIdentityMember.ref}
+              locale={locale}
+              memberRef={selectedIdentityMember.ref}
+            />
+            : null}
           memberResidence={identityMemberResidence && selectedIdentityMember?.access === 'GUARDIAN' ? <FamilyIdentityResidence
             key={selectedIdentityMember.ref}
             locale={locale}

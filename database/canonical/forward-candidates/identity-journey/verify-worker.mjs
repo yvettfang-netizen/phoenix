@@ -13,6 +13,7 @@ import { verifyDocumentDates } from "./verify-document-dates.mjs";
 import { verifyEpisodeWrite } from "./verify-episode-write.mjs";
 import { verifySponsorship } from "./verify-sponsorship.mjs";
 import { verifyAdultDelegation } from "./verify-delegation.mjs";
+import { verifyDelegationManagement } from "./verify-delegation-management.mjs";
 import { verifyIdentityPolicyPaths } from "./verify-policy-paths.mjs";
 import { verifyReviewPlans } from "./verify-review-plans.mjs";
 import { verifyReviewPlanningHttp } from "./verify-review-planning-http.mjs";
@@ -282,11 +283,12 @@ let reviewPlanningBrowser;
 let openEndedIdentityBrowser;
 let sponsorshipBrowser;
 let adultDelegationBrowser;
+let delegationManagementBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser, verifyFamilyResidenceBrowser,
     verifyOfficialTravelBrowser, verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser,
     verifyIdentityReviewPlanningBrowser, verifyOpenEndedIdentityBrowser, verifySponsorshipBrowser,
-    verifyAdultDelegationBrowser } = await import("./verify-browser.mjs");
+    verifyAdultDelegationBrowser, verifyDelegationManagementBrowser } = await import("./verify-browser.mjs");
   timelineBrowser = verifyFamilyTimelineBrowser;
   residenceBrowser = verifyFamilyResidenceBrowser;
   officialTravelBrowser = verifyOfficialTravelBrowser;
@@ -296,6 +298,7 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   openEndedIdentityBrowser = verifyOpenEndedIdentityBrowser;
   sponsorshipBrowser = verifySponsorshipBrowser;
   adultDelegationBrowser = verifyAdultDelegationBrowser;
+  delegationManagementBrowser = verifyDelegationManagementBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
@@ -407,6 +410,7 @@ await verifySponsorship({
 });
 await verifyAdultDelegation({
   query, recipient,
+  verifyManagement: fixture => verifyDelegationManagement({ ...fixture, authConfig, browser: delegationManagementBrowser }),
   async verifyProfile({ readDelegatedProfile, canReadDelegatedProfile, revokeDelegation }) {
     const memberRef = "member_delegate_000000000000000000";
     const validSession = session =>
