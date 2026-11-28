@@ -69,11 +69,11 @@ function makeDue() {
   query(`UPDATE identity.journey_station_reminders SET retry_not_before = clock_timestamp() - interval '1 second'
     WHERE reminder_id = :'id'::uuid AND state = 'RETRY';`, { id: candidate });
 }
-function verifyReceipt(expectedCount) {
+function verifyReceipt(expectedCount, id = candidate) {
   assert.equal(query(`SELECT count(*) FROM identity.journey_station_notices n
     JOIN identity.journey_station_reminders r USING (reminder_id)
     WHERE n.reminder_id = :'id'::uuid AND r.state = 'DELIVERED'
-      AND n.published_at = r.delivered_at AND r.claim_token IS NULL;`, { id: candidate }), String(expectedCount));
+      AND n.published_at = r.delivered_at AND r.claim_token IS NULL;`, { id }), String(expectedCount));
 }
 
 makeDue();
@@ -232,7 +232,7 @@ assert.equal((await post(candidate)).status, 403);
 console.log("PASS Family OS inbox HTTP session, same-origin, minimized response, acknowledgement and revocation");
 
 const crmFixture = await verifyCrmHandoff({ query, recipient, authConfig });
-const recordRenewalReview = await verifyServiceChain({ query, recipient, crmFixture });
+const verifyRenewalReview = await verifyServiceChain({ query, recipient, crmFixture });
 
 let timelineBrowser;
 let residenceBrowser;
@@ -266,10 +266,47 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   });
   console.log("PASS Chromium desktop and mobile inbox over HTTP and isolated PostgreSQL");
 }
+function setRenewalNoticeAuthorization(active) {
+  query(`UPDATE identity_journey_test.station_grant SET withdrawn_at =
+     CASE WHEN :'active'::boolean THEN NULL ELSE clock_timestamp() END
+    WHERE identity_case_id = :'caseId'::uuid AND recipient_principal_id = :'principalId'::uuid;`,
+  { ...recipient, active });
+}
+setRenewalNoticeAuthorization(true);
 await verifyTimeline({
   query, recipient, authConfig, browser: timelineBrowser,
   async onRenewal() {
-    recordRenewalReview();
+    verifyRenewalReview();
+    const nextNotice = "01910000-0000-7000-8100-000000000057";
+    const nextRevision = "01910000-0000-7000-8100-000000000050";
+    setRenewalNoticeAuthorization(false);
+    const beforeAuthorization = await runStationReminderBatch(queue, 1);
+    assert.equal(beforeAuthorization.denied, 1);
+    assert.equal(beforeAuthorization.deferred, 1);
+    verifyReceipt(0, nextNotice);
+    setRenewalNoticeAuthorization(true);
+    query(`UPDATE identity.journey_station_reminders SET retry_not_before = clock_timestamp() - interval '1 second'
+      WHERE reminder_id = :'nextNotice'::uuid AND date_revision_id = :'nextRevision'::uuid AND state = 'RETRY';`,
+    { ...recipient, nextNotice, nextRevision });
+    try {
+      assert.equal((await runStationReminderBatch(queue, 1)).delivered, 1);
+      assert.equal((await runStationReminderBatch(queue, 1)).claimed, 0);
+      verifyReceipt(1, nextNotice);
+      const inboxResponse = await get();
+      assert.equal(inboxResponse.status, 200);
+      const rows = (await inboxResponse.json()).notices;
+      assert.equal(rows.find(row => row.id === candidate)?.readAt, new Date(firstReadAt).toISOString());
+      assert.equal(rows.find(row => row.id === nextNotice)?.readAt, null);
+      const acknowledgement = await post(nextNotice);
+      assert.equal(acknowledgement.status, 200);
+      const { readAt } = await acknowledgement.json();
+      assert.ok(Number.isFinite(Date.parse(readAt)));
+      assert.equal((await (await post(nextNotice)).json()).readAt, readAt);
+    } finally {
+      setRenewalNoticeAuthorization(false);
+    }
+    assert.equal((await get()).status, 403);
+    console.log("PASS same renewal through authorized Worker, next-cycle Family inbox and first-read receipt");
     await verifyFounderSummary({ query, recipient, crmFixture });
   },
 });

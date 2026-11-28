@@ -112,10 +112,38 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
   assert.equal(query("SELECT count(*) FROM identity.external_facts WHERE fact_kind='DECISION';"), "0");
   console.log("PASS same identity need, scheduled consultation, existing Client/Deal, synthetic commercial gate, adviser tasks and Family Workbench");
 
-  return function recordRenewalReview() {
+  // The result-review task is the existing STAFF task from the service plan.
+  // Put it in progress before verify-renewal.sql binds the attestation.  The
+  // renewal bridge is then the only operation allowed to complete this task;
+  // the old post-hoc TASK_STATUS pair must not be used as proof of delivery.
+  const reviewIndex = identityRenewalServiceActions.findIndex(action => action.key === "RESULT_REVIEW");
+  assert.ok(reviewIndex >= 0);
+  const reviewTask = id(110 + reviewIndex);
+  const reviewStartEvent = id(150);
+  const beforeReview = snapshot("advisor").data.project.revision;
+  const started = JSON.parse(invoke("advisor", `SELECT service.workbench_command(
+      :'project'::uuid,'TASK_STATUS',:'body'::jsonb,:'key',:'eventId'::uuid);`, {
+    body: JSON.stringify({ revision: beforeReview, id: reviewTask, status: "IN_PROGRESS",
+      reason: "SYNTHETIC_RENEWAL_REVIEW_STARTED" }),
+    key: "synthetic-renewal-result-review-start",
+    eventId: reviewStartEvent,
+  }));
+  assert.equal(started.status, "ALLOW");
+  const startedSnapshot = snapshot("advisor").data;
+  const startedTask = startedSnapshot.tasks.find(entry => entry.id === reviewTask);
+  assert.equal(startedTask?.status, "IN_PROGRESS");
+  assert.equal(startedTask?.assignee, vars.advisorPrincipal);
+  assert.equal(startedTask?.audience, "STAFF");
+  assert.equal(query(`SELECT count(*) FROM service.task_events
+    WHERE task_event_id=:'eventId'::uuid AND task_id=:'task'::uuid
+      AND event_kind='STATUS_CHANGED' AND from_status='PENDING' AND to_status='IN_PROGRESS';`,
+  { eventId: reviewStartEvent, task: reviewTask }), "1");
+
+  return function verifyRenewalReview() {
     const verifiedRevision = id(50);
     assert.equal(query(`SELECT count(*) FROM identity.journey_date_revisions r
       JOIN identity.journey_renewal_attestations attestation ON attestation.decision_id=r.official_fact_id
+        AND attestation.review_task_id=:'reviewTask'::uuid
       JOIN identity.cases identity_case ON identity_case.identity_case_id=r.identity_case_id
       JOIN identity.journey_station_reminders original_notice ON original_notice.reminder_id=:'noticeId'::uuid
         AND original_notice.identity_case_id=identity_case.identity_case_id
@@ -129,19 +157,28 @@ export async function verifyServiceChain({ query, recipient, crmFixture }) {
         AND subject.subject_person_id=identity_case.subject_person_id AND subject.data_scope='IDENTITY'
       WHERE r.date_revision_id=:'verifiedRevision'::uuid AND r.verification='VERIFIED'
         AND r.verified_by=:'advisorPrincipal'::uuid AND r.identity_case_id=:'caseId'::uuid
-        AND subject.service_project_id=:'project'::uuid AND subject.status='ACTIVE';`, { ...vars, verifiedRevision }), "1");
-    const index = identityRenewalServiceActions.findIndex(action => action.key === "RESULT_REVIEW");
-    const task = id(110 + index);
-    const revision = snapshot("advisor").data.project.revision;
-    for (const [step, status] of ["IN_PROGRESS", "COMPLETED"].entries()) {
-      const body = JSON.stringify({ revision: revision + step, id: task, status, reason: "SYNTHETIC_VERIFIED_RENEWAL" });
-      assert.equal(JSON.parse(invoke("advisor", `SELECT service.workbench_command(
-        :'project'::uuid,'TASK_STATUS',:'body'::jsonb,:'key',:'eventId'::uuid);`,
-      { body, key: `synthetic-renewal-result-review-${step}`, eventId: id(150 + step) })).status, "ALLOW");
-    }
+        AND subject.service_project_id=:'project'::uuid AND subject.status='ACTIVE';`, { ...vars, verifiedRevision, reviewTask }), "1");
+    const task = reviewTask;
     const after = snapshot("advisor").data;
     assert.equal(after.tasks.find(entry => entry.id === task)?.status, "COMPLETED");
     assert.equal(after.project.status, "ACTIVE", "Completing the result review does not close the whole service");
-    console.log("PASS supersession links the original expiry notice, consultation handoff and the same Identity Workbench task");
+    assert.equal(query(`SELECT count(*) FROM service.task_events
+      WHERE task_event_id=:'eventId'::uuid AND task_id=:'task'::uuid
+        AND event_kind='STATUS_CHANGED' AND from_status='IN_PROGRESS' AND to_status='COMPLETED'
+        AND reason_code='IDENTITY_RENEWAL_RESULT_VERIFIED';`,
+    { eventId: id(151), task }), "1");
+    // The bridge owns the completion command.  Inspect the canonical event
+    // by its exact event id and task result instead of issuing another
+    // post-hoc TASK_STATUS command here.
+    assert.equal(query(`SELECT count(*) FROM service.workbench_events e
+      WHERE e.event_id=:'eventId'::uuid AND e.service_project_id=:'project'::uuid
+        AND e.command_kind='TASK_STATUS' AND e.result->>'toStatus'='COMPLETED'
+        AND e.result->>'eventId'=:'eventId'::text;`,
+    { eventId: id(151), project: vars.project }), "1");
+    assert.equal(query(`SELECT count(*) FROM audit.access_events
+      WHERE resource_kind='SERVICE_WORKBENCH' AND resource_id=:'project'::uuid
+        AND action='TASK_STATUS' AND decision='ALLOW'
+        AND reason_code='WORKBENCH_COMMAND_COMMITTED';`, { project: vars.project }), "2");
+    console.log("PASS supersession links the original expiry notice, consultation handoff and the same Identity Workbench task atomically");
   };
 }

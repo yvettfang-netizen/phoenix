@@ -4,7 +4,7 @@ import { handleIdentityTimeline, identityTimelinePath } from "../../../../websit
 
 export async function verifyTimeline({ query, recipient, authConfig, browser, onRenewal }) {
   query(readFileSync(new URL("./verify-renewal.sql", import.meta.url), "utf8"));
-  console.log("PASS same-family verified renewal, rollback, old receipt, next-cycle delivery and canonical audit");
+  console.log("PASS same-family verified renewal, rollback, old receipt, next-cycle queue and canonical audit");
   await onRenewal();
   assert.equal(query(`SELECT has_function_privilege('phoenix_canonical_app',
     'identity.list_journey_stay_timeline(uuid,uuid,uuid,integer)', 'EXECUTE');`), "f");
