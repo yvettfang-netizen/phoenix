@@ -433,6 +433,7 @@ export async function verifyIdentityMemberProfile({ query, recipient, authConfig
     recipient,
     authConfig,
     member: memberFor(childRef),
+    withFamilyContext: inContext,
     profileLock,
     profilePost: post,
     profileEnv: env,

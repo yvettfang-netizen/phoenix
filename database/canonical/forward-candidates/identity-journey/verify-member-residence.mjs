@@ -16,6 +16,7 @@ export async function verifyIdentityMemberResidence({
   recipient,
   authConfig,
   member,
+  withFamilyContext,
   profileLock,
   profilePost,
   profileEnv,
@@ -91,9 +92,6 @@ export async function verifyIdentityMemberResidence({
   });
 
   const origin = authConfig.origin;
-  const familyContext = { principal: recipient.principalId, person: actor, channel: "FAMILY" };
-  const lastLine = value => String(value ?? "").split(/\r?\n/).map(line => line.trim())
-    .filter(Boolean).at(-1) ?? "";
   const valuesFor = session => ({
     ...recipient,
     actor,
@@ -106,15 +104,12 @@ export async function verifyIdentityMemberResidence({
     caseTwo,
   });
   function inContext(statement, values = {}) {
-    return lastLine(query(`BEGIN;
-      SET LOCAL statement_timeout = '4s';
-      SELECT auth.issue_context_ticket(:'principal'::uuid, :'person'::uuid,
-        :'familyId'::uuid, :'channel', clock_timestamp()+interval '45 seconds',
-        gen_random_uuid(), :'principal'::uuid) AS ticket \gset
-      SELECT auth.redeem_context_ticket(:'ticket'::uuid, :'principal'::uuid);
-      ${statement}
-      SELECT auth.clear_context();
-      COMMIT;`, { ...familyContext, ...values }));
+    try {
+      return withFamilyContext(statement, values);
+    } catch (error) {
+      if (error?.stderr) console.error(error.stderr.toString().trim());
+      throw error;
+    }
   }
   const grantWhere = `member_ref = :'memberRef'
     AND customer_id = :'customerId' AND session_hash = :'sessionHash'
