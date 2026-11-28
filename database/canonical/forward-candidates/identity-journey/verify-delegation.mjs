@@ -47,6 +47,7 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   const crossFamilyDelegation = id(22);
   const foreignCapacity = id(23);
   const unverifiedCapacity = id(24);
+  const foreignMembership = id(25);
 
   const today = query("SELECT to_char((clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date,'YYYY-MM-DD');");
   assert.match(today, /^\d{4}-\d{2}-\d{2}$/);
@@ -88,7 +89,8 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
     INSERT INTO auth.principals(principal_id,person_id,principal_kind,status)
       VALUES(:'adultPrincipal'::uuid,:'adult'::uuid,'FAMILY','ACTIVE');
     INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from)
-      VALUES(:'membership'::uuid,:'familyId'::uuid,:'adult'::uuid,'MEMBER',clock_timestamp()-interval '1 day');
+      VALUES(:'membership'::uuid,:'familyId'::uuid,:'adult'::uuid,'MEMBER',clock_timestamp()-interval '1 day'),
+        (:'foreignMembership'::uuid,:'otherFamily'::uuid,:'otherPerson'::uuid,'PRIMARY',clock_timestamp()-interval '1 day');
     INSERT INTO core.civil_capacity_history(capacity_record_id,person_id,capacity_status,evidence_ref,verified_by_principal_id)
       VALUES(:'capacity'::uuid,:'adult'::uuid,'ADULT_VERIFIED','synthetic/adult-delegation-capacity',:'advisorPrincipal'::uuid),
         (:'foreignCapacity'::uuid,:'otherPerson'::uuid,'ADULT_VERIFIED','synthetic/foreign-adult-capacity',:'advisorPrincipal'::uuid);
@@ -112,7 +114,8 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
         (:'revisionB'::uuid,:'caseB'::uuid,:'episodeB'::uuid,'STAY_EXPIRY','CASE_APPROVAL',:'caseBExpiry'::date,
         'VERIFIED',NULL,:'documentB'::uuid,:'advisorPrincipal'::uuid,:'adultPrincipal'::uuid);
   `, {
-    familyId: family, adult, adultPrincipal, membership, capacity, foreignCapacity, otherPerson, advisorPrincipal,
+    familyId: family, adult, adultPrincipal, membership, capacity, foreignCapacity, foreignMembership, otherFamily,
+    otherPerson, advisorPrincipal,
     caseA, caseB, episodeA, episodeB, documentA, documentB, versionA, versionB,
     revisionA, revisionB, startA: addDays(today, -120), startB: addDays(today, -60),
     caseAExpiry, caseBExpiry,
