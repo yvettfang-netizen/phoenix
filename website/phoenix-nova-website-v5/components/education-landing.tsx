@@ -21,6 +21,37 @@ const educationStages = [
   { route: "education/global", cn: "全球升学与流动", en: "Global education pathways", cnBody: "比较不同国家和地区的教育目的地与发展方向。", enBody: "Compare education destinations and development directions across regions." },
   { route: "education/academy", cn: "凤启学苑｜启明堂", en: "Phoenix Academy · Qiming Hall", cnBody: "连接课程、导师与长期学习支持，能力入口待开放。", enBody: "Connect courses, tutors and continuing learning support; access awaits confirmation." },
 ] as const;
+const educationPricingPackages = [
+  {
+    id: "standard",
+    name: ["香港升学标准套餐", "Hong Kong Admissions · Standard"],
+    price: ["¥39,980 起", "From RMB 39,980"],
+    description: ["适合目标方向较清晰、希望获得专业申请支持的学生及家庭。", "For students and families seeking structured support for a defined admissions direction."],
+    features: [["背景评估与院校专业规划", "Background review and programme planning"], ["申请材料与递交进度支持", "Application materials and submission guidance"]],
+  },
+  {
+    id: "vip",
+    name: ["香港硕士 VIP 全程申请", "Hong Kong Master's · VIP"],
+    price: ["¥89,980", "RMB 89,980"],
+    description: ["适合希望获得更深入申请规划和全过程顾问支持的申请者。", "For applicants seeking more detailed planning and continuing advisory support."],
+    features: [["个性化申请路径与材料策略", "Tailored application and document strategy"], ["多阶段申请跟进与选择建议", "Multi-stage follow-up and offer guidance"]],
+  },
+  {
+    id: "tailored",
+    name: ["高目标院校与复杂背景定制", "Selective Universities · Tailored"],
+    price: ["评估后报价", "Quoted after assessment"],
+    description: ["涵盖具有特殊背景或较高目标要求的申请，不以学校排名直接承诺结果。", "For complex profiles or selective goals; university rankings are not an outcome promise."],
+    features: [["先评估适配的院校及专业范围", "Evaluate suitable universities and programmes first"], ["风险共担或退款安排须另立书面条款", "Any risk-sharing or refund terms require a separate written agreement"]],
+  },
+  {
+    id: "research",
+    name: ["博士 PhD / DBA 进阶规划", "PhD / DBA · Research Pathways"],
+    price: ["评估后报价", "Quoted after assessment"],
+    description: ["按研究方向、申请类型与实际工作量确认服务范围。", "Scope depends on research aims, programme type and the work required."],
+    features: [["研究定位与申请路径评估", "Research positioning and admissions pathway review"], ["导师沟通与材料支持按方案约定", "Supervisor outreach and materials support as contracted"]],
+  },
+] as const;
+
 export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAssessmentEnabled = false }: { locale: Locale; catalogPreviewEnabled?: boolean; freeAssessmentEnabled?: boolean }) {
   const zh = locale === "zh";
   const t = (cn: string, en: string) => zh ? cn : en;
@@ -54,6 +85,22 @@ export function EducationLanding({ locale, catalogPreviewEnabled = false, freeAs
         <header className={styles.sectionHeading}><div><p className={styles.eyebrow}>{t("全球教育专业服务", "OUR EDUCATION SERVICES")}</p><h2 id="services-title">{t("一站式全球教育规划服务", "Connected global education planning")}</h2><p>{t("从启蒙到升学，从学业到未来发展，为每个家庭提供全周期教育支持。", "From early learning to admissions and future development, support shaped around each family’s education journey.")}</p></div><a className={styles.textLink} href="#education-compass">{t("先看清方向", "Find your direction")}<Arrow /></a></header>
         <div className={styles.serviceGrid}>{educationServices.map((service, index) => <Card key={service.id} className={styles.serviceCard} data-testid="education-service"><div className={styles.serviceImage}><Image src={service.image} alt={copy(service.alt)} fill unoptimized sizes="(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 25vw" /></div><CardContent className={styles.serviceContent}><span className={styles.number}>0{index + 1}</span><h3>{copy(service.title)}</h3><p>{copy(service.body)}</p><details><summary>{t("了解更多", "Learn more")}<Arrow /></summary><div><p>{copy(service.detail)}</p><a href="#consultation">{t("准备教育咨询", "Prepare a consultation")} ↗</a></div></details></CardContent></Card>)}</div>
         <p className={styles.small}>{t("实际服务以约定范围为准，不承诺学校录取、考试成绩或升学结果。", "Actual services depend on agreed scope. Admission, examination scores and education outcomes are not guaranteed.")}</p>
+      </div></section>
+
+      <section className={`${styles.section} ${styles.pricingSection}`} id="education-packages" aria-labelledby="education-packages-title"><div className={styles.container}>
+        <header className={styles.pricingIntro}>
+          <p className={styles.eyebrow}>{t("透明服务收费", "TRANSPARENT SERVICE PRICING")}</p>
+          <h2 id="education-packages-title">{t("升学服务套餐与参考价格", "Education service packages & reference fees")}</h2>
+          <p>{t("先了解不同服务层级，再根据学业背景、目标院校与实际需求确定适合的方案。价格以人民币计。", "Compare service levels first, then select a suitable proposal based on your background, university goals and actual needs. All amounts are in CNY (RMB).")}</p>
+        </header>
+        <div className={styles.pricingGrid}>{educationPricingPackages.map(plan => <article className={styles.pricingCard} key={plan.id} data-testid="education-pricing-package">
+          <h3>{copy(plan.name)}</h3>
+          <p className={styles.pricingPrice}>{copy(plan.price)}</p>
+          <p className={styles.pricingDescription}>{copy(plan.description)}</p>
+          <ul className={styles.pricingFeatures}>{plan.features.map(feature => <li key={feature[1]}><Check size={16} aria-hidden="true" />{copy(feature)}</li>)}</ul>
+          <a className={styles.pricingAction} href="#consultation">{t("了解适用条件与书面报价", "Ask about eligibility & a written quote")}<Arrow /></a>
+        </article>)}</div>
+        <p className={styles.pricingDisclaimer}>{t("以上为公开参考服务费及套餐介绍，非自动生成的合同报价。具体院校／专业、申请数量、交付内容、付款与退款条件以书面方案和合同为准。院校申请费、考试费、学费、签证及其他第三方费用通常另计。院校自主决定录取结果；本服务不保证录取。", "These are indicative service fees and package descriptions, not an automatically binding quotation. Programme choices, application counts, deliverables, payment and refund terms are defined in the written proposal and contract. University fees, examinations, tuition, visas and other third-party charges are generally separate. Admissions decisions belong to institutions; admission is not guaranteed.")}</p>
       </div></section>
 
       <section className={`${styles.section} ${styles.compassSection}`} id="education-compass" aria-labelledby="compass-title"><div className={styles.container}>
