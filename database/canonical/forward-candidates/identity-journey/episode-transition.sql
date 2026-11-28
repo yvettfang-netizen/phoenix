@@ -61,11 +61,16 @@ AS $fn$
   SELECT EXISTS (
     SELECT 1 FROM identity.journey_transition_attestations a
     JOIN identity.journey_episodes e ON e.transition_decision_id=a.decision_id
+    JOIN identity.journey_episodes previous ON previous.episode_id=a.prior_episode_id
+    JOIN identity.cases former_case ON former_case.identity_case_id=previous.identity_case_id
+    JOIN identity.cases approved_case ON approved_case.identity_case_id=a.target_case_id
     JOIN docs.document_versions v ON v.version_id=a.document_version_id
     JOIN identity.external_facts f ON f.fact_id=a.decision_id
     WHERE a.decision_id=p_decision AND a.target_case_id=p_case
       AND f.identity_case_id=p_case AND f.fact_kind='DECISION'
       AND e.episode_id=p_episode AND e.identity_case_id=p_case AND e.started_on=a.effective_on
+      AND previous.ended_before=a.effective_on
+      AND former_case.family_id=approved_case.family_id AND former_case.subject_person_id=approved_case.subject_person_id
       AND a.verified_target_on=p_target AND a.verified_by=p_verified_by AND v.document_id=p_document
   );
 $fn$;

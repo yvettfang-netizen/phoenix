@@ -247,6 +247,13 @@ export async function verifyEpisodeWrite({ query, recipient }) {
   };
   const validParameters = { decision: validDecision, episode: validEpisode, revision: validRevision,
     recipientId: recipient.principalId, offsets: [1], jobs: [newReminder] };
+  const { call: applyWithoutPlan, values: applyWithoutPlanValues } = applyCall({
+    decision: validDecision, episode: validEpisode, revision: validRevision,
+  });
+  assert.equal(inAdvisor(`SAVEPOINT missing_source_assignment;
+    UPDATE casework.advisor_assignments SET revoked_at=clock_timestamp() WHERE assignment_id=:'sourceAssignment'::uuid;
+    SELECT (${applyWithoutPlan}) IS NULL;
+    ROLLBACK TO SAVEPOINT missing_source_assignment;`, { ...applyWithoutPlanValues, sourceAssignment }), "t");
   assert.equal(applyWithReminderAuthority(validParameters), validEpisode);
 
   assert.equal(query(`SELECT e.identity_case_id=:'targetCase'::uuid AND e.started_on=:'effective'::date
