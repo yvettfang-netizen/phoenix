@@ -5,7 +5,11 @@ import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 
 // Exercise the built application in its real Workers environment. Direct Node
 // imports cannot resolve cloudflare:workers or provide request-scoped bindings.
-export function createV5Worker(bindings = {}) {
+// `serviceBindings` and extra compatibility flags are intentionally optional
+// second-argument fields so existing callers can continue to provide only
+// ordinary environment bindings. The scheduled() suite opts into Miniflare's
+// extra service-binding handler explicitly instead of changing all fixtures.
+export function createV5Worker(bindings = {}, { serviceBindings = {}, compatibilityFlags = [] } = {}) {
   const root = fileURLToPath(new URL("../dist/server/", import.meta.url));
   const files = directory => readdirSync(directory, { withFileTypes: true }).flatMap(entry =>
     entry.isDirectory() ? files(join(directory, entry.name)) : [join(directory, entry.name)]);
@@ -15,8 +19,12 @@ export function createV5Worker(bindings = {}) {
       .map(path => ({ type: "ESModule", path })),
     modulesRoot: root,
     compatibilityDate: "2026-03-17",
-    compatibilityFlags: ["nodejs_compat"],
+    compatibilityFlags: [
+      "nodejs_compat",
+      ...compatibilityFlags,
+    ],
     d1Databases: ["DB"],
     bindings,
+    serviceBindings,
   }));
 }

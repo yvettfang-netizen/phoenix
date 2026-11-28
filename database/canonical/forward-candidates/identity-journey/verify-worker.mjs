@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { runStationReminderBatch } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-reminder-worker.ts";
+import { handleIdentityStationQueue, runIdentityStationSchedule } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-station-schedule.ts";
 import { handleIdentityInbox, identityNoticePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-inbox.ts";
 import { handleIdentityProfile } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-profile.ts";
 import { identityProfilePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-profile-contract.ts";
@@ -108,7 +109,11 @@ verifyReceipt(0);
 
 makeDue();
 injectRollback = false;
-const delivered = await runStationReminderBatch(queue, 1);
+const delivered = await runIdentityStationSchedule("*/5 * * * *", {
+  FAMILY_IDENTITY_STATION_SCHEDULE_ENABLED: "true",
+  FAMILY_IDENTITY_STATION_CRON: "*/5 * * * *",
+  FAMILY_IDENTITY_STATION_QUEUE: { fetch: request => handleIdentityStationQueue(request, queue) },
+});
 assert.equal(delivered.delivered, 1);
 verifyReceipt(1);
 assert.equal((await runStationReminderBatch(queue, 1)).claimed, 0);
@@ -299,13 +304,25 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   sponsorshipBrowser = verifySponsorshipBrowser;
   adultDelegationBrowser = verifyAdultDelegationBrowser;
   delegationManagementBrowser = verifyDelegationManagementBrowser;
-  query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
+  const { verifyStationSchedule } = await import("./verify-station-schedule.mjs");
+  const scheduledReminder = "01910000-0000-7000-8100-000000000010";
+  query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_timestamp();
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
-    SELECT '01910000-0000-7000-8100-000000000010', identity_case_id, episode_id, date_revision_id,
+    SELECT :'scheduledReminder'::uuid, identity_case_id, episode_id, date_revision_id,
       date_kind, target_on, 14, recipient_principal_id, 'PENDING'
-    FROM identity.journey_station_reminders WHERE reminder_id = :'noticeId'::uuid;`, recipient);
-  assert.equal((await runStationReminderBatch(queue, 1)).delivered, 1);
+    FROM identity.journey_station_reminders WHERE reminder_id = :'noticeId'::uuid;`, { ...recipient, scheduledReminder });
+  await verifyStationSchedule({
+    queue,
+    verifyReceipt: count => verifyReceipt(count, scheduledReminder),
+    afterDenied() {
+      assert.equal(query(`SELECT state='RETRY' AND retry_not_before>clock_timestamp() AND claim_token IS NULL
+        FROM identity.journey_station_reminders WHERE reminder_id=:'scheduledReminder'::uuid;`, { scheduledReminder }), "t");
+      query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
+        UPDATE identity.journey_station_reminders SET retry_not_before = clock_timestamp()-interval '1 second'
+        WHERE reminder_id=:'scheduledReminder'::uuid;`, { scheduledReminder });
+    },
+  });
   await verifyFamilyInboxBrowser({
     noticePath: identityNoticePath,
     handle(request, browserOrigin, hasSession) {
