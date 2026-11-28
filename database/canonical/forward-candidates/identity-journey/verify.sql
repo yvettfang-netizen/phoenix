@@ -68,6 +68,21 @@ BEGIN
     RAISE EXCEPTION 'DUPLICATE_REMINDER_ACCEPTED';
   EXCEPTION WHEN unique_violation THEN NULL;
   END;
+
+  UPDATE identity.journey_station_reminders SET state = 'RETRY', attempt_count = 2,
+    retry_not_before = '2028-02-29 09:30:00+08' WHERE reminder_id = reminder;
+  INSERT INTO identity.journey_date_revisions(date_revision_id,identity_case_id,episode_id,date_kind,date_basis,
+    target_on,verification,document_id,verified_by,supersedes_id,recorded_by)
+    VALUES (invalid_revision,identity_case,episode,'STAY_EXPIRY','CASE_APPROVAL',
+      '2028-03-01','VERIFIED',doc,principal,revision,principal);
+  UPDATE identity.journey_station_reminders SET date_revision_id = invalid_revision
+    WHERE reminder_id = reminder AND state IN ('PENDING','RETRY');
+  IF NOT EXISTS (
+    SELECT 1 FROM identity.journey_station_reminders WHERE reminder_id = reminder
+      AND date_revision_id = invalid_revision AND state = 'RETRY' AND attempt_count = 2
+      AND retry_not_before = TIMESTAMPTZ '2028-02-29 09:30:00+08'
+      AND send_on = DATE '2028-02-29' AND delivered_at IS NULL
+  ) THEN RAISE EXCEPTION 'REMINDER_REBIND_LOST_RETRY_STATE'; END IF;
 END
 $test$;
 ROLLBACK;
