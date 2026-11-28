@@ -2,7 +2,7 @@ BEGIN;
 DO $test$
 DECLARE
   candidate_tables text[] := ARRAY['journey_episodes','journey_date_revisions',
-    'journey_residence_intervals','journey_station_reminders'];
+    'journey_residence_intervals','journey_station_reminders','journey_station_notices'];
   candidate_table text;
   family uuid := '01910000-0000-7000-8000-000000000001';
   other_family uuid := '01910000-0000-7000-8000-000000000002';
@@ -16,6 +16,10 @@ DECLARE
   invalid_revision uuid := '01910000-0000-7000-8000-000000000010';
   reminder uuid := '01910000-0000-7000-8000-000000000011';
   early_receipt timestamptz;
+  live_revision uuid := '01910000-0000-7000-8000-000000000012';
+  live_reminder uuid := '01910000-0000-7000-8000-000000000013';
+  live_target date := (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date + 1;
+  membership uuid := '01910000-0000-7000-8000-000000000014';
 BEGIN
   IF (SELECT count(*) FROM canonical_migrations.applied) <> 37 THEN
     RAISE EXCEPTION 'FORMAL_LEDGER_CHANGED';
@@ -27,6 +31,9 @@ BEGIN
       OR has_table_privilege('phoenix_canonical_reader', 'identity.' || candidate_table, 'SELECT,INSERT,UPDATE,DELETE')
     THEN RAISE EXCEPTION 'CANDIDATE_SCOPE_NOT_CLOSED'; END IF;
   END LOOP;
+  IF has_function_privilege('phoenix_canonical_app','identity.publish_journey_station_notice(uuid,uuid,uuid)','EXECUTE')
+    OR has_function_privilege('phoenix_canonical_reader','identity.publish_journey_station_notice(uuid,uuid,uuid)','EXECUTE')
+    THEN RAISE EXCEPTION 'STATION_PUBLICATION_SCOPE_NOT_CLOSED'; END IF;
 
   INSERT INTO core.families(family_id,display_name) VALUES (family,'Synthetic family'),(other_family,'Synthetic other family');
   INSERT INTO core.people(person_id,display_name) VALUES (person,'Synthetic adult');
@@ -131,6 +138,40 @@ BEGIN
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM <> 'IDENTITY_JOURNEY_DELIVERED_RECEIPT_IMMUTABLE' THEN RAISE; END IF;
   END;
+
+  INSERT INTO identity.journey_date_revisions(date_revision_id,identity_case_id,episode_id,date_kind,date_basis,
+    target_on,verification,document_id,verified_by,recorded_by)
+    VALUES (live_revision,identity_case,episode,'FIRST_ENTRY_DEADLINE','CASE_APPROVAL',
+      live_target,'VERIFIED',doc,principal,principal);
+  INSERT INTO identity.journey_station_reminders(reminder_id,identity_case_id,episode_id,date_revision_id,
+    date_kind,target_on,offset_days,recipient_principal_id,state)
+    VALUES (live_reminder,identity_case,episode,live_revision,'FIRST_ENTRY_DEADLINE',live_target,1,principal,'PENDING');
+  IF identity.publish_journey_station_notice(live_reminder,person,live_revision) <> 'UNAVAILABLE'
+    OR identity.publish_journey_station_notice(live_reminder,principal,revision) <> 'REVISION_CHANGED'
+    OR identity.publish_journey_station_notice(live_reminder,principal,live_revision) <> 'RECIPIENT_UNAVAILABLE'
+    OR EXISTS (SELECT 1 FROM identity.journey_station_notices)
+    THEN RAISE EXCEPTION 'STATION_BOUNDARY_BYPASSED'; END IF;
+  INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from)
+    VALUES (membership,family,person,'PRIMARY',now()-interval '1 day');
+  BEGIN
+    IF identity.publish_journey_station_notice(live_reminder,principal,live_revision) <> 'DELIVERED'
+      THEN RAISE EXCEPTION 'STATION_PRE_ROLLBACK_PUBLISH_FAILED'; END IF;
+    RAISE EXCEPTION 'TEST_ROLLBACK_STATION_NOTICE';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'TEST_ROLLBACK_STATION_NOTICE' THEN RAISE; END IF;
+  END;
+  IF EXISTS (SELECT 1 FROM identity.journey_station_notices)
+    OR (SELECT state FROM identity.journey_station_reminders WHERE reminder_id = live_reminder) <> 'PENDING'
+    THEN RAISE EXCEPTION 'STATION_PUBLICATION_ROLLBACK_FAILED'; END IF;
+  IF identity.publish_journey_station_notice(live_reminder,principal,live_revision) <> 'DELIVERED'
+    THEN RAISE EXCEPTION 'STATION_PUBLISH_FAILED'; END IF;
+  IF identity.publish_journey_station_notice(live_reminder,principal,live_revision) <> 'ALREADY_DELIVERED'
+    OR (SELECT count(*) FROM identity.journey_station_notices) <> 1
+    OR NOT EXISTS (
+      SELECT 1 FROM identity.journey_station_notices n
+      JOIN identity.journey_station_reminders r USING (reminder_id)
+      WHERE n.reminder_id = live_reminder AND r.state = 'DELIVERED' AND r.delivered_at = n.published_at
+    ) THEN RAISE EXCEPTION 'STATION_RECEIPT_NOT_ATOMIC'; END IF;
 END
 $test$;
 ROLLBACK;

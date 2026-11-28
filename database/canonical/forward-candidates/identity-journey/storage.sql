@@ -176,6 +176,85 @@ REVOKE ALL ON FUNCTION identity.guard_journey_delivery_receipt() FROM PUBLIC;
 CREATE TRIGGER journey_delivery_receipt BEFORE UPDATE ON identity.journey_station_reminders
 FOR EACH ROW EXECUTE FUNCTION identity.guard_journey_delivery_receipt();
 
+-- One station notice per reminder. Presentation can resolve its type from the
+-- authorized reminder. This row carries no document, date-of-stay, or message copy.
+CREATE TABLE identity.journey_station_notices (
+  reminder_id uuid PRIMARY KEY REFERENCES identity.journey_station_reminders,
+  published_at timestamptz NOT NULL
+);
+ALTER TABLE identity.journey_station_notices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE identity.journey_station_notices FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON identity.journey_station_notices FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
+
+-- Isolated publication primitive, invoker rights only. The eventual worker
+-- must resolve and lock an approved IDENTITY_REMINDER purpose grant in the same
+-- transaction before calling this. No application or reader can call it today.
+CREATE FUNCTION identity.publish_journey_station_notice(
+  p_reminder_id uuid, p_recipient_principal_id uuid, p_expected_revision_id uuid
+) RETURNS text
+LANGUAGE plpgsql
+SET search_path = pg_catalog, identity, auth, core, docs
+AS $fn$
+DECLARE
+  job identity.journey_station_reminders%ROWTYPE;
+  now_at timestamptz;
+BEGIN
+  SELECT * INTO job FROM identity.journey_station_reminders
+    WHERE reminder_id = p_reminder_id AND recipient_principal_id = p_recipient_principal_id
+    FOR UPDATE SKIP LOCKED;
+  IF NOT FOUND THEN RETURN 'UNAVAILABLE'; END IF;
+  IF job.date_revision_id IS DISTINCT FROM p_expected_revision_id THEN RETURN 'REVISION_CHANGED'; END IF;
+  IF job.state = 'DELIVERED' THEN
+    IF EXISTS (SELECT 1 FROM identity.journey_station_notices WHERE reminder_id = job.reminder_id)
+      THEN RETURN 'ALREADY_DELIVERED';
+    END IF;
+    RETURN 'UNAVAILABLE';
+  END IF;
+  IF job.state = 'CANCELED' THEN RETURN 'CANCELED'; END IF;
+  now_at := clock_timestamp();
+  IF job.send_on > (now_at AT TIME ZONE 'Asia/Hong_Kong')::date
+    OR (job.state = 'RETRY' AND job.retry_not_before > now_at) THEN RETURN 'NOT_DUE'; END IF;
+
+  -- This candidate only verifies direct self-recipient binding. Any enabled
+  -- delegate path requires its own reviewed subject + recipient authorization.
+  PERFORM 1 FROM identity.cases c
+    JOIN auth.principals p ON p.person_id = c.subject_person_id
+    JOIN core.family_memberships m ON m.family_id = c.family_id AND m.person_id = p.person_id
+    WHERE c.identity_case_id = job.identity_case_id AND p.principal_id = p_recipient_principal_id
+      AND p.status = 'ACTIVE' AND p.principal_kind = 'FAMILY'
+      AND m.valid_from <= now_at AND (m.valid_until IS NULL OR m.valid_until > now_at)
+    FOR SHARE OF p, m;
+  IF NOT FOUND THEN RETURN 'RECIPIENT_UNAVAILABLE'; END IF;
+
+  -- A superseding revision takes a foreign-key lock on this row.
+  PERFORM 1 FROM identity.journey_date_revisions WHERE date_revision_id = job.date_revision_id FOR UPDATE SKIP LOCKED;
+  IF NOT FOUND THEN RETURN 'UNAVAILABLE'; END IF;
+  IF EXISTS (
+    SELECT 1 FROM identity.journey_date_revisions WHERE supersedes_id = job.date_revision_id
+  ) THEN RETURN 'REVISION_CHANGED'; END IF;
+
+  -- A withdrawn or expired linked document cannot support a new notice.
+  IF EXISTS (
+    SELECT 1 FROM identity.journey_date_revisions r
+      WHERE r.date_revision_id = job.date_revision_id AND r.document_id IS NOT NULL
+  ) THEN
+    PERFORM 1 FROM identity.journey_date_revisions r
+      JOIN docs.documents d ON d.document_id = r.document_id
+      WHERE r.date_revision_id = job.date_revision_id AND d.withdrawn_at IS NULL AND d.retention_until > now_at
+      FOR SHARE OF d;
+    IF NOT FOUND THEN RETURN 'EVIDENCE_UNAVAILABLE'; END IF;
+  END IF;
+
+  INSERT INTO identity.journey_station_notices(reminder_id, published_at) VALUES (job.reminder_id, now_at);
+  -- Existing transition triggers also recheck that the source is current.
+  UPDATE identity.journey_station_reminders SET state = 'DELIVERED', delivered_at = now_at, retry_not_before = NULL
+    WHERE reminder_id = job.reminder_id;
+  RETURN 'DELIVERED';
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.publish_journey_station_notice(uuid,uuid,uuid)
+  FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
+
 -- No operational principals have grants in this candidate; fine-grained API
 -- policies and revocation/retention writers require a separately reviewed contract.
 ALTER TABLE identity.journey_episodes ENABLE ROW LEVEL SECURITY;
