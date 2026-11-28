@@ -301,8 +301,20 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
           <div className="fc-context">
             <label>{t("起始日（含）", "Start date (inclusive)")}<input required type="date" value={form.from} max={overview.asOf} onChange={event => setForm(current => ({ ...current, from: event.target.value }))} /></label>
             <label>{t("结束日（不含）", "End date (exclusive)")}<input required type="date" value={form.untilBefore} max={overview.asOf} onChange={event => setForm(current => ({ ...current, untilBefore: event.target.value }))} /></label>
-            <label>{t("位置", "Location")}<select value={form.place} onChange={event => setForm(current => ({ ...current, place: event.target.value as FormState["place"], absenceReason: event.target.value === "HK" ? "" : current.absenceReason, expectedReturnOn: event.target.value === "HK" ? "" : current.expectedReturnOn }))}><option value="AWAY">{t("离港／境外", "Outside Hong Kong")}</option><option value="HK">{t("香港境内", "In Hong Kong")}</option></select></label>
-            {form.place === "AWAY" ? <label>{t("离港原因（可选）", "Reason for absence (optional)")}<select value={form.absenceReason} onChange={event => setForm(current => ({ ...current, absenceReason: event.target.value }))}><option value="">{t("未说明", "Not specified")}</option>{reasonValues.map(reason => <option key={reason} value={reason}>{labelReason(reason, locale)}</option>)}</select></label> : null}
+            <div>
+              <label htmlFor="identity-residence-place">{t("位置", "Location")}</label>
+              <select id="identity-residence-place" value={form.place} onChange={event => setForm(current => ({ ...current, place: event.target.value as FormState["place"], absenceReason: event.target.value === "HK" ? "" : current.absenceReason, expectedReturnOn: event.target.value === "HK" ? "" : current.expectedReturnOn }))}>
+                <option value="AWAY">{t("离港／境外", "Outside Hong Kong")}</option>
+                <option value="HK">{t("香港境内", "In Hong Kong")}</option>
+              </select>
+            </div>
+            {form.place === "AWAY" ? <div>
+              <label htmlFor="identity-residence-reason">{t("离港原因（可选）", "Reason for absence (optional)")}</label>
+              <select id="identity-residence-reason" value={form.absenceReason} onChange={event => setForm(current => ({ ...current, absenceReason: event.target.value }))}>
+                <option value="">{t("未说明", "Not specified")}</option>
+                {reasonValues.map(reason => <option key={reason} value={reason}>{labelReason(reason, locale)}</option>)}
+              </select>
+            </div> : null}
             {form.place === "AWAY" ? <label>{t("计划回港日（可选）", "Expected return (optional)")}<input type="date" value={form.expectedReturnOn} min={form.untilBefore || undefined} onChange={event => setForm(current => ({ ...current, expectedReturnOn: event.target.value }))} /></label> : null}
           </div>
           <button className="fc-gold" type="submit" disabled={reportState === "submitting"}>{reportState === "submitting" ? t("正在保存……", "Saving…") : t("提交记录", "Submit record")}</button>
