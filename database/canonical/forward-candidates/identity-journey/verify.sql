@@ -20,6 +20,8 @@ DECLARE
   live_reminder uuid := '01910000-0000-7000-8000-000000000013';
   live_target date := (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date + 1;
   membership uuid := '01910000-0000-7000-8000-000000000014';
+  live_claim uuid;
+  worker_function text;
 BEGIN
   IF (SELECT count(*) FROM canonical_migrations.applied) <> 37 THEN
     RAISE EXCEPTION 'FORMAL_LEDGER_CHANGED';
@@ -31,9 +33,15 @@ BEGIN
       OR has_table_privilege('phoenix_canonical_reader', 'identity.' || candidate_table, 'SELECT,INSERT,UPDATE,DELETE')
     THEN RAISE EXCEPTION 'CANDIDATE_SCOPE_NOT_CLOSED'; END IF;
   END LOOP;
-  IF has_function_privilege('phoenix_canonical_app','identity.publish_journey_station_notice(uuid,uuid,uuid)','EXECUTE')
-    OR has_function_privilege('phoenix_canonical_reader','identity.publish_journey_station_notice(uuid,uuid,uuid)','EXECUTE')
-    THEN RAISE EXCEPTION 'STATION_PUBLICATION_SCOPE_NOT_CLOSED'; END IF;
+  FOREACH worker_function IN ARRAY ARRAY[
+    'identity.publish_journey_station_notice(uuid,uuid,uuid,uuid)',
+    'identity.claim_journey_station_reminders(integer)',
+    'identity.retry_journey_station_reminder(uuid,uuid,uuid)'
+  ] LOOP
+    IF has_function_privilege('phoenix_canonical_app',worker_function,'EXECUTE')
+      OR has_function_privilege('phoenix_canonical_reader',worker_function,'EXECUTE')
+      THEN RAISE EXCEPTION 'STATION_PUBLICATION_SCOPE_NOT_CLOSED'; END IF;
+  END LOOP;
 
   INSERT INTO core.families(family_id,display_name) VALUES (family,'Synthetic family'),(other_family,'Synthetic other family');
   INSERT INTO core.people(person_id,display_name) VALUES (person,'Synthetic adult');
@@ -146,15 +154,18 @@ BEGIN
   INSERT INTO identity.journey_station_reminders(reminder_id,identity_case_id,episode_id,date_revision_id,
     date_kind,target_on,offset_days,recipient_principal_id,state)
     VALUES (live_reminder,identity_case,episode,live_revision,'FIRST_ENTRY_DEADLINE',live_target,1,principal,'PENDING');
-  IF identity.publish_journey_station_notice(live_reminder,person,live_revision) <> 'UNAVAILABLE'
-    OR identity.publish_journey_station_notice(live_reminder,principal,revision) <> 'REVISION_CHANGED'
-    OR identity.publish_journey_station_notice(live_reminder,principal,live_revision) <> 'RECIPIENT_UNAVAILABLE'
+  SELECT claim.claim_token INTO STRICT live_claim FROM identity.claim_journey_station_reminders(1) claim
+    WHERE claim.reminder_id = live_reminder;
+  IF identity.publish_journey_station_notice(live_reminder,person,live_revision,live_claim) <> 'UNAVAILABLE'
+    OR identity.publish_journey_station_notice(live_reminder,principal,revision,live_claim) <> 'REVISION_CHANGED'
+    OR identity.publish_journey_station_notice(live_reminder,principal,live_revision,NULL) <> 'CLAIM_LOST'
+    OR identity.publish_journey_station_notice(live_reminder,principal,live_revision,live_claim) <> 'RECIPIENT_UNAVAILABLE'
     OR EXISTS (SELECT 1 FROM identity.journey_station_notices)
     THEN RAISE EXCEPTION 'STATION_BOUNDARY_BYPASSED'; END IF;
   INSERT INTO core.family_memberships(membership_id,family_id,person_id,membership_role,valid_from)
     VALUES (membership,family,person,'PRIMARY',now()-interval '1 day');
   BEGIN
-    IF identity.publish_journey_station_notice(live_reminder,principal,live_revision) <> 'DELIVERED'
+    IF identity.publish_journey_station_notice(live_reminder,principal,live_revision,live_claim) <> 'DELIVERED'
       THEN RAISE EXCEPTION 'STATION_PRE_ROLLBACK_PUBLISH_FAILED'; END IF;
     RAISE EXCEPTION 'TEST_ROLLBACK_STATION_NOTICE';
   EXCEPTION WHEN raise_exception THEN
@@ -163,9 +174,9 @@ BEGIN
   IF EXISTS (SELECT 1 FROM identity.journey_station_notices)
     OR (SELECT state FROM identity.journey_station_reminders WHERE reminder_id = live_reminder) <> 'PENDING'
     THEN RAISE EXCEPTION 'STATION_PUBLICATION_ROLLBACK_FAILED'; END IF;
-  IF identity.publish_journey_station_notice(live_reminder,principal,live_revision) <> 'DELIVERED'
+  IF identity.publish_journey_station_notice(live_reminder,principal,live_revision,live_claim) <> 'DELIVERED'
     THEN RAISE EXCEPTION 'STATION_PUBLISH_FAILED'; END IF;
-  IF identity.publish_journey_station_notice(live_reminder,principal,live_revision) <> 'ALREADY_DELIVERED'
+  IF identity.publish_journey_station_notice(live_reminder,principal,live_revision,live_claim) <> 'ALREADY_DELIVERED'
     OR (SELECT count(*) FROM identity.journey_station_notices) <> 1
     OR NOT EXISTS (
       SELECT 1 FROM identity.journey_station_notices n

@@ -43,7 +43,37 @@ psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/verify.sql
 
 db=phoenix_identity_journey_synthetic_ci
 psql_synthetic -d "$db" < "$candidate/verify-worker-fixture.sql"
-publication="SELECT identity.publish_journey_station_notice('01910000-0000-7000-8100-000000000008', '01910000-0000-7000-8100-000000000003', '01910000-0000-7000-8100-000000000007');"
+claim="SELECT claim_token FROM identity.claim_journey_station_reminders(1);"
+publish_sql() {
+  [[ "$1" =~ ^[0-9a-f-]{36}$ ]] || return 64
+  printf "SELECT identity.publish_journey_station_notice('01910000-0000-7000-8100-000000000008', '01910000-0000-7000-8100-000000000003', '01910000-0000-7000-8100-000000000007', '%s');" "$1"
+}
+retry_sql() {
+  [[ "$1" =~ ^[0-9a-f-]{36}$ ]] || return 64
+  printf "SELECT identity.retry_journey_station_reminder('01910000-0000-7000-8100-000000000008', '01910000-0000-7000-8100-000000000007', '%s');" "$1"
+}
+stale_token=$(psql_synthetic -qAt -d "$db" -c "$claim")
+[[ -z "$(psql_synthetic -qAt -d "$db" -c "$claim")" ]]
+psql_synthetic -qAt -d "$db" -c "UPDATE identity.journey_station_reminders
+  SET claim_until = clock_timestamp() - interval '1 second'
+  WHERE reminder_id = '01910000-0000-7000-8100-000000000008'"
+active_token=$(psql_synthetic -qAt -d "$db" -c "$claim")
+[[ "$stale_token" != "$active_token" ]]
+[[ "$(psql_synthetic -qAt -d "$db" -c "$(publish_sql "$stale_token")")" == 'CLAIM_LOST' ]]
+[[ "$(psql_synthetic -qAt -d "$db" -c "$(retry_sql "$stale_token")")" == 'f' ]]
+[[ "$(psql_synthetic -qAt -d "$db" -c "$(retry_sql "$active_token")")" == 't' ]]
+[[ -z "$(psql_synthetic -qAt -d "$db" -c "$claim")" ]]
+[[ "$(psql_synthetic -qAt -d "$db" -c "
+  SELECT count(*) FROM identity.journey_station_reminders
+  WHERE reminder_id = '01910000-0000-7000-8100-000000000008'
+    AND state = 'RETRY' AND attempt_count = 3 AND claim_token IS NULL
+    AND retry_not_before > clock_timestamp() + interval '19 minutes'
+    AND retry_not_before <= clock_timestamp() + interval '20 minutes'")" == '1' ]]
+psql_synthetic -qAt -d "$db" -c "UPDATE identity.journey_station_reminders
+  SET retry_not_before = clock_timestamp() - interval '1 second'
+  WHERE reminder_id = '01910000-0000-7000-8100-000000000008'"
+active_token=$(psql_synthetic -qAt -d "$db" -c "$claim")
+publication=$(publish_sql "$active_token")
 membership="UPDATE core.family_memberships SET valid_until = %s WHERE membership_id = '01910000-0000-7000-8100-000000000004';"
 
 # Worker A publishes without committing. Waiting for its explicit result keeps
@@ -69,6 +99,6 @@ psql_synthetic -qAt -d "$db" -c "$(printf "$membership" NULL)"
   JOIN identity.journey_station_reminders r USING (reminder_id)
   WHERE n.reminder_id = '01910000-0000-7000-8100-000000000008'
     AND n.published_at = r.delivered_at AND r.state = 'DELIVERED'
-    AND r.attempt_count = 2 AND r.retry_not_before IS NULL")" == '1' ]]
-echo "PASS competing sessions, rollback recovery, membership revocation and single receipt: PG$1"
+    AND r.attempt_count = 3 AND r.retry_not_before IS NULL AND r.claim_token IS NULL")" == '1' ]]
+echo "PASS competing sessions, expired claim recovery, stale Worker fencing, durable retry, membership revocation and single receipt: PG$1"
 echo "PASS Identity Journey candidate PostgreSQL $1; synthetic fixture only"

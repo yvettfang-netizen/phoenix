@@ -111,12 +111,16 @@ CREATE TABLE identity.journey_station_reminders (
   state text NOT NULL CHECK (state IN ('PENDING','RETRY','DELIVERED','CANCELED')),
   attempt_count integer NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
   retry_not_before timestamptz,
+  claim_token uuid,
+  claim_until timestamptz,
   delivered_at timestamptz,
   FOREIGN KEY (date_revision_id, identity_case_id, episode_id, date_kind)
     REFERENCES identity.journey_date_revisions(date_revision_id, identity_case_id, episode_id, date_kind),
   UNIQUE (identity_case_id, episode_id, date_kind, target_on, offset_days, recipient_principal_id),
   CHECK ((state = 'DELIVERED') = (delivered_at IS NOT NULL)),
-  CHECK ((state = 'RETRY') = (retry_not_before IS NOT NULL))
+  CHECK ((state = 'RETRY') = (retry_not_before IS NOT NULL)),
+  CHECK ((claim_token IS NULL) = (claim_until IS NULL)),
+  CHECK (claim_token IS NULL OR state IN ('PENDING','RETRY'))
 );
 CREATE INDEX journey_station_due_idx ON identity.journey_station_reminders(send_on, retry_not_before)
   WHERE state IN ('PENDING','RETRY');
@@ -176,6 +180,82 @@ REVOKE ALL ON FUNCTION identity.guard_journey_delivery_receipt() FROM PUBLIC;
 CREATE TRIGGER journey_delivery_receipt BEFORE UPDATE ON identity.journey_station_reminders
 FOR EACH ROW EXECUTE FUNCTION identity.guard_journey_delivery_receipt();
 
+CREATE FUNCTION identity.clear_stale_journey_station_claim() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $fn$
+BEGIN
+  IF NEW.date_revision_id IS DISTINCT FROM OLD.date_revision_id
+    OR NEW.recipient_principal_id IS DISTINCT FROM OLD.recipient_principal_id
+    OR NEW.target_on IS DISTINCT FROM OLD.target_on
+    OR NEW.offset_days IS DISTINCT FROM OLD.offset_days
+    OR NEW.state NOT IN ('PENDING','RETRY') THEN
+    NEW.claim_token := NULL;
+    NEW.claim_until := NULL;
+  END IF;
+  RETURN NEW;
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.clear_stale_journey_station_claim() FROM PUBLIC;
+CREATE TRIGGER journey_station_claim_scope BEFORE UPDATE ON identity.journey_station_reminders
+FOR EACH ROW EXECUTE FUNCTION identity.clear_stale_journey_station_claim();
+
+-- The scheduler commits the short claim transaction before doing any work.
+-- Claims reserve work; they do not grant authority to read a family or publish.
+CREATE FUNCTION identity.claim_journey_station_reminders(p_limit integer)
+RETURNS TABLE (reminder_id uuid, recipient_principal_id uuid, revision_id uuid, claim_token uuid, claim_until timestamptz)
+LANGUAGE plpgsql
+SET search_path = pg_catalog, identity
+AS $fn$
+DECLARE
+  now_at timestamptz := clock_timestamp();
+BEGIN
+  IF p_limit IS NULL OR p_limit NOT BETWEEN 1 AND 50 THEN
+    RAISE EXCEPTION 'IDENTITY_JOURNEY_CLAIM_LIMIT_INVALID';
+  END IF;
+  RETURN QUERY
+    WITH due AS (
+      SELECT r.reminder_id FROM identity.journey_station_reminders r
+      WHERE r.state IN ('PENDING','RETRY')
+        AND r.send_on <= (now_at AT TIME ZONE 'Asia/Hong_Kong')::date
+        AND (r.retry_not_before IS NULL OR r.retry_not_before <= now_at)
+        AND (r.claim_until IS NULL OR r.claim_until <= now_at)
+        AND NOT EXISTS (SELECT 1 FROM identity.journey_date_revisions n WHERE n.supersedes_id = r.date_revision_id)
+      ORDER BY r.send_on, r.retry_not_before NULLS FIRST, r.reminder_id
+      LIMIT p_limit
+      FOR UPDATE OF r SKIP LOCKED
+    )
+    UPDATE identity.journey_station_reminders r SET
+      claim_token = gen_random_uuid(), claim_until = now_at + interval '2 minutes'
+    FROM due WHERE r.reminder_id = due.reminder_id
+    RETURNING r.reminder_id, r.recipient_principal_id, r.date_revision_id, r.claim_token, r.claim_until;
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.claim_journey_station_reminders(integer)
+  FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
+
+CREATE FUNCTION identity.retry_journey_station_reminder(
+  p_reminder_id uuid, p_expected_revision_id uuid, p_claim_token uuid
+) RETURNS boolean
+LANGUAGE plpgsql
+SET search_path = pg_catalog, identity
+AS $fn$
+BEGIN
+  -- A stale Worker cannot delay or requeue an item that another Worker claimed.
+  UPDATE identity.journey_station_reminders r SET state = 'RETRY',
+    retry_not_before = clock_timestamp() + interval '5 minutes' * (1 << least(r.attempt_count, 4)),
+    attempt_count = least(r.attempt_count, 2147483646) + 1,
+    claim_token = NULL, claim_until = NULL
+  WHERE r.reminder_id = p_reminder_id AND r.date_revision_id = p_expected_revision_id
+    AND r.state IN ('PENDING','RETRY')
+    AND r.claim_token = p_claim_token AND r.claim_until > clock_timestamp()
+    AND NOT EXISTS (SELECT 1 FROM identity.journey_date_revisions n WHERE n.supersedes_id = r.date_revision_id);
+  RETURN FOUND;
+END
+$fn$;
+REVOKE ALL ON FUNCTION identity.retry_journey_station_reminder(uuid,uuid,uuid)
+  FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
+
 -- One station notice per reminder. Presentation can resolve its type from the
 -- authorized reminder. This row carries no document, date-of-stay, or message copy.
 CREATE TABLE identity.journey_station_notices (
@@ -190,7 +270,7 @@ REVOKE ALL ON identity.journey_station_notices FROM PUBLIC, phoenix_canonical_ap
 -- must resolve and lock an approved IDENTITY_REMINDER purpose grant in the same
 -- transaction before calling this. No application or reader can call it today.
 CREATE FUNCTION identity.publish_journey_station_notice(
-  p_reminder_id uuid, p_recipient_principal_id uuid, p_expected_revision_id uuid
+  p_reminder_id uuid, p_recipient_principal_id uuid, p_expected_revision_id uuid, p_claim_token uuid
 ) RETURNS text
 LANGUAGE plpgsql
 SET search_path = pg_catalog, identity, auth, core, docs
@@ -212,6 +292,8 @@ BEGIN
   END IF;
   IF job.state = 'CANCELED' THEN RETURN 'CANCELED'; END IF;
   now_at := clock_timestamp();
+  IF p_claim_token IS NULL OR job.claim_token IS DISTINCT FROM p_claim_token
+    OR job.claim_until <= now_at THEN RETURN 'CLAIM_LOST'; END IF;
   IF job.send_on > (now_at AT TIME ZONE 'Asia/Hong_Kong')::date
     OR (job.state = 'RETRY' AND job.retry_not_before > now_at) THEN RETURN 'NOT_DUE'; END IF;
 
@@ -245,6 +327,8 @@ BEGIN
     IF NOT FOUND THEN RETURN 'EVIDENCE_UNAVAILABLE'; END IF;
   END IF;
 
+  now_at := clock_timestamp();
+  IF job.claim_until <= now_at THEN RETURN 'CLAIM_LOST'; END IF;
   INSERT INTO identity.journey_station_notices(reminder_id, published_at) VALUES (job.reminder_id, now_at);
   -- Existing transition triggers also recheck that the source is current.
   UPDATE identity.journey_station_reminders SET state = 'DELIVERED', delivered_at = now_at, retry_not_before = NULL
@@ -252,7 +336,7 @@ BEGIN
   RETURN 'DELIVERED';
 END
 $fn$;
-REVOKE ALL ON FUNCTION identity.publish_journey_station_notice(uuid,uuid,uuid)
+REVOKE ALL ON FUNCTION identity.publish_journey_station_notice(uuid,uuid,uuid,uuid)
   FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader;
 
 -- No operational principals have grants in this candidate; fine-grained API
