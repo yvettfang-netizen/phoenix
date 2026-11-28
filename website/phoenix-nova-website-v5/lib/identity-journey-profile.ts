@@ -6,6 +6,7 @@ import {
   identityProfilePath,
   isIdentityNoFixedExpiryPathway,
   isIdentityInternalOnlyMilestoneKind,
+  parseIdentitySponsorship,
   type IdentityMemberProfile,
   type IdentityProfileMember,
 } from "./identity-journey-profile-contract";
@@ -52,7 +53,7 @@ function privateProfile(input: unknown): IdentityMemberProfile {
   if (!Array.isArray(episodes) || episodes.length > 64) throw new Error("Invalid identity history");
   return {
     episodes: episodes.map(raw => {
-      const { path, startedOn, endedBefore, stayTerm, milestones } = readObject(raw);
+      const { path, startedOn, endedBefore, stayTerm, sponsorship, milestones } = readObject(raw);
       if (!isIdentityCivilDate(startedOn) || (endedBefore !== null && (!isIdentityCivilDate(endedBefore) || endedBefore <= startedOn)) ||
         !Array.isArray(milestones) || milestones.length > 96) throw new Error("Invalid identity episode");
       const normalizedPath = typeof path === "string" && Object.hasOwn(identityPathways, path) ? path : null;
@@ -61,10 +62,13 @@ function privateProfile(input: unknown): IdentityMemberProfile {
           milestones.some(milestone => readObject(milestone).kind === "STAY_EXPIRY"))) {
         throw new Error("Invalid no-fixed-expiry identity episode");
       }
+      const verifiedSponsorship = sponsorship === undefined ? null : parseIdentitySponsorship(sponsorship, normalizedPath, startedOn, endedBefore);
+      if (sponsorship !== undefined && !verifiedSponsorship) throw new Error("Invalid dependant sponsorship record");
       return {
         path: normalizedPath,
         startedOn, endedBefore,
         ...(stayTerm === identityNoFixedExpiryTerm ? { stayTerm } : {}),
+        ...(verifiedSponsorship ? { sponsorship: verifiedSponsorship } : {}),
         milestones: milestones.map(rawMilestone => {
           const { kind, basis, on, verification, current } = readObject(rawMilestone);
           const knownKind = identityMilestoneKinds.find(value => value === kind);

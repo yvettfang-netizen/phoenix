@@ -11,6 +11,7 @@ import { verifyFounderSummary } from "./verify-founder-summary.mjs";
 import { verifyResidence } from "./verify-residence.mjs";
 import { verifyDocumentDates } from "./verify-document-dates.mjs";
 import { verifyEpisodeWrite } from "./verify-episode-write.mjs";
+import { verifySponsorship } from "./verify-sponsorship.mjs";
 import { verifyIdentityPolicyPaths } from "./verify-policy-paths.mjs";
 import { verifyReviewPlans } from "./verify-review-plans.mjs";
 import { verifyReviewPlanningHttp } from "./verify-review-planning-http.mjs";
@@ -193,6 +194,32 @@ const authConfig = {
   },
   async recordAccess(_, action) { events.push(action); },
 };
+function syntheticMemberProfileHandler(readProjection, memberRef) {
+  const grant = async ({ customerId, sessionHash }) =>
+    customerId === "ci-only-account" && sessionHash === "ci-only-session";
+  const profileEnv = {
+    FAMILY_IDENTITY_PROFILE_ENABLED: "true",
+    FAMILY_IDENTITY_PROFILE_PROVIDER: {
+      async resolveRoster(session) {
+        if (!await grant(session)) return null;
+        return { assertCurrent: () => grant(session),
+          async listAuthorized() { return [{ ref: memberRef, access: "SELF", label: "Synthetic member" }]; } };
+      },
+      async resolveMember(session, ref) {
+        if (ref !== memberRef || !await grant(session)) return null;
+        return { assertCurrent: () => grant(session), async readAuthorized() { return readProjection(); } };
+      },
+    },
+  };
+  const handle = (request, browserOrigin, hasSession) => handleIdentityProfile(request, profileEnv, {
+    ...authConfig, origin: browserOrigin, verifySession: async () => hasSession ? authConfig.verifySession() : null,
+  });
+  const postProfile = () => handle(new Request(origin + identityProfilePath, {
+    method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ memberRef }),
+  }), origin, true);
+  return { handle, postProfile };
+}
+
 const env = {
   FAMILY_IDENTITY_INBOX_ENABLED: "true",
   FAMILY_IDENTITY_INBOX_PROVIDER: {
@@ -252,10 +279,11 @@ let memberProfileBrowser;
 let memberResidenceBrowser;
 let reviewPlanningBrowser;
 let openEndedIdentityBrowser;
+let sponsorshipBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser, verifyFamilyResidenceBrowser,
     verifyOfficialTravelBrowser, verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser,
-    verifyIdentityReviewPlanningBrowser, verifyOpenEndedIdentityBrowser } = await import("./verify-browser.mjs");
+    verifyIdentityReviewPlanningBrowser, verifyOpenEndedIdentityBrowser, verifySponsorshipBrowser } = await import("./verify-browser.mjs");
   timelineBrowser = verifyFamilyTimelineBrowser;
   residenceBrowser = verifyFamilyResidenceBrowser;
   officialTravelBrowser = verifyOfficialTravelBrowser;
@@ -263,6 +291,7 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   memberResidenceBrowser = verifyFamilyMemberResidenceBrowser;
   reviewPlanningBrowser = verifyIdentityReviewPlanningBrowser;
   openEndedIdentityBrowser = verifyOpenEndedIdentityBrowser;
+  sponsorshipBrowser = verifySponsorshipBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
@@ -332,30 +361,8 @@ await verifyResidence({ query, recipient, authConfig, browser: residenceBrowser 
 await verifyEpisodeWrite({
   query, recipient,
   async verifyProfile({ readProfile, withdrawEvidence }) {
-    const memberRef = "member_self_open_ended_000000000000";
-    const grant = async ({ customerId, sessionHash }) =>
-      customerId === "ci-only-account" && sessionHash === "ci-only-session";
     let readProjection = () => JSON.parse(readProfile());
-    const env = {
-      FAMILY_IDENTITY_PROFILE_ENABLED: "true",
-      FAMILY_IDENTITY_PROFILE_PROVIDER: {
-        async resolveRoster(session) {
-          if (!await grant(session)) return null;
-          return { assertCurrent: () => grant(session),
-            async listAuthorized() { return [{ ref: memberRef, access: "SELF", label: "Synthetic member" }]; } };
-        },
-        async resolveMember(session, ref) {
-          if (ref !== memberRef || !await grant(session)) return null;
-          return { assertCurrent: () => grant(session), async readAuthorized() { return readProjection(); } };
-        },
-      },
-    };
-    const handle = (request, browserOrigin, hasSession) => handleIdentityProfile(request, env, {
-      ...authConfig, origin: browserOrigin, verifySession: async () => hasSession ? authConfig.verifySession() : null,
-    });
-    const postProfile = () => handle(new Request(origin + identityProfilePath, {
-      method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ memberRef }),
-    }), origin, true);
+    const { handle, postProfile } = syntheticMemberProfileHandler(() => readProjection(), "member_self_open_ended_000000000000");
     const reply = await postProfile();
     assert.equal(reply.status, 200);
     assert.equal((await reply.json()).episodes.filter(row => row.stayTerm === "NO_FIXED_EXPIRY").length, 1);
@@ -373,6 +380,25 @@ await verifyEpisodeWrite({
     assert.equal(withdrawn.status, 200);
     assert.ok((await withdrawn.json()).episodes.every(row =>
       !Object.hasOwn(row, "stayTerm") && row.path !== "HK_PERMANENT_RESIDENT"));
+  },
+});
+await verifySponsorship({
+  query, recipient,
+  async verifyProfile({ readDependantProfile }) {
+    const readProfile = () => JSON.parse(readDependantProfile());
+    let readProjection = readProfile;
+    const { handle, postProfile } = syntheticMemberProfileHandler(() => readProjection(), "member_self_dependant_000000000000");
+    const response = await postProfile();
+    assert.equal(response.status, 200);
+    const sponsorship = (await response.json()).episodes.find(row => row.path === "DEPENDANT")?.sponsorship;
+    assert.deepEqual(Object.keys(sponsorship ?? {}).sort(), ["effectiveOn", "status"]);
+    readProjection = () => ({ episodes: readProfile().episodes.map(row =>
+      row.path === "DEPENDANT" ? { ...row, sponsorship: { ...row.sponsorship, documentRef: "synthetic-private" } } : row) });
+    assert.equal((await postProfile()).status, 503);
+    readProjection = readProfile;
+    if (sponsorshipBrowser) {
+      await sponsorshipBrowser({ handle, apiPath: identityProfilePath, sponsorship });
+    }
   },
 });
 await verifyDocumentDates({ query, recipient });

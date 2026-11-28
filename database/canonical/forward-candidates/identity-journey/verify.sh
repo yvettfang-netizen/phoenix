@@ -33,7 +33,7 @@ psql_synthetic() {
   docker exec -i -e PGPASSFILE=/tmp/canonical-premerge.pgpass "$container" psql "${args[@]}" "$@"
 }
 
-for protected_candidate in storage.sql crm-chain.sql service-renewal.sql official-travel.sql document-dates.sql review-plans.sql episode-transition.sql; do
+for protected_candidate in storage.sql crm-chain.sql service-renewal.sql official-travel.sql document-dates.sql review-plans.sql episode-transition.sql sponsorship.sql; do
   if output=$(psql_synthetic -d phoenix_canonical_dev < "$candidate/$protected_candidate" 2>&1); then
     echo "The unapproved database-name guard did not block $protected_candidate." >&2
     exit 1
@@ -48,6 +48,7 @@ psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/crm-cha
 psql_synthetic -q -d phoenix_identity_journey_synthetic_ci < "$candidate/service-renewal.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/residence.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/episode-transition.sql"
+psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/sponsorship.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/timeline.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/document-dates.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/member-profile.sql"

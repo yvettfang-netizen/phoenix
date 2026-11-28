@@ -307,6 +307,26 @@ export async function verifyOpenEndedIdentityBrowser({ handle, apiPath, withdraw
   console.log("PASS Chromium verified no fixed stay expiry on English desktop and Chinese mobile, with withdrawal");
 }
 
+export async function verifySponsorshipBrowser({ handle, apiPath, sponsorship }) {
+  await withFamilyView({ handle, apiPath, view: "profile" }, async ({ pageFor, output }) => {
+    const ended = sponsorship.status === "ENDED";
+    for (const [locale, width, title, caption] of [
+      ["en", 1440, "Member identity profile", ended ? "Verified end of sponsorship" : "Verified sponsorship recorded"],
+      ["zh", 390, "成员身份档案", ended ? "已核验的保证关系结束" : "已核验的保证关系记录"],
+    ]) {
+      const page = await pageFor(locale, width);
+      await page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ }).click();
+      const panel = page.getByRole("region", { name: title });
+      await panel.getByRole("button", { name: /Synthetic member/ }).click();
+      await panel.getByText(caption, { exact: true }).waitFor();
+      await panel.locator(`time[datetime="${sponsorship.effectiveOn}"]`).waitFor();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await page.screenshot({ path: join(output, `identity-sponsorship-${locale}-${width}.png`), fullPage: true });
+    }
+  });
+  console.log("PASS Chromium shows only verified dependant sponsorship status and effective date on English desktop and Chinese mobile");
+}
+
 export async function verifyFamilyMemberResidenceBrowser({
   profilePath, handleProfile, residencePath, handleResidence, guardianLabel, selfLabel,
   childFrom, revokeResidence, restoreResidence,

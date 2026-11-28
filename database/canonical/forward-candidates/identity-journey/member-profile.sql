@@ -86,7 +86,10 @@ BEGIN
     SELECT e.episode_id, e.identity_case_id, e.started_on, e.ended_before, c.case_kind,
       CASE WHEN a.stay_term='NO_FIXED_EXPIRY' THEN
         identity.has_journey_transition_no_fixed_expiry(a.decision_id,e.episode_id)
-      END AS verified_no_fixed_expiry
+      END AS verified_no_fixed_expiry,
+      CASE WHEN c.case_kind='DEPENDANT' THEN
+        identity.read_journey_sponsorship_summary(e.episode_id)
+      END AS sponsorship
     FROM identity.journey_episodes e JOIN identity.cases c USING(identity_case_id)
     LEFT JOIN identity.journey_transition_attestations a ON a.decision_id=e.transition_decision_id
     WHERE e.identity_case_id = ANY(p_cases) AND e.started_on BETWEEN DATE '1000-01-01' AND DATE '9999-12-31'
@@ -94,7 +97,7 @@ BEGIN
     ORDER BY e.started_on DESC, e.episode_id
     LIMIT 65 FOR SHARE OF e
   ), view_rows AS (
-    SELECT e.episode_id,e.started_on,e.ended_before,e.case_kind,e.verified_no_fixed_expiry,
+    SELECT e.episode_id,e.started_on,e.ended_before,e.case_kind,e.verified_no_fixed_expiry,e.sponsorship,
       (SELECT coalesce(jsonb_agg(to_jsonb(item) ORDER BY item.current DESC,item."on" DESC,item.kind),'[]')
         FROM (
           SELECT r.date_kind AS kind, r.date_basis AS basis, r.target_on AS "on", r.verification,
@@ -128,6 +131,7 @@ BEGIN
       'path',CASE WHEN verified_no_fixed_expiry IS FALSE THEN NULL ELSE case_kind END,
       'startedOn',started_on,'endedBefore',ended_before,'milestones',milestones)
       || CASE WHEN verified_no_fixed_expiry THEN jsonb_build_object('stayTerm','NO_FIXED_EXPIRY') ELSE '{}'::jsonb END
+      || CASE WHEN sponsorship IS NOT NULL THEN jsonb_build_object('sponsorship',sponsorship) ELSE '{}'::jsonb END
       ORDER BY ended_before IS NOT NULL,started_on DESC,episode_id),'[]'))
   INTO output FROM view_rows;
 

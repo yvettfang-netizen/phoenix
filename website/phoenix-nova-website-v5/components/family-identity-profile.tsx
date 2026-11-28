@@ -7,6 +7,7 @@ import {
   identityNoFixedExpiryTerm,
   identityProfilePath,
   isIdentityNoFixedExpiryPathway,
+  parseIdentitySponsorship,
   type IdentityMemberProfile,
   type IdentityProfileMember,
 } from "@/lib/identity-journey-profile-contract";
@@ -115,6 +116,9 @@ function parseProfile(value: unknown): IdentityMemberProfile | null {
       || milestones.some((milestone) => isRecord(milestone) && milestone.kind === "STAY_EXPIRY");
   });
   if (invalidNoFixedExpiryClaim) return null;
+  const invalidSponsorshipClaim = value.episodes.some(episode => isRecord(episode) && episode.sponsorship !== undefined &&
+    !parseIdentitySponsorship(episode.sponsorship, episode.path, episode.startedOn, episode.endedBefore));
+  if (invalidSponsorshipClaim) return null;
   const episodes = value.episodes.filter((episode) => {
     if (!isRecord(episode) || typeof episode.startedOn !== "string") return false;
     if (episode.path !== null && typeof episode.path !== "string") return false;
@@ -125,6 +129,7 @@ function parseProfile(value: unknown): IdentityMemberProfile | null {
     startedOn: episode.startedOn as string,
     endedBefore: episode.endedBefore as string | null,
     ...(episode.stayTerm === identityNoFixedExpiryTerm ? { stayTerm: episode.stayTerm } : {}),
+    sponsorship: parseIdentitySponsorship(episode.sponsorship, episode.path, episode.startedOn, episode.endedBefore) ?? undefined,
     milestones: (episode.milestones as unknown[]).filter((milestone): milestone is Milestone => {
       if (!isRecord(milestone)) return false;
       const kind = milestone.kind;
@@ -352,6 +357,13 @@ export function FamilyIdentityProfile({
           : !episode.milestones.some((milestone) => milestone.kind === "STAY_EXPIRY")
             ? <p className="fc-muted">{text(locale, "未显示获准逗留期限。", "No permitted-stay expiry is shown.")}</p>
             : null}
+        {episode.sponsorship ? <p className="fc-muted">
+          <span>{text(locale,
+            episode.sponsorship.status === "ENDED" ? "已核验的保证关系结束" : "已核验的保证关系记录",
+            episode.sponsorship.status === "ENDED" ? "Verified end of sponsorship" : "Verified sponsorship recorded")}</span>
+          {" · "}
+          <time dateTime={episode.sponsorship.effectiveOn}>{formatDate(episode.sponsorship.effectiveOn, locale)}</time>
+        </p> : null}
         {episode.milestones.length ? <div role="list" aria-label={text(locale, "身份节点", "Identity milestones")}>
           {episode.milestones.map((milestone, milestoneIndex) => <MilestoneRow key={`${milestone.kind}-${milestone.on}-${milestoneIndex}`} milestone={milestone} locale={locale} />)}
         </div> : <p className="fc-muted">{text(locale, "暂无可显示的身份节点。", "No identity milestones are available.")}</p>}

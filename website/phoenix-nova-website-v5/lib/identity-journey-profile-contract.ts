@@ -1,3 +1,5 @@
+import { isIdentityCivilDate } from "./identity-journey-request";
+
 export const identityProfilePath = "/api/family-services/identity-profile";
 
 export const identityMilestoneKinds = [
@@ -18,6 +20,24 @@ export function isIdentityNoFixedExpiryPathway(value: string): boolean {
   return (identityNoFixedExpiryPathways as readonly string[]).includes(value);
 }
 
+type IdentitySponsorship = {
+  effectiveOn: string;
+  status: "RECORDED" | "ENDED";
+};
+
+export function parseIdentitySponsorship(
+  value: unknown, path: unknown, startedOn: unknown, endedBefore: unknown,
+): IdentitySponsorship | null {
+  if (!value || typeof value !== "object" || Array.isArray(value) || path !== "DEPENDANT" ||
+    !isIdentityCivilDate(startedOn) || (endedBefore !== null && !isIdentityCivilDate(endedBefore))) return null;
+  const record = value as Record<string, unknown>;
+  const { effectiveOn, status } = record;
+  if (Object.keys(record).length !== 2 || !Object.hasOwn(record, "effectiveOn") || !Object.hasOwn(record, "status") ||
+    !isIdentityCivilDate(effectiveOn) || effectiveOn < startedOn || (status !== "RECORDED" && status !== "ENDED") ||
+    (endedBefore !== null && (effectiveOn > endedBefore || (effectiveOn === endedBefore && status === "RECORDED")))) return null;
+  return { effectiveOn, status };
+}
+
 export const identityInternalOnlyMilestoneKinds = [
   "INVESTMENT_REVIEW", "PERMANENT_RESIDENCE_PREPARATION",
 ] as const;
@@ -35,6 +55,8 @@ export type IdentityMemberProfile = {
     endedBefore: string | null;
     /** Present only for a verified same-case decision with no fixed expiry. */
     stayTerm?: IdentityNoFixedExpiryTerm;
+    /** Present only for a verified dependant sponsorship record. */
+    sponsorship?: IdentitySponsorship;
     milestones: {
       kind: IdentityMilestoneKind;
       basis: "STATUTORY" | "CASE_APPROVAL" | "OFFICIAL_WINDOW" | "INTERNAL";
