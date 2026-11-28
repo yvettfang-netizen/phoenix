@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const website = fileURLToPath(new URL("../../../../website/phoenix-nova-website-v5/", import.meta.url));
 const require = createRequire(join(website, "package.json"));
 
-async function bundleFamilyCenter() {
+async function bundleFamilyCenter(view) {
   const { build } = require("esbuild");
   const result = await build({
     stdin: {
@@ -20,7 +20,8 @@ async function bundleFamilyCenter() {
         const locale = location.pathname.startsWith("/zh") ? "zh" : "en";
         document.documentElement.lang = locale;
         createRoot(document.getElementById("root")).render(
-          <FamilyCenterV2 locale={locale} account workbench identityInbox />
+          <FamilyCenterV2 locale={locale} account workbench
+            identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}} />
         );`,
     },
     bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", jsx: "automatic",
@@ -42,11 +43,11 @@ async function bundleFamilyCenter() {
   return result.outputFiles[0].text;
 }
 
-export async function verifyFamilyInboxBrowser({ handle, noticePath, revokeGrant, receiptCount }) {
+async function withFamilyView({ handle, apiPath, view }, verify) {
   const output = process.env.IDENTITY_BROWSER_EVIDENCE_DIR;
   await mkdir(output, { recursive: true });
   const { chromium } = await import(pathToFileURL(join(process.env.PLAYWRIGHT_MODULE, "index.mjs")).href);
-  const bundle = await bundleFamilyCenter();
+  const bundle = await bundleFamilyCenter(view);
   const css = (await Promise.all(["family-center-v2.css", "family-service-center-panels.css", "family-service-overview.css"]
     .map(file => readFile(join(website, "components", file), "utf8")))).join("\n");
   const publicRoot = resolve(website, "public");
@@ -61,7 +62,7 @@ export async function verifyFamilyInboxBrowser({ handle, noticePath, revokeGrant
       const url = new URL(request.url, origin);
       if (url.pathname === "/assets/identity-inbox.js") return send(200, bundle, "text/javascript");
       if (url.pathname === "/assets/identity-inbox.css") return send(200, css, "text/css");
-      if (url.pathname === noticePath) {
+      if (url.pathname === apiPath) {
         const chunks = [];
         for await (const chunk of request) chunks.push(chunk);
         const verifiedCookie = String(request.headers.cookie ?? "").split(";").some(cookie => cookie.trim() === `inbox=${sessionCookie}`);
@@ -80,7 +81,7 @@ export async function verifyFamilyInboxBrowser({ handle, noticePath, revokeGrant
       }
       if (!/^\/(en|zh)\/family-center$/.test(url.pathname)) return send(404, "", "text/plain");
       return send(200, `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Family OS synthetic inbox acceptance</title><link rel="stylesheet" href="/assets/identity-inbox.css"></head>
+        <title>Family OS synthetic browser acceptance</title><link rel="stylesheet" href="/assets/identity-inbox.css"></head>
         <body><div id="root"></div><script src="/assets/identity-inbox.js"></script></body></html>`, "text/html; charset=utf-8");
     } catch {
       send(503, "Isolated browser server unavailable", "text/plain");
@@ -94,13 +95,27 @@ export async function verifyFamilyInboxBrowser({ handle, noticePath, revokeGrant
   let browser;
   try {
     browser = await chromium.launch();
-    const run = async (locale, width, label) => {
+    const pageFor = async (locale, width) => {
       const context = await browser.newContext({ viewport: { width, height: 940 }, locale, timezoneId: "Europe/London" });
       await context.addCookies([{ name: "inbox", value: sessionCookie, url: origin, httpOnly: true, sameSite: "Lax" }]);
       const page = await context.newPage();
+      await page.goto(`${origin}/${locale}/family-center`);
+      return page;
+    };
+    await verify({ pageFor, output });
+  } finally {
+    await browser?.close();
+    server.closeAllConnections();
+    await new Promise(done => server.close(done));
+  }
+}
+
+export async function verifyFamilyInboxBrowser({ handle, noticePath, revokeGrant, receiptCount }) {
+  await withFamilyView({ handle, apiPath: noticePath, view: "inbox" }, async ({ pageFor, output }) => {
+    const run = async (locale, width, label) => {
+      const page = await pageFor(locale, width);
       const heading = locale === "zh" ? "身份提醒" : "Identity notifications";
       const bell = page.getByRole("button", { name: locale === "zh" ? "通知" : "Notifications", exact: true });
-      await page.goto(`${origin}/${locale}/family-center`);
       await bell.click();
       const inbox = page.getByRole("region", { name: heading });
       const items = inbox.getByRole("listitem");
@@ -135,9 +150,30 @@ export async function verifyFamilyInboxBrowser({ handle, noticePath, revokeGrant
       viewports: ["en desktop 1440", "zh mobile 390"], checks: ["open notification bell", "no auto-acknowledgement",
         "explicit acknowledgement persists across locales", "revoked consent removes notice list", "no horizontal overflow"],
     }, null, 2));
-  } finally {
-    await browser?.close();
-    server.closeAllConnections();
-    await new Promise(done => server.close(done));
-  }
+  });
+}
+
+export async function verifyFamilyTimelineBrowser({ handle, apiPath, expectedDate, revoke }) {
+  await withFamilyView({ handle, apiPath, view: "timeline" }, async ({ pageFor, output }) => {
+    const open = async (locale, width, filename) => {
+      const page = await pageFor(locale, width);
+      const nav = page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ });
+      const timeline = page.getByRole("region", { name: locale === "zh" ? "获准逗留期限" : "Permitted stay timeline" });
+      await nav.click();
+      await timeline.locator('[data-date-status="current"] time').first().waitFor();
+      assert.equal(await timeline.locator('[data-date-status="current"] time').first().getAttribute("datetime"), expectedDate);
+      assert.equal(await timeline.locator('[data-date-status="historical"]').count(), 1);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await page.screenshot({ path: join(output, filename), fullPage: true });
+      return { page, nav, timeline };
+    };
+    await open("en", 1440, "identity-timeline-en-desktop.png");
+    const mobile = await open("zh", 390, "identity-timeline-zh-mobile.png");
+    revoke();
+    await mobile.page.reload();
+    await mobile.nav.click();
+    await mobile.timeline.getByText("当前会话无法读取期限。", { exact: true }).waitFor();
+    assert.equal(await mobile.timeline.locator("time").count(), 0);
+    console.log("PASS Chromium Family OS permitted stay timeline, history, responsive and revoked access");
+  });
 }

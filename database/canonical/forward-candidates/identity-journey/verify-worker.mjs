@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { runStationReminderBatch } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-reminder-worker.ts";
 import { handleIdentityInbox, identityNoticePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-inbox.ts";
 import { verifyCrmHandoff } from "./verify-crm.mjs";
+import { verifyTimeline } from "./verify-timeline.mjs";
 
 const container = process.argv[2];
 assert.match(container ?? "", /^[0-9a-f]{64}$/);
@@ -228,8 +229,10 @@ console.log("PASS Family OS inbox HTTP session, same-origin, minimized response,
 
 await verifyCrmHandoff({ query, recipient, authConfig });
 
+let timelineBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
-  const { verifyFamilyInboxBrowser } = await import("./verify-browser.mjs");
+  const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser } = await import("./verify-browser.mjs");
+  timelineBrowser = verifyFamilyTimelineBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
@@ -251,3 +254,4 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   });
   console.log("PASS Chromium desktop and mobile inbox over HTTP and isolated PostgreSQL");
 }
+await verifyTimeline({ query, recipient, authConfig, browser: timelineBrowser });

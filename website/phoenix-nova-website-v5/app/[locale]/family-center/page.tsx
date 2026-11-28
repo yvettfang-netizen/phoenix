@@ -13,6 +13,7 @@ import {workbenchEnabled} from "@/lib/service-workbench-bff";
 import {customerBridgeEnabled} from "@/lib/customer-canonical-bridge";
 import {identityInboxEnabled} from "@/lib/identity-journey-inbox";
 import {identityConsultationEnabled} from "@/lib/identity-journey-consultation";
+import {identityTimelineEnabled} from "@/lib/identity-journey-timeline";
 
 function NewCenter({locale,account=false}:{locale:"zh"|"en";account?:boolean}) {
   const values=env as unknown as Record<string,unknown>;
@@ -21,6 +22,7 @@ function NewCenter({locale,account=false}:{locale:"zh"|"en";account?:boolean}) {
     demo={demo}
     identityInbox={account && !demo && identityInboxEnabled(values)}
     identityConsultation={account && !demo && identityConsultationEnabled(values)}
+    identityTimeline={account && !demo && identityTimelineEnabled(values)}
     identityJourneyPreview={demo && values.FAMILY_IDENTITY_JOURNEY_PREVIEW==="true"}
     canonical={!account && sessionFamilyPreviewEnabled(values,process.env.NODE_ENV)}
     personalized={values.FAMILY_CENTER_PERSONALIZATION_ENABLED==="true"}

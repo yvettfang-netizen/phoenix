@@ -7,7 +7,11 @@ import { FamilyIdentityConsultation } from "./family-identity-consultation";
 
 type InboxState = "loading" | "ready" | "stale" | "denied" | "unavailable";
 
-export function FamilyIdentityInbox({ locale, consultationEnabled }: { locale: "zh" | "en"; consultationEnabled?: boolean }) {
+export function FamilyIdentityInbox({ locale, consultationEnabled, onOpenTimeline }: {
+  locale: "zh" | "en";
+  consultationEnabled?: boolean;
+  onOpenTimeline?(): void;
+}) {
   const [notices, setNotices] = useState<IdentityNotice[]>([]);
   const [state, setState] = useState<InboxState>("loading");
   const [refresh, setRefresh] = useState(0);
@@ -86,6 +90,9 @@ export function FamilyIdentityInbox({ locale, consultationEnabled }: { locale: "
   return <section className="fc-panel" aria-labelledby="identity-inbox-title">
     <div className="fc-heading"><h2 id="identity-inbox-title"><Bell aria-hidden="true"/>{t("身份提醒", "Identity notifications")}</h2></div>
     <p className="fc-muted">{t("站内通知时间为香港时间。请先核对你的身份档案，再安排下一步。", "Notification times are shown in Hong Kong time. Check your identity records before taking the next step.")}</p>
+    {onOpenTimeline && <button type="button" className="fc-gold" onClick={onOpenTimeline}>
+      {t("查看获准逗留期限", "View permitted stay dates")}
+    </button>}
     {state !== "ready" ? <div role="status">
       <p>{state === "loading" ? t("正在读取提醒……", "Loading notifications…") :
         state === "denied" ? t("当前会话无法读取提醒。", "Your current session cannot access notifications.") :

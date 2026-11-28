@@ -29,6 +29,7 @@ DECLARE
   already_late uuid := (base || '59')::uuid;
   spare uuid := (base || '60')::uuid;
   active_consent uuid := (base || '62')::uuid;
+  initial_doc uuid := (base || '63')::uuid;
   today_hk date := (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date;
   expected_target date := today_hk + 7;
   delivery_token uuid;
@@ -36,6 +37,7 @@ DECLARE
   past_receipt timestamptz;
   advisor_ticket uuid;
 BEGIN
+  IF current_database() <> 'phoenix_identity_journey_synthetic_ci' THEN RAISE EXCEPTION 'SYNTHETIC_RENEWAL_FIXTURE_REQUIRED'; END IF;
   IF has_function_privilege('phoenix_canonical_app', 'identity.apply_journey_renewal(uuid,uuid,uuid,smallint[],uuid[])', 'EXECUTE')
     OR has_function_privilege('phoenix_canonical_reader', 'identity.apply_journey_renewal(uuid,uuid,uuid,smallint[],uuid[])', 'EXECUTE')
     OR has_table_privilege('phoenix_canonical_app','identity.journey_renewal_attestations','SELECT,INSERT,UPDATE,DELETE')
@@ -50,13 +52,14 @@ BEGIN
     VALUES((base || '44')::uuid,casework_case,advisor_person,clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour');
   INSERT INTO docs.documents(document_id,family_id,subject_person_id,data_class,document_kind,retention_until)
     VALUES(doc,home,subject,'IDENTITY_SENSITIVE','SYNTHETIC_RENEWAL_RESULT',clock_timestamp()+interval '1 day'),
+          (initial_doc,home,subject,'IDENTITY_SENSITIVE','SYNTHETIC_PRIOR_PERIOD',clock_timestamp()+interval '1 day'),
           (other_doc,other_home,subject,'IDENTITY_SENSITIVE','SYNTHETIC_WRONG_FAMILY',clock_timestamp()+interval '1 day');
   INSERT INTO docs.document_versions(version_id,document_id,version_no,content_sha256,storage_key,size_bytes)
     VALUES(doc_version,doc,1,repeat('a',64),'synthetic/renewal-evidence-a',1),
           (other_version,other_doc,1,repeat('b',64),'synthetic/renewal-evidence-b',1);
   INSERT INTO identity.journey_date_revisions(date_revision_id,identity_case_id,episode_id,date_kind,date_basis,
     target_on,verification,document_id,verified_by,recorded_by)
-    VALUES(prior,journey_case,episode,'STAY_EXPIRY','CASE_APPROVAL',today_hk+1,'VERIFIED',doc,advisor_principal,advisor_principal);
+    VALUES(prior,journey_case,episode,'STAY_EXPIRY','CASE_APPROVAL',today_hk+1,'VERIFIED',initial_doc,advisor_principal,advisor_principal);
   INSERT INTO identity.external_facts(fact_id,identity_case_id,fact_kind,source_name,external_reference,observed_at)
     VALUES(decision,journey_case,'DECISION','Synthetic fixture','synthetic-approved',clock_timestamp()),
           (invalid_receipt,journey_case,'OFFICIAL_RECEIPT','Synthetic fixture','synthetic-receipt',clock_timestamp()),
@@ -97,6 +100,9 @@ BEGIN
     OR identity.apply_journey_renewal(wrong_document_decision,updated,recipient,ARRAY[7]::smallint[],ARRAY[new_due]) IS NOT NULL
     OR identity.apply_journey_renewal(decision,updated,advisor_principal,ARRAY[7]::smallint[],ARRAY[new_due]) IS NOT NULL
   THEN RAISE EXCEPTION 'RENEWAL_ACCEPTED_UNVERIFIED_OR_WRONG_SCOPE'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM identity.list_journey_stay_timeline(home,journey_case,recipient,10)
+    WHERE record_id = prior AND is_current AND valid_until = today_hk+1)
+  THEN RAISE EXCEPTION 'RENEWAL_TIMELINE_PRIOR_NOT_CURRENT'; END IF;
   BEGIN
     PERFORM identity.apply_journey_renewal(decision,updated,recipient,ARRAY[7]::smallint[],ARRAY[old_delivered]);
     RAISE EXCEPTION 'UNEXPECTED_RENEWAL_REMINDER_COLLISION_SUCCESS';
@@ -131,4 +137,5 @@ BEGIN
   RAISE NOTICE 'PASS same-family verified renewal, rollback, old receipt, next-cycle delivery and canonical audit';
 END
 $test$;
-ROLLBACK;
+-- Persist into the disposable database so HTTP and Chromium read the result.
+COMMIT;
