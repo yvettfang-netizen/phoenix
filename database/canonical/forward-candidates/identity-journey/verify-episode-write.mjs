@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { runStationReminderBatch } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-reminder-worker.ts";
 
 /* Disposable STUDENT -> IANG transition verifier. */
-export async function verifyEpisodeWrite({ query, recipient }) {
+export async function verifyEpisodeWrite({ query, recipient, verifyProfile }) {
   const existing = sequence => `01910000-0000-7000-8100-${String(sequence).padStart(12, "0")}`;
   const id = sequence => `01910000-0000-7000-8600-${String(sequence).padStart(12, "0")}`;
   const actor = existing(2);
@@ -56,6 +56,34 @@ export async function verifyEpisodeWrite({ query, recipient }) {
   const hkicReminder = id(8646);
   const newReminder = id(8647);
   const replayReminder = id(8648);
+  const openTargetCase = id(8649);
+  const openTargetCasework = id(8650);
+  const openTargetAssignment = id(8651);
+  const openEpisode = id(8652);
+  const openReplayEpisode = id(8653);
+  const openDocument = id(8654);
+  const openVersion = id(8655);
+  const openDecision = id(8656);
+  const openReplayRevision = id(8657);
+  const openUnexpectedRevision = id(8658);
+  const openReminder = id(8659);
+  const openPassportRevision = id(8660);
+  const openHkicRevision = id(8661);
+  const openPassportReminder = id(8662);
+  const openHkicReminder = id(8663);
+  const unsupportedSourceCase = id(8664);
+  const unsupportedTargetCase = id(8665);
+  const unsupportedSourceCasework = id(8666);
+  const unsupportedTargetCasework = id(8667);
+  const unsupportedSourceAssignment = id(8668);
+  const unsupportedTargetAssignment = id(8669);
+  const unsupportedEpisode = id(8670);
+  const unsupportedDocument = id(8671);
+  const unsupportedVersion = id(8672);
+  const unsupportedDecision = id(8673);
+  const mismatchDecision = id(8674);
+  const prematureRevision = id(8675);
+  const prematureReminder = id(8676);
   const foreignFamily = existing(180);
   const foreignPerson = existing(181);
   const familyContext = { principal: recipient.principalId, person: actor, channel: "FAMILY" };
@@ -176,14 +204,15 @@ export async function verifyEpisodeWrite({ query, recipient }) {
 
   const applyCall = ({ decision, episode, revision, recipientId = null, offsets = [], jobs = [] }) => {
     const recipientExpression = recipientId ? ":'recipientId'::uuid" : "NULL";
+    const revisionExpression = revision === null ? "NULL" : ":'revision'::uuid";
     const offsetExpression = offsets.length ? `ARRAY[${offsets.join(",")}]::smallint[]` : "ARRAY[]::smallint[]";
     const jobExpression = jobs.length
       ? `ARRAY[${jobs.map((_, index) => `:'job${index}'::uuid`).join(",")}]::uuid[]`
       : "ARRAY[]::uuid[]";
     return {
-      call: `identity.apply_journey_episode_transition(:'decision'::uuid,:'episode'::uuid,:'revision'::uuid,
+      call: `identity.apply_journey_episode_transition(:'decision'::uuid,:'episode'::uuid,${revisionExpression},
         ${recipientExpression},${offsetExpression},${jobExpression})`,
-      values: { decision, episode, revision, ...(recipientId ? { recipientId } : {}),
+      values: { decision, episode, ...(revision === null ? {} : { revision }), ...(recipientId ? { recipientId } : {}),
         ...Object.fromEntries(jobs.map((job, index) => [`job${index}`, job])) },
     };
   };
@@ -355,5 +384,147 @@ export async function verifyEpisodeWrite({ query, recipient }) {
     WHERE identity_case_id=:'targetCase'::uuid AND state IN ('PENDING','RETRY')
       AND send_on <= (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date;`, { targetCase }), "0");
 
+  // An explicit, already-effective decision may describe a status with no
+  // fixed permitted-stay expiry. The candidate stores that fact as a status
+  // term, never as a sentinel date or a synthetic expiry reminder.
+  query(`INSERT INTO identity.cases(identity_case_id,family_id,subject_person_id,case_kind,status)
+      VALUES(:'openTargetCase'::uuid,:'familyId'::uuid,:'actor'::uuid,'HK_PERMANENT_RESIDENT','UNDER_REVIEW'),
+        (:'unsupportedSourceCase'::uuid,:'familyId'::uuid,:'actor'::uuid,'IANG','UNDER_REVIEW'),
+        (:'unsupportedTargetCase'::uuid,:'familyId'::uuid,:'actor'::uuid,'IANG','UNDER_REVIEW');
+    INSERT INTO identity.journey_episodes(episode_id,identity_case_id,started_on,recorded_by)
+      VALUES(:'unsupportedEpisode'::uuid,:'unsupportedSourceCase'::uuid,:'episodeStart'::date,:'principalId'::uuid);
+    INSERT INTO casework.cases(case_id,family_id,subject_person_id,title,status,resource_kind,resource_id)
+      VALUES(:'openTargetCasework'::uuid,:'familyId'::uuid,:'actor'::uuid,'Synthetic permanent-status transition','OPEN','IDENTITY_CASE',:'openTargetCase'::uuid),
+        (:'unsupportedSourceCasework'::uuid,:'familyId'::uuid,:'actor'::uuid,'Synthetic unsupported source','OPEN','IDENTITY_CASE',:'unsupportedSourceCase'::uuid),
+        (:'unsupportedTargetCasework'::uuid,:'familyId'::uuid,:'actor'::uuid,'Synthetic unsupported target','OPEN','IDENTITY_CASE',:'unsupportedTargetCase'::uuid);
+    INSERT INTO casework.advisor_assignments(assignment_id,case_id,advisor_person_id,valid_from,valid_until)
+      VALUES(:'openTargetAssignment'::uuid,:'openTargetCasework'::uuid,:'advisorPerson'::uuid,clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour'),
+        (:'unsupportedSourceAssignment'::uuid,:'unsupportedSourceCasework'::uuid,:'advisorPerson'::uuid,clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour'),
+        (:'unsupportedTargetAssignment'::uuid,:'unsupportedTargetCasework'::uuid,:'advisorPerson'::uuid,clock_timestamp()-interval '1 hour',clock_timestamp()+interval '1 hour');
+    INSERT INTO docs.documents(document_id,family_id,subject_person_id,data_class,document_kind,retention_until)
+      VALUES(:'openDocument'::uuid,:'familyId'::uuid,:'actor'::uuid,'IDENTITY_SENSITIVE','HK_IDENTITY_TRANSITION_DECISION',clock_timestamp()+interval '1 day'),
+        (:'unsupportedDocument'::uuid,:'familyId'::uuid,:'actor'::uuid,'IDENTITY_SENSITIVE','HK_IDENTITY_TRANSITION_DECISION',clock_timestamp()+interval '1 day');
+    INSERT INTO docs.document_versions(version_id,document_id,version_no,content_sha256,storage_key,size_bytes)
+      VALUES(:'openVersion'::uuid,:'openDocument'::uuid,1,repeat('e',64),'synthetic/episode-transition-open-ended',1),
+        (:'unsupportedVersion'::uuid,:'unsupportedDocument'::uuid,1,repeat('f',64),'synthetic/episode-transition-unsupported-open-ended',1);
+    INSERT INTO identity.external_facts(fact_id,identity_case_id,fact_kind,source_name,external_reference,observed_at)
+      VALUES(:'openDecision'::uuid,:'openTargetCase'::uuid,'DECISION','Synthetic transition','iang-to-permanent-approved',clock_timestamp()),
+        (:'unsupportedDecision'::uuid,:'unsupportedTargetCase'::uuid,'DECISION','Synthetic transition','iang-to-iang-rejected',clock_timestamp()),
+        (:'mismatchDecision'::uuid,:'unsupportedTargetCase'::uuid,'DECISION','Synthetic transition','dated-without-expiry-rejected',clock_timestamp());
+    INSERT INTO identity.journey_transition_attestations
+      (decision_id,prior_episode_id,target_case_id,document_version_id,effective_on,verified_target_on,stay_term,verified_by)
+      VALUES(:'openDecision'::uuid,:'validEpisode'::uuid,:'openTargetCase'::uuid,:'openVersion'::uuid,:'today'::date,NULL,'NO_FIXED_EXPIRY',:'advisorPrincipal'::uuid),
+        (:'unsupportedDecision'::uuid,:'unsupportedEpisode'::uuid,:'unsupportedTargetCase'::uuid,:'unsupportedVersion'::uuid,:'today'::date,NULL,'NO_FIXED_EXPIRY',:'advisorPrincipal'::uuid);`, {
+    ...recipient, actor, advisorPerson, advisorPrincipal, familyId: recipient.familyId,
+    openTargetCase, openTargetCasework, openTargetAssignment, openDocument, openVersion, openDecision,
+    unsupportedSourceCase, unsupportedTargetCase, unsupportedSourceCasework, unsupportedTargetCasework,
+    unsupportedSourceAssignment, unsupportedTargetAssignment, unsupportedEpisode, unsupportedDocument,
+    unsupportedVersion, unsupportedDecision, mismatchDecision, validEpisode, today,
+    episodeStart: addDays(today, -45), principalId: recipient.principalId,
+  });
+  assert.throws(() => query(`INSERT INTO identity.journey_transition_attestations
+      (decision_id,prior_episode_id,target_case_id,document_version_id,effective_on,verified_target_on,stay_term,verified_by)
+      VALUES(:'mismatchDecision'::uuid,:'unsupportedEpisode'::uuid,:'unsupportedTargetCase'::uuid,:'unsupportedVersion'::uuid,
+        :'today'::date,NULL,'DATED',:'advisorPrincipal'::uuid);`, {
+    mismatchDecision, unsupportedEpisode, unsupportedTargetCase, unsupportedVersion, today, advisorPrincipal,
+  }), error => String(error.stderr).includes("violates check constraint"));
+  const openDenied = (parameters) => {
+    const { call, values } = applyCall({ revision: null, ...parameters });
+    assert.equal(inAdvisor(`SELECT COALESCE((${call})::text,'null');`, values), "null");
+  };
+  // Target-path vocabulary and argument shape are both part of the guard.
+  openDenied({ decision: unsupportedDecision, episode: openEpisode });
+  openDenied({ decision: openDecision, episode: openEpisode, revision: openUnexpectedRevision });
+  openDenied({ decision: openDecision, episode: openEpisode, recipientId: recipient.principalId,
+    offsets: [1], jobs: [prematureReminder] });
+  assert.equal(query(`SELECT count(*) FROM identity.journey_episodes
+    WHERE identity_case_id IN (:'openTargetCase'::uuid,:'unsupportedTargetCase'::uuid);`, {
+    openTargetCase, unsupportedTargetCase,
+  }), "0");
+
+  // Attach independent document milestones to the current IANG stage. They
+  // must survive the status transition, while a no-expiry stage gets no queue.
+  query(`INSERT INTO identity.journey_date_revisions
+      (date_revision_id,identity_case_id,episode_id,date_kind,date_basis,target_on,verification,document_id,verified_by,recorded_by)
+      VALUES(:'openPassportRevision'::uuid,:'targetCase'::uuid,:'validEpisode'::uuid,'PASSPORT_EXPIRY','CASE_APPROVAL',:'passportExpiry'::date,'VERIFIED',:'validDocument'::uuid,:'advisorPrincipal'::uuid,:'advisorPrincipal'::uuid),
+        (:'openHkicRevision'::uuid,:'targetCase'::uuid,:'validEpisode'::uuid,'HKIC_AGE_18','INTERNAL',:'hkicOn'::date,'REPORTED',NULL,NULL,:'advisorPrincipal'::uuid);
+    INSERT INTO identity.journey_station_reminders
+      (reminder_id,identity_case_id,episode_id,date_revision_id,date_kind,target_on,offset_days,recipient_principal_id,state,retry_not_before,claim_token,claim_until)
+      VALUES(:'openPassportReminder'::uuid,:'targetCase'::uuid,:'validEpisode'::uuid,:'openPassportRevision'::uuid,'PASSPORT_EXPIRY',:'passportExpiry'::date,30,:'principalId'::uuid,'PENDING',NULL,NULL,NULL),
+        (:'openHkicReminder'::uuid,:'targetCase'::uuid,:'validEpisode'::uuid,:'openHkicRevision'::uuid,'HKIC_AGE_18',:'hkicOn'::date,60,:'principalId'::uuid,'PENDING',NULL,NULL,NULL),
+        (:'replayReminder'::uuid,:'targetCase'::uuid,:'validEpisode'::uuid,:'validRevision'::uuid,'STAY_EXPIRY',:'newExpiry'::date,7,:'principalId'::uuid,'PENDING',NULL,NULL,NULL);`, {
+    ...recipient, targetCase, validEpisode, openPassportRevision, openHkicRevision, openPassportReminder,
+    openHkicReminder, passportExpiry, hkicOn, validDocument, advisorPrincipal, replayReminder, validRevision, newExpiry,
+  });
+  const openApplied = inAdvisor(`SELECT COALESCE((SELECT identity.apply_journey_episode_transition(
+      :'decision'::uuid,:'episode'::uuid,NULL,NULL,ARRAY[]::smallint[],ARRAY[]::uuid[]))::text,'null');`, {
+    decision: openDecision, episode: openEpisode,
+  });
+  assert.equal(openApplied, openEpisode);
+  assert.equal(query(`SELECT e.identity_case_id=:'openTargetCase'::uuid AND e.started_on=:'today'::date
+      AND e.ended_before IS NULL AND e.transition_decision_id=:'openDecision'::uuid
+    FROM identity.journey_episodes e WHERE e.episode_id=:'openEpisode'::uuid;`, {
+    openTargetCase, today, openDecision, openEpisode,
+  }), "t");
+  assert.equal(query(`SELECT a.stay_term='NO_FIXED_EXPIRY' AND a.verified_target_on IS NULL
+    FROM identity.journey_transition_attestations a WHERE a.decision_id=:'openDecision'::uuid;`, {
+    openDecision,
+  }), "t");
+  assert.equal(query(`SELECT count(*) FROM identity.journey_date_revisions
+    WHERE episode_id=:'openEpisode'::uuid OR identity_case_id=:'openTargetCase'::uuid;`, { openEpisode, openTargetCase }), "0");
+  assert.equal(query(`SELECT count(*) FROM identity.journey_station_reminders
+    WHERE identity_case_id=:'openTargetCase'::uuid;`, { openTargetCase }), "0");
+  assert.equal(query(`SELECT count(*) FROM identity.journey_station_reminders
+    WHERE identity_case_id=:'targetCase'::uuid AND reminder_id IN (:'openPassportReminder'::uuid,:'openHkicReminder'::uuid)
+      AND state='PENDING';`, { targetCase, openPassportReminder, openHkicReminder }), "2");
+  assert.equal(query(`SELECT r.state='CANCELED' AND EXISTS (
+      SELECT 1 FROM identity.journey_station_notices WHERE reminder_id=:'newReminder'::uuid
+    ) FROM identity.journey_station_reminders r WHERE r.reminder_id=:'replayReminder'::uuid;`,
+  { newReminder, replayReminder }), "t");
+
+  const openTimeline = JSON.parse(inFamily(`
+    SELECT COALESCE(jsonb_agg(to_jsonb(row)),'[]'::jsonb)
+    FROM identity.list_journey_stay_timeline(:'familyId'::uuid,:'openTargetCase'::uuid,:'principalId'::uuid,10) row;`, {
+    openTargetCase,
+  }));
+  assert.deepEqual(openTimeline, []);
+  const readProfile = () => inFamily(`
+    SELECT COALESCE(identity.read_journey_member_profile(:'actor'::uuid,NULL,
+      ARRAY[:'targetCase'::uuid,:'openTargetCase'::uuid])::text,'null');`, { targetCase, openTargetCase });
+  const openProfile = JSON.parse(readProfile());
+  const openStage = openProfile.episodes.find(row => row.path === "HK_PERMANENT_RESIDENT");
+  assert.equal(openStage?.stayTerm, "NO_FIXED_EXPIRY");
+  assert.equal(openStage?.milestones.some(row => row.kind === "STAY_EXPIRY"), false);
+  assert.equal(JSON.stringify(openProfile).includes(openTargetCase), false);
+
+  // The same decision is idempotent even when the caller supplies fresh UUIDs.
+  assert.equal(inAdvisor(`SELECT COALESCE((SELECT identity.apply_journey_episode_transition(
+      :'decision'::uuid,:'replayEpisode'::uuid,NULL,NULL,ARRAY[]::smallint[],ARRAY[]::uuid[]))::text,'null');`, {
+    decision: openDecision, replayEpisode: openReplayEpisode,
+  }), openEpisode);
+  assert.equal(query(`SELECT count(*) FROM identity.journey_episodes WHERE identity_case_id=:'openTargetCase'::uuid;`, {
+    openTargetCase,
+  }), "1");
+  assert.equal(query(`SELECT count(*) FROM identity.journey_station_reminders WHERE identity_case_id=:'openTargetCase'::uuid;`, {
+    openTargetCase,
+  }), "0");
+
+  // Revoking the decision document removes the optional no-expiry projection;
+  // it never fabricates an expiry or leaves a stale status assertion visible.
+  const withdrawEvidence = () => query(
+    `UPDATE docs.documents SET withdrawn_at=clock_timestamp() WHERE document_id=:'openDocument'::uuid;`,
+    { openDocument },
+  );
+  if (verifyProfile) {
+    await verifyProfile({ readProfile, withdrawEvidence });
+  } else {
+    withdrawEvidence();
+  }
+  const revokedProfile = JSON.parse(readProfile());
+  const revokedStage = revokedProfile.episodes.find(row => row.startedOn === today);
+  assert.equal(revokedStage?.path, null);
+  assert.equal(Object.hasOwn(revokedStage, "stayTerm"), false);
+
   console.log("PASS STUDENT→IANG episode transition, dual-case advisor scope, evidence denial, Family timeline, stage cancellation, independent passport/travel/HKIC queues, immutable receipt, idempotent replay and due notice publication");
+  console.log("PASS applied decision without fixed expiry, withdrawal removes status claim, no synthetic expiry or renewal reminder, independent document reminders persist");
 }

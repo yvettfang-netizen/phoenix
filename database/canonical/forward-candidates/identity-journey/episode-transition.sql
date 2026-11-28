@@ -14,10 +14,14 @@ CREATE TABLE identity.journey_transition_attestations (
   target_case_id uuid NOT NULL REFERENCES identity.cases,
   document_version_id uuid NOT NULL REFERENCES docs.document_versions,
   effective_on date NOT NULL CHECK (effective_on BETWEEN DATE '1900-01-01' AND DATE '9999-12-31'),
-  verified_target_on date NOT NULL CHECK (verified_target_on <= DATE '9999-12-31'),
+  stay_term text NOT NULL DEFAULT 'DATED',
+  verified_target_on date CHECK (verified_target_on <= DATE '9999-12-31'),
   verified_by uuid NOT NULL REFERENCES auth.principals,
   verified_at timestamptz NOT NULL DEFAULT clock_timestamp(),
-  CHECK (verified_target_on > effective_on)
+  CHECK (
+    (stay_term = 'DATED' AND verified_target_on IS NOT NULL AND verified_target_on > effective_on)
+    OR (stay_term = 'NO_FIXED_EXPIRY' AND verified_target_on IS NULL)
+  )
 );
 ALTER TABLE identity.journey_transition_attestations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE identity.journey_transition_attestations FORCE ROW LEVEL SECURITY;
@@ -71,8 +75,39 @@ AS $fn$
       AND e.episode_id=p_episode AND e.identity_case_id=p_case AND e.started_on=a.effective_on
       AND previous.ended_before=a.effective_on
       AND former_case.family_id=approved_case.family_id AND former_case.subject_person_id=approved_case.subject_person_id
-      AND a.verified_target_on=p_target AND a.verified_by=p_verified_by AND v.document_id=p_document
+      AND a.stay_term='DATED' AND a.verified_target_on=p_target
+      AND a.verified_by=p_verified_by AND v.document_id=p_document
   );
+$fn$;
+
+-- A verified statement of no fixed expiry must remain tied to live evidence.
+-- Only a flag is returned to the already-authorized member profile.
+CREATE FUNCTION identity.has_journey_transition_no_fixed_expiry(p_decision uuid,p_episode uuid)
+RETURNS boolean
+LANGUAGE plpgsql SET search_path = pg_catalog
+AS $fn$
+BEGIN
+  PERFORM 1 FROM identity.journey_transition_attestations a
+    JOIN identity.journey_episodes e ON e.transition_decision_id=a.decision_id
+    JOIN identity.journey_episodes previous ON previous.episode_id=a.prior_episode_id
+    JOIN identity.cases former_case ON former_case.identity_case_id=previous.identity_case_id
+    JOIN identity.cases approved_case ON approved_case.identity_case_id=a.target_case_id
+    JOIN identity.external_facts f ON f.fact_id=a.decision_id
+    JOIN docs.document_versions v ON v.version_id=a.document_version_id
+    JOIN docs.documents d USING (document_id)
+    WHERE a.decision_id=p_decision AND a.stay_term='NO_FIXED_EXPIRY' AND e.episode_id=p_episode
+      AND e.identity_case_id=a.target_case_id AND e.started_on=a.effective_on AND previous.ended_before=a.effective_on
+      AND approved_case.case_kind IN ('HK_PERMANENT_RESIDENT','RIGHT_TO_LAND','UNCONDITIONAL_STAY')
+      AND former_case.family_id=approved_case.family_id AND former_case.subject_person_id=approved_case.subject_person_id
+      AND approved_case.family_id=auth.current_family_id()
+      AND f.identity_case_id=a.target_case_id AND f.fact_kind='DECISION' AND f.observed_at <= a.verified_at
+      AND v.created_at <= a.verified_at AND a.verified_at <= clock_timestamp()
+      AND d.family_id=approved_case.family_id AND d.subject_person_id=approved_case.subject_person_id
+      AND d.data_class='IDENTITY_SENSITIVE' AND d.document_kind='HK_IDENTITY_TRANSITION_DECISION'
+      AND d.withdrawn_at IS NULL AND d.retention_until > clock_timestamp()
+    FOR SHARE OF d;
+  RETURN FOUND;
+END
 $fn$;
 
 -- A trusted invoker must verify the attestation issuer and lock the independent
@@ -92,7 +127,7 @@ DECLARE
   existing_episode uuid;
 BEGIN
   IF auth.current_channel() IS DISTINCT FROM 'ADVISOR' OR auth.write_context_is_live() IS NOT TRUE
-    OR core.is_uuid_v7(p_episode) IS NOT TRUE OR core.is_uuid_v7(p_revision) IS NOT TRUE
+    OR core.is_uuid_v7(p_episode) IS NOT TRUE
     OR p_offsets IS NULL OR p_job_ids IS NULL
     OR coalesce(array_ndims(p_offsets),1) <> 1 OR coalesce(array_ndims(p_job_ids),1) <> 1
     OR cardinality(p_offsets) <> cardinality(p_job_ids) OR cardinality(p_offsets) > 8
@@ -108,12 +143,17 @@ BEGIN
   IF NOT FOUND OR reviewed.verified_by IS DISTINCT FROM auth.current_principal_id()
     OR reviewed.verified_at > clock_timestamp()
     OR reviewed.effective_on > (clock_timestamp() AT TIME ZONE 'Asia/Hong_Kong')::date THEN RETURN NULL; END IF;
+  IF (reviewed.stay_term='DATED' AND core.is_uuid_v7(p_revision) IS NOT TRUE)
+    OR (reviewed.stay_term='NO_FIXED_EXPIRY' AND (p_revision IS NOT NULL OR p_recipient IS NOT NULL))
+  THEN RETURN NULL; END IF;
   SELECT e.* INTO prior FROM identity.journey_episodes e
     JOIN identity.cases source ON source.identity_case_id=e.identity_case_id
     JOIN identity.cases target ON target.identity_case_id=reviewed.target_case_id
     WHERE e.episode_id=reviewed.prior_episode_id AND source.identity_case_id<>target.identity_case_id
       AND source.family_id=auth.current_family_id() AND target.family_id=source.family_id
       AND target.subject_person_id=source.subject_person_id
+      AND (reviewed.stay_term='DATED'
+        OR target.case_kind IN ('HK_PERMANENT_RESIDENT','RIGHT_TO_LAND','UNCONDITIONAL_STAY'))
       AND e.started_on < reviewed.effective_on
     FOR SHARE OF source,target;
   IF NOT FOUND THEN RETURN NULL; END IF;
@@ -143,11 +183,14 @@ BEGIN
     auth.current_family_id(),reviewed.target_case_id,p_recipient) IS NOT TRUE THEN RETURN NULL; END IF;
 
   SELECT e.episode_id INTO existing_episode FROM identity.journey_episodes e
-    JOIN identity.journey_date_revisions r USING (episode_id,identity_case_id)
     WHERE e.transition_decision_id=p_decision AND e.identity_case_id=reviewed.target_case_id
       AND e.started_on=reviewed.effective_on AND prior.ended_before=reviewed.effective_on
-      AND r.official_fact_id=p_decision AND r.target_on=reviewed.verified_target_on
-      AND r.date_kind='STAY_EXPIRY' AND r.verification='VERIFIED' AND r.document_id=first_scope.document_id;
+      AND (reviewed.stay_term='NO_FIXED_EXPIRY' OR EXISTS (
+        SELECT 1 FROM identity.journey_date_revisions r
+        WHERE r.episode_id=e.episode_id AND r.identity_case_id=e.identity_case_id
+          AND r.official_fact_id=p_decision AND r.target_on=reviewed.verified_target_on
+          AND r.date_kind='STAY_EXPIRY' AND r.verification='VERIFIED' AND r.document_id=first_scope.document_id
+      ));
   IF FOUND THEN RETURN existing_episode; END IF;
   IF prior.ended_before IS NOT NULL
     OR EXISTS (SELECT 1 FROM identity.journey_episodes e
@@ -157,10 +200,12 @@ BEGIN
 
   INSERT INTO identity.journey_episodes(episode_id,identity_case_id,started_on,recorded_by,transition_decision_id)
   VALUES (p_episode,reviewed.target_case_id,reviewed.effective_on,reviewed.verified_by,p_decision);
-  INSERT INTO identity.journey_date_revisions(date_revision_id,identity_case_id,episode_id,date_kind,date_basis,
-    target_on,verification,official_fact_id,document_id,verified_by,recorded_by)
-  VALUES (p_revision,reviewed.target_case_id,p_episode,'STAY_EXPIRY','CASE_APPROVAL',reviewed.verified_target_on,
-    'VERIFIED',p_decision,first_scope.document_id,reviewed.verified_by,reviewed.verified_by);
+  IF reviewed.stay_term='DATED' THEN
+    INSERT INTO identity.journey_date_revisions(date_revision_id,identity_case_id,episode_id,date_kind,date_basis,
+      target_on,verification,official_fact_id,document_id,verified_by,recorded_by)
+    VALUES (p_revision,reviewed.target_case_id,p_episode,'STAY_EXPIRY','CASE_APPROVAL',reviewed.verified_target_on,
+      'VERIFIED',p_decision,first_scope.document_id,reviewed.verified_by,reviewed.verified_by);
+  END IF;
   UPDATE identity.journey_episodes SET ended_before=reviewed.effective_on WHERE episode_id=prior.episode_id;
   UPDATE identity.journey_station_reminders r SET state='CANCELED',retry_not_before=NULL
     WHERE r.episode_id=prior.episode_id AND r.state IN ('PENDING','RETRY')
@@ -178,6 +223,7 @@ $fn$;
 
 REVOKE ALL ON FUNCTION identity.apply_journey_episode_transition(uuid,uuid,uuid,uuid,smallint[],uuid[]),
   identity.has_journey_transition_stay_source(uuid,uuid,uuid,date,uuid,uuid),
+  identity.has_journey_transition_no_fixed_expiry(uuid,uuid),
   identity.protect_applied_journey_transition()
   FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader, phoenix_canonical_service_workbench;
 COMMIT;

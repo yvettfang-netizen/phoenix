@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { runStationReminderBatch } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-reminder-worker.ts";
 import { handleIdentityInbox, identityNoticePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-inbox.ts";
+import { handleIdentityProfile } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-profile.ts";
+import { identityProfilePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-profile-contract.ts";
 import { verifyCrmHandoff } from "./verify-crm.mjs";
 import { verifyTimeline } from "./verify-timeline.mjs";
 import { verifyServiceChain } from "./verify-service-chain.mjs";
@@ -249,16 +251,18 @@ let officialTravelBrowser;
 let memberProfileBrowser;
 let memberResidenceBrowser;
 let reviewPlanningBrowser;
+let openEndedIdentityBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser, verifyFamilyResidenceBrowser,
     verifyOfficialTravelBrowser, verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser,
-    verifyIdentityReviewPlanningBrowser } = await import("./verify-browser.mjs");
+    verifyIdentityReviewPlanningBrowser, verifyOpenEndedIdentityBrowser } = await import("./verify-browser.mjs");
   timelineBrowser = verifyFamilyTimelineBrowser;
   residenceBrowser = verifyFamilyResidenceBrowser;
   officialTravelBrowser = verifyOfficialTravelBrowser;
   memberProfileBrowser = verifyFamilyMemberProfileBrowser;
   memberResidenceBrowser = verifyFamilyMemberResidenceBrowser;
   reviewPlanningBrowser = verifyIdentityReviewPlanningBrowser;
+  openEndedIdentityBrowser = verifyOpenEndedIdentityBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
@@ -325,7 +329,52 @@ const timeline = await verifyTimeline({
   },
 });
 await verifyResidence({ query, recipient, authConfig, browser: residenceBrowser });
-await verifyEpisodeWrite({ query, recipient });
+await verifyEpisodeWrite({
+  query, recipient,
+  async verifyProfile({ readProfile, withdrawEvidence }) {
+    const memberRef = "member_self_open_ended_000000000000";
+    const grant = async ({ customerId, sessionHash }) =>
+      customerId === "ci-only-account" && sessionHash === "ci-only-session";
+    let readProjection = () => JSON.parse(readProfile());
+    const env = {
+      FAMILY_IDENTITY_PROFILE_ENABLED: "true",
+      FAMILY_IDENTITY_PROFILE_PROVIDER: {
+        async resolveRoster(session) {
+          if (!await grant(session)) return null;
+          return { assertCurrent: () => grant(session),
+            async listAuthorized() { return [{ ref: memberRef, access: "SELF", label: "Synthetic member" }]; } };
+        },
+        async resolveMember(session, ref) {
+          if (ref !== memberRef || !await grant(session)) return null;
+          return { assertCurrent: () => grant(session), async readAuthorized() { return readProjection(); } };
+        },
+      },
+    };
+    const handle = (request, browserOrigin, hasSession) => handleIdentityProfile(request, env, {
+      ...authConfig, origin: browserOrigin, verifySession: async () => hasSession ? authConfig.verifySession() : null,
+    });
+    const postProfile = () => handle(new Request(origin + identityProfilePath, {
+      method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ memberRef }),
+    }), origin, true);
+    const reply = await postProfile();
+    assert.equal(reply.status, 200);
+    assert.equal((await reply.json()).episodes.filter(row => row.stayTerm === "NO_FIXED_EXPIRY").length, 1);
+    const liveProjection = readProjection;
+    readProjection = () => ({ episodes: liveProjection().episodes.map(row =>
+      row.path === "IANG" ? { ...row, stayTerm: "NO_FIXED_EXPIRY" } : row) });
+    assert.equal((await postProfile()).status, 503);
+    readProjection = liveProjection;
+    if (openEndedIdentityBrowser) {
+      await openEndedIdentityBrowser({ handle, apiPath: identityProfilePath, withdrawEvidence });
+    } else {
+      withdrawEvidence();
+    }
+    const withdrawn = await postProfile();
+    assert.equal(withdrawn.status, 200);
+    assert.ok((await withdrawn.json()).episodes.every(row =>
+      !Object.hasOwn(row, "stayTerm") && row.path !== "HK_PERMANENT_RESIDENT"));
+  },
+});
 await verifyDocumentDates({ query, recipient });
 await verifyOfficialTravel({ query, recipient, authConfig, browser: officialTravelBrowser });
 await verifyIdentityMemberProfile({ query, recipient, authConfig, browser: memberProfileBrowser, memberResidenceBrowser });

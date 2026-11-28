@@ -4,7 +4,9 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { ShieldCheck, ArrowRight, Clock3 } from "lucide-react";
 import {
   isIdentityInternalOnlyMilestoneKind,
+  identityNoFixedExpiryTerm,
   identityProfilePath,
+  isIdentityNoFixedExpiryPathway,
   type IdentityMemberProfile,
   type IdentityProfileMember,
 } from "@/lib/identity-journey-profile-contract";
@@ -102,6 +104,17 @@ function parseMembers(value: unknown): IdentityProfileMember[] {
 
 function parseProfile(value: unknown): IdentityMemberProfile | null {
   if (!isRecord(value) || !Array.isArray(value.episodes)) return null;
+  const invalidNoFixedExpiryClaim = value.episodes.some((episode) => {
+    if (!isRecord(episode) || episode.stayTerm === undefined) return false;
+    const path = episode.path;
+    const milestones = episode.milestones;
+    return episode.stayTerm !== identityNoFixedExpiryTerm
+      || typeof path !== "string"
+      || !isIdentityNoFixedExpiryPathway(path)
+      || !Array.isArray(milestones)
+      || milestones.some((milestone) => isRecord(milestone) && milestone.kind === "STAY_EXPIRY");
+  });
+  if (invalidNoFixedExpiryClaim) return null;
   const episodes = value.episodes.filter((episode) => {
     if (!isRecord(episode) || typeof episode.startedOn !== "string") return false;
     if (episode.path !== null && typeof episode.path !== "string") return false;
@@ -111,6 +124,7 @@ function parseProfile(value: unknown): IdentityMemberProfile | null {
     path: episode.path as string | null,
     startedOn: episode.startedOn as string,
     endedBefore: episode.endedBefore as string | null,
+    ...(episode.stayTerm === identityNoFixedExpiryTerm ? { stayTerm: episode.stayTerm } : {}),
     milestones: (episode.milestones as unknown[]).filter((milestone): milestone is Milestone => {
       if (!isRecord(milestone)) return false;
       const kind = milestone.kind;
@@ -333,6 +347,11 @@ export function FamilyIdentityProfile({
           <span>{episode.endedBefore ? text(locale, "历史阶段", "Historical stage") : text(locale, "当前阶段", "Current stage")}</span>
         </div>
         <p className="fc-muted">{formatDate(episode.startedOn, locale)}{episode.endedBefore ? ` — ${formatDate(episode.endedBefore, locale)}` : ` · ${text(locale, "仍在记录中", "ongoing")}`}</p>
+        {episode.stayTerm === identityNoFixedExpiryTerm
+          ? <p className="fc-muted">{text(locale, "该阶段的已核验决定未设固定逗留期限。", "The verified decision for this stage specifies no fixed limit of stay.")}</p>
+          : !episode.milestones.some((milestone) => milestone.kind === "STAY_EXPIRY")
+            ? <p className="fc-muted">{text(locale, "未显示获准逗留期限。", "No permitted-stay expiry is shown.")}</p>
+            : null}
         {episode.milestones.length ? <div role="list" aria-label={text(locale, "身份节点", "Identity milestones")}>
           {episode.milestones.map((milestone, milestoneIndex) => <MilestoneRow key={`${milestone.kind}-${milestone.on}-${milestoneIndex}`} milestone={milestone} locale={locale} />)}
         </div> : <p className="fc-muted">{text(locale, "暂无可显示的身份节点。", "No identity milestones are available.")}</p>}

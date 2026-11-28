@@ -8,6 +8,16 @@ export const identityMilestoneKinds = [
 ] as const;
 
 export type IdentityMilestoneKind = typeof identityMilestoneKinds[number];
+export const identityNoFixedExpiryTerm = "NO_FIXED_EXPIRY" as const;
+export const identityNoFixedExpiryPathways = [
+  "HK_PERMANENT_RESIDENT", "RIGHT_TO_LAND", "UNCONDITIONAL_STAY",
+] as const;
+export type IdentityNoFixedExpiryTerm = typeof identityNoFixedExpiryTerm;
+
+export function isIdentityNoFixedExpiryPathway(value: string): boolean {
+  return (identityNoFixedExpiryPathways as readonly string[]).includes(value);
+}
+
 export const identityInternalOnlyMilestoneKinds = [
   "INVESTMENT_REVIEW", "PERMANENT_RESIDENCE_PREPARATION",
 ] as const;
@@ -23,6 +33,8 @@ export type IdentityMemberProfile = {
     path: string | null;
     startedOn: string;
     endedBefore: string | null;
+    /** Present only for a verified same-case decision with no fixed expiry. */
+    stayTerm?: IdentityNoFixedExpiryTerm;
     milestones: {
       kind: IdentityMilestoneKind;
       basis: "STATUTORY" | "CASE_APPROVAL" | "OFFICIAL_WINDOW" | "INTERNAL";

@@ -275,6 +275,38 @@ export async function verifyFamilyMemberProfileBrowser({ handle, apiPath, revoke
   });
 }
 
+export async function verifyOpenEndedIdentityBrowser({ handle, apiPath, withdrawEvidence }) {
+  await withFamilyView({ handle, apiPath, view: "profile" }, async ({ pageFor, output }) => {
+    async function open(locale, width, caption, label) {
+      const page = await pageFor(locale, width);
+      const title = locale === "zh" ? "成员身份档案" : "Member identity profile";
+      await page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ }).click();
+      const panel = page.getByRole("region", { name: title });
+      const self = panel.getByRole("button", { name: /Synthetic member/ });
+      await self.click();
+      const verified = panel.getByText(caption, { exact: true });
+      await verified.waitFor();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await page.screenshot({ path: join(output, label + ".png"), fullPage: true });
+      return { page, panel, self, verified };
+    }
+    await open("en", 1440, "The verified decision for this stage specifies no fixed limit of stay.",
+      "identity-open-ended-en-desktop");
+    const mobile = await open("zh", 390, "该阶段的已核验决定未设固定逗留期限。",
+      "identity-open-ended-zh-mobile");
+    withdrawEvidence();
+    const response = mobile.page.waitForResponse(reply =>
+      reply.url().endsWith(apiPath) && reply.request().method() === "POST");
+    await mobile.self.click();
+    assert.equal((await response).status(), 200);
+    await mobile.verified.waitFor({ state: "hidden" });
+    await mobile.panel.getByText("未显示获准逗留期限。", { exact: true }).waitFor();
+    assert.equal(await mobile.panel.getByRole("heading", { name: "香港永久居民身份" }).count(), 0);
+    await mobile.page.screenshot({ path: join(output, "identity-open-ended-withdrawn-zh-mobile.png"), fullPage: true });
+  });
+  console.log("PASS Chromium verified no fixed stay expiry on English desktop and Chinese mobile, with withdrawal");
+}
+
 export async function verifyFamilyMemberResidenceBrowser({
   profilePath, handleProfile, residencePath, handleResidence, guardianLabel, selfLabel,
   childFrom, revokeResidence, restoreResidence,
