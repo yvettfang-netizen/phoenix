@@ -23,17 +23,17 @@ export async function verifyTimeline({ query, recipient, authConfig, browser, on
     AND principal_id = :'principalId'::uuid AND purpose = 'IDENTITY_READ' AND revoked_at IS NULL
     AND valid_until > clock_timestamp()`;
   const queryScope = ":'familyId'::uuid, :'caseId'::uuid, :'principalId'::uuid";
-  const supported = {
+  const supported = (source = query) => ({
     FAMILY_IDENTITY_TIMELINE_ENABLED: "true",
     FAMILY_IDENTITY_TIMELINE_PROVIDER: {
       async resolve(session) {
         if (session.customerId !== "ci-only-account" || session.sessionHash !== "ci-only-session") return null;
         return {
           async assertCurrent() {
-            return query(`SELECT count(*) FROM identity_journey_test.timeline_authority WHERE ${authCondition};`, recipient) === "1";
+          return source(`SELECT count(*) FROM identity_journey_test.timeline_authority WHERE ${authCondition};`, recipient) === "1";
           },
           async listAuthorized() {
-            const result = query(`BEGIN;
+          const result = source(`BEGIN;
               WITH locked_grant AS MATERIALIZED (
                 SELECT family_id, case_id, principal_id FROM identity_journey_test.timeline_authority
                 WHERE ${authCondition} FOR SHARE
@@ -49,9 +49,9 @@ export async function verifyTimeline({ query, recipient, authConfig, browser, on
         };
       },
     },
-  };
-  const get = (headers = {}, suffix = "") =>
-    handleIdentityTimeline(new Request(authConfig.origin + identityTimelinePath + suffix, { headers }), supported, authConfig);
+  });
+  const get = (headers = {}, suffix = "", source = query) =>
+    handleIdentityTimeline(new Request(authConfig.origin + identityTimelinePath + suffix, { headers }), supported(source), authConfig);
   const response = await get();
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("cache-control"), "private, no-store");
@@ -73,7 +73,7 @@ export async function verifyTimeline({ query, recipient, authConfig, browser, on
       apiPath: identityTimelinePath,
       expectedDate: dates[0].validUntil,
       handle(request, origin, hasSession) {
-        return handleIdentityTimeline(request, supported, {
+        return handleIdentityTimeline(request, supported(), {
           ...authConfig,
           origin,
           verifySession: async () => hasSession ? authConfig.verifySession() : null,
@@ -83,17 +83,26 @@ export async function verifyTimeline({ query, recipient, authConfig, browser, on
     });
     query("UPDATE identity_journey_test.timeline_authority SET revoked_at = NULL;");
   }
-  const noScope = await handleIdentityTimeline(new Request(authConfig.origin + identityTimelinePath), supported, {
+  const noScope = await handleIdentityTimeline(new Request(authConfig.origin + identityTimelinePath), supported(), {
     ...authConfig, verifySession: async () => null,
   });
   assert.equal(noScope.status, 401);
-  query(`UPDATE docs.documents SET withdrawn_at = clock_timestamp() WHERE document_id = :'newDoc'::uuid;`, { newDoc });
-  const withheldDoc = await get();
-  assert.equal(withheldDoc.status, 200);
-  assert.deepEqual((await withheldDoc.json()).dates.map(entry => [entry.id, entry.current]), [[oldId, false]]);
-  revoke();
-  const revoked = await get();
-  assert.equal(revoked.status, 403);
-  assert.equal(Object.hasOwn(await revoked.json(), "dates"), false);
-  console.log("PASS authorized stay timeline over HTTP and PostgreSQL, previous-date history, withdrawn source does not revive prior date");
+  async function assertRevoked(source) {
+    const revoked = await get({}, "", source);
+    assert.equal(revoked.status, 403);
+    assert.equal(Object.hasOwn(await revoked.json(), "dates"), false);
+  }
+  return {
+    newDoc,
+    async verifyWithdrawal(withdrawDocument) {
+      withdrawDocument();
+      const withheldDoc = await get();
+      assert.equal(withheldDoc.status, 200);
+      assert.deepEqual((await withheldDoc.json()).dates.map(entry => [entry.id, entry.current]), [[oldId, false]]);
+      revoke();
+      await assertRevoked(query);
+      console.log("PASS authorized stay timeline over HTTP and PostgreSQL, withdrawn source does not revive prior date");
+    },
+    assertRevoked,
+  };
 }

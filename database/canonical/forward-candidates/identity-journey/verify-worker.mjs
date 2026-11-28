@@ -8,6 +8,7 @@ import { verifyServiceChain } from "./verify-service-chain.mjs";
 import { verifyFounderSummary } from "./verify-founder-summary.mjs";
 import { verifyResidence } from "./verify-residence.mjs";
 import { verifyIdentityMemberProfile } from "./verify-member-profile.mjs";
+import { verifyRenewalRecovery } from "./verify-recovery.mjs";
 
 const container = process.argv[2];
 assert.match(container ?? "", /^[0-9a-f]{64}$/);
@@ -15,13 +16,15 @@ assert.equal(execFileSync("docker", ["inspect", "--format",
   '{{.HostConfig.NetworkMode}}/{{index .Config.Labels "phoenix.identity-journey"}}', container],
 { encoding: "utf8" }).trim(), "none/synthetic");
 
-function query(sql, variables = {}, role = "bootstrap") {
+function query(sql, variables = {}, role = "bootstrap", restored = false) {
   assert.ok(["bootstrap", "app", "binder", "workbench"].includes(role));
   const args = Object.entries(variables).flatMap(([key, value]) => ["-v", `${key}=${value}`]);
   const login = role === "bootstrap" ? "phoenix_bootstrap" : `identity_journey_fixture_${role}`;
-  const passfile = role === "bootstrap" ? "/tmp/canonical-premerge.pgpass" : `/tmp/identity-crm-${role}.pgpass`;
+  const passfile = restored
+    ? (role === "bootstrap" ? "/tmp/identity-recovery-client.pgpass" : `/tmp/identity-recovery-${role}.pgpass`)
+    : (role === "bootstrap" ? "/tmp/canonical-premerge.pgpass" : `/tmp/identity-crm-${role}.pgpass`);
   return execFileSync("docker", ["exec", "-i", "-e", `PGPASSFILE=${passfile}`,
-    container, "psql", "-XqAt", "-h", "127.0.0.1", "-U", login,
+    container, "psql", "-XqAt", "-h", "127.0.0.1", "-p", restored ? "5433" : "5432", "-U", login,
     "-d", "phoenix_identity_journey_synthetic_ci", "-v", "ON_ERROR_STOP=1", ...args],
   { input: sql, encoding: "utf8", timeout: 15000, stdio: ["pipe", "pipe", "pipe"] }).trim();
 }
@@ -273,7 +276,7 @@ function setRenewalNoticeAuthorization(active) {
   { ...recipient, active });
 }
 setRenewalNoticeAuthorization(true);
-await verifyTimeline({
+const timeline = await verifyTimeline({
   query, recipient, authConfig, browser: timelineBrowser,
   async onRenewal() {
     verifyRenewalReview();
@@ -312,3 +315,7 @@ await verifyTimeline({
 });
 await verifyResidence({ query, recipient, authConfig, browser: residenceBrowser });
 await verifyIdentityMemberProfile({ query, recipient, authConfig, browser: memberProfileBrowser, memberResidenceBrowser });
+await verifyRenewalRecovery({
+  container, query, recipient, timeline, actor: crmFixture.actor,
+  restoredQuery: (sql, variables, role) => query(sql, variables, role, true),
+});
