@@ -193,12 +193,78 @@ BEGIN
 END
 $fn$;
 
+-- Private owner inventory for the Family OS authorization adapter. This is
+-- deliberately a self-only projection. A family member, guardian, or adult
+-- delegate cannot use it to discover another person's cases or grants.
+-- Returning 129 rows is an overflow sentinel for a provider that accepts at
+-- most 128 cases. The serving adapter must fail closed when it sees that
+-- sentinel instead of treating a truncated inventory as complete.
+CREATE FUNCTION identity.list_journey_station_authorizations()
+RETURNS TABLE (
+  identity_case_id uuid,
+  case_kind text,
+  authorization_id uuid,
+  expires_at timestamptz
+)
+LANGUAGE plpgsql VOLATILE
+SET search_path = pg_catalog, identity, auth, core, consent
+AS $fn$
+DECLARE
+  family uuid := auth.current_family_id();
+  subject uuid := auth.current_actor_person_id();
+  principal uuid := auth.current_principal_id();
+BEGIN
+  -- This inventory is only meaningful inside a live, authenticated FAMILY
+  -- context. The no-argument signature prevents a caller from selecting a
+  -- different family, subject, or principal.
+  IF auth.current_channel() IS DISTINCT FROM 'FAMILY'
+    OR auth.write_context_is_live() IS NOT TRUE
+    OR family IS NULL OR subject IS NULL OR principal IS NULL
+  THEN
+    RETURN;
+  END IF;
+
+  RETURN QUERY
+  SELECT cases.identity_case_id, cases.case_kind,
+    grant_row.authorization_id, grant_row.expires_at
+  FROM (
+    SELECT c.identity_case_id, c.case_kind, c.family_id, c.subject_person_id
+    FROM identity.cases c
+    WHERE c.family_id = family AND c.subject_person_id = subject
+      AND identity.lock_journey_station_self_scope(family, c.identity_case_id, principal) IS TRUE
+    ORDER BY c.identity_case_id
+    LIMIT 129
+  ) AS cases
+  LEFT JOIN LATERAL (
+    SELECT locked.authorization_id, locked.expires_at
+    FROM (
+      SELECT g.authorization_id, g.expires_at
+      FROM consent.identity_journey_station_grants g
+      WHERE g.identity_case_id = cases.identity_case_id
+        AND g.family_id = cases.family_id
+        AND g.subject_person_id = cases.subject_person_id
+        AND g.recipient_principal_id = principal
+        AND g.granted_at <= clock_timestamp()
+        AND g.withdrawn_at IS NULL
+        AND g.expires_at > clock_timestamp()
+      ORDER BY g.granted_at DESC, g.authorization_id DESC
+      LIMIT 1
+      FOR SHARE
+    ) locked
+    WHERE locked.expires_at > clock_timestamp()
+  ) AS grant_row ON TRUE
+  WHERE auth.write_context_is_live() IS TRUE
+  ORDER BY cases.identity_case_id;
+END
+$fn$;
+
 REVOKE ALL ON FUNCTION consent.guard_identity_station_grant_history(),
   identity.issue_journey_station_authorization(uuid,uuid,timestamptz,text,boolean),
   identity.revoke_journey_station_authorization(uuid),
   identity.lock_journey_station_authorization(uuid,uuid,uuid),
   identity.publish_authorized_journey_station_notice(uuid,uuid,uuid,uuid),
   identity.list_authorized_journey_station_notices(uuid,uuid,uuid,integer),
-  identity.acknowledge_authorized_journey_station_notice(uuid,uuid,uuid,uuid)
+  identity.acknowledge_authorized_journey_station_notice(uuid,uuid,uuid,uuid),
+  identity.list_journey_station_authorizations()
   FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader, phoenix_canonical_service_workbench;
 COMMIT;

@@ -196,6 +196,7 @@ export function FamilyIdentityProfile({
   memberResidence,
   reviewPlanningEnabled = false,
   identityDelegationManagement,
+  stationConsent,
 }: {
   locale: Locale;
   /**
@@ -210,6 +211,7 @@ export function FamilyIdentityProfile({
   reviewPlanningEnabled?: boolean;
   /** Separately gated delegation controls; the parent supplies this only for SELF. */
   identityDelegationManagement?: ReactNode;
+  stationConsent?: ReactNode;
 }) {
   const [members, setMembers] = useState<IdentityProfileMember[]>([]);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
@@ -380,7 +382,7 @@ export function FamilyIdentityProfile({
       onSaved={() => void selectMember(selectedMember.ref, true)}
       enabled
     /> : null}
-    {selectedMember?.access === "SELF" && profile ? identityDelegationManagement : null}
+    {selectedMember?.access === "SELF" && profile ? <>{stationConsent}{identityDelegationManagement}</> : null}
     {memberResidence}
     <p className="fc-muted">{text(locale, "家庭关系本身不会授予其他成年成员的资料访问权；本人授权查阅仅限只读身份档案，不开放出入境、写入、提醒或 CRM 功能。", "Family membership alone does not grant access to another adult's records. Adult-authorized read-only access is limited to the identity profile and does not open travel, write, reminder, or CRM features.")}</p>
     <button type="button" className="fc-gold" onClick={() => void loadMembers()}><ArrowRight size={17} />{text(locale, "重新核验成员授权", "Verify member access again")}</button>

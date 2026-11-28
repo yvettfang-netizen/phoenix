@@ -567,3 +567,17 @@ await verifyRenewalRecovery({
   container, query, recipient, timeline, actor: crmFixture.actor,
   restoredQuery: (sql, variables, role) => query(sql, variables, role, true),
 });
+const { verifyStationConsent } = await import("./verify-station-consent.mjs");
+const stationConsentBrowser = process.env.IDENTITY_BROWSER_EVIDENCE_DIR
+  ? (await import("./verify-browser.mjs")).verifyIdentityStationConsentBrowser : undefined;
+await verifyStationConsent({
+  query, recipient, inboxEnv: env, verifyReceipt, browser: stationConsentBrowser,
+  async deliver() {
+    const result = await runIdentityStationSchedule("*/5 * * * *", {
+      FAMILY_IDENTITY_STATION_SCHEDULE_ENABLED: "true",
+      FAMILY_IDENTITY_STATION_CRON: "*/5 * * * *",
+      FAMILY_IDENTITY_STATION_QUEUE: { fetch: request => handleIdentityStationQueue(request, queue) },
+    });
+    return result.delivered;
+  },
+});

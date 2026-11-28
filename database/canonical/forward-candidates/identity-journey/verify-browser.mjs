@@ -22,10 +22,11 @@ async function bundleFamilyCenter(view) {
         createRoot(document.getElementById("root")).render(
           <FamilyCenterV2 locale={locale} account workbench
             identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}}
-            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence" || view === "review-planning" || view === "delegated-profile" || view === "delegation-management"}}
+            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence" || view === "review-planning" || view === "delegated-profile" || view === "delegation-management" || view === "station-consent"}}
             identityMemberResidence={${view === "member-residence" || view === "delegated-profile"}}
             identityReviewPlanning={${view === "review-planning" || view === "delegated-profile"}}
-            identityDelegationManagement={${view === "delegation-management"}} />
+            identityDelegationManagement={${view === "delegation-management"}}
+            identityStationConsent={${view === "station-consent"}} />
         );`,
     },
     bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", jsx: "automatic",
@@ -525,4 +526,83 @@ export async function verifyIdentityReviewPlanningBrowser({
     await mobile.page.screenshot({ path: join(output, "identity-review-planning-zh-mobile-guardian.png"), fullPage: true });
     console.log("PASS Chromium Family OS identity review planning, consented save, persisted date, guardian isolation and responsive layout");
   });
+}
+
+export async function verifyIdentityStationConsentBrowser({
+  profilePath, handleProfile, managementPath, handleManagement, through, caseLabel, verifyIssued, verifyRevoked,
+}) {
+  assert.equal(typeof profilePath, "string");
+  assert.equal(typeof managementPath, "string");
+  assert.equal(typeof handleProfile, "function");
+  assert.equal(typeof handleManagement, "function");
+  assert.match(through, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(typeof verifyIssued, "function");
+  assert.equal(typeof verifyRevoked, "function");
+
+  const secondary = { path: managementPath, handle: handleManagement };
+  await withFamilyView({
+    handle: handleProfile, apiPath: profilePath, view: "station-consent", secondary,
+  }, async ({ pageFor, output }) => {
+    const open = async (locale, width) => {
+      const page = await pageFor(locale, width);
+      await page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ }).click();
+      await page.getByRole("button", { name: /Synthetic station owner/ }).click();
+      const region = page.getByRole("region", { name: locale === "zh" ? /身份提醒授权/ : /Identity reminder authorization/ });
+      await region.waitFor();
+      return { page, region };
+    };
+
+    const desktop = await open("en", 1440);
+    const selectedCase = desktop.region.getByRole("radio", { name: caseLabel, exact: true });
+    await selectedCase.check();
+    const expiry = desktop.region.locator("input[type=date]").first();
+    await expiry.fill(through);
+    const confirm = desktop.region.getByRole("checkbox", { name: /I confirm that I am enabling/i });
+    const issue = desktop.region.getByRole("button", { name: "Confirm reminders", exact: true });
+    assert.equal(await issue.isDisabled(), true);
+    await confirm.check();
+    assert.equal(await issue.isDisabled(), false);
+
+    const issueRequest = desktop.page.waitForRequest(request => request.url().endsWith(managementPath) &&
+      request.method() === "POST" && request.postDataJSON()?.action === "issue");
+    const issueResponse = desktop.page.waitForResponse(response =>
+      response.url().endsWith(managementPath) && response.request().method() === "POST" &&
+      response.request().postDataJSON()?.action === "issue");
+    await issue.click();
+    const request = await issueRequest;
+    const payload = request.postDataJSON();
+    assert.equal(payload.action, "issue");
+    assert.equal(payload.through, through);
+    assert.equal(payload.confirmed, true);
+    assert.equal((await issueResponse).status(), 200);
+    await verifyIssued();
+    await desktop.region.getByText("Authorized through " + through, { exact: true }).waitFor();
+    assert.ok(await desktop.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await desktop.page.screenshot({ path: join(output, "identity-station-consent-en-desktop-1440.png"), fullPage: true });
+
+    const mobile = await open("zh", 390);
+    await mobile.region.getByRole("radio", { name: caseLabel, exact: true }).check();
+    const revoke = mobile.region.getByRole("button", { name: "确认撤回授权", exact: true });
+    await revoke.waitFor();
+    const revokeConfirm = mobile.region.getByRole("checkbox", { name: /我确认撤回此身份案件/ });
+    assert.equal(await revoke.isDisabled(), true);
+    await revokeConfirm.check();
+    assert.equal(await revoke.isDisabled(), false);
+    assert.ok(await mobile.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    await mobile.page.screenshot({ path: join(output, "identity-station-consent-zh-mobile-before-revoke-390.png"), fullPage: true });
+
+    const revokeRequest = mobile.page.waitForRequest(request => request.url().endsWith(managementPath) &&
+      request.method() === "POST" && request.postDataJSON()?.action === "revoke");
+    const revokeResponse = mobile.page.waitForResponse(response =>
+      response.url().endsWith(managementPath) && response.request().method() === "POST" &&
+      response.request().postDataJSON()?.action === "revoke");
+    await revoke.click();
+    const revokePayload = (await revokeRequest).postDataJSON();
+    assert.equal(revokePayload.action, "revoke");
+    assert.equal((await revokeResponse).status(), 200);
+    await verifyRevoked();
+    await mobile.region.getByRole("radio", { name: caseLabel, exact: true }).locator("..").getByText("尚未授权提醒", { exact: true }).waitFor();
+    await mobile.page.screenshot({ path: join(output, "identity-station-consent-zh-mobile-revoked-390.png"), fullPage: true });
+  });
+  console.log("PASS Chromium English desktop station reminder authorization and Chinese mobile revocation");
 }
