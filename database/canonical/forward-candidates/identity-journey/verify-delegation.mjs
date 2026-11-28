@@ -324,6 +324,7 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile, v
         :'noticeVersion'::text)::text,'null');`, {
         delegationId: managementDelegation,
         delegatePrincipal: applicantPrincipal,
+        caseA,
         through,
         noticeVersion: submittedNoticeVersion,
       });
