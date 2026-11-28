@@ -46,6 +46,7 @@ function assertEducationStructure(html, locale) {
   assert.equal(testIdCount(html, "education-service"), 4, `${locale}: Education needs four services`);
   assert.equal(testIdCount(html, "education-pricing-package"), 3, "Education pricing retains undergraduate launch and two other-stage cards");
   assert.equal(testIdCount(html, "masters-pricing"), 1, "Masters pricing must be unique");
+  assert.equal(testIdCount(html, "shared-signature-pricing"), 1, "One shared undergraduate and masters signature section");
   assert.equal(testIdCount(html, "application-fee-journey"), 1, "Application fee journey must be unique");
   assert.equal(testIdCount(html, "education-pricing-terms"), 1, "Education pricing must explain service boundaries once");
   assert.equal(testIdCount(html, "gaokao-pricing"), 1, "Gaokao pricing section must be unique");
@@ -89,7 +90,10 @@ function assertEducationStructure(html, locale) {
   }
   assert.ok(pricing.slice(m[0],m[1]).includes(locale === "zh" ? "4个专业申请项目" : "4 programme applications"), "Masters launch quota");
   assert.ok(pricing.slice(m[1],m[2]).includes(locale === "zh" ? "10个专业申请项目" : "10 programme applications"), "Masters premium quota");
-  assert.ok(pricing.slice(m[3],endMasters).includes(locale === "zh" ? "名校定制服务" : "Bespoke Selective Admissions"), "Masters specialist positioning");
+  assert.ok(pricing.slice(m[3],endMasters).includes(locale === "zh" ? "名校定制服务" : "Bespoke Selective Admissions"), "Shared specialist positioning");
+  assert.ok(pricing.slice(m[3],endMasters).includes(locale === "zh" ? "本科与硕士全国统一10万元起" : "for both undergraduate and master’s admissions"), "Shared signature applicability");
+  assert.ok(pricing.slice(d,other).includes('href="#education-package-tailored"'), "Undergraduate must link to shared signature");
+  assert.ok(pricing.slice(m[2],m[3]).includes('href="#education-package-tailored"'), "Masters must link to shared signature");
   assert.doesNotMatch(pricing, /89,980/, "Superseded master's VIP price");
   assert.ok(pricing.includes(locale === "zh" ? "并非强制逐项购买" : "not mandatory sequential purchases"), "Assessment fees are optional");
   assert.ok(pricing.includes(locale === "zh" ? "评估后书面报价" : "Written quote after assessment"), "Custom tiers must remain scoped quotations");
