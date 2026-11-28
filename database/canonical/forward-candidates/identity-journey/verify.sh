@@ -33,7 +33,7 @@ psql_synthetic() {
   docker exec -i -e PGPASSFILE=/tmp/canonical-premerge.pgpass "$container" psql "${args[@]}" "$@"
 }
 
-for protected_candidate in storage.sql crm-chain.sql service-renewal.sql official-travel.sql document-dates.sql review-plans.sql episode-transition.sql sponsorship.sql adult-delegation.sql; do
+for protected_candidate in storage.sql crm-chain.sql service-renewal.sql official-travel.sql document-dates.sql review-plans.sql episode-transition.sql sponsorship.sql adult-delegation.sql station-authorization.sql; do
   if output=$(psql_synthetic -d phoenix_canonical_dev < "$candidate/$protected_candidate" 2>&1); then
     echo "The unapproved database-name guard did not block $protected_candidate." >&2
     exit 1
@@ -52,6 +52,7 @@ psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/sponsorshi
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/timeline.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/document-dates.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/adult-delegation.sql"
+psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/station-authorization.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/member-profile.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/review-plans.sql"
 psql_synthetic -d phoenix_identity_journey_synthetic_ci < "$candidate/member-residence.sql"
@@ -140,5 +141,38 @@ GRANT phoenix_canonical_context_binder TO identity_journey_fixture_binder WITH I
 GRANT phoenix_canonical_service_workbench TO identity_journey_fixture_workbench WITH INHERIT TRUE, SET FALSE;
 SQL
 psql_synthetic -q -d "$db" < "$candidate/verify-crm-fixture.sql"
+psql_synthetic -q -d "$db" < "$candidate/verify-station-authorization.sql"
+
+# Hold an in-flight authorized publication in one DB session. The family
+# withdrawal must wait for that grant lock, then deny later Worker calls.
+station_case='01910000-0000-7000-8100-000000000005'
+station_recipient='01910000-0000-7000-8100-000000000003'
+station_grant='01910000-0000-7000-8100-000000000070'
+station_context="
+  SELECT auth.issue_context_ticket('$station_recipient','01910000-0000-7000-8100-000000000002',
+    '01910000-0000-7000-8100-000000000001','FAMILY',clock_timestamp()+interval '45 seconds',
+    gen_random_uuid(),'$station_recipient') AS ticket \\gset
+  SELECT auth.redeem_context_ticket(:'ticket'::uuid,'$station_recipient') \\gset
+"
+issue_station="SELECT identity.issue_journey_station_authorization('$station_grant','$station_case',
+  clock_timestamp()+interval '1 hour','2026-11-28.v1',true);"
+withdraw_station="SELECT identity.revoke_journey_station_authorization('$station_grant');"
+[[ "$(psql_synthetic -qAt -d "$db" <<< "$station_context $issue_station")" == "$station_grant" ]]
+authorized_publication="${publication/identity.publish_journey_station_notice/identity.publish_authorized_journey_station_notice}"
+coproc STATION_PUBLISHER { psql_synthetic -qAt -d "$db"; }
+station_publisher_pid=$STATION_PUBLISHER_PID
+printf 'BEGIN;\n%s\n' "$authorized_publication" >&"${STATION_PUBLISHER[1]}"
+IFS= read -r -t 20 station_status <&"${STATION_PUBLISHER[0]}"
+[[ "$station_status" == 'ALREADY_DELIVERED' ]]
+if output=$(psql_synthetic -qAt -d "$db" <<< "SET lock_timeout='500ms'; $station_context $withdraw_station" 2>&1); then
+  echo 'Station withdrawal did not serialize with publication.' >&2
+  exit 1
+fi
+[[ "$output" == *'canceling statement due to lock timeout'* ]]
+printf 'COMMIT;\n\\q\n' >&"${STATION_PUBLISHER[1]}"
+wait "$station_publisher_pid"
+[[ "$(psql_synthetic -qAt -d "$db" <<< "$station_context $withdraw_station")" == 't' ]]
+[[ "$(psql_synthetic -qAt -d "$db" -c "$authorized_publication")" == 'AUTHORIZATION_DENIED' ]]
+echo "PASS station publication and withdrawal serialize across independent PostgreSQL $1 sessions"
 node --experimental-strip-types --import "$candidate/register-native-typescript.mjs" "$candidate/verify-worker.mjs" "$container"
 echo "PASS Identity Journey candidate PostgreSQL $1; synthetic fixture only"

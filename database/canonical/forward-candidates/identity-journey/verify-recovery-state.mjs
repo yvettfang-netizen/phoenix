@@ -132,10 +132,11 @@ WITH s AS MATERIALIZED (
   LEFT JOIN identity.journey_crm_service_links chain ON chain.lead_event_id=r.lead_event_id
 ), authz AS (
   SELECT jsonb_build_object(
-    'notice',coalesce((SELECT jsonb_build_object('exists',true,'active',withdrawn_at IS NULL,
-      'withdrawn',withdrawn_at IS NOT NULL) FROM identity_journey_test.station_grant
+    'notice',coalesce((SELECT jsonb_build_object('exists',true,'active',withdrawn_at IS NULL AND expires_at>clock_timestamp(),
+      'withdrawn',withdrawn_at IS NOT NULL) FROM consent.identity_journey_station_grants
       WHERE identity_case_id=:'caseId'::uuid AND family_id=:'familyId'::uuid
-        AND subject_person_id=(SELECT subject_person_id FROM s) AND recipient_principal_id=:'principalId'::uuid),
+        AND subject_person_id=(SELECT subject_person_id FROM s) AND recipient_principal_id=:'principalId'::uuid
+      ORDER BY granted_at DESC,authorization_id DESC LIMIT 1),
       jsonb_build_object('exists',false,'active',false,'withdrawn',false)),
     'timeline',coalesce((SELECT jsonb_build_object('exists',true,'active',revoked_at IS NULL,'revoked_at',revoked_at)
       FROM identity_journey_test.timeline_authority WHERE case_id=:'caseId'::uuid AND family_id=:'familyId'::uuid

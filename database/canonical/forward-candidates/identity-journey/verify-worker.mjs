@@ -42,6 +42,72 @@ function query(sql, variables = {}, role = "bootstrap", restored = false) {
 }
 
 let injectRollback = false;
+
+// The station fixture represents the subject receiving their own reminders.
+// Authorization is issued and revoked through the candidate-purpose API under
+// a bound FAMILY context. It is intentionally independent of the CI-only
+// station_grant fixture still used by review-plan checks.
+const stationContext = {
+  familyId: "01910000-0000-7000-8100-000000000001",
+  caseId: "01910000-0000-7000-8100-000000000005",
+  personId: "01910000-0000-7000-8100-000000000002",
+  principalId: "01910000-0000-7000-8100-000000000003",
+};
+const stationAuthorizationIds = [
+  "01910000-0000-7000-8100-000000000080",
+  "01910000-0000-7000-8100-000000000081",
+  "01910000-0000-7000-8100-000000000082",
+  "01910000-0000-7000-8100-000000000083",
+  "01910000-0000-7000-8100-000000000084",
+  "01910000-0000-7000-8100-000000000085",
+  "01910000-0000-7000-8100-000000000086",
+];
+const stationNoticeVersion = "2026-11-28.v1";
+let stationAuthorizationIndex = 0;
+let activeStationAuthorizationId = null;
+const stationContextBindings = {
+  contextFamilyId: stationContext.familyId,
+  contextPersonId: stationContext.personId,
+  contextPrincipalId: stationContext.principalId,
+};
+
+function stationContextSql(statement) {
+  return `SELECT auth.issue_context_ticket(:'contextPrincipalId'::uuid, :'contextPersonId'::uuid,
+      :'contextFamilyId'::uuid, 'FAMILY', clock_timestamp()+interval '45 seconds',
+      gen_random_uuid(), :'contextPrincipalId'::uuid) AS ticket \\gset
+    SELECT auth.redeem_context_ticket(:'ticket'::uuid, :'contextPrincipalId'::uuid);
+    ${statement}
+    SELECT auth.clear_context();`;
+}
+
+function stationContextQuery(statement, variables = {}) {
+  return query(`BEGIN;
+    ${stationContextSql(statement)}
+    COMMIT;`, { ...stationContext, ...stationContextBindings, ...variables });
+}
+
+function issueNextStationAuthorization() {
+  const authorizationId = stationAuthorizationIds[stationAuthorizationIndex++];
+  assert.ok(authorizationId, "station authorization fixture capacity exhausted");
+  assert.equal(stationContextQuery(`SELECT COALESCE(
+      identity.issue_journey_station_authorization(:'authorizationId'::uuid, :'caseId'::uuid,
+        clock_timestamp()+interval '1 hour', :'noticeVersion'::text, true)::text, 'null');`, {
+    authorizationId,
+    noticeVersion: stationNoticeVersion,
+  }), authorizationId);
+  activeStationAuthorizationId = authorizationId;
+  return authorizationId;
+}
+
+function revokeStationAuthorization() {
+  if (!activeStationAuthorizationId) return false;
+  const authorizationId = activeStationAuthorizationId;
+  assert.equal(stationContextQuery(`SELECT identity.revoke_journey_station_authorization(
+      :'authorizationId'::uuid);`, { authorizationId }), "t");
+  activeStationAuthorizationId = null;
+  return true;
+}
+
 const queue = {
   async claimDue(limit) {
     return JSON.parse(query(`
@@ -54,21 +120,8 @@ const queue = {
     return query(`
       BEGIN;
       SET LOCAL statement_timeout = '4s';
-      WITH authorized AS MATERIALIZED (
-        SELECT grant_row.expires_at FROM identity.journey_station_reminders r
-        JOIN identity.cases c USING (identity_case_id)
-        JOIN identity_journey_test.station_grant grant_row
-          ON grant_row.identity_case_id = c.identity_case_id
-          AND grant_row.family_id = c.family_id AND grant_row.subject_person_id = c.subject_person_id
-          AND grant_row.recipient_principal_id = r.recipient_principal_id
-        WHERE r.reminder_id = :'reminderId'::uuid AND r.recipient_principal_id = :'recipientPrincipalId'::uuid
-          AND grant_row.withdrawn_at IS NULL
-        FOR SHARE OF grant_row
-      )
-      SELECT CASE WHEN EXISTS (SELECT 1 FROM authorized WHERE expires_at > clock_timestamp())
-        THEN identity.publish_journey_station_notice(
-          :'reminderId'::uuid, :'recipientPrincipalId'::uuid, :'revisionId'::uuid, :'claimToken'::uuid)
-        ELSE 'AUTHORIZATION_DENIED' END;
+      SELECT identity.publish_authorized_journey_station_notice(
+        :'reminderId'::uuid, :'recipientPrincipalId'::uuid, :'revisionId'::uuid, :'claimToken'::uuid);
       ${injectRollback ? "SELECT 1 / 0;" : ""}
       COMMIT;
     `, claim);
@@ -80,6 +133,8 @@ const queue = {
 };
 
 const candidate = "01910000-0000-7000-8100-000000000009";
+issueNextStationAuthorization();
+revokeStationAuthorization();
 function makeDue() {
   query(`UPDATE identity.journey_station_reminders SET retry_not_before = clock_timestamp() - interval '1 second'
     WHERE reminder_id = :'id'::uuid AND state = 'RETRY';`, { id: candidate });
@@ -99,7 +154,7 @@ assert.equal(revoked.deferred, 1);
 verifyReceipt(0);
 assert.equal((await runStationReminderBatch(queue, 1)).claimed, 0);
 
-query("UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;");
+issueNextStationAuthorization();
 makeDue();
 injectRollback = true;
 const failed = await runStationReminderBatch(queue, 1);
@@ -117,7 +172,7 @@ const delivered = await runIdentityStationSchedule("*/5 * * * *", {
 assert.equal(delivered.delivered, 1);
 verifyReceipt(1);
 assert.equal((await runStationReminderBatch(queue, 1)).claimed, 0);
-console.log("PASS station scheduler, revoked synthetic grant, delivery rollback and backoff, recovery and one notice/receipt");
+console.log("PASS station scheduler, withdrawn purpose grant, delivery rollback and backoff, recovery and one notice/receipt");
 
 const recipient = {
   familyId: "01910000-0000-7000-8100-000000000001",
@@ -126,20 +181,13 @@ const recipient = {
   noticeId: candidate,
 };
 const scopeArgs = ":'familyId'::uuid, :'caseId'::uuid, :'principalId'::uuid";
-const list = `SELECT COALESCE(jsonb_agg(to_jsonb(n)), '[]') FROM locked_grant g
-  CROSS JOIN LATERAL identity.list_journey_station_notices(${scopeArgs}, g.page_limit) n;`;
-const acknowledge = `SELECT identity.acknowledge_journey_station_notice(${scopeArgs}, g.notice_id) FROM locked_grant g;`;
+const list = `SELECT COALESCE(jsonb_agg(to_jsonb(n)), '[]')
+  FROM identity.list_authorized_journey_station_notices(${scopeArgs}, 50) n;`;
+const acknowledge = `SELECT identity.acknowledge_authorized_journey_station_notice(
+  ${scopeArgs}, :'noticeId'::uuid);`;
 
 function inbox(statement, scope = recipient) {
   return query(`BEGIN;
-    WITH locked_grant AS MATERIALIZED (
-      SELECT 50 AS page_limit, :'noticeId'::uuid AS notice_id
-      FROM identity_journey_test.station_grant
-      WHERE family_id = :'familyId'::uuid AND identity_case_id = :'caseId'::uuid
-        AND recipient_principal_id = :'principalId'::uuid AND withdrawn_at IS NULL
-        AND expires_at > clock_timestamp()
-      FOR SHARE
-    )
     ${statement}
     COMMIT;`, scope);
 }
@@ -158,17 +206,18 @@ assert.equal(query("SELECT count(*) FROM identity.journey_station_notice_reads;"
 assert.equal(inbox(acknowledge, { ...recipient, noticeId: recipient.familyId }), "");
 
 // Even a trusted resolver calling with a wrong scope must not reach this inbox.
-assert.equal(query(`SELECT count(*) FROM identity.list_journey_station_notices(${scopeArgs}, 50);`,
-  { ...recipient, familyId: recipient.caseId }), "0");
-assert.equal(query(`SELECT identity.acknowledge_journey_station_notice(${scopeArgs}, :'noticeId'::uuid);`,
-  { ...recipient, principalId: recipient.caseId }), "");
+assert.equal(inbox(`SELECT count(*) FROM identity.list_authorized_journey_station_notices(
+  ${scopeArgs}, 50);`, { ...recipient, familyId: recipient.caseId }), "0");
+assert.equal(inbox(`SELECT identity.acknowledge_authorized_journey_station_notice(
+  ${scopeArgs}, :'noticeId'::uuid);`, { ...recipient, principalId: recipient.caseId }), "");
 
 query(`UPDATE core.family_memberships SET valid_until = clock_timestamp()
   WHERE family_id = :'familyId'::uuid;`, recipient);
 assert.deepEqual(JSON.parse(inbox(list)), []);
 assert.equal(inbox(acknowledge), "");
 query(`UPDATE core.family_memberships SET valid_until = NULL WHERE family_id = :'familyId'::uuid;
-  UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_timestamp();`, recipient);
+`, recipient);
+revokeStationAuthorization();
 assert.deepEqual(JSON.parse(inbox(list)), []);
 assert.equal(inbox(acknowledge), "");
 verifyReceipt(1);
@@ -189,7 +238,7 @@ console.log("PASS scoped inbox, acknowledgement idempotency, access withdrawal a
 // Run the same delivered notification through the HTTP handler and SQL
 // transactions using a CI-only session/provider. The browser receives only
 // notice identity and timestamps; fixture subjects never cross the response.
-query("UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;");
+issueNextStationAuthorization();
 const origin = "https://family.synthetic.invalid";
 const events = [];
 let authActive = true;
@@ -234,8 +283,8 @@ const env = {
       assert.deepEqual(session, { customerId: "ci-only-account", sessionHash: "ci-only-session" });
       return {
         async assertCurrent() {
-          return query(`SELECT count(*) FROM identity_journey_test.station_grant
-            WHERE withdrawn_at IS NULL AND expires_at > clock_timestamp();`) === "1";
+          return query(`SELECT (identity.lock_journey_station_authorization(
+            :'familyId'::uuid, :'caseId'::uuid, :'principalId'::uuid) IS NOT NULL);`, stationContext) === "t";
         },
         async listAuthorized() {
           return JSON.parse(inbox(list)).map(n => ({ id: n.notice_id, publishedAt: n.published_at, readAt: n.read_at }));
@@ -271,7 +320,7 @@ assert.ok(events.includes("IDENTITY_INBOX_ACKNOWLEDGE_PREPARED"));
 authActive = false;
 assert.equal((await get()).status, 401);
 authActive = true;
-query("UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_timestamp();");
+revokeStationAuthorization();
 assert.equal((await get()).status, 403);
 assert.equal((await post(candidate)).status, 403);
 console.log("PASS Family OS inbox HTTP session, same-origin, minimized response, acknowledgement and revocation");
@@ -306,7 +355,8 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   delegationManagementBrowser = verifyDelegationManagementBrowser;
   const { verifyStationSchedule } = await import("./verify-station-schedule.mjs");
   const scheduledReminder = "01910000-0000-7000-8100-000000000010";
-  query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_timestamp();
+  revokeStationAuthorization();
+  query(`
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
     SELECT :'scheduledReminder'::uuid, identity_case_id, episode_id, date_revision_id,
@@ -318,7 +368,8 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
     afterDenied() {
       assert.equal(query(`SELECT state='RETRY' AND retry_not_before>clock_timestamp() AND claim_token IS NULL
         FROM identity.journey_station_reminders WHERE reminder_id=:'scheduledReminder'::uuid;`, { scheduledReminder }), "t");
-      query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
+      issueNextStationAuthorization();
+      query(`
         UPDATE identity.journey_station_reminders SET retry_not_before = clock_timestamp()-interval '1 second'
         WHERE reminder_id=:'scheduledReminder'::uuid;`, { scheduledReminder });
     },
@@ -332,16 +383,17 @@ if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
         verifySession: async () => hasSession ? authConfig.verifySession() : null,
       });
     },
-    revokeGrant() { query("UPDATE identity_journey_test.station_grant SET withdrawn_at = clock_timestamp();"); },
+    revokeGrant() { revokeStationAuthorization(); },
     receiptCount() { return Number(query("SELECT count(*) FROM identity.journey_station_notice_reads;")); },
   });
   console.log("PASS Chromium desktop and mobile inbox over HTTP and isolated PostgreSQL");
 }
 function setRenewalNoticeAuthorization(active) {
-  query(`UPDATE identity_journey_test.station_grant SET withdrawn_at =
-     CASE WHEN :'active'::boolean THEN NULL ELSE clock_timestamp() END
-    WHERE identity_case_id = :'caseId'::uuid AND recipient_principal_id = :'principalId'::uuid;`,
-  { ...recipient, active });
+  if (active) {
+    if (!activeStationAuthorizationId) issueNextStationAuthorization();
+    return;
+  }
+  revokeStationAuthorization();
 }
 setRenewalNoticeAuthorization(true);
 const timeline = await verifyTimeline({

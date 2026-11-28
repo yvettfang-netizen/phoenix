@@ -109,11 +109,8 @@ BEGIN
     purpose,data_class,status,granted_at,expires_at)
     VALUES(active_consent,home,subject,advisor_person,subject,'IDENTITY_CASE','IDENTITY_SENSITIVE',
       'ACTIVE',clock_timestamp()-interval '5 minutes',clock_timestamp()+interval '1 hour');
-  PERFORM 1 FROM identity_journey_test.station_grant
-    WHERE identity_case_id=journey_case AND family_id=home AND subject_person_id=subject
-      AND recipient_principal_id=recipient AND withdrawn_at IS NULL AND expires_at>clock_timestamp()
-    FOR SHARE;
-  IF NOT FOUND THEN RAISE EXCEPTION 'RENEWAL_STATION_AUTHORITY_MISSING'; END IF;
+  IF identity.lock_journey_station_authorization(home,journey_case,recipient) IS NULL
+  THEN RAISE EXCEPTION 'RENEWAL_STATION_AUTHORITY_MISSING'; END IF;
 
   IF identity.apply_journey_renewal(spare,updated,recipient,ARRAY[7]::smallint[],ARRAY[new_due]) IS NOT NULL
     OR identity.apply_journey_renewal(invalid_receipt,updated,recipient,ARRAY[7]::smallint[],ARRAY[new_due]) IS NOT NULL
