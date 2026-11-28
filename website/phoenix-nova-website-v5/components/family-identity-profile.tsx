@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheck, ArrowRight, Clock3 } from "lucide-react";
 import {
   identityProfilePath,
@@ -154,7 +154,21 @@ function MilestoneRow({ milestone, locale }: { milestone: Milestone; locale: Loc
   </div>;
 }
 
-export function FamilyIdentityProfile({ locale }: { locale: Locale }) {
+export function FamilyIdentityProfile({
+  locale,
+  onMemberSelectionChange,
+  memberResidence,
+}: {
+  locale: Locale;
+  /**
+   * Notifies the Family Center only after an authorized member profile has
+   * loaded.  The parent uses this to mount separately scoped, read-only
+   * member modules; it must never be used to submit profile data.
+   */
+  onMemberSelectionChange?: (member: IdentityProfileMember | null) => void;
+  /** Optional read-only member panel mounted by the Family Center gate. */
+  memberResidence?: ReactNode;
+}) {
   const [members, setMembers] = useState<IdentityProfileMember[]>([]);
   const [selectedRef, setSelectedRef] = useState<string | null>(null);
   const [profile, setProfile] = useState<IdentityMemberProfile | null>(null);
@@ -173,7 +187,8 @@ export function FamilyIdentityProfile({ locale }: { locale: Locale }) {
     setSelectedRef(null);
     setProfile(null);
     setState(nextState);
-  }, []);
+    onMemberSelectionChange?.(null);
+  }, [onMemberSelectionChange]);
 
   const armExpiry = useCallback(() => {
     if (expiryTimer.current) clearTimeout(expiryTimer.current);
@@ -189,6 +204,7 @@ export function FamilyIdentityProfile({ locale }: { locale: Locale }) {
     setSelectedRef(null);
     setProfile(null);
     setState("loading");
+    onMemberSelectionChange?.(null);
     try {
       const response = await fetch(identityProfilePath, {
         method: "GET",
@@ -207,7 +223,7 @@ export function FamilyIdentityProfile({ locale }: { locale: Locale }) {
       if (controller.signal.aborted || sequence !== requestSequence.current) return;
       clearSensitive(error instanceof Error && error.message === "denied" ? "denied" : "error");
     }
-  }, [armExpiry, clearSensitive]);
+  }, [armExpiry, clearSensitive, onMemberSelectionChange]);
 
   const selectMember = useCallback(async (memberRef: string) => {
     const selected = members.find((member) => member.ref === memberRef);
@@ -220,6 +236,7 @@ export function FamilyIdentityProfile({ locale }: { locale: Locale }) {
     setSelectedRef(selected.ref);
     setProfile(null);
     setState("loading");
+    onMemberSelectionChange?.(null);
     try {
       const response = await fetch(identityProfilePath, {
         method: "POST",
@@ -235,12 +252,13 @@ export function FamilyIdentityProfile({ locale }: { locale: Locale }) {
       if (!parsed) throw new Error("error");
       setProfile(parsed);
       setState("ready");
+      onMemberSelectionChange?.(selected);
       armExpiry();
     } catch (error) {
       if (controller.signal.aborted || sequence !== requestSequence.current) return;
       clearSensitive(error instanceof Error && error.message === "denied" ? "denied" : "error");
     }
-  }, [armExpiry, clearSensitive, members]);
+  }, [armExpiry, clearSensitive, members, onMemberSelectionChange]);
 
   useEffect(() => {
     const initialLoad = window.setTimeout(() => void loadMembers(), 0);
@@ -258,8 +276,9 @@ export function FamilyIdentityProfile({ locale }: { locale: Locale }) {
       window.removeEventListener("pagehide", onPageHide);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       requestController.current?.abort();
+      onMemberSelectionChange?.(null);
     };
-  }, [clearSensitive, loadMembers]);
+  }, [clearSensitive, loadMembers, onMemberSelectionChange]);
 
   const selectedMember = selectedRef ? members.find((member) => member.ref === selectedRef) : null;
   return <section className="fc-panel" aria-labelledby="fc-identity-profile-title">
@@ -298,6 +317,7 @@ export function FamilyIdentityProfile({ locale }: { locale: Locale }) {
       </article>) : <p className="fc-muted">{text(locale, "暂无可显示的身份阶段。", "No identity stages are available.")}</p>}
       <p className="fc-muted">{text(locale, "已核验与待核验信息分开显示；日期仅反映授权资料中的记录，不代表资格判断。", "Verified and reported information are shown separately. Dates reflect authorized records and do not determine eligibility.")}</p>
     </div> : null}
+    {memberResidence}
     <p className="fc-muted">{text(locale, "家庭关系本身不会授予其他成年成员的资料访问权；当前暂不支持成人委托。", "Family membership alone does not grant access to another adult's records. Adult delegation is not supported at this time.")}</p>
     <button type="button" className="fc-gold" onClick={() => void loadMembers()}><ArrowRight size={17} />{text(locale, "重新核验成员授权", "Verify member access again")}</button>
     <p className="fc-muted"><Clock3 size={13} aria-hidden="true" /> {text(locale, "离开或隐藏页面后，成员资料会自动清除。", "Member information is cleared when you leave or hide this page.")}</p>

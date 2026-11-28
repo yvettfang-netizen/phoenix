@@ -45,7 +45,7 @@ function readRecordFields(input: Record<string, unknown>, latest: string, allowU
   return { from, untilBefore, place, absenceReason, expectedReturnOn };
 }
 
-function overview(data: { records: unknown[]; canReport: boolean }, asOf: string, canReport: boolean): IdentityResidenceOverview {
+export function buildIdentityResidenceOverview(data: { records: unknown[]; canReport: boolean }, asOf: string, canReport: boolean): IdentityResidenceOverview {
   if (!Array.isArray(data.records) || data.records.length > maxRecords || typeof data.canReport !== "boolean") {
     throw new Error("Invalid or incomplete residence window");
   }
@@ -106,7 +106,7 @@ export async function handleIdentityResidence(request: Request, env: Record<stri
       if (!scope || await scope.assertCurrent() !== true) return reply(403, "ACCESS_DENIED");
       const source = await scope.listAuthorized((Number(asOf.slice(0, 4)) - 6) + "-01-01", asOf);
       if (!source) return reply(403, "ACCESS_DENIED");
-      const data = overview(source, asOf, reportingEnabled);
+      const data = buildIdentityResidenceOverview(source, asOf, reportingEnabled);
       await config.recordAccess(session.id, "IDENTITY_RESIDENCE_READ_PREPARED", requestId + ":prepared");
       if (!await sessionStillCurrent()) return reply(401, "SIGN_IN_REQUIRED");
       if (await scope.assertCurrent() !== true) return reply(403, "ACCESS_DENIED");

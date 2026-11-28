@@ -4,6 +4,7 @@ import { type FormEvent, useCallback, useEffect, useRef, useState } from "react"
 import { CalendarRange, Globe2, ShieldCheck } from "lucide-react";
 import {
   identityResidenceAbsenceReasons,
+  identityMemberResidencePath,
   identityResidencePath,
   type IdentityResidenceOverview,
   type IdentityResidenceRecord,
@@ -115,8 +116,20 @@ function labelReason(reason: string, locale: "zh" | "en") {
   return labels[reason]?.[locale === "zh" ? 0 : 1] ?? reason;
 }
 
-export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
+export function FamilyIdentityResidence({
+  locale,
+  memberRef,
+  memberLabel,
+}: {
+  locale: "zh" | "en";
+  /** Opaque authorized member reference. Presence means read-only member mode. */
+  memberRef?: string;
+  /** Display label from the already-authorized member roster; never a member id. */
+  memberLabel?: string;
+}) {
   const t = (zh: string, en: string) => locale === "zh" ? zh : en;
+  const memberMode = Boolean(memberRef);
+  const titleId = memberMode ? "identity-member-residence-title" : "identity-residence-title";
   const [reload, setReload] = useState(0);
   const [state, setState] = useState<State>("loading");
   const [overview, setOverview] = useState<IdentityResidenceOverview | null>(null);
@@ -145,11 +158,22 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
     const clear = () => clearSensitive("stale");
     const hide = () => { if (document.hidden) clear(); };
 
-    void fetch(identityResidencePath, {
-      credentials: "same-origin",
-      cache: "no-store",
-      signal: controller.signal,
-    }).then(async response => {
+    const request = memberRef
+      ? fetch(identityMemberResidencePath, {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json", "Content-Type": "application/json", "Cache-Control": "no-store" },
+        body: JSON.stringify({ memberRef }),
+        signal: controller.signal,
+      })
+      : fetch(identityResidencePath, {
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { Accept: "application/json", "Cache-Control": "no-store" },
+        signal: controller.signal,
+      });
+    void request.then(async response => {
       if (controller.signal.aborted) return;
       if (!response.ok) {
         clearSensitive(response.status === 401 || response.status === 403 ? "denied" : "unavailable");
@@ -178,7 +202,7 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
       document.removeEventListener("visibilitychange", hide);
       window.removeEventListener("pagehide", clear);
     };
-  }, [clearSensitive, reload]);
+  }, [clearSensitive, memberRef, reload]);
 
   function refresh() {
     clearSensitive("loading");
@@ -187,7 +211,9 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
 
   async function submitReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!overview?.canReport || reportController.current) return;
+    // A member reference is read-only by construction. Never send a write
+    // request carrying an authorized member reference.
+    if (memberRef || !overview?.canReport || reportController.current) return;
     const today = overview.asOf;
     if (!isCivilDate(form.from) || !isCivilDate(form.untilBefore) || form.from >= form.untilBefore || form.untilBefore > today) {
       setReportState("error");
@@ -257,11 +283,20 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
     ready: "",
   }[state];
 
-  return <section className="fc-panel" aria-labelledby="identity-residence-title">
+  return <section
+    className="fc-panel"
+    aria-labelledby={titleId}
+    data-identity-member-residence={memberMode ? "true" : undefined}
+    data-member-residence-readonly={memberMode ? "true" : undefined}
+  >
     <div className="fc-heading">
-      <h2 id="identity-residence-title"><Globe2 aria-hidden="true" />{t("出入境与通常居住记录", "Travel, entry and ordinary residence records")}</h2>
+      <h2 id={titleId}><Globe2 aria-hidden="true" />{memberMode ? t("成员出入境与通常居住记录", "Member travel, entry and ordinary residence records") : t("出入境与通常居住记录", "Travel, entry and ordinary residence records")}</h2>
       {overview ? <span>{t("截至", "As of")} {formatCivil(overview.asOf, locale)}</span> : null}
     </div>
+    {memberMode ? <div className="fc-context selected-member-context" role="note" aria-label={t("所选成员只读上下文", "Selected member read-only context")}>
+      <strong>{t("当前查看成员：", "Viewing member: ")}{memberLabel || t("已授权成员", "Authorized member")}</strong>
+      <span>{t("仅显示经授权的只读记录；成员视图不能提交新的出入境记录。", "Only authorized read-only records are shown; new residence records cannot be submitted from a member view.")}</span>
+    </div> : null}
     <p className="fc-muted">{t("这里只整理经授权的记录，不自动判断通常居住、永久居民或护照资格。所有区间为香港民用日期，结束日不含当天。", "This area organizes authorized records only. It does not determine ordinary residence, permanent-resident status or passport eligibility. Intervals use Hong Kong civil dates and exclude the end date.")}</p>
     {state !== "ready" ? <p className="fc-state" role="status" aria-live="polite">{reportMessage || statusText}</p> : null}
     {state === "ready" && overview ? <>
@@ -295,7 +330,7 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
         <span>{t("居留权与永居资格：需人工核验", "Right of abode and permanent residence: human review required")}</span>
         <span>{t("护照资格：需人工核验", "Passport eligibility: human review required")}</span>
       </div>
-      {overview.canReport ? <form onSubmit={submitReport} aria-labelledby="identity-residence-report-title">
+      {overview.canReport && !memberMode ? <form onSubmit={submitReport} aria-labelledby="identity-residence-report-title">
         <fieldset style={{ border: "1px solid #e6d8c5", borderRadius: 10, padding: 12 }}>
           <legend id="identity-residence-report-title">{t("补充本人记录", "Add your record")}</legend>
           <p className="fc-muted">{t("提交日期和位置即可，无需上传证件。", "Submit dates and location. No documents are required.")}</p>
@@ -321,7 +356,9 @@ export function FamilyIdentityResidence({ locale }: { locale: "zh" | "en" }) {
           <button className="fc-gold" type="submit" disabled={reportState === "submitting"}>{reportState === "submitting" ? t("正在保存……", "Saving…") : t("提交记录", "Submit record")}</button>
           {reportMessage ? <p role="status" aria-live="polite" className="fc-muted">{reportMessage}</p> : null}
         </fieldset>
-      </form> : <p className="fc-muted">{t("自助补充记录暂未开放；已授权的只读记录仍可查看。", "Self-reporting is not currently open; authorized read-only records remain available.")}</p>}
+      </form> : <p className="fc-muted">{memberMode
+        ? t("成员视图为只读；如需补充记录，请由本人在自己的授权模块中提交。", "Member view is read-only. To add a record, the signed-in person must use their own authorized module.")
+        : t("自助补充记录暂未开放；已授权的只读记录仍可查看。", "Self-reporting is not currently open; authorized read-only records remain available.")}</p>}
     </> : null}
     {state !== "loading" ? <button type="button" className="fc-gold" onClick={refresh}><CalendarRange size={16} aria-hidden="true" />{t("刷新记录", "Refresh records")}</button> : null}
   </section>;

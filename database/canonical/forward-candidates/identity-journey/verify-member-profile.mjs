@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { handleIdentityProfile } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-profile.ts";
 import { identityProfilePath } from "../../../../website/phoenix-nova-website-v5/lib/identity-journey-profile-contract.ts";
+import { verifyIdentityMemberResidence } from "./verify-member-residence.mjs";
 
 /*
  * This verifier is intentionally a disposable-database adapter test.  The
  * browser sees only opaque member references and the small profile projection;
  * all fixture UUIDs remain inside the trusted resolver and PostgreSQL checks.
  */
-export async function verifyIdentityMemberProfile({ query, recipient, authConfig, browser }) {
+export async function verifyIdentityMemberProfile({ query, recipient, authConfig, browser, memberResidenceBrowser }) {
   const id = sequence => `01910000-0000-7000-8100-${String(sequence).padStart(12, "0")}`;
   const actor = id(2);
   const verifierPrincipal = id(41);
@@ -427,6 +428,16 @@ export async function verifyIdentityMemberProfile({ query, recipient, authConfig
       lifecycle_status = 'REVOKED'
     WHERE authority_id = :'authority'::uuid AND revoked_at IS NULL;`,
   { ...recipient, authority: childAuthority });
+  const memberResidence = await verifyIdentityMemberResidence({
+    query,
+    recipient,
+    authConfig,
+    member: memberFor(childRef),
+    profileLock,
+    profilePost: post,
+    profileEnv: env,
+    browser: memberResidenceBrowser,
+  });
   if (browser) {
     await browser({
       apiPath: identityProfilePath,
@@ -449,6 +460,7 @@ export async function verifyIdentityMemberProfile({ query, recipient, authConfig
   const afterRevoke = await get();
   assert.equal((await afterRevoke.json()).members.some(member => member.ref === childRef), false);
   assert.equal((await post({ memberRef: childRef })).status, 403);
+  assert.equal((await memberResidence.post({ memberRef: childRef })).status, 403);
   assert.equal((await get({}, env, { ...authConfig, verifySession: async () => null })).status, 401);
   console.log("PASS identity member profile HTTP/Canonical scope, opaque roster, verified minor guardian access, case separation, document minimization, adult transition, cross-family/general denial and revocation");
 }

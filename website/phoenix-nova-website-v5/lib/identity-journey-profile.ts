@@ -1,7 +1,7 @@
 import { readCustomerSession, type AuthConfig } from "./customer-auth";
 import { identityPathways } from "./identity-journey-policy";
 import { identityMilestoneKinds, identityProfilePath, type IdentityMemberProfile, type IdentityProfileMember } from "./identity-journey-profile-contract";
-import { identityPrivateHeaders, isIdentityCivilDate, readIdentityRequestBody, sameOriginIdentityRequest } from "./identity-journey-request";
+import { identityPrivateHeaders, isIdentityCivilDate, isIdentityMemberRef, readIdentityMemberSelection, sameOriginIdentityRequest } from "./identity-journey-request";
 
 type Session = { customerId: string; sessionHash: string };
 type AuthorizedRead = { assertCurrent(): Promise<boolean> };
@@ -20,10 +20,6 @@ export function identityProfileEnabled(env: Record<string, unknown>) {
     typeof provider?.resolveRoster === "function" && typeof provider.resolveMember === "function";
 }
 
-function isMemberRef(value: unknown): value is string {
-  return typeof value === "string" && /^member_[A-Za-z0-9_-]{24,96}$/.test(value);
-}
-
 function readObject(input: unknown): Record<string, unknown> {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error("Invalid profile projection");
   return input as Record<string, unknown>;
@@ -35,7 +31,7 @@ function privateRoster(value: unknown): { members: IdentityProfileMember[] } {
   return {
     members: value.map(input => {
       const { ref, label, access } = readObject(input);
-      if (!isMemberRef(ref) || seen.has(ref) || typeof label !== "string" || label.trim().length < 1 ||
+      if (!isIdentityMemberRef(ref) || seen.has(ref) || typeof label !== "string" || label.trim().length < 1 ||
         label.length > 120 || (access !== "SELF" && access !== "GUARDIAN")) throw new Error("Invalid member roster entry");
       seen.add(ref);
       return { ref, label: label.trim(), access };
@@ -82,9 +78,8 @@ export async function handleIdentityProfile(request: Request, env: Record<string
     const identity = { customerId: session.id, sessionHash: session.token_hash };
     const requestId = crypto.randomUUID();
     const roster = request.method === "GET";
-    const selected = roster ? null : await readIdentityRequestBody(request, 160);
-    const memberRef = selected?.memberRef;
-    if (!roster && (!selected || Object.keys(selected).length !== 1 || !isMemberRef(memberRef))) {
+    const memberRef = roster ? null : await readIdentityMemberSelection(request);
+    if (!roster && !memberRef) {
       return reply(400, "INVALID_MEMBER_SELECTION");
     }
     const audit = roster ? "IDENTITY_PROFILE_ROSTER" : "IDENTITY_PROFILE_READ";

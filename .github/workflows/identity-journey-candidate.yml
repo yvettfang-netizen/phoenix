@@ -18,6 +18,7 @@ on:
       - 'website/phoenix-nova-website-v5/app/api/family-services/identity-timeline/**'
       - 'website/phoenix-nova-website-v5/app/api/family-services/identity-residence/**'
       - 'website/phoenix-nova-website-v5/app/api/family-services/identity-profile/**'
+      - 'website/phoenix-nova-website-v5/app/api/family-services/identity-member-residence/**'
       - 'website/phoenix-nova-website-v5/tests/identity-journey.test.mjs'
       - '.github/workflows/identity-journey-candidate.yml'
 permissions:

@@ -22,7 +22,8 @@ async function bundleFamilyCenter(view) {
         createRoot(document.getElementById("root")).render(
           <FamilyCenterV2 locale={locale} account workbench
             identityInbox={${view === "inbox"}} identityTimeline={${view === "timeline"}}
-            identityResidence={${view === "residence"}} identityProfile={${view === "profile"}} />
+            identityResidence={${view === "residence"}} identityProfile={${view === "profile" || view === "member-residence"}}
+            identityMemberResidence={${view === "member-residence"}} />
         );`,
     },
     bundle: true, write: false, format: "iife", platform: "browser", target: "es2022", jsx: "automatic",
@@ -44,7 +45,7 @@ async function bundleFamilyCenter(view) {
   return result.outputFiles[0].text;
 }
 
-async function withFamilyView({ handle, apiPath, view }, verify) {
+async function withFamilyView({ handle, apiPath, view, secondary }, verify) {
   const output = process.env.IDENTITY_BROWSER_EVIDENCE_DIR;
   await mkdir(output, { recursive: true });
   const { chromium } = await import(pathToFileURL(join(process.env.PLAYWRIGHT_MODULE, "index.mjs")).href);
@@ -63,11 +64,12 @@ async function withFamilyView({ handle, apiPath, view }, verify) {
       const url = new URL(request.url, origin);
       if (url.pathname === "/assets/identity-inbox.js") return send(200, bundle, "text/javascript");
       if (url.pathname === "/assets/identity-inbox.css") return send(200, css, "text/css");
-      if (url.pathname === apiPath) {
+      const handler = url.pathname === apiPath ? handle : url.pathname === secondary?.path ? secondary.handle : undefined;
+      if (handler) {
         const chunks = [];
         for await (const chunk of request) chunks.push(chunk);
         const verifiedCookie = String(request.headers.cookie ?? "").split(";").some(cookie => cookie.trim() === `inbox=${sessionCookie}`);
-        const upstream = await handle(new Request(url, {
+        const upstream = await handler(new Request(url, {
           method: request.method, headers: request.headers, body: chunks.length ? Buffer.concat(chunks) : undefined,
         }), origin, verifiedCookie);
         response.writeHead(upstream.status, Object.fromEntries(upstream.headers));
@@ -252,5 +254,55 @@ export async function verifyFamilyMemberProfileBrowser({ handle, apiPath, revoke
     assert.equal(await mobile.panel.locator("time").count(), 0);
     assert.equal(await mobile.dependent.count(), 0);
     console.log("PASS Chromium Family OS switches between authorized member histories and clears revoked guardian profile");
+  });
+}
+
+export async function verifyFamilyMemberResidenceBrowser({
+  profilePath, handleProfile, residencePath, handleResidence, guardianLabel, selfLabel,
+  childFrom, revokeResidence, restoreResidence,
+}) {
+  const secondary = { path: residencePath, handle: handleResidence };
+  let holdProfileResponse = null;
+  async function handle(request, origin, hasSession) {
+    if (request.method === "POST" && holdProfileResponse) await holdProfileResponse;
+    return handleProfile(request, origin, hasSession);
+  }
+  await withFamilyView({ handle, apiPath: profilePath, view: "member-residence", secondary }, async ({ pageFor, output }) => {
+    const open = async (locale, width) => {
+      const page = await pageFor(locale, width);
+      await page.getByRole("button", { name: locale === "zh" ? /我的身份/ : /My Identity/ }).click();
+      const profile = page.getByRole("region", { name: locale === "zh" ? "成员身份档案" : "Member identity profile" });
+      const guardian = profile.getByRole("button", { name: new RegExp(guardianLabel) });
+      const self = profile.getByRole("button", { name: new RegExp(selfLabel) });
+      await guardian.click();
+      const residence = profile.locator("[data-identity-member-residence]");
+      await residence.locator(`time[datetime="${childFrom}"]`).waitFor();
+      assert.equal(await residence.locator("form").count(), 0);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+      await page.screenshot({ path: join(output, `identity-member-residence-${locale}-${width}.png`), fullPage: true });
+      return { profile, guardian, self, residence };
+    };
+    const desktop = await open("en", 1440);
+    const { promise, resolve } = Promise.withResolvers();
+    holdProfileResponse = promise;
+    try {
+      await desktop.self.click();
+      await desktop.residence.waitFor({ state: "hidden" });
+    } finally {
+      holdProfileResponse = null;
+      resolve();
+    }
+    const mobile = await open("zh", 390);
+    await revokeResidence();
+    try {
+      await mobile.residence.getByRole("button", { name: "刷新记录" }).click();
+      await mobile.residence.getByRole("status").filter({ hasText: /无法读取/ }).waitFor();
+      assert.equal(await mobile.residence.locator("time").count(), 0);
+      assert.equal(await mobile.guardian.getAttribute("aria-pressed"), "true");
+      await mobile.profile.getByRole("heading", { name: "受养人身份" }).waitFor();
+    } finally {
+      await restoreResidence();
+    }
+    console.log("PASS Chromium Family OS isolates selected member residence and clears a separately revoked residence grant");
   });
 }

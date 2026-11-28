@@ -15,8 +15,9 @@ import { FamilyIdentityInbox } from './family-identity-inbox';
 import { FamilyIdentityTimeline } from './family-identity-timeline';
 import { FamilyIdentityResidence } from './family-identity-residence';
 import { FamilyIdentityProfile } from './family-identity-profile';
+import { type IdentityProfileMember } from '@/lib/identity-journey-profile-contract';
 
-type Props = { locale: 'zh'|'en'; demo?: boolean; identityJourneyPreview?: boolean; identityInbox?: boolean; identityConsultation?: boolean; identityTimeline?: boolean; identityResidence?: boolean; identityProfile?: boolean; canonical?: boolean; personalized?: boolean; harmony?: boolean; account?: boolean; workbench?: boolean };
+type Props = { locale: 'zh'|'en'; demo?: boolean; identityJourneyPreview?: boolean; identityInbox?: boolean; identityConsultation?: boolean; identityTimeline?: boolean; identityResidence?: boolean; identityProfile?: boolean; identityMemberResidence?: boolean; canonical?: boolean; personalized?: boolean; harmony?: boolean; account?: boolean; workbench?: boolean };
 const domainText = {education:['教育 · 成长','Education'],identity:['身份 · 规划','Identity'],health:['健康 · 守护','Health'],wealth:['财富 · 保障','Wealth']};
 const icons = {education:GraduationCap,identity:Globe,health:Heart,wealth:Coins};
 const art = {education:'/images/education-v3/education-academy.png',identity:'/images/identity-v3/identity-hong-kong.png',health:'/images/health-v31-gba-family.png',wealth:'/images/wealth-v3/family-harbour.png'};
@@ -29,10 +30,11 @@ export function FamilyCenterV2(props: Props) {
   // Distinct identities and modes own distinct component state.
   return <ScopedCenter key={`${props.demo?'demo':props.canonical?'canonical':'account'}:${props.locale}`} {...props}/>;
 }
-function ScopedCenter({locale,demo=false,identityJourneyPreview=false,identityInbox=false,identityConsultation=false,identityTimeline=false,identityResidence=false,identityProfile=false,canonical=false,personalized=false,harmony=false,account=false,workbench=false}:Props) {
+function ScopedCenter({locale,demo=false,identityJourneyPreview=false,identityInbox=false,identityConsultation=false,identityTimeline=false,identityResidence=false,identityProfile=false,identityMemberResidence=false,canonical=false,personalized=false,harmony=false,account=false,workbench=false}:Props) {
   const en=locale==='en', t=(zh:string,english:string)=>en?english:zh;
   const [view,setView]=useState('overview'), [scenario,setScenario]=useState<Scenario>('multi');
   const [family,setFamily]=useState('demo-family-a'), [member,setMember]=useState<string|null>(null), [pin,setPin]=useState<Domain|null>(null);
+  const [selectedIdentityMember, setSelectedIdentityMember] = useState<IdentityProfileMember | null>(null);
   const [data,setData]=useState<DashboardView>(emptyDashboard), [state,setState]=useState<ModuleState>(canonical?'loading':'unavailable');
   const [demoState,setDemoState]=useState<ModuleState>('ready');
   const [detail,setDetail]=useState<string|null>(null), [retry,setRetry]=useState(0);
@@ -56,7 +58,7 @@ function ScopedCenter({locale,demo=false,identityJourneyPreview=false,identityIn
   const selectedFamily=demo?source.families.find(f=>f.id===family):source.families[0];
   const projection=scopedDashboard(source,member), services=preferredServices(projection.services,pin), dates=verifiedDates(projection.dates), priority=dates[0];
   const moduleState:ModuleState=demo?demoState:state;
-  const changeContext=()=>{setMember(null);setPin(null);setDetail(null);};
+  const changeContext=()=>{setMember(null);setPin(null);setDetail(null);setSelectedIdentityMember(null);};
   const refresh=()=>{setData(emptyDashboard());setState('loading');setMember(null);setDetail(null);setRetry(n=>n+1);};
   return <div className={p1AccountWorkbench?"fc-v2 fc-p1-services":"fc-v2"} data-family-center-v2>
     <header className="fc-top"><Link href={`/${locale}`} aria-label="Phoenix Nova"><Image unoptimized src="/brand/official/v3/phoenix-nova-header@2x.png" alt="Phoenix Nova™" width={195} height={60}/></Link><div className="fc-product"><strong>{t('凤启家序','Family OS')}</strong><small>{t('Family OS','凤启家序')}</small></div><div className="fc-account"><Link href={`/${en?'zh':'en'}/family-center`} hrefLang={en?'zh':'en'}>{en?'中文':'English'}</Link><button type="button" className={identityInbox?'fc-identity-inbox-toggle':undefined} aria-pressed={identityInbox?view==='identity-inbox':undefined} onClick={()=>identityInbox?setView('identity-inbox'):p1AccountWorkbench?setView('updates'):setDetail(t('暂无已核验的新通知。','No verified new notifications.'))} aria-label={t('通知','Notifications')}><Bell size={21}/></button><Link href={`/${locale}/account`}>{t('账户与安全','Account & security')}</Link></div></header>
@@ -73,8 +75,17 @@ function ScopedCenter({locale,demo=false,identityJourneyPreview=false,identityIn
       <section className="fc-hero"><div className="fc-hero-art" aria-hidden="true"/><div className="fc-hero-copy"><p>PHOENIX NOVA™</p><h1>{t('凤启家序','Family OS')}</h1><p className="fc-hero-tagline">{t('每一个重要阶段，都有温暖的陪伴。','Every important chapter, thoughtfully supported.')}</p><span>{en?'每一个重要阶段，都有温暖的陪伴。':'Every important chapter, thoughtfully supported.'}</span></div></section>
       {p1AccountWorkbench?null:<div className="fc-context">{selectedFamily?<><label>{t('当前家庭','Family')}<select aria-label={t('当前家庭','Family')} value={selectedFamily.id} disabled={!demo} onChange={e=>{setFamily(e.target.value);changeContext();}}>{source.families.map(f=><option key={f.id} value={f.id}>{f.name}</option>)}</select></label><label>{t('资料主体','Subject')}<select aria-label={t('资料主体','Subject')} value={member??''} onChange={e=>{setMember(e.target.value||null);setPin(null);setDetail(null);}}><option value="">{t('已授权摘要','Authorized summaries')}</option>{selectedFamily.members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label></>:<span>{t('个人客户也可直接咨询，无需先创建家庭。','You can consult as an individual without creating a family.')}</span>}{canonical&&!account&&!demo?<button onClick={refresh}>{t('重新核验资料','Refresh authorization')}</button>:null}</div>}
       {!p1AccountWorkbench&&moduleState!=='ready'?<CenterState state={moduleState} en={en}/>:null}
-      {identityInbox&&view==='identity-inbox'?<FamilyIdentityInbox locale={locale} consultationEnabled={identityConsultation} onOpenTimeline={identityTimeline?()=>setView('identity'):undefined}/>:(identityProfile||identityTimeline||identityResidence)&&view==='identity'?<>
-        {identityProfile?<FamilyIdentityProfile locale={locale}/>:null}
+      {identityInbox&&view==='identity-inbox'?<FamilyIdentityInbox locale={locale} consultationEnabled={identityConsultation} onOpenTimeline={identityTimeline?()=>setView('identity'):undefined}/>:(identityProfile||identityTimeline||identityResidence||identityMemberResidence)&&view==='identity'?<>
+        {identityProfile?<FamilyIdentityProfile
+          locale={locale}
+          onMemberSelectionChange={setSelectedIdentityMember}
+          memberResidence={identityMemberResidence && selectedIdentityMember?.access === 'GUARDIAN' ? <FamilyIdentityResidence
+            key={selectedIdentityMember.ref}
+            locale={locale}
+            memberRef={selectedIdentityMember.ref}
+            memberLabel={selectedIdentityMember.label}
+          /> : null}
+        />:null}
         {identityProfile&&(identityTimeline||identityResidence)?<p className="fc-muted"><strong>{t('以下为登录本人模块；与上方所选成员档案分开显示。','The modules below belong to the signed-in member and are separate from the selected member profile above.')}</strong></p>:null}
         {identityTimeline?<FamilyIdentityTimeline locale={locale}/>:null}
         {identityResidence?<FamilyIdentityResidence locale={locale}/>:null}

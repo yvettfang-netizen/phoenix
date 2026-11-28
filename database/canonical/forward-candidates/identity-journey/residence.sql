@@ -34,6 +34,35 @@ CREATE UNIQUE INDEX journey_residence_self_report_key ON identity.journey_reside
 CREATE UNIQUE INDEX journey_residence_review_key ON identity.journey_residence_intervals
   (confirmed_report_id,evidence_version_id) WHERE record_source = 'ADVISER_VERIFIED';
 
+-- Shared row projection. Its caller must already hold the case and purpose scope.
+CREATE FUNCTION identity.collect_journey_residence(p_subject uuid, p_cases uuid[], p_from date, p_until date) RETURNS jsonb
+LANGUAGE sql
+SET search_path = pg_catalog
+AS $fn$
+  SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY r."from" DESC, r.id), '[]')
+  FROM (
+    SELECT i.interval_id AS id, i.from_on AS "from", i.until_before AS "untilBefore", i.location_class AS place,
+      i.record_source AS source, i.absence_reason_class AS "absenceReason", i.expected_return_on AS "expectedReturnOn"
+    FROM identity.journey_residence_intervals i
+    JOIN identity.cases c USING (identity_case_id)
+    WHERE i.identity_case_id = ANY(p_cases) AND c.family_id = auth.current_family_id()
+      AND c.subject_person_id = p_subject
+      AND i.from_on < p_until AND i.until_before > p_from AND i.until_before <= p_until
+      AND (i.document_id IS NULL OR EXISTS (
+        SELECT 1 FROM docs.documents d WHERE d.document_id = i.document_id AND d.family_id = c.family_id
+          AND d.subject_person_id = c.subject_person_id AND d.data_class = 'IDENTITY_SENSITIVE'
+          AND d.withdrawn_at IS NULL AND d.retention_until > clock_timestamp()
+        FOR SHARE OF d))
+      AND (i.official_fact_id IS NULL OR EXISTS (
+        SELECT 1 FROM identity.external_facts f WHERE f.fact_id = i.official_fact_id AND f.identity_case_id = i.identity_case_id))
+      AND (i.evidence_version_id IS NULL OR EXISTS (
+        SELECT 1 FROM docs.document_versions v WHERE v.version_id = i.evidence_version_id AND v.document_id = i.document_id
+        FOR SHARE OF v))
+    ORDER BY i.from_on DESC, i.interval_id
+    LIMIT 513
+  ) r;
+$fn$;
+
 CREATE FUNCTION identity.list_journey_residence(p_cases uuid[], p_from date, p_until date) RETURNS jsonb
 LANGUAGE plpgsql
 SET search_path = pg_catalog
@@ -51,27 +80,7 @@ BEGIN
     IF identity.lock_journey_station_self_scope(auth.current_family_id(),case_id,auth.current_principal_id()) IS NOT TRUE
       THEN RETURN NULL; END IF;
   END LOOP;
-  SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY r."from" DESC, r.id), '[]') INTO result
-  FROM (
-    SELECT i.interval_id AS id, i.from_on AS "from", i.until_before AS "untilBefore", i.location_class AS place,
-      i.record_source AS source, i.absence_reason_class AS "absenceReason", i.expected_return_on AS "expectedReturnOn"
-    FROM identity.journey_residence_intervals i
-    JOIN identity.cases c USING (identity_case_id)
-    WHERE i.identity_case_id = ANY(p_cases)
-      AND i.from_on < p_until AND i.until_before > p_from AND i.until_before <= p_until
-      AND (i.document_id IS NULL OR EXISTS (
-        SELECT 1 FROM docs.documents d WHERE d.document_id = i.document_id AND d.family_id = c.family_id
-          AND d.subject_person_id = c.subject_person_id AND d.data_class = 'IDENTITY_SENSITIVE'
-          AND d.withdrawn_at IS NULL AND d.retention_until > clock_timestamp()
-        FOR SHARE OF d))
-      AND (i.official_fact_id IS NULL OR EXISTS (
-        SELECT 1 FROM identity.external_facts f WHERE f.fact_id = i.official_fact_id AND f.identity_case_id = i.identity_case_id))
-      AND (i.evidence_version_id IS NULL OR EXISTS (
-        SELECT 1 FROM docs.document_versions v WHERE v.version_id = i.evidence_version_id AND v.document_id = i.document_id
-        FOR SHARE OF v))
-    ORDER BY i.from_on DESC, i.interval_id
-    LIMIT 513
-  ) r;
+  result := identity.collect_journey_residence(auth.current_actor_person_id(),p_cases,p_from,p_until);
   IF auth.write_context_is_live() IS NOT TRUE THEN RETURN NULL; END IF;
   RETURN result;
 END
@@ -194,6 +203,7 @@ END
 $fn$;
 
 REVOKE ALL ON FUNCTION identity.list_journey_residence(uuid[],date,date),
+  identity.collect_journey_residence(uuid,uuid[],date,date),
   identity.record_journey_residence_report(uuid,uuid,date,date,text,text,date),
   identity.confirm_journey_residence_report(uuid,uuid,uuid)
   FROM PUBLIC, phoenix_canonical_app, phoenix_canonical_reader, phoenix_canonical_service_workbench;

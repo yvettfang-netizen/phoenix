@@ -11,6 +11,15 @@ export function isIdentityNoticeId(value: unknown): value is string {
   return typeof value === "string" && noticeIdPattern.test(value);
 }
 
+export function isIdentityMemberRef(value: unknown): value is string {
+  return typeof value === "string" && /^member_[A-Za-z0-9_-]{24,96}$/.test(value);
+}
+
+export async function readIdentityMemberSelection(request: Request): Promise<string | null> {
+  const body = await readIdentityRequestBody(request, 160);
+  return body && Object.keys(body).length === 1 && isIdentityMemberRef(body.memberRef) ? body.memberRef : null;
+}
+
 export function isIdentityCivilDate(value: unknown): value is string {
   if (typeof value !== "string" || !/^[1-9]\d{3}-\d{2}-\d{2}$/.test(value)) return false;
   const timestamp = Date.parse(value + "T00:00:00.000Z");

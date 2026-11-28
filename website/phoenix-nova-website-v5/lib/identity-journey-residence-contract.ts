@@ -1,4 +1,5 @@
 export const identityResidencePath = "/api/family-services/identity-residence";
+export const identityMemberResidencePath = "/api/family-services/identity-member-residence";
 
 export const identityResidenceAbsenceReasons = ["WORK", "STUDY", "FAMILY", "OTHER", "WITHHELD"] as const;
 export type IdentityResidenceAbsenceReason = typeof identityResidenceAbsenceReasons[number];

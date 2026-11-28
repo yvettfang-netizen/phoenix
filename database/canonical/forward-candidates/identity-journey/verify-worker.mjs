@@ -237,12 +237,14 @@ const recordRenewalReview = await verifyServiceChain({ query, recipient, crmFixt
 let timelineBrowser;
 let residenceBrowser;
 let memberProfileBrowser;
+let memberResidenceBrowser;
 if (process.env.IDENTITY_BROWSER_EVIDENCE_DIR) {
   const { verifyFamilyInboxBrowser, verifyFamilyTimelineBrowser, verifyFamilyResidenceBrowser,
-    verifyFamilyMemberProfileBrowser } = await import("./verify-browser.mjs");
+    verifyFamilyMemberProfileBrowser, verifyFamilyMemberResidenceBrowser } = await import("./verify-browser.mjs");
   timelineBrowser = verifyFamilyTimelineBrowser;
   residenceBrowser = verifyFamilyResidenceBrowser;
   memberProfileBrowser = verifyFamilyMemberProfileBrowser;
+  memberResidenceBrowser = verifyFamilyMemberResidenceBrowser;
   query(`UPDATE identity_journey_test.station_grant SET withdrawn_at = NULL;
     INSERT INTO identity.journey_station_reminders (reminder_id, identity_case_id, episode_id,
       date_revision_id, date_kind, target_on, offset_days, recipient_principal_id, state)
@@ -272,4 +274,4 @@ await verifyTimeline({
   },
 });
 await verifyResidence({ query, recipient, authConfig, browser: residenceBrowser });
-await verifyIdentityMemberProfile({ query, recipient, authConfig, browser: memberProfileBrowser });
+await verifyIdentityMemberProfile({ query, recipient, authConfig, browser: memberProfileBrowser, memberResidenceBrowser });
