@@ -116,9 +116,9 @@ export async function verifyReviewPlanningHttp({ query, recipient, authConfig, b
   assert.ok(initial, "review-plans verifier must leave an investment review head");
   assert.equal(initial.revisionId, currentRevision);
   // The delivered seven-day notice remains on id(8502); only the pending
-  // one-day offset is attached to current id(8523).
+  // one-day offset is rebound to current id(8523) with its original job ID.
   assert.deepEqual(initial.offsets, [1]);
-  assert.deepEqual(initial.jobs, [id(8525)]);
+  assert.deepEqual(initial.jobs, [id(8504)]);
   const initialOn = initial.on;
   const addDays = (date, days) => {
     const value = new Date(`${date}T00:00:00.000Z`);
