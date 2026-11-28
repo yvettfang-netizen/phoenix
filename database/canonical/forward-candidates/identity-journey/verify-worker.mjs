@@ -7,6 +7,8 @@ import { verifyTimeline } from "./verify-timeline.mjs";
 import { verifyServiceChain } from "./verify-service-chain.mjs";
 import { verifyFounderSummary } from "./verify-founder-summary.mjs";
 import { verifyResidence } from "./verify-residence.mjs";
+import { verifyDocumentDates } from "./verify-document-dates.mjs";
+import { verifyIdentityPolicyPaths } from "./verify-policy-paths.mjs";
 import { verifyOfficialTravel } from "./verify-official-travel.mjs";
 import { verifyIdentityMemberProfile } from "./verify-member-profile.mjs";
 import { verifyRenewalRecovery } from "./verify-recovery.mjs";
@@ -317,8 +319,10 @@ const timeline = await verifyTimeline({
   },
 });
 await verifyResidence({ query, recipient, authConfig, browser: residenceBrowser });
+await verifyDocumentDates({ query, recipient });
 await verifyOfficialTravel({ query, recipient, authConfig, browser: officialTravelBrowser });
 await verifyIdentityMemberProfile({ query, recipient, authConfig, browser: memberProfileBrowser, memberResidenceBrowser });
+await verifyIdentityPolicyPaths({ query });
 await verifyRenewalRecovery({
   container, query, recipient, timeline, actor: crmFixture.actor,
   restoredQuery: (sql, variables, role) => query(sql, variables, role, true),
