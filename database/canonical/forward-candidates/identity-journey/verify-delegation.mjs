@@ -189,7 +189,7 @@ export async function verifyAdultDelegation({ query, recipient, verifyProfile })
   // live FAMILY principal, use a non-empty scope, and select that subject's
   // existing cases exactly.
   assert.equal(issue(wrongDelegation, adultPrincipal, [caseA], validUntil, inApplicant), "null");
-  assert.equal(issue(emptyScopeDelegation, applicantPrincipal, [], "clock_timestamp()+interval '1 hour'"), "null");
+  assert.equal(issue(emptyScopeDelegation, applicantPrincipal, []), "null");
   assert.equal(issue(duplicateScopeDelegation, applicantPrincipal, [caseA, caseA]), "null");
   assert.equal(issue(wrongCaseDelegation, applicantPrincipal, [recipient.caseId]), "null");
   assert.equal(issue(advisorDelegation, advisorPrincipal, [caseA]), "null");
