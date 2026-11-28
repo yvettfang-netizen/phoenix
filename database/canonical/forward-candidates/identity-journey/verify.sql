@@ -15,6 +15,7 @@ DECLARE
   revision uuid := '01910000-0000-7000-8000-000000000009';
   invalid_revision uuid := '01910000-0000-7000-8000-000000000010';
   reminder uuid := '01910000-0000-7000-8000-000000000011';
+  early_receipt timestamptz;
 BEGIN
   IF (SELECT count(*) FROM canonical_migrations.applied) <> 37 THEN
     RAISE EXCEPTION 'FORMAL_LEDGER_CHANGED';
@@ -91,6 +92,27 @@ BEGIN
       AND retry_not_before = TIMESTAMPTZ '2028-02-29 09:30:00+08'
       AND send_on = DATE '2028-02-29' AND delivered_at IS NULL
   ) THEN RAISE EXCEPTION 'REMINDER_REBIND_LOST_RETRY_STATE'; END IF;
+
+  FOREACH early_receipt IN ARRAY ARRAY[
+    TIMESTAMPTZ '2028-02-28 23:59:59+08', TIMESTAMPTZ '2028-02-29 09:29:59+08'
+  ] LOOP
+    BEGIN
+      UPDATE identity.journey_station_reminders SET state = 'DELIVERED',
+        delivered_at = early_receipt, retry_not_before = NULL WHERE reminder_id = reminder;
+      RAISE EXCEPTION 'EARLY_RECEIPT_ACCEPTED';
+    EXCEPTION WHEN raise_exception THEN
+      IF SQLERRM <> 'IDENTITY_JOURNEY_DELIVERY_NOT_DUE' THEN RAISE; END IF;
+    END;
+  END LOOP;
+  BEGIN
+    UPDATE identity.journey_station_reminders SET state = 'CANCELED', retry_not_before = NULL
+      WHERE reminder_id = reminder;
+    UPDATE identity.journey_station_reminders SET state = 'DELIVERED',
+      delivered_at = '2028-02-29 09:30:00+08' WHERE reminder_id = reminder;
+    RAISE EXCEPTION 'CANCELED_REMINDER_DELIVERED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'IDENTITY_JOURNEY_DELIVERY_STATE_INVALID' THEN RAISE; END IF;
+  END;
 
   UPDATE identity.journey_station_reminders SET state = 'DELIVERED',
     delivered_at = '2028-02-29 09:30:00+08', retry_not_before = NULL
