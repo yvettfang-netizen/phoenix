@@ -75,6 +75,14 @@ BEGIN
     target_on,verification,document_id,verified_by,supersedes_id,recorded_by)
     VALUES (invalid_revision,identity_case,episode,'STAY_EXPIRY','CASE_APPROVAL',
       '2028-03-01','VERIFIED',doc,principal,revision,principal);
+  BEGIN
+    UPDATE identity.journey_station_reminders SET state = 'DELIVERED',
+      delivered_at = '2028-02-29 09:30:00+08', retry_not_before = NULL
+      WHERE reminder_id = reminder;
+    RAISE EXCEPTION 'SUPERSEDED_REMINDER_DELIVERED';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'IDENTITY_JOURNEY_REMINDER_SOURCE_INVALID' THEN RAISE; END IF;
+  END;
   UPDATE identity.journey_station_reminders SET date_revision_id = invalid_revision
     WHERE reminder_id = reminder AND state IN ('PENDING','RETRY');
   IF NOT EXISTS (

@@ -148,6 +148,9 @@ $fn$;
 REVOKE ALL ON FUNCTION identity.guard_journey_reminder() FROM PUBLIC;
 CREATE TRIGGER journey_reminder_source BEFORE INSERT OR UPDATE OF date_revision_id, target_on ON identity.journey_station_reminders
 FOR EACH ROW EXECUTE FUNCTION identity.guard_journey_reminder();
+CREATE TRIGGER journey_reminder_source_on_delivery BEFORE UPDATE OF state ON identity.journey_station_reminders
+FOR EACH ROW WHEN (NEW.state = 'DELIVERED' AND OLD.state <> 'DELIVERED')
+EXECUTE FUNCTION identity.guard_journey_reminder();
 
 CREATE FUNCTION identity.guard_journey_delivery_receipt() RETURNS trigger
 LANGUAGE plpgsql
